@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { Plan } from "@/models/Plan";
+import { PlatformAdmin } from "@/models/PlatformAdmin";
 import bcrypt from "bcryptjs";
 
 export async function GET(req: Request) {
@@ -12,6 +13,7 @@ export async function GET(req: Request) {
         // We use updateOne with upsert to ensure we update existing users or create them if missing.
         const passwordHashAdmin = await bcrypt.hash("admin789", 10);
         const passwordHashOperator = await bcrypt.hash("operator234", 10);
+        const passwordHashSuperAdmin = await bcrypt.hash("superadmin456", 10);
 
         await User.updateOne(
             { role: "admin" },
@@ -32,6 +34,18 @@ export async function GET(req: Request) {
                     name: "Operator",
                     email: "operator@tspools.com",
                     passwordHash: passwordHashOperator,
+                }
+            },
+            { upsert: true }
+        );
+
+        // Seed Super Admin
+        await PlatformAdmin.updateOne(
+            { email: "superadmin@tspools.com" },
+            {
+                $set: {
+                    passwordHash: passwordHashSuperAdmin,
+                    role: "superadmin",
                 }
             },
             { upsert: true }
