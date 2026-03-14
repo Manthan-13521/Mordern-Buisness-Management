@@ -1,0 +1,76 @@
+import { NextResponse } from "next/server";
+import connectDB from "@/lib/mongodb";
+import { User } from "@/models/User";
+import { Plan } from "@/models/Plan";
+import { Member } from "@/models/Member";
+import { Payment } from "@/models/Payment";
+import { EntryLog } from "@/models/EntryLog";
+import { NotificationLog } from "@/models/NotificationLog";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+
+export async function GET(req: Request) {
+    // Allow Cron Jobs with Secret OR Authenticated Admins
+    const authHeader = req.headers.get("authorization");
+    let isAuthorized = false;
+
+    if (authHeader === `Bearer ${process.env.CRON_SECRET || "cron123"}`) {
+        isAuthorized = true;
+    } else {
+        const session = await getServerSession(authOptions);
+        if (session?.user && session.user.role === "admin") {
+            isAuthorized = true;
+        }
+    }
+
+    if (!isAuthorized) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    try {
+        await connectDB();
+        
+        // Ensure pool separation for non-superadmins
+        const session = await getServerSession(authOptions);
+        const baseMatch = session?.user && session.user.role !== "superadmin" && session.user.poolId 
+            ? { poolId: session.user.poolId } : {};
+
+        // Fetch all records from all collections
+        const [users, plans, members, payments, entries, notifications] = await Promise.all([
+            User.find({ ...baseMatch }).lean(),
+            Plan.find({ deletedAt: null, ...baseMatch }).lean(),
+            Member.find({ ...baseMatch }).lean(),
+            Payment.find({ ...baseMatch }).lean(),
+            EntryLog.find({ ...baseMatch }).lean(),
+            NotificationLog.find({}).lean(), // Needs complex link or ignore for now
+        ]);
+
+        const backupData = {
+            timestamp: new Date().toISOString(),
+            version: "1.0",
+            data: {
+                users,
+                plans,
+                members,
+                payments,
+                entries,
+                notifications,
+            },
+        };
+
+        const jsonString = JSON.stringify(backupData, null, 2);
+        const buffer = Buffer.from(jsonString, "utf-8");
+
+        return new NextResponse(buffer, {
+            status: 200,
+            headers: {
+                "Content-Disposition": `attachment; filename="ts_pools_backup_${new Date().toISOString().split("T")[0]}.json"`,
+                "Content-Type": "application/json",
+            },
+        });
+
+    } catch (error) {
+        console.error("Backup failed", error);
+        return NextResponse.json({ error: "Failed to generate backup" }, { status: 500 });
+    }
+}
