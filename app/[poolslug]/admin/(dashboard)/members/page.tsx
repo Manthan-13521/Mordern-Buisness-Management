@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { AddMemberModal } from "./AddMemberModal";
 import { Plus, Search, Download } from "lucide-react";
 
-export const dynamic = "force-dynamic";
 
 interface Member {
     _id: string;

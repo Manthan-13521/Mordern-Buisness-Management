@@ -7,7 +7,6 @@ import { Camera, RefreshCw, Upload, CheckCircle2, User, CreditCard, Shield, Phon
 import Link from "next/link";
 import Script from "next/script";
 
-export const dynamic = "force-dynamic";
 
 declare global {
     interface Window {

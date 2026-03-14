@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { Download, Plus } from "lucide-react";
 
-export const dynamic = "force-dynamic";
 
 interface Payment {
     _id: string;

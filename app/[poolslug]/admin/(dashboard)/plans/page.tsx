@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 
-export const dynamic = "force-dynamic";
 
 interface Plan {
     _id: string;

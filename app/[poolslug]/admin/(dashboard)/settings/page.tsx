@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { Save, HardDrive, Moon, Sun, Monitor, Download, Users, Activity, Server } from "lucide-react";
 import { useSession } from "next-auth/react";
 
-export const dynamic = "force-dynamic";
 
 export default function SettingsPage() {
     const { data: session } = useSession();

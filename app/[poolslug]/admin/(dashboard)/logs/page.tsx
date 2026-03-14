@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Download, Search, UserPlus, ScanFace } from "lucide-react";
 
-export const dynamic = "force-dynamic";
 
 interface SystemLog {
     id: string;

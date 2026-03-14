@@ -1,7 +1,6 @@
 "use client";
 import { User, Activity, Trophy, Clock, QrCode } from "lucide-react";
 
-export const dynamic = "force-dynamic";
 
 export default function MemberPortalDashboard() {
     return (

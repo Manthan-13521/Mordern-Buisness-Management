@@ -4,8 +4,6 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { Users, UserX, Activity, DollarSign, ArrowUpRight, TrendingUp, Waves, Heart } from "lucide-react";
 import {
-
-export const dynamic = "force-dynamic";
     PieChart,
     Pie,
     Cell,
