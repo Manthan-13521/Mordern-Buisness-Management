@@ -33,6 +33,10 @@ declare module "next-auth/jwt" {
 }
 
 export const authOptions: NextAuthOptions = {
+    secret: process.env.NEXTAUTH_SECRET || "fallback-dev-secret-change-me",
+    pages: {
+        signIn: "/auth/signin" // general fallback, middleware dictates exact path
+    },
     providers: [
         CredentialsProvider({
             name: "Credentials",
@@ -143,8 +147,4 @@ export const authOptions: NextAuthOptions = {
         strategy: "jwt",
         maxAge: 30 * 24 * 60 * 60, // 30 Days
     },
-    pages: {
-        signIn: "/auth/signin" // general fallback, middleware dictates exact path
-    },
-    secret: process.env.NEXTAUTH_SECRET,
 };

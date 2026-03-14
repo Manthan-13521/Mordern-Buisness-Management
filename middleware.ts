@@ -49,6 +49,6 @@ export default withAuth(
 export const config = {
   matcher: [
     "/superadmin/:path*",
-    "/((?!api|_next/static|_next/image|favicon.ico).*)",
+    "/:poolslug/admin/:path*",
   ],
 };
