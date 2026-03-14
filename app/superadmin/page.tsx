@@ -3,6 +3,8 @@ import connectDB from "@/lib/mongodb";
 import { Pool } from "@/models/Pool";
 import { Member } from "@/models/Member";
 
+export const dynamic = "force-dynamic";
+
 export default async function SuperAdminDashboard() {
     await connectDB();
     const pools = await Pool.find({}).sort({ createdAt: -1 }).lean() as any[];

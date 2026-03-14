@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { MessageSquare, RefreshCw, Send } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 interface NotificationLog {
     _id: string;
     memberId: { name: string; memberId: string; phone: string };

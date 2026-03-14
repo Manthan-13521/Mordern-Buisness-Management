@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import connectDB from "@/lib/mongodb";
 import { Pool } from "@/models/Pool";
 
+export const dynamic = "force-dynamic";
+
 export default function PlatformBillingDashboard() {
     return (
         <div className="space-y-6">

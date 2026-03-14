@@ -3,6 +3,8 @@ import { Pool } from "@/models/Pool";
 import { notFound } from "next/navigation";
 import RegistrationForm from "./RegistrationForm";
 
+export const dynamic = "force-dynamic";
+
 export default async function PoolRegistrationPage({ params }: { params: Promise<{ poolSlug: string }> }) {
     await connectDB();
     const { poolSlug } = await params;

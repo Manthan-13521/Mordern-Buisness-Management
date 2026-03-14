@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { Users, RotateCcw, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 interface ExpiredMember {
     _id: string;
     memberId: string;

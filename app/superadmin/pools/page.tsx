@@ -8,6 +8,8 @@ import Link from "next/link";
 import { Search, Plus, ShieldCheck } from "lucide-react";
 import { ResetPasswordButton } from "./ResetPasswordButton";
 
+export const dynamic = "force-dynamic";
+
 export default async function PlatformPoolsList() {
     const session = await getServerSession(authOptions);
     if (!session?.user || session.user.role !== "superadmin") {

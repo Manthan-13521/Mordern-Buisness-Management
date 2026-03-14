@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Scanner } from "@yudiel/react-qr-scanner";
 import { UserCheck, UserX, ScanFace, WifiOff, Wifi, Users } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 interface ScanResult {
     success: boolean;
     message: string;

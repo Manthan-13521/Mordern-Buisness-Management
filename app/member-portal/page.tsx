@@ -1,6 +1,8 @@
 "use client";
 import { User, Activity, Trophy, Clock, QrCode } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default function MemberPortalDashboard() {
     return (
         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pt-4">
