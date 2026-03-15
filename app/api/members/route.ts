@@ -72,24 +72,39 @@ export async function POST(req: Request) {
         // Generate Member ID specific to this pool
         const memberId = await getNextMemberId(poolId);
 
-        // Upload photo to Cloudinary
+        // Upload photo to Cloudinary (optional — skip if not configured)
         let photoUrl = "";
         if (photoBase64) {
-            photoUrl = await uploadBase64Image(
-                photoBase64,
-                "swimming-pool/photos",
-                `${poolId}_${memberId}_photo`
-            );
+            try {
+                photoUrl = await uploadBase64Image(
+                    photoBase64,
+                    "swimming-pool/photos",
+                    `${poolId}_${memberId}_photo`
+                );
+            } catch (uploadErr) {
+                console.warn("Cloudinary photo upload failed (not configured?), skipping:", uploadErr);
+            }
         }
 
-        // Generate QR Code and upload to Cloudinary
+        // Generate QR Code
         const qrToken = crypto.randomUUID();
-        const qrPngBuffer = await QRCode.toBuffer(`${memberId}:${qrToken}`, { width: 300 });
-        const qrCodeUrl = await uploadBuffer(
-            qrPngBuffer,
-            "swimming-pool/qrcodes",
-            `${poolId}_${memberId}_qr`
-        );
+        let qrCodeUrl = "";
+        try {
+            const qrPngBuffer = await QRCode.toBuffer(`${memberId}:${qrToken}`, { width: 300 });
+            qrCodeUrl = await uploadBuffer(
+                qrPngBuffer,
+                "swimming-pool/qrcodes",
+                `${poolId}_${memberId}_qr`
+            );
+        } catch (uploadErr) {
+            console.warn("Cloudinary QR upload failed, using data URL fallback:", uploadErr);
+            // Fallback: generate QR as data URL
+            try {
+                qrCodeUrl = await QRCode.toDataURL(`${memberId}:${qrToken}`, { width: 300 });
+            } catch {
+                console.warn("QR data URL generation also failed");
+            }
+        }
 
         // Validate plan
         const { Plan } = await import("@/models/Plan");

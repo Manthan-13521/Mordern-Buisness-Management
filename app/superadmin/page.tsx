@@ -6,13 +6,20 @@ import { Member } from "@/models/Member";
 export const dynamic = "force-dynamic";
 
 export default async function SuperAdminDashboard() {
-    await connectDB();
-    const pools = await Pool.find({}).sort({ createdAt: -1 }).lean() as any[];
-    const totalPools = pools.length;
-    const activePools = pools.filter(p => p.status === "ACTIVE").length;
-    
-    // Total members across all pools
-    const totalMembersCount = await Member.countDocuments({});
+    let pools: any[] = [];
+    let totalPools = 0;
+    let activePools = 0;
+    let totalMembersCount = 0;
+
+    try {
+        await connectDB();
+        pools = await Pool.find({}).sort({ createdAt: -1 }).lean() as any[];
+        totalPools = pools.length;
+        activePools = pools.filter(p => p.status === "ACTIVE").length;
+        totalMembersCount = await Member.countDocuments({});
+    } catch (err) {
+        console.error("SuperAdmin dashboard DB error:", err);
+    }
 
     return (
         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">

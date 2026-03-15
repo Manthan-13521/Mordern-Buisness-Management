@@ -51,10 +51,6 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!photoPreview) {
-            alert("Please capture a photo");
-            return;
-        }
 
         setLoading(true);
         try {
@@ -228,7 +224,7 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                         </button>
                         <button
                             type="submit"
-                            disabled={loading || !photoPreview}
+                            disabled={loading}
                             className="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
                         >
                             {loading ? "Saving..." : "Save Member"}

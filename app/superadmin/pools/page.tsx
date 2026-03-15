@@ -7,6 +7,7 @@ import { User } from "@/models/User";
 import Link from "next/link";
 import { Search, Plus, ShieldCheck } from "lucide-react";
 import { ResetPasswordButton } from "./ResetPasswordButton";
+import { DeletePoolButton } from "./DeletePoolButton";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +55,7 @@ export default async function PlatformPoolsList() {
                             <th scope="col" className="px-6 py-4">Status</th>
                             <th scope="col" className="px-6 py-4">Admin Credentials</th>
                             <th scope="col" className="px-6 py-4">Joined At</th>
+                            <th scope="col" className="px-6 py-4">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -82,11 +84,14 @@ export default async function PlatformPoolsList() {
                                 <td className="px-6 py-4">
                                     {pool.createdAt ? new Date(pool.createdAt).toLocaleDateString() : "Just Now"}
                                 </td>
+                                <td className="px-6 py-4">
+                                    <DeletePoolButton poolId={pool.poolId} poolName={pool.poolName} />
+                                </td>
                             </tr>
                         ))}
                         {pools.length === 0 && (
                             <tr>
-                                <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                                <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
                                     No pools registered yet.
                                 </td>
                             </tr>
