@@ -71,39 +71,72 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
 
         console.log("[PDF] Header drawn. Embedding photo...");
 
+        // Helper to get image bytes from URL (local, remote, or base64)
+        async function getImageBytes(imagePath: string): Promise<{ bytes: Buffer, type: 'png' | 'jpg' } | null> {
+            try {
+                if (imagePath.startsWith('data:image/')) {
+                    const matches = imagePath.match(/^data:image\/([a-zA-Z+]+);base64,(.+)$/);
+                    if (!matches) return null;
+                    const type = matches[1] === 'png' ? 'png' : 'jpg';
+                    const bytes = Buffer.from(matches[2], 'base64');
+                    return { bytes, type };
+                }
+
+                if (imagePath.startsWith('http')) {
+                    const response = await fetch(imagePath);
+                    const arrayBuffer = await response.arrayBuffer();
+                    const bytes = Buffer.from(arrayBuffer);
+                    const type = imagePath.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
+                    return { bytes, type };
+                }
+
+                // Local path fallback
+                const fullPath = path.join(process.cwd(), "public", imagePath);
+                if (fs.existsSync(fullPath)) {
+                    const bytes = fs.readFileSync(fullPath);
+                    const type = imagePath.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
+                    return { bytes, type };
+                }
+            } catch (err) {
+                console.error("Error fetching image bytes:", err);
+            }
+            return null;
+        }
+
+        console.log("[PDF] Header drawn. Embedding photo...");
+
         // Embed and Draw Photo (Left side)
         const photoSize = 100;
         if (member.photoUrl) {
-            try {
-                const photoPath = path.join(process.cwd(), "public", member.photoUrl);
-                const photoBytes = fs.readFileSync(photoPath);
-                let photoImage;
-                if (member.photoUrl.toLowerCase().endsWith(".png")) {
-                    photoImage = await pdfDoc.embedPng(photoBytes);
-                } else {
-                    photoImage = await pdfDoc.embedJpg(photoBytes);
-                }
+            const photoData = await getImageBytes(member.photoUrl);
+            if (photoData) {
+                try {
+                    const photoImage = photoData.type === 'png' 
+                        ? await pdfDoc.embedPng(photoData.bytes)
+                        : await pdfDoc.embedJpg(photoData.bytes);
 
-                // Draw photo box shadow/border approximation
-                page.drawRectangle({
-                    x: 23, y: height - 70 - photoSize - 3,
-                    width: photoSize + 6, height: photoSize + 6,
-                    color: rgb(0.8, 0.8, 0.8),
-                });
-                page.drawRectangle({
-                    x: 25, y: height - 70 - photoSize,
-                    width: photoSize, height: photoSize,
-                    color: rgb(1, 1, 1),
-                });
-                page.drawImage(photoImage, {
-                    x: 25, y: height - 70 - photoSize,
-                    width: photoSize, height: photoSize,
-                });
-            } catch (err) {
-                console.error("Failed to embed photo", err);
+                    // Draw photo box shadow/border approximation
+                    page.drawRectangle({
+                        x: 23, y: height - 70 - photoSize - 3,
+                        width: photoSize + 6, height: photoSize + 6,
+                        color: rgb(0.8, 0.8, 0.8),
+                    });
+                    page.drawRectangle({
+                        x: 25, y: height - 70 - photoSize,
+                        width: photoSize, height: photoSize,
+                        color: rgb(1, 1, 1),
+                    });
+                    page.drawImage(photoImage, {
+                        x: 25, y: height - 70 - photoSize,
+                        width: photoSize, height: photoSize,
+                    });
+                } catch (err) {
+                    console.error("Failed to embed photo image", err);
+                }
             }
         }
 
+        // ... (rest of the code for member details remains same)
         // Draw Member Details (Middle)
         let startY = height - 80;
         const textStartX = 145;
@@ -166,20 +199,20 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
 
         // Embed and Draw QR Code (Right bottom)
         if (member.qrCodeUrl) {
-            try {
-                const qrPath = path.join(process.cwd(), "public", member.qrCodeUrl);
-                const qrBytes = fs.readFileSync(qrPath);
-                const qrImage = await pdfDoc.embedPng(qrBytes);
-
-                const qrSize = 85;
-                page.drawImage(qrImage, {
-                    x: width - qrSize - 20,
-                    y: 55, // above footer
-                    width: qrSize,
-                    height: qrSize,
-                });
-            } catch (err) {
-                console.error("Failed to embed QR code", err);
+            const qrData = await getImageBytes(member.qrCodeUrl);
+            if (qrData) {
+                try {
+                    const qrImage = await pdfDoc.embedPng(qrData.bytes);
+                    const qrSize = 85;
+                    page.drawImage(qrImage, {
+                        x: width - qrSize - 20,
+                        y: 55, // above footer
+                        width: qrSize,
+                        height: qrSize,
+                    });
+                } catch (err) {
+                    console.error("Failed to embed QR code", err);
+                }
             }
         }
 
