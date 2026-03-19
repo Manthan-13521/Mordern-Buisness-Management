@@ -8,6 +8,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 /**
  * GET /api/logs
@@ -102,8 +103,8 @@ export async function GET(req: Request) {
             });
         }
 
-        // Filter out MS series members entirely
-        const filteredUnified = unified.filter((log) => !log.memberId?.startsWith("MS"));
+        // No memberId filtering – include all logs
+        const filteredUnified = unified;
 
         // Sort by date desc, then paginate
         filteredUnified.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -111,12 +112,12 @@ export async function GET(req: Request) {
         const paged  = filteredUnified.slice(skip, skip + limit);
 
         return NextResponse.json({
-            data:       paged,
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
-        });
+    data:       paged,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+}, { headers: { 'Cache-Control': 'no-store' } });
     } catch (error) {
         console.error("[GET /api/logs]", error);
         return NextResponse.json({ error: "Failed to fetch logs" }, { status: 500 });
