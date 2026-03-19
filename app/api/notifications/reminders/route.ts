@@ -40,12 +40,28 @@ export async function POST(req: Request) {
         const inThreeDays = new Date(today);
         inThreeDays.setDate(inThreeDays.getDate() + 3);
 
+        const inSevenDays = new Date(today);
+        inSevenDays.setDate(inSevenDays.getDate() + 7);
+
+        const inEightDays = new Date(today);
+        inEightDays.setDate(inEightDays.getDate() + 8);
+
+        // Pool isolation — superadmin or cron sees all, admin sees only their pool
+        const session = await getServerSession(authOptions);
+        const poolFilter: Record<string, unknown> = {};
+        if (session?.user?.role === "admin" && session.user.poolId) {
+            poolFilter.poolId = session.user.poolId;
+        }
+
         const membersExpiring = await Member.find({
+            ...poolFilter,
             $or: [
-                { status: "active", expiryDate: { $gte: inTwoDays, $lt: inThreeDays } }, // Expiring in 2 days
+                { status: "active", expiryDate: { $gte: inSevenDays, $lt: inEightDays } }, // Expiring in 7 days
+                { status: "active", expiryDate: { $gte: inTwoDays,  $lt: inThreeDays } }, // Expiring in 2 days
                 { expiryDate: { $gte: yesterday, $lt: today } } // Expired yesterday
             ]
         }).populate("planId");
+
 
         let sentCount = 0;
         const logs = [];
@@ -59,13 +75,18 @@ export async function POST(req: Request) {
 
             // Only send expiry alert if the plan exceeds 7 days (or is exactly 7 days, excluding shorter/hourly plans)
             if (!isHourly && durationDays >= 7) {
-                const isExpiringSoon = member.expiryDate >= inTwoDays && member.expiryDate < inThreeDays;
-                
+                const expiryDate = member.expiryDate ?? new Date();
+                const isExpiringSoon7 = expiryDate >= inSevenDays && expiryDate < inEightDays;
+                const isExpiringSoon2 = expiryDate >= inTwoDays  && expiryDate < inThreeDays;
+                const expiryDateStr   = new Date(expiryDate).toLocaleDateString();
+
                 let message = "";
-                if (isExpiringSoon) {
-                    message = `Hello ${member.name}, your swimming pool membership (ID: ${member.memberId}) is expiring in 2 days on ${new Date(member.expiryDate).toLocaleDateString()}. Please renew it to continue enjoying the pool! \n- TS Pools Mgmt`;
+                if (isExpiringSoon7) {
+                    message = `Hello ${member.name}, your swimming pool membership (ID: ${member.memberId}) is expiring in 7 days on ${expiryDateStr}. Please renew it to continue enjoying the pool!\n- TS Pools Mgmt`;
+                } else if (isExpiringSoon2) {
+                    message = `Hello ${member.name}, your swimming pool membership (ID: ${member.memberId}) is expiring in 2 days on ${expiryDateStr}. Please renew it to continue enjoying the pool!\n- TS Pools Mgmt`;
                 } else {
-                    message = `Hello ${member.name}, your swimming pool membership (ID: ${member.memberId}) has expired. Please renew it to continue enjoying the pool! \n- TS Pools Mgmt`;
+                    message = `Hello ${member.name}, your swimming pool membership (ID: ${member.memberId}) has expired. Please renew it to continue enjoying the pool!\n- TS Pools Mgmt`;
                 }
 
                 const success = await sendWhatsAppMessage(member.phone, message);

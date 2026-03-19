@@ -7,7 +7,7 @@ import crypto from "crypto";
 import QRCode from "qrcode";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { logger } from "@/lib/logger";
-import { uploadBase64Image, uploadBuffer } from "@/lib/cloudinary";
+import { uploadBase64Image, uploadBuffer } from "@/lib/local-upload";
 
 export async function POST(req: Request) {
     try {

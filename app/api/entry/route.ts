@@ -158,6 +158,12 @@ export async function POST(req: Request) {
         const baseMatch = session.user.role !== "superadmin" && session.user.poolId ? { poolId: session.user.poolId } : {};
         member = await Member.findOne({ memberId, ...baseMatch }).populate("planId");
 
+        // Fallback to EntertainmentMember if not found in regular Member collection
+        if (!member) {
+            const { EntertainmentMember } = await import("@/models/EntertainmentMember");
+            member = await EntertainmentMember.findOne({ memberId, ...baseMatch }).populate("planId");
+        }
+
         if (!member) {
             logger.scan("QR scan denied — member not found", { memberId });
             await EntryLog.create({
@@ -204,10 +210,22 @@ export async function POST(req: Request) {
         }
 
         // ── Membership Expiry Check ──────────────────────────────────────────
-        if (member.status !== "active" || new Date(member.expiryDate) < new Date()) {
-            if (member.status === "active") {
-                member.status = "expired";
-                await member.save();
+        const isEntertainment = !('status' in (member as any));
+        const memberStatus = isEntertainment ? ((member as any).isActive && !(member as any).isExpired ? "active" : "expired") : (member as any).status;
+        const expiryFieldValue = isEntertainment ? (member as any).planEndDate : (member as any).expiryDate;
+
+        if (memberStatus !== "active" || new Date(expiryFieldValue ?? 0) < new Date()) {
+            if (isEntertainment) {
+                if ((member as any).isActive) {
+                    (member as any).isActive = false;
+                    (member as any).isExpired = true;
+                    await member.save();
+                }
+            } else {
+                if ((member as any).status === "active") {
+                    (member as any).status = "expired";
+                    await member.save();
+                }
             }
             await EntryLog.create({
                 poolId: session.user.poolId,
@@ -222,20 +240,22 @@ export async function POST(req: Request) {
         }
 
         // ── Entry Limit Check ────────────────────────────────────────────────
-        const entriesUsed = member.entriesUsed || 0;
-        const totalEntriesAllowed = member.totalEntriesAllowed || 1;
+        if (!isEntertainment) {
+            const entriesUsed = (member as any).entriesUsed || 0;
+            const totalEntriesAllowed = (member as any).totalEntriesAllowed || 1;
 
-        if (entriesUsed >= totalEntriesAllowed) {
-            await EntryLog.create({
-                poolId: session.user.poolId,
-                memberId: member._id,
-                status: "denied",
-                reason: "Entry Limit Reached",
-                operatorId: new mongoose.Types.ObjectId(session.user.id),
-                rawPayload: qrPayload,
-            });
-            logger.scan("QR scan denied — entry limit", { memberId, entriesUsed, totalEntriesAllowed });
-            return NextResponse.json({ error: "Entry limit reached" }, { status: 400 });
+            if (entriesUsed >= totalEntriesAllowed) {
+                await EntryLog.create({
+                    poolId: session.user.poolId,
+                    memberId: member._id,
+                    status: "denied",
+                    reason: "Entry Limit Reached",
+                    operatorId: new mongoose.Types.ObjectId(session.user.id),
+                    rawPayload: qrPayload,
+                });
+                logger.scan("QR scan denied — entry limit", { memberId, entriesUsed, totalEntriesAllowed });
+                return NextResponse.json({ error: "Entry limit reached" }, { status: 400 });
+            }
         }
 
         // ── Pool Capacity Check ──────────────────────────────────────────────
@@ -276,7 +296,9 @@ export async function POST(req: Request) {
         }
 
         // ── Grant Entry ──────────────────────────────────────────────────────
-        member.entriesUsed = entriesUsed + 1;
+        if (!isEntertainment) {
+            (member as any).entriesUsed = ((member as any).entriesUsed || 0) + 1;
+        }
         member.lastScannedAt = new Date();
 
         // Rotate QR token after successful scan (prevents screenshot reuse)
@@ -285,11 +307,12 @@ export async function POST(req: Request) {
         await member.save();
 
         // Create PoolSession for automated checkout
+        const expiryFieldValueForSession = isEntertainment ? (member as any).planEndDate : (member as any).expiryDate;
         await PoolSession.create({
             poolId: session.user.poolId,
             memberId: member._id,
             numPersons,
-            expiryTime: member.expiryDate,
+            expiryTime: expiryFieldValueForSession,
             status: "active",
         });
 
@@ -320,7 +343,7 @@ export async function POST(req: Request) {
                     planName: (member.planId as any)?.name || "Active Plan",
                     planQuantity: member.planQuantity || 1,
                     voiceAlert: (member.planId as any)?.voiceAlert || false,
-                    expiryDate: member.expiryDate,
+                    expiryDate: expiryFieldValueForSession,
                 },
                 entry,
                 occupancy: {

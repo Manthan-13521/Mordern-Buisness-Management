@@ -11,6 +11,7 @@ interface SystemLog {
     description: string;
     member: string;
     memberId: string;
+    photoUrl?: string;
 }
 
 export default function LogsPage() {
@@ -23,7 +24,7 @@ export default function LogsPage() {
         fetch(`/api/logs?type=all`)
             .then((res) => res.json())
             .then((data) => {
-                setLogs(Array.isArray(data) ? data : []);
+                setLogs(Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []));
                 setLoading(false);
             })
             .catch((err) => {
@@ -44,7 +45,7 @@ export default function LogsPage() {
     );
 
     // Separating the tables
-    const registrationLogs = filteredLogs.filter(log => log.type === "Payment" || log.type === "Registration");
+    const registrationLogs = filteredLogs.filter(log => log.type === "Registration");
     const entryLogs = filteredLogs.filter(log => log.type === "Entry Scan");
 
     // Grouping entry logs by Local Date string
@@ -66,7 +67,7 @@ export default function LogsPage() {
                 <div>
                     <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">System Logs</h1>
                     <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
-                        View separated Registration and Entry history.
+                        View Registration and Entry history.
                     </p>
                 </div>
                 <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
@@ -98,7 +99,7 @@ export default function LogsPage() {
                 <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-xl dark:ring-white/10 bg-white dark:bg-gray-900 flex flex-col max-h-[700px]">
                     <div className="p-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex items-center gap-2">
                         <UserPlus className="h-5 w-5 text-indigo-500" />
-                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Registrations & Payments</h2>
+                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Registrations</h2>
                     </div>
                     <div className="overflow-y-auto flex-1">
                         <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-800">
@@ -120,14 +121,21 @@ export default function LogsPage() {
                                             <td className="whitespace-nowrap py-3 pl-4 pr-3 text-sm text-gray-500 dark:text-gray-400 sm:pl-6">
                                                 {new Date(log.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                                             </td>
-                                            <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-900 dark:text-white">
+                                            <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-900 dark:text-white flex items-center gap-3">
+                                                {log.photoUrl ? (
+                                                    <img src={log.photoUrl} alt="" className="h-8 w-8 rounded-full object-cover ring-1 ring-gray-200 dark:ring-gray-700" />
+                                                ) : (
+                                                    <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
+                                                        <span className="text-indigo-700 dark:text-indigo-300 font-bold text-xs">{log.member.charAt(0).toUpperCase()}</span>
+                                                    </div>
+                                                )}
                                                 <div className="flex flex-col">
                                                     <span className="font-medium">{log.member}</span>
                                                     <span className="text-xs text-gray-500">{log.memberId}</span>
                                                 </div>
                                             </td>
                                             <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400">
-                                                <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset mb-1 mr-2 ${log.type === "Payment" ? "bg-green-50 text-green-700 ring-green-600/20" : "bg-purple-50 text-purple-700 ring-purple-600/20"}`}>
+                                                <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset mb-1 mr-2 bg-purple-50 text-purple-700 ring-purple-600/20">
                                                     {log.type}
                                                 </span>
                                                 {log.description}
@@ -174,7 +182,14 @@ export default function LogsPage() {
                                                     <td className="whitespace-nowrap py-3 pl-4 pr-3 text-sm text-gray-500 dark:text-gray-400 sm:pl-6 shadow-sm">
                                                         {new Date(log.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </td>
-                                                    <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-900 dark:text-white">
+                                                    <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-900 dark:text-white flex items-center gap-3">
+                                                        {log.photoUrl ? (
+                                                            <img src={log.photoUrl} alt="" className="h-8 w-8 rounded-full object-cover ring-1 ring-gray-200 dark:ring-gray-700" />
+                                                        ) : (
+                                                            <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+                                                                <span className="text-blue-700 dark:text-blue-300 font-bold text-xs">{log.member.charAt(0).toUpperCase()}</span>
+                                                            </div>
+                                                        )}
                                                         <div className="flex flex-col">
                                                             <span className="font-medium">{log.member}</span>
                                                             <span className="text-xs text-gray-500">{log.memberId}</span>

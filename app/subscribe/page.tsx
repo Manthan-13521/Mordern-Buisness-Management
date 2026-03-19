@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Building2, Mail, MapPin, Loader2, CheckCircle2 } from "lucide-react";
+import { Building2, Mail, MapPin, Loader2, CheckCircle2, Phone } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +18,7 @@ function SubscribeFormContent() {
         poolName: "",
         city: "",
         adminEmail: "",
+        adminPhone: "",
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -170,6 +171,25 @@ function SubscribeFormContent() {
                                     onChange={(e) => setForm({ ...form, adminEmail: e.target.value })}
                                     className="pl-10 block w-full border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white py-2"
                                     placeholder="admin@bluewaves.com"
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label htmlFor="adminPhone" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Support Phone Number (Optional)
+                            </label>
+                            <div className="mt-1 relative rounded-md shadow-sm">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <Phone className="h-5 w-5 text-gray-400" />
+                                </div>
+                                <input
+                                    type="tel"
+                                    id="adminPhone"
+                                    value={form.adminPhone}
+                                    onChange={(e) => setForm({ ...form, adminPhone: e.target.value })}
+                                    className="pl-10 block w-full border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white py-2"
+                                    placeholder="9876543210"
                                 />
                             </div>
                         </div>

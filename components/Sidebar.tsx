@@ -15,6 +15,9 @@ import {
     ScanLine,
     Bell,
     UserX,
+    IndianRupee,
+    UserCog,
+    Trophy,
 } from "lucide-react";
 
 export function Sidebar() {
@@ -27,15 +30,18 @@ export function Sidebar() {
     const basePath = poolSlug ? `/${poolSlug}/admin` : "/admin";
 
     const links = [
-        { name: "Dashboard", href: `${basePath}/dashboard`, icon: LayoutDashboard, roles: ["admin", "operator"] },
-        { name: "QR Entry", href: `${basePath}/entry`, icon: ScanLine, roles: ["admin", "operator"] },
-        { name: "Members", href: `${basePath}/members`, icon: Users, roles: ["admin", "operator"] },
-        { name: "Expired Members", href: `${basePath}/expired-members`, icon: UserX, roles: ["admin", "operator"] },
-        { name: "Plans", href: `${basePath}/plans`, icon: Ticket, roles: ["admin"] },
-        { name: "Payments", href: `${basePath}/payments`, icon: CreditCard, roles: ["admin", "operator"] },
-        { name: "Logs", href: `${basePath}/logs`, icon: History, roles: ["admin", "operator"] },
-        { name: "Notifications", href: `${basePath}/notifications`, icon: Bell, roles: ["admin", "operator"] },
-        { name: "Settings", href: `${basePath}/settings`, icon: Settings, roles: ["admin"] },
+        { name: "Dashboard",        href: `${basePath}/dashboard`,        icon: LayoutDashboard, roles: ["admin", "operator"] },
+        { name: "QR Entry",         href: `${basePath}/entry`,             icon: ScanLine,         roles: ["admin", "operator"] },
+        { name: "Members",          href: `${basePath}/members`,           icon: Users,            roles: ["admin", "operator"] },
+        { name: "Expired Members",  href: `${basePath}/expired-members`,   icon: UserX,            roles: ["admin", "operator"] },
+        { name: "Plans",            href: `${basePath}/plans`,             icon: Ticket,           roles: ["admin"] },
+        { name: "Payments",         href: `${basePath}/payments`,          icon: CreditCard,       roles: ["admin", "operator"] },
+        { name: "Balance Payments", href: `${basePath}/balance-payments`,  icon: IndianRupee,      roles: ["admin"] },
+        { name: "Staff",            href: `${basePath}/staff`,             icon: UserCog,          roles: ["admin"] },
+        { name: "Competitions",     href: `${basePath}/competitions`,      icon: Trophy,           roles: ["admin"] },
+        { name: "Logs",             href: `${basePath}/logs`,              icon: History,          roles: ["admin", "operator"] },
+        { name: "Notifications",    href: `${basePath}/notifications`,     icon: Bell,             roles: ["admin", "operator"] },
+        { name: "Settings",         href: `${basePath}/settings`,          icon: Settings,         roles: ["admin"] },
     ];
 
     const filteredLinks = links.filter(link => role && link.roles.includes(role));
@@ -100,7 +106,7 @@ export function Sidebar() {
         <div className="flex h-full w-64 flex-col bg-gray-900 text-white">
             <div className="flex h-16 items-center justify-center border-b border-gray-800">
                 <h1 className="text-xl font-bold text-center leading-tight px-4">
-                    AquaSync <br /><span className="text-xs text-gray-400 font-normal">Management System</span>
+                    {session?.user?.poolName || "Pool Name"} <br /><span className="text-xs text-gray-400 font-normal">Management System</span>
                 </h1>
             </div>
             <nav className="flex-1 space-y-1 px-2 py-4">

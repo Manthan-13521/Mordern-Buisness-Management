@@ -22,6 +22,7 @@ export default function PublicRegistration() {
     const [step, setStep] = useState(1);
     const [plans, setPlans] = useState<any[]>([]);
     const [poolName, setPoolName] = useState("Pool");
+    const [adminPhone, setAdminPhone] = useState("");
     const [loading, setLoading] = useState(false);
 
     const [formData, setFormData] = useState({
@@ -52,6 +53,7 @@ export default function PublicRegistration() {
                     if (data.plans) {
                         setPlans(data.plans);
                         setPoolName(data.poolName || "Pool");
+                        if (data.adminPhone) setAdminPhone(data.adminPhone);
                     } else if (Array.isArray(data)) {
                         setPlans(data); // Fallback if API hasn't updated yet
                     }
@@ -215,6 +217,12 @@ export default function PublicRegistration() {
                     <div>
                         <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Join {poolName}</h2>
                         <p className="text-gray-500 dark:text-gray-400 mt-1 md:text-lg">Register online and get your digital pass instantly.</p>
+                        {adminPhone && (
+                            <div className="mt-3 flex items-center gap-2 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 px-3 py-1.5 rounded-lg w-max border border-indigo-100 dark:border-indigo-500/20 shadow-sm">
+                                <Phone className="w-4 h-4" />
+                                <span className="text-sm font-semibold tracking-wide">Support: {adminPhone}</span>
+                            </div>
+                        )}
                     </div>
 
                     <div className="flex items-center gap-2">

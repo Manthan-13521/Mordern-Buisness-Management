@@ -4,8 +4,10 @@ export interface IUser extends Document {
     name: string;
     email: string;
     passwordHash: string;
-    role: "admin" | "operator";
+    role: "superadmin" | "admin" | "operator";
     poolId?: string;
+    isActive: boolean;
+    lastLogin?: Date;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -16,10 +18,19 @@ const userSchema = new Schema<IUser>(
         email: { type: String, required: true, unique: true },
         passwordHash: { type: String, required: true },
         poolId: { type: String, index: true, sparse: true },
-        role: { type: String, enum: ["admin", "operator"], default: "operator" },
+        role: {
+            type: String,
+            enum: ["superadmin", "admin", "operator"],
+            default: "operator",
+        },
+        isActive: { type: Boolean, default: true },
+        lastLogin: { type: Date },
     },
     { timestamps: true }
 );
+
+userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ poolId: 1, role: 1 });
 
 export const User: Model<IUser> =
     mongoose.models.User || mongoose.model<IUser>("User", userSchema);

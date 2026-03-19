@@ -19,12 +19,22 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
 
         await connectDB();
         // Since id route parameter is the generated human string (e.g. M0002) or DB ID, fallback appropriately
-        const member = await Member.findOne({
+        const idQuery = {
             $or: [
                 { memberId: memberId },
                 { _id: memberId.length === 24 ? memberId : null }
             ]
-        }).populate("planId", "name");
+        };
+        
+        // Try regular member first
+        let member: any = await Member.findOne(idQuery).populate("planId", "name");
+        
+        // Fallback to entertainment member
+        if (!member) {
+            const { EntertainmentMember } = await import("@/models/EntertainmentMember");
+            member = await EntertainmentMember.findOne(idQuery).populate("planId", "name");
+        }
+
         if (!member) return NextResponse.json({ error: "Member not found" }, { status: 404 });
 
         // Create a new PDF Document
@@ -156,9 +166,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
         page.drawText(member.phone, { x: textStartX + 45, y: startY, size: 11, font: fontBold, color: rgb(0.1, 0.1, 0.1) });
         startY -= 18;
 
-        page.drawText(`Blood Grp:`, { x: textStartX, y: startY, size: 10, font: fontRegular, color: rgb(0.4, 0.4, 0.4) });
-        page.drawText((member as any).bloodGroup || "Not Provided", { x: textStartX + 55, y: startY, size: 11, font: fontBold, color: rgb(0.8, 0.1, 0.1) });
-        startY -= 18;
+        // Blood group removed from ID card (Phase 3)
 
         if (member.aadharCard) {
             page.drawText(`Aadhar:`, { x: textStartX, y: startY, size: 10, font: fontRegular, color: rgb(0.4, 0.4, 0.4) });
@@ -193,8 +201,8 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
         page.drawText(`Membership Plan: ${planName}`, { x: 20, y: 15, size: 11, font: fontBold, color: rgb(0.1, 0.4, 0.1) });
 
         const expiryStr = isHourly
-            ? new Date(member.expiryDate).toLocaleString()
-            : new Date(member.expiryDate).toLocaleDateString();
+            ? new Date(member.expiryDate ?? "").toLocaleString()
+            : new Date(member.expiryDate ?? "").toLocaleDateString();
         page.drawText(`Valid Till: ${expiryStr}`, { x: 280, y: 15, size: 10, font: fontBold, color: rgb(0.8, 0.2, 0.2) });
 
         // Embed and Draw QR Code (Right bottom)

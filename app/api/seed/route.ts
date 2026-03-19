@@ -1,84 +1,73 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import { User } from "@/models/User";
-import { Plan } from "@/models/Plan";
-import { PlatformAdmin } from "@/models/PlatformAdmin";
+import { Pool } from "@/models/Pool";
 import bcrypt from "bcryptjs";
 
-export async function GET(req: Request) {
-    // Caution: Protect this route or use it only for initial setup
-    try {
-        await connectDB();
+/**
+ * POST /api/seed
+ * Creates a demo pool + admin user for initial setup.
+ *
+ * ⚠️  Protected by SEED_SECRET env variable.
+ * Send: Authorization: Bearer <SEED_SECRET>
+ */
+export async function POST(req: NextRequest) {
+    const seedSecret = process.env.SEED_SECRET;
 
-        // We use updateOne with upsert to ensure we update existing users or create them if missing.
-        const passwordHashAdmin = await bcrypt.hash("admin789", 10);
-        const passwordHashOperator = await bcrypt.hash("operator234", 10);
-        const passwordHashSuperAdmin = await bcrypt.hash("superadmin456", 10);
-
-        await User.updateOne(
-            { role: "admin" },
-            {
-                $set: {
-                    name: "Admin",
-                    email: "admin@tspools.com",
-                    passwordHash: passwordHashAdmin,
-                }
-            },
-            { upsert: true }
+    if (!seedSecret) {
+        return NextResponse.json(
+            { error: "SEED_SECRET is not configured on the server.", code: "MISCONFIGURED" },
+            { status: 500 }
         );
-
-        await User.updateOne(
-            { role: "operator" },
-            {
-                $set: {
-                    name: "Operator",
-                    email: "operator@tspools.com",
-                    passwordHash: passwordHashOperator,
-                }
-            },
-            { upsert: true }
-        );
-
-        // Seed Super Admin
-        await PlatformAdmin.updateOne(
-            { email: "superadmin@tspools.com" },
-            {
-                $set: {
-                    passwordHash: passwordHashSuperAdmin,
-                    role: "superadmin",
-                }
-            },
-            { upsert: true }
-        );
-
-        // Check if plans exist to avoid duplicate key errors on name (if they have unique constraints)
-        const plansExist = await Plan.countDocuments();
-        if (plansExist === 0) {
-            await Plan.create([
-            {
-                name: "Monthly Pass",
-                durationDays: 30,
-                price: 1500,
-                features: ["Access all days", "1 Hour per day"],
-            },
-            {
-                name: "Quarterly Pass",
-                durationDays: 90,
-                price: 4000,
-                features: ["Access all days", "1.5 Hours per day", "Locker facility"],
-            },
-            {
-                name: "Daily Pass",
-                durationDays: 1,
-                price: 100,
-                features: ["Single entry", "1 Hour access"],
-            },
-        ]);
-        }
-
-        return NextResponse.json({ message: "Seed data created successfully" });
-    } catch (error) {
-        console.error(error);
-        return NextResponse.json({ error: "Seed failed" }, { status: 500 });
     }
+
+    const authHeader = req.headers.get("authorization") ?? "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+
+    if (!token || token !== seedSecret) {
+        return NextResponse.json(
+            { error: "Unauthorized", code: "FORBIDDEN" },
+            { status: 401 }
+        );
+    }
+
+    await connectDB();
+
+    // Idempotent — don't create duplicates
+    const existing = await Pool.findOne({ slug: "demo-pool" }).lean();
+    if (existing) {
+        return NextResponse.json({ message: "Seed data already exists." }, { status: 200 });
+    }
+
+    const poolId = "DEMO001";
+    await Pool.create({
+        poolId,
+        poolName: "Demo Pool",
+        slug: "demo-pool",
+        adminEmail: "admin@demo.com",
+        capacity: 100,
+        status: "ACTIVE",
+    });
+
+    const passwordHash = await bcrypt.hash("admin123", 10);
+    await User.create({
+        name: "Demo Admin",
+        email: "admin@demo.com",
+        passwordHash,
+        role: "admin",
+        poolId,
+        isActive: true,
+    });
+
+    return NextResponse.json({ message: "Seed data created successfully." }, { status: 201 });
+}
+
+/**
+ * GET /api/seed — always returns 401 (no accidental browser exposure)
+ */
+export async function GET() {
+    return NextResponse.json(
+        { error: "Unauthorized", code: "FORBIDDEN" },
+        { status: 401 }
+    );
 }

@@ -18,7 +18,11 @@ export function Topbar() {
                         <div className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center text-white">
                             <UserIcon className="h-5 w-5" />
                         </div>
-                        <span aria-hidden="true">{session?.user?.name || "User"} ({session?.user?.role})</span>
+                        <span aria-hidden="true">
+                            {session?.user?.role === "admin" || session?.user?.role === "superadmin"
+                                ? `${session?.user?.poolName || "Pool"} (Admin)`
+                                : `${session?.user?.name || "User"} (${session?.user?.role})`}
+                        </span>
                     </div>
 
                     <button

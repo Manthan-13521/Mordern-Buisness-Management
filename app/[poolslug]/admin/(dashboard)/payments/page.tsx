@@ -33,10 +33,11 @@ export default function PaymentsPage() {
 
     const fetchPayments = () => {
         setLoading(true);
-        fetch("/api/payments")
+        fetch("/api/payments?limit=200")
             .then((res) => res.json())
             .then((data) => {
-                setPayments(data);
+                const list = Array.isArray(data) ? data : (data.data ?? []);
+                setPayments(list);
                 setLoading(false);
             });
     };
@@ -45,8 +46,14 @@ export default function PaymentsPage() {
         fetchPayments();
 
         // Fetch members and plans for the new payment form
-        fetch("/api/members").then(r => r.json()).then(data => setMembers(data));
-        fetch("/api/plans").then(r => r.json()).then(data => setPlans(data));
+        fetch("/api/members?limit=500").then(r => r.json()).then(data => {
+            const list = Array.isArray(data) ? data : (data.data ?? []);
+            setMembers(list);
+        });
+        fetch("/api/plans?limit=100").then(r => r.json()).then(data => {
+            const list = Array.isArray(data) ? data : (data.data ?? []);
+            setPlans(list);
+        });
     }, []);
 
     const handleExport = () => {

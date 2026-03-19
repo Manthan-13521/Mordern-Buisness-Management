@@ -14,12 +14,14 @@ declare module "next-auth" {
             role: string;
             poolId?: string;
             poolSlug?: string;
+            poolName?: string;
         } & DefaultSession["user"];
     }
     interface User {
         role: string;
         poolId?: string;
         poolSlug?: string;
+        poolName?: string;
     }
 }
 
@@ -29,11 +31,20 @@ declare module "next-auth/jwt" {
         role: string;
         poolId?: string;
         poolSlug?: string;
+        poolName?: string;
     }
 }
 
 export const authOptions: NextAuthOptions = {
-    secret: process.env.NEXTAUTH_SECRET || "fallback-dev-secret-change-me",
+    secret: (() => {
+        const secret = process.env.NEXTAUTH_SECRET;
+        if (!secret) {
+            throw new Error(
+                "[Auth] NEXTAUTH_SECRET is not set. Generate one with: openssl rand -base64 64"
+            );
+        }
+        return secret;
+    })(),
     pages: {
         signIn: "/auth/signin" // general fallback, middleware dictates exact path
     },
@@ -70,10 +81,12 @@ export const authOptions: NextAuthOptions = {
                 }
 
                 let pool = null;
+                let poolNameStr = undefined;
 
                 if (credentials.poolSlug) {
                     pool = await Pool.findOne({ slug: credentials.poolSlug }).lean();
                     if (!pool) throw new Error("Pool not found");
+                    poolNameStr = (pool as any).poolName;
                 }
 
                 // Global login lookup OR specific pool lookup
@@ -85,7 +98,7 @@ export const authOptions: NextAuthOptions = {
                 };
 
                 if (pool) {
-                    userQuery.poolId = pool.poolId;
+                    userQuery.poolId = (pool as any).poolId;
                 }
 
                 const user = await UserModel.findOne(userQuery).lean() as IUser | null;
@@ -106,7 +119,10 @@ export const authOptions: NextAuthOptions = {
                     if (!pool) {
                        pool = await Pool.findOne({ poolId: user.poolId }).lean();
                     }
-                    if (pool) effectiveSlug = pool.slug;
+                    if (pool) {
+                        effectiveSlug = (pool as any).slug;
+                        poolNameStr = (pool as any).poolName;
+                    }
                 }
 
                 return {
@@ -116,6 +132,7 @@ export const authOptions: NextAuthOptions = {
                     role: user.role,
                     poolId: user.poolId,
                     poolSlug: effectiveSlug || credentials.poolSlug,
+                    poolName: poolNameStr,
                 };
             },
         }),
@@ -127,6 +144,7 @@ export const authOptions: NextAuthOptions = {
                 token.role = user.role;
                 if (user.poolId) token.poolId = user.poolId;
                 if (user.poolSlug) token.poolSlug = user.poolSlug;
+                if (user.poolName) token.poolName = user.poolName;
             }
             if (trigger === "update" && session) {
                  token = { ...token, ...session }
@@ -139,6 +157,7 @@ export const authOptions: NextAuthOptions = {
                 session.user.role = token.role;
                 if (token.poolId) session.user.poolId = token.poolId;
                 if (token.poolSlug) session.user.poolSlug = token.poolSlug;
+                if (token.poolName) session.user.poolName = token.poolName;
             }
             return session;
         },

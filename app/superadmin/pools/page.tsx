@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Search, Plus, ShieldCheck } from "lucide-react";
 import { ResetPasswordButton } from "./ResetPasswordButton";
 import { DeletePoolButton } from "./DeletePoolButton";
+import { PausePoolButton } from "./PausePoolButton";
 
 export const dynamic = "force-dynamic";
 
@@ -67,18 +68,22 @@ export default async function PlatformPoolsList() {
                                 </td>
                                 <td className="px-6 py-4 font-mono text-xs text-indigo-400">{pool.slug}</td>
                                 <td className="px-6 py-4">
-                                    <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs px-2.5 py-1 rounded-full font-medium">
-                                        {pool.status || "ACTIVE"}
+                                    <span className={`border text-xs px-2.5 py-1 rounded-full font-medium ${pool.subscriptionStatus === "paused" ? "bg-amber-500/10 text-amber-500 border-amber-500/20" : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"}`}>
+                                        {pool.subscriptionStatus === "paused" ? "PAUSED" : (pool.status || "ACTIVE")}
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 text-xs">
                                     <div className="text-gray-300"><b>Email:</b> {pool.adminEmail}</div>
+                                    {pool.adminPhone && (
+                                        <div className="text-gray-300 mt-0.5"><b>Phone:</b> {pool.adminPhone}</div>
+                                    )}
                                     <div className="text-gray-500 mt-1 flex items-center gap-1.5 font-medium italic">
                                         <ShieldCheck className="w-3.5 h-3.5 text-gray-400" />
                                         Secure (Not Viewable)
                                     </div>
                                     <div className="mt-3">
                                         <ResetPasswordButton poolId={pool.poolId} poolName={pool.poolName} />
+                                        <PausePoolButton poolId={pool.poolId} currentStatus={pool.subscriptionStatus} />
                                     </div>
                                 </td>
                                 <td className="px-6 py-4">

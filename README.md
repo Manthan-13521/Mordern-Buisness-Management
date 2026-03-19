@@ -23,19 +23,26 @@ A production-ready Next.js 15 application for managing swimming pool memberships
 ## Getting Started
 
 1. **Environment Variables**
-Create a `.env.local` file in the root based on the following template (this was already generated):
+Create a `.env.local` file in the root. Copy `.env.example` and fill in your values:
 ```env
-MONGODB_URI="mongodb://localhost:27017/ts_pools"
+MONGODB_URI="mongodb+srv://..."
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
-NEXTAUTH_SECRET="f9a3c1b504d7e8b2f9a3c1b504d7e8b2"
+NEXTAUTH_SECRET="<generate: openssl rand -base64 64>"
 NEXTAUTH_URL="http://localhost:3000"
-CRON_SECRET="cron123"
+SEED_SECRET="<generate: openssl rand -hex 32>"
+CRON_SECRET="<generate: openssl rand -hex 32>"
 
-# Twilio Optional settings
+# Optional: Twilio WhatsApp
 TWILIO_ACCOUNT_SID=""
 TWILIO_AUTH_TOKEN=""
 TWILIO_WHATSAPP_NUMBER="+14155238886"
+
+# Optional: Cloudinary (photo storage)
+CLOUDINARY_CLOUD_NAME=""
+CLOUDINARY_API_KEY=""
+CLOUDINARY_API_SECRET=""
 ```
+> ⚠️ **Never commit real secret values.** Generate unique secrets before deploying.
 
 2. **Install Dependencies**
 ```bash
@@ -48,16 +55,14 @@ npm run dev
 ```
 
 4. **Seed the Database (First-time run)**
-Open your browser or terminal and hit the seed endpoint to create default roles and plans:
+The seed endpoint is protected. Pass your `SEED_SECRET` value:
 ```bash
-curl http://localhost:3000/api/seed
+curl -H "Authorization: Bearer <YOUR_SEED_SECRET>" http://localhost:3000/api/seed
 ```
-*This will create the following logins:*
-- **Admin**: `admin@tspools.com` | Password: `admin`
-- **Operator**: `operator@tspools.com` | Password: `operator`
+*Default credentials are set by environment variables — see `.env.example`.*
 
 5. **Login and Explore**
-Navigate to `http://localhost:3000/admin/login` and sign in.
+Navigate to `http://localhost:3000/<pool-slug>/admin/login` and sign in.
 
 ## Project Architecture Highlight
 - `/app/admin/(dashboard)/*`: Protected admin layout with sidebar and NextAuth session validation via middleware.

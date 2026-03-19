@@ -2,14 +2,20 @@ import mongoose, { Document, Model, Schema } from "mongoose";
 
 export interface IEntryLog extends Document {
     memberId: mongoose.Types.ObjectId;
-    poolId?: string;
+    poolId: string;
+    memberCollection: "members" | "entertainment_members";
+    entryType: "qr" | "face";
     scanTime: Date;
+    entryTime?: Date;
     status: "granted" | "denied";
+    isValid: boolean;
     reason?: string;
+    failReason?: "expired" | "not_found" | "face_mismatch";
     operatorId?: mongoose.Types.ObjectId;
-    qrToken?: string; // token used at time of scan (for audit)
-    rawPayload?: string; // the actual scanned string before verification
-    numPersons?: number; // the quantity/group size used at scan time
+    deviceId?: string;
+    qrToken?: string;
+    rawPayload?: string;
+    numPersons: number;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -17,11 +23,24 @@ export interface IEntryLog extends Document {
 const entryLogSchema = new Schema<IEntryLog>(
     {
         memberId: { type: Schema.Types.ObjectId, ref: "Member", index: true },
-        poolId: { type: String, index: true, sparse: true },
-        scanTime: { type: Date, default: Date.now, index: true },
+        poolId: { type: String, required: true, index: true },
+        memberCollection: {
+            type: String,
+            enum: ["members", "entertainment_members"],
+            default: "members",
+        },
+        entryType: { type: String, enum: ["qr", "face"], default: "qr" },
+        scanTime: { type: Date, default: Date.now },
+        entryTime: { type: Date },
         status: { type: String, enum: ["granted", "denied"], required: true },
+        isValid: { type: Boolean, default: false },
         reason: { type: String },
+        failReason: {
+            type: String,
+            enum: ["expired", "not_found", "face_mismatch"],
+        },
         operatorId: { type: Schema.Types.ObjectId, ref: "User" },
+        deviceId: { type: String },
         qrToken: { type: String },
         rawPayload: { type: String },
         numPersons: { type: Number, default: 1 },
@@ -29,8 +48,12 @@ const entryLogSchema = new Schema<IEntryLog>(
     { timestamps: true }
 );
 
-// Compound index for fast recent-scan queries (used in cooldown check)
-entryLogSchema.index({ memberId: 1, scanTime: -1 });
+// Fix #10 — compound indexes for fast entry log queries
+entryLogSchema.index({ poolId: 1, memberId: 1, createdAt: -1 });
+entryLogSchema.index({ poolId: 1, createdAt: -1 });
+entryLogSchema.index({ poolId: 1, scanTime: 1 });
+entryLogSchema.index({ memberId: 1, scanTime: -1 }); // kept for cooldown checks
 
 export const EntryLog: Model<IEntryLog> =
-    mongoose.models.EntryLog || mongoose.model<IEntryLog>("EntryLog", entryLogSchema);
+    mongoose.models.EntryLog ||
+    mongoose.model<IEntryLog>("EntryLog", entryLogSchema);

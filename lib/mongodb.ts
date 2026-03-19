@@ -1,41 +1,52 @@
 import mongoose from "mongoose";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let cached = (global as any).mongoose;
-
-if (!cached) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    cached = (global as any).mongoose = { conn: null, promise: null };
+declare global {
+    // Preserve connection across hot reloads in Next.js dev mode
+    // eslint-disable-next-line no-var
+    var _mongoCache: { conn: typeof mongoose | null; promise: Promise<typeof mongoose> | null };
 }
 
-async function connectDB() {
-    const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URI = process.env.MONGODB_URI;
 
-    if (!MONGODB_URI) {
-        // During Vercel build, env vars may not be available.
-        // Return null gracefully so static page generation doesn't crash.
-        console.warn("[connectDB] MONGODB_URI not set — skipping DB connection (build phase?)");
-        return null;
-    }
+if (!MONGODB_URI) {
+    throw new Error(
+        "[MongoDB] MONGODB_URI is not set. Add it to your .env.local file."
+    );
+}
 
+let cached = global._mongoCache;
+
+if (!cached) {
+    cached = global._mongoCache = { conn: null, promise: null };
+}
+
+async function connectDB(): Promise<typeof mongoose> {
     if (cached.conn) {
         return cached.conn;
     }
 
     if (!cached.promise) {
-        const opts = {
+        const opts: mongoose.ConnectOptions = {
             bufferCommands: false,
+            connectTimeoutMS: 10000,
+            serverSelectionTimeoutMS: 5000,
         };
 
-        cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-            return mongoose;
-        });
+        cached.promise = mongoose
+            .connect(MONGODB_URI!, opts)
+            .then((mongooseInstance) => mongooseInstance)
+            .catch((err) => {
+                // Reset so next call retries
+                cached.promise = null;
+                throw err;
+            });
     }
+
     try {
         cached.conn = await cached.promise;
-    } catch (e) {
+    } catch (err) {
         cached.promise = null;
-        throw e;
+        throw err;
     }
 
     return cached.conn;

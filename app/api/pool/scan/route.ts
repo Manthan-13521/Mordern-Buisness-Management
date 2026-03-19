@@ -63,7 +63,7 @@ export async function POST(req: Request) {
             // Priority Fallback to DB if cache misses
             let member = await Member.findOne({ qrToken: scanToken, poolId }).lean();
             if (!member) {
-                member = await StudentMember.findOne({ qrToken: scanToken, poolId }).lean();
+                member = (await StudentMember.findOne({ qrToken: scanToken, poolId }).lean()) as any;
             }
 
             if (!member) {
@@ -77,7 +77,7 @@ export async function POST(req: Request) {
             }
 
             // Expiry Validation
-            if (new Date() > new Date(member.expiryDate) || member.status !== "active") {
+            if (new Date() > new Date(member.expiryDate ?? 0) || member.status !== "active") {
                 return NextResponse.json({ success: false, reason: "MEMBERSHIP_EXPIRED" }, { status: 403 });
             }
 

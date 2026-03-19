@@ -14,6 +14,10 @@ interface Plan {
     whatsAppAlert?: boolean;
     allowQuantity?: boolean;
     voiceAlert?: boolean;
+    hasEntertainment?: boolean;
+    hasFaceScan?: boolean;
+    quickDelete?: boolean;
+    hasTokenPrint?: boolean;
 }
 
 export default function PlansPage() {
@@ -34,14 +38,20 @@ export default function PlansPage() {
         whatsAppAlert: false,
         allowQuantity: false,
         voiceAlert: false,
+        hasEntertainment: false,
+        hasFaceScan: false,
+        quickDelete: false,
+        hasTokenPrint: false,
     });
 
     const fetchPlans = () => {
         setLoading(true);
-        fetch("/api/plans")
+        fetch("/api/plans?limit=100")
             .then((res) => res.json())
             .then((data) => {
-                setPlans(data);
+                // Handle both plain array (legacy) and paginated {data:[]} response
+                const planList = Array.isArray(data) ? data : (data.data ?? []);
+                setPlans(planList);
                 setLoading(false);
             })
             .catch((err) => {
@@ -65,6 +75,10 @@ export default function PlansPage() {
             whatsAppAlert: formData.whatsAppAlert,
             allowQuantity: formData.allowQuantity,
             voiceAlert: formData.voiceAlert,
+            hasEntertainment: formData.hasEntertainment,
+            hasFaceScan: formData.hasFaceScan,
+            quickDelete: formData.quickDelete,
+            hasTokenPrint: formData.hasTokenPrint,
             ...(formData.durationType === "days" ? { durationDays: formData.durationValue } : 
                formData.durationType === "hours" ? { durationHours: formData.durationValue } :
                formData.durationType === "minutes" ? { durationMinutes: formData.durationValue } :
@@ -84,7 +98,7 @@ export default function PlansPage() {
             if (res.ok) {
                 setIsModalOpen(false);
                 setEditPlanId(null);
-                setFormData({ name: "", durationValue: 30, durationType: "days", price: 0, features: "", whatsAppAlert: false, allowQuantity: false, voiceAlert: false });
+                setFormData({ name: "", durationValue: 30, durationType: "days", price: 0, features: "", whatsAppAlert: false, allowQuantity: false, voiceAlert: false, hasEntertainment: false, hasFaceScan: false, quickDelete: false, hasTokenPrint: false });
                 fetchPlans();
             } else {
                 alert("Failed to create plan");
@@ -108,7 +122,7 @@ export default function PlansPage() {
                         <button
                             onClick={() => {
                                 setEditPlanId(null);
-                                setFormData({ name: "", durationValue: 30, durationType: "days", price: 0, features: "", whatsAppAlert: false, allowQuantity: false, voiceAlert: false });
+                                setFormData({ name: "", durationValue: 30, durationType: "days", price: 0, features: "", whatsAppAlert: false, allowQuantity: false, voiceAlert: false, hasEntertainment: false, hasFaceScan: false, quickDelete: false, hasTokenPrint: false });
                                 setIsModalOpen(true);
                             }}
                             type="button"
@@ -155,8 +169,14 @@ export default function PlansPage() {
                                         </li>
                                     ))}
                                 </ul>
-                                {plan.whatsAppAlert && <p className="mt-4 text-xs text-indigo-600 dark:text-indigo-400 font-semibold">• WhatsApp Alerts Enabled</p>}
-                                {plan.allowQuantity && <p className="mt-1 text-xs text-green-600 dark:text-green-400 font-semibold">• Configurable Quantity Allowed</p>}
+                                <div className="mt-4 flex flex-wrap gap-1.5">
+                                    {plan.whatsAppAlert && <span className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-400">💬 WhatsApp</span>}
+                                    {plan.allowQuantity && <span className="inline-flex items-center rounded-full bg-green-50 dark:bg-green-900/30 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">🔢 Multi-Qty</span>}
+                                    {plan.hasEntertainment && <span className="inline-flex items-center rounded-full bg-purple-50 dark:bg-purple-900/30 px-2 py-0.5 text-xs font-medium text-purple-700 dark:text-purple-400">🎭 Entertainment</span>}
+                                    {plan.hasFaceScan && <span className="inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-400">📷 Face Scan</span>}
+                                    {plan.quickDelete && <span className="inline-flex items-center rounded-full bg-orange-50 dark:bg-orange-900/30 px-2 py-0.5 text-xs font-medium text-orange-700 dark:text-orange-400">⚡ Quick Delete</span>}
+                                    {plan.hasTokenPrint && <span className="inline-flex items-center rounded-full bg-teal-50 dark:bg-teal-900/30 px-2 py-0.5 text-xs font-medium text-teal-700 dark:text-teal-400">🖨️ Token Print</span>}
+                                </div>
                             </div>
                             {isAdmin && (
                                 <div className="mt-6 flex gap-2">
@@ -182,6 +202,10 @@ export default function PlansPage() {
                                                 whatsAppAlert: plan.whatsAppAlert || false,
                                                 allowQuantity: plan.allowQuantity || false,
                                                 voiceAlert: plan.voiceAlert || false,
+                                                hasEntertainment: plan.hasEntertainment || false,
+                                                hasFaceScan: plan.hasFaceScan || false,
+                                                quickDelete: plan.quickDelete || false,
+                                                hasTokenPrint: plan.hasTokenPrint || false,
                                             });
                                             setIsModalOpen(true);
                                         }}
@@ -265,10 +289,33 @@ export default function PlansPage() {
                                     <span>Voice Alert upon expiration (Announcement via System Speaker)</span>
                                 </label>
                             </div>
+                            {/* ── Phase 2 Advanced Features ── */}
+                            <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+                                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Advanced Features</p>
+                                <div className="space-y-2.5">
+                                    <label className="flex items-start gap-2 text-sm dark:text-gray-300 cursor-pointer" title="Members under this plan use the MS-series ID (MS0001…)">
+                                        <input type="checkbox" checked={formData.hasEntertainment} onChange={e => setFormData({ ...formData, hasEntertainment: e.target.checked })} className="mt-0.5 rounded border-gray-300 text-purple-600 dark:border-gray-600 dark:bg-gray-800" />
+                                        <span>🎭 <strong>Entertainment Member</strong> — uses MS-series ID</span>
+                                    </label>
+                                    <label className="flex items-start gap-2 text-sm dark:text-gray-300 cursor-pointer" title="Entry gate requires face scan for this plan">
+                                        <input type="checkbox" checked={formData.hasFaceScan} onChange={e => setFormData({ ...formData, hasFaceScan: e.target.checked })} className="mt-0.5 rounded border-gray-300 text-blue-600 dark:border-gray-600 dark:bg-gray-800" />
+                                        <span>📷 <strong>Face Scan Entry</strong> — biometric required at gate</span>
+                                    </label>
+                                    <label className="flex items-start gap-2 text-sm dark:text-gray-300 cursor-pointer" title="Auto-purge 1 day after expiry (default is 15 days)">
+                                        <input type="checkbox" checked={formData.quickDelete} onChange={e => setFormData({ ...formData, quickDelete: e.target.checked })} className="mt-0.5 rounded border-gray-300 text-orange-600 dark:border-gray-600 dark:bg-gray-800" />
+                                        <span>⚡ <strong>Quick Delete</strong> — auto-purge 1 day after expiry</span>
+                                    </label>
+                                    <label className="flex items-start gap-2 text-sm dark:text-gray-300 cursor-pointer" title="Print 80mm thermal receipt on registration">
+                                        <input type="checkbox" checked={formData.hasTokenPrint} onChange={e => setFormData({ ...formData, hasTokenPrint: e.target.checked })} className="mt-0.5 rounded border-gray-300 text-teal-600 dark:border-gray-600 dark:bg-gray-800" />
+                                        <span>🖨️ <strong>Token Print</strong> — auto-print 80mm receipt on registration</span>
+                                    </label>
+                                </div>
+                            </div>
                             <div className="flex justify-end space-x-3 mt-6">
                                 <button type="button" onClick={() => {
                                     setIsModalOpen(false);
                                     setEditPlanId(null);
+                                    setFormData({ name: "", durationValue: 30, durationType: "days", price: 0, features: "", whatsAppAlert: false, allowQuantity: false, voiceAlert: false, hasEntertainment: false, hasFaceScan: false, quickDelete: false, hasTokenPrint: false });
                                 }} className="px-4 py-2 text-sm rounded-md border dark:border-gray-700 dark:text-gray-300">Cancel</button>
                                 <button type="submit" className="px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-500">{editPlanId ? "Update Plan" : "Save Plan"}</button>
                             </div>

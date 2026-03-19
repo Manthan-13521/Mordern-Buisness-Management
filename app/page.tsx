@@ -13,11 +13,6 @@ const features = [
     icon: Activity,
   },
   {
-    name: "CCTV & Water Quality",
-    description: "Integrate existing CCTVs and log daily chlorine and pH metrics directly to the dashboard.",
-    icon: Cctv,
-  },
-  {
     name: "Analytics",
     description: "View daily, weekly, and monthly trends on registrations, check-ins, and renewals.",
     icon: BarChart4,
@@ -58,7 +53,6 @@ const tiers = [
     features: [
       "Multiple Pool Locations",
       "Custom Branding & Domain",
-      "CCTV Livestream Integration",
       "Dedicated Account Manager",
     ],
     featured: false,

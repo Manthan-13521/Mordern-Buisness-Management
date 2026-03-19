@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { ArrowRight, UserPlus, ShieldCheck, Clock } from "lucide-react";
 
-export default function PoolLanding({ params }: { params: { poolslug: string } }) {
-  const poolslug = params.poolslug;
+export default async function PoolLanding({ params }: { params: Promise<{ poolslug: string }> }) {
+  const pSlug = await params;
+  const poolslug = pSlug.poolslug;
   return (
     <div className="bg-white dark:bg-gray-950">
 

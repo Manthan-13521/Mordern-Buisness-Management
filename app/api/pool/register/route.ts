@@ -18,7 +18,7 @@ async function getNextPoolId() {
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { poolName, city, adminEmail, plan } = body;
+        const { poolName, city, adminEmail, adminPhone, plan } = body;
 
         if (!poolName || !city || !adminEmail) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -52,6 +52,7 @@ export async function POST(req: Request) {
             poolName,
             slug,
             adminEmail,
+            adminPhone,
             location: city,
             status: "ACTIVE",
             capacity: plan === "enterprise" ? 500 : (plan === "pro" ? 200 : 100)
