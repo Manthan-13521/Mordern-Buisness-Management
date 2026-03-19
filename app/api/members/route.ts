@@ -10,6 +10,8 @@ import QRCode from "qrcode";
 import crypto from "crypto";
 import { uploadBase64Image, uploadBuffer } from "@/lib/local-upload";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Atomic member ID generator — uses MongoDB $inc on Plan.memberCounter
  * to prevent race conditions that caused M0001 collisions.

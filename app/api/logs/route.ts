@@ -7,6 +7,8 @@ import { EntertainmentMember } from "@/models/EntertainmentMember";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/logs
  * Unified paginated activity log combining entry scans, payments, and registrations.
