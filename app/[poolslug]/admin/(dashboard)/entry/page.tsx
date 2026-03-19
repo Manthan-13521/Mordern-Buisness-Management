@@ -138,8 +138,9 @@ export default function EntryPage() {
         return `${diffMins} mins remaining`;
     };
 
-    const handleScan = async (text: string) => {
-        if (!text || loading || !isScanning) return;
+    const handleScan = async (text: string, isManual = false) => {
+        if (!text || loading) return;
+        if (!isManual && !isScanning) return;
 
         const now = Date.now();
         if (now - lastScanTime.current < COOLDOWN_MS) return;
@@ -391,7 +392,7 @@ export default function EntryPage() {
                                 onKeyDown={e => {
                                     if(e.key === "Enter") {
                                         handleUidLookup();
-                                        handleScan(uid.trim());
+                                        handleScan(uid.trim(), true);
                                     }
                                 }}
                                 placeholder="M0001 or MS0001"
@@ -401,7 +402,7 @@ export default function EntryPage() {
                                 className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                                 {lookupLoading ? "..." : "Search"}
                             </button>
-                            <button onClick={() => { handleUidLookup(); handleScan(uid.trim()); }} disabled={lookupLoading || !uid.trim() || isScanning}
+                            <button onClick={() => { handleUidLookup(); handleScan(uid.trim(), true); }} disabled={lookupLoading || !uid.trim() || isScanning}
                                 className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                                 {lookupLoading ? "..." : "Record Entry"}
                             </button>

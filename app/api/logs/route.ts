@@ -48,7 +48,12 @@ export async function GET(req: Request) {
                       .limit(200)
                       .lean()
                 : Promise.resolve([]),
-            Promise.resolve([]),
+            (filterType === "all" || filterType === "registration")
+                ? EntertainmentMember.find({ ...baseMatch, isDeleted: false })
+                      .sort({ createdAt: -1 })
+                      .limit(200)
+                      .lean()
+                : Promise.resolve([]),
         ]);
 
         const registrations = [...(regularRegistrations as any[]), ...(entertainmentRegistrations as any[])]
