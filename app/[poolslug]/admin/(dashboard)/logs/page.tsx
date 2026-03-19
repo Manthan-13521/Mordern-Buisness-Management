@@ -21,7 +21,7 @@ export default function LogsPage() {
 
     useEffect(() => {
         setLoading(true);
-        fetch(`/api/logs?type=all`)
+        fetch(`/api/logs?type=all&t=${Date.now()}`)
             .then((res) => res.json())
             .then((data) => {
                 setLogs(Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []));

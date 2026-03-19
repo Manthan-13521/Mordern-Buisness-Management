@@ -33,7 +33,7 @@ export default function PaymentsPage() {
 
     const fetchPayments = () => {
         setLoading(true);
-        fetch("/api/payments?limit=200")
+        fetch(`/api/payments?limit=200&t=${Date.now()}`)
             .then((res) => res.json())
             .then((data) => {
                 const list = Array.isArray(data) ? data : (data.data ?? []);
@@ -46,11 +46,11 @@ export default function PaymentsPage() {
         fetchPayments();
 
         // Fetch members and plans for the new payment form
-        fetch("/api/members?limit=500").then(r => r.json()).then(data => {
+        fetch(`/api/members?limit=500&t=${Date.now()}`).then(r => r.json()).then(data => {
             const list = Array.isArray(data) ? data : (data.data ?? []);
             setMembers(list);
         });
-        fetch("/api/plans?limit=100").then(r => r.json()).then(data => {
+        fetch(`/api/plans?limit=100&t=${Date.now()}`).then(r => r.json()).then(data => {
             const list = Array.isArray(data) ? data : (data.data ?? []);
             setPlans(list);
         });

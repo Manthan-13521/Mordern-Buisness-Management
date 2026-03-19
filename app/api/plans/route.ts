@@ -5,6 +5,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import mongoose from "mongoose";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/plans
  * Supports: ?page=1&limit=20&slug=<poolSlug> (public) or session-based

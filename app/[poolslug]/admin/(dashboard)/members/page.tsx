@@ -118,7 +118,7 @@ export default function MembersPage() {
             limit: String(LIMIT),
             ...(searchDebounced ? { search: searchDebounced } : {}),
         });
-        fetch(`/api/members?${params}`)
+        fetch(`/api/members?${params}&t=${Date.now()}`)
             .then((res) => res.json())
             .then((data) => {
                 // API returns { data: [], total, page, limit }
