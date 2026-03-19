@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import connectDB from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
@@ -12,31 +13,44 @@ import { uploadBase64Image, uploadBuffer } from "@/lib/local-upload";
 
 export const dynamic = "force-dynamic";
 
-/**
- * Atomic member ID generator — uses MongoDB $inc on Plan.memberCounter
- * to prevent race conditions that caused M0001 collisions.
- */
 async function getNextMemberId(
-    planId: string,
+    poolId: string,
     isEntertainment: boolean
 ): Promise<string> {
-    const { Plan } = await import("@/models/Plan");
+    const { Pool } = await import("@/models/Pool");
 
     const field = isEntertainment
         ? "entertainmentMemberCounter"
         : "memberCounter";
 
-    const updatedPlan = await Plan.findByIdAndUpdate(
-        planId,
+    let updatedPool = await Pool.findOneAndUpdate(
+        { poolId },
         { $inc: { [field]: 1 } },
         { new: true, upsert: false }
     );
 
-    if (!updatedPlan) throw new Error("Plan not found");
+    if (!updatedPool) throw new Error("Pool not found");
 
-    const counter = isEntertainment
-        ? updatedPlan.entertainmentMemberCounter
-        : updatedPlan.memberCounter;
+    let counter = isEntertainment
+        ? (updatedPool as any).entertainmentMemberCounter
+        : (updatedPool as any).memberCounter;
+
+    // Self-healing: If counter is 1, it might be the first time we use Pool counters.
+    // Ensure we don't collide with members created via the old Plan-level counters.
+    if (counter === 1) {
+        const Model = isEntertainment ? mongoose.models.EntertainmentMember || EntertainmentMember : mongoose.models.Member || Member;
+        const allMembers = await Model.find({ poolId }).select("memberId").lean();
+        let maxNum = 0;
+        for (const m of allMembers as any[]) {
+            const numStr = (m.memberId || "").replace(/[^0-9]/g, "");
+            const num = parseInt(numStr, 10);
+            if (!isNaN(num) && num > maxNum) maxNum = num;
+        }
+        if (maxNum > 0) {
+            counter = maxNum + 1;
+            await Pool.findOneAndUpdate({ poolId }, { $set: { [field]: counter } });
+        }
+    }
 
     const prefix = isEntertainment ? "MS" : "M";
     return `${prefix}${counter.toString().padStart(4, "0")}`;
@@ -166,7 +180,7 @@ export async function POST(req: Request) {
 
         // Atomic ID generation via $inc (no race conditions)
         const isEntertainment = plan.hasEntertainment ?? false;
-        const memberId = await getNextMemberId(planId, isEntertainment);
+        const memberId = await getNextMemberId(poolId, isEntertainment);
 
         // Upload photo to Cloudinary (skip if not configured)
         let photoUrl = "";
@@ -309,10 +323,10 @@ export async function POST(req: Request) {
             : await Member.findById(newMember._id).populate("planId", "name hasTokenPrint quickDelete price");
 
         return NextResponse.json(savedMember, { status: 201 });
-    } catch (error) {
+    } catch (error: any) {
         console.error("[POST /api/members]", error);
         return NextResponse.json(
-            { error: "Server error creating member" },
+            { error: error?.message || "Server error creating member" },
             { status: 500 }
         );
     }

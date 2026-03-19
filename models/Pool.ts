@@ -24,6 +24,9 @@ export interface IPool extends Document {
     maxStaff: number;
     featuresEnabled: string[]; // e.g. ["face_scan", "whatsapp", "entertainment"]
     billingEmail?: string;
+    // Pool isolated ID counters
+    memberCounter: number;
+    entertainmentMemberCounter: number;
     // ──────────────────────────────────────────────────────────────────
     createdAt: Date;
     updatedAt: Date;
@@ -65,6 +68,9 @@ const poolSchema = new Schema<IPool>(
         maxStaff:          { type: Number, default: 5 },
         featuresEnabled:   { type: [String], default: [] },
         billingEmail:      { type: String },
+        // Pool isolated ID counters
+        memberCounter:     { type: Number, default: 0 },
+        entertainmentMemberCounter: { type: Number, default: 0 },
     },
     { timestamps: true }
 );
