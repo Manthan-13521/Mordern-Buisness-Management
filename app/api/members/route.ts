@@ -308,7 +308,9 @@ export async function POST(req: Request) {
                     memberCollection: isEntertainment ? "entertainment_members" : "members",
                     amount: paidAmount,
                     paymentMethod: modeMap[body.paymentMode] || "cash",
-                    recordedBy: session.user.id,
+                    recordedBy: (typeof session.user.id === "string" && session.user.id.length === 24) 
+                        ? new mongoose.Types.ObjectId(session.user.id) 
+                        : undefined,
                     status: "success",
                     notes: `Auto-recorded on member registration`,
                 });

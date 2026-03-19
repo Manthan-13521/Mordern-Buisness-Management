@@ -322,7 +322,9 @@ export async function POST(req: Request) {
             poolId: session.user.poolId,
             memberId: member._id,
             status: "granted",
-            operatorId: new mongoose.Types.ObjectId(session.user.id),
+            operatorId: (typeof session.user.id === "string" && session.user.id.length === 24) 
+                ? new mongoose.Types.ObjectId(session.user.id) 
+                : undefined,
             qrToken: oldToken,
             rawPayload: qrPayload,
             numPersons,
