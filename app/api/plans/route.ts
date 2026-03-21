@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Plan } from "@/models/Plan";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import mongoose from "mongoose";
+import { PlanSchema } from "@/lib/validators";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: Request) {
     try {
-        await connectDB();
+        await dbConnect();
         const { searchParams } = new URL(req.url);
         const slug = searchParams.get("slug");
 
@@ -71,25 +72,20 @@ export async function POST(req: Request) {
         }
 
         const body = await req.json();
+        const result = PlanSchema.safeParse(body);
+        if (!result.success) {
+            return NextResponse.json({ error: result.error.flatten() }, { status: 400 });
+        }
+        const data = result.data;
         const {
             name, price,
             durationDays, durationHours, durationMinutes, durationSeconds,
             features, whatsAppAlert, allowQuantity, voiceAlert, description,
-            // Phase 2 checkboxes
             hasEntertainment, hasFaceScan, quickDelete, hasTokenPrint,
             poolId: bodyPoolId,
-        } = body;
+        } = { ...body, ...data }; // Merge specific body items that are not in schema
 
-        if (!name || price === undefined || (
-            durationDays === undefined &&
-            durationHours === undefined &&
-            durationMinutes === undefined &&
-            durationSeconds === undefined
-        )) {
-            return NextResponse.json({ error: "Missing required: name, price, and at least one duration field" }, { status: 400 });
-        }
-
-        await connectDB();
+        await dbConnect();
 
         const poolId = session.user.role === "superadmin" ? bodyPoolId : session.user.poolId;
         if (!poolId) return NextResponse.json({ error: "Pool ID required" }, { status: 400 });

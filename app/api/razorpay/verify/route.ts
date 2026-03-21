@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { Payment } from "@/models/Payment";
 import { Plan } from "@/models/Plan";
@@ -7,7 +7,9 @@ import crypto from "crypto";
 import QRCode from "qrcode";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { logger } from "@/lib/logger";
-import { uploadBase64Image, uploadBuffer } from "@/lib/local-upload";
+import { uploadBuffer } from "@/lib/local-upload";
+import { savePhoto } from "@/lib/savePhoto";
+import { signQRToken } from "@/lib/qrSigner";
 
 export async function POST(req: Request) {
     try {
@@ -38,7 +40,7 @@ export async function POST(req: Request) {
             }
         }
 
-        await connectDB();
+        await dbConnect();
 
         // Idempotency: prevent duplicate member/payment if same order verified twice
         if (razorpay_order_id && !isMock) {
@@ -89,19 +91,16 @@ export async function POST(req: Request) {
             expiryDate.setDate(expiryDate.getDate() + (plan.durationDays || 30));
         }
 
-        // Upload photo to Cloudinary
+        // Upload photo locally
         let photoUrl = "";
         if (memberData.photoBase64) {
-            photoUrl = await uploadBase64Image(
-                memberData.photoBase64,
-                "swimming-pool/photos",
-                `${plan.poolId}_${generatedMemberId}_photo`
-            );
+            photoUrl = await savePhoto(memberData.photoBase64);
         }
 
-        // Generate QR and upload to Cloudinary
+        // Generate Secure JWT QR and upload to Cloudinary (or local depending on uploadBuffer implementation)
         const qrToken = crypto.randomUUID();
-        const qrPngBuffer = await QRCode.toBuffer(`${generatedMemberId}:${qrToken}`, { width: 300 });
+        const qrPayloadObject = await signQRToken(generatedMemberId);
+        const qrPngBuffer = await QRCode.toBuffer(qrPayloadObject, { width: 300 });
         const qrCodeUrl = await uploadBuffer(
             qrPngBuffer,
             "swimming-pool/qrcodes",

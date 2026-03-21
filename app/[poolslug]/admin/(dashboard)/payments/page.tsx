@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Download, Plus } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Download, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 
 
 interface Payment {
@@ -20,6 +20,10 @@ export default function PaymentsPage() {
     const [payments, setPayments] = useState<Payment[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [page, setPage] = useState(1);
+    const [total, setTotal] = useState(0);
+
+    const LIMIT = 10;
     const [formData, setFormData] = useState({
         memberId: "",
         planId: "",
@@ -31,16 +35,17 @@ export default function PaymentsPage() {
     const [members, setMembers] = useState<{ _id: string; name: string; memberId: string }[]>([]);
     const [plans, setPlans] = useState<{ _id: string; name: string; price: number }[]>([]);
 
-    const fetchPayments = () => {
+    const fetchPayments = useCallback(() => {
         setLoading(true);
-        fetch(`/api/payments?limit=200&t=${Date.now()}`)
+        fetch(`/api/payments?page=${page}&limit=${LIMIT}&t=${Date.now()}`)
             .then((res) => res.json())
             .then((data) => {
                 const list = Array.isArray(data) ? data : (data.data ?? []);
                 setPayments(list);
+                setTotal(data.total ?? 0);
                 setLoading(false);
             });
-    };
+    }, [page]);
 
     useEffect(() => {
         fetchPayments();
@@ -54,7 +59,9 @@ export default function PaymentsPage() {
             const list = Array.isArray(data) ? data : (data.data ?? []);
             setPlans(list);
         });
-    }, []);
+    }, [fetchPayments]);
+
+    const totalPages = Math.max(1, Math.ceil(total / LIMIT));
 
     const handleExport = () => {
         window.location.href = "/api/payments/export";
@@ -179,6 +186,25 @@ export default function PaymentsPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Pagination */}
+            {total > LIMIT && (
+                <div className="flex items-center justify-between pt-2">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Page {page} of {totalPages}
+                    </p>
+                    <div className="flex gap-2">
+                        <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1 || loading}
+                            className="inline-flex items-center rounded-md px-3 py-2 text-sm text-gray-700 bg-white ring-1 ring-gray-300 hover:bg-gray-50 disabled:opacity-40 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700">
+                            <ChevronLeft className="h-4 w-4 mr-1" /> Prev
+                        </button>
+                        <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages || loading}
+                            className="inline-flex items-center rounded-md px-3 py-2 text-sm text-gray-700 bg-white ring-1 ring-gray-300 hover:bg-gray-50 disabled:opacity-40 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700">
+                            Next <ChevronRight className="h-4 w-4 ml-1" />
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">

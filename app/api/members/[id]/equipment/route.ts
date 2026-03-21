@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
 import { getServerSession } from "next-auth";
@@ -24,7 +24,7 @@ export async function POST(req: Request, props: RouteContext) {
             return NextResponse.json({ error: "itemName is required" }, { status: 400 });
         }
 
-        await connectDB();
+        await dbConnect();
 
         let member: any = await Member.findByIdAndUpdate(
             id,
@@ -82,7 +82,7 @@ export async function PATCH(req: Request, props: RouteContext) {
             return NextResponse.json({ error: "equipmentItemId is required" }, { status: 400 });
         }
 
-        await connectDB();
+        await dbConnect();
 
         let member: any = await Member.findOneAndUpdate(
             { _id: id, "equipmentTaken._id": equipmentItemId },

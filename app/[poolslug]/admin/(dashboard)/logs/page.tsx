@@ -18,6 +18,8 @@ export default function LogsPage() {
     const [logs, setLogs] = useState<SystemLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
+    const [regPage, setRegPage] = useState(1);
+    const REG_LIMIT = 7;
 
     useEffect(() => {
         setLoading(true);
@@ -47,6 +49,12 @@ export default function LogsPage() {
     // Separating the tables
     const registrationLogs = filteredLogs.filter(log => log.type === "Registration");
     const entryLogs = filteredLogs.filter(log => log.type === "Entry Scan");
+
+    const totalRegPages = Math.max(1, Math.ceil(registrationLogs.length / REG_LIMIT));
+    const paginatedRegistrations = registrationLogs.slice((regPage - 1) * REG_LIMIT, regPage * REG_LIMIT);
+
+    // Reset regPage when search changes
+    useEffect(() => { setRegPage(1); }, [searchTerm]);
 
     // Grouping entry logs by Local Date string
     const groupedEntries = useMemo(() => {
@@ -113,10 +121,10 @@ export default function LogsPage() {
                             <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-800 dark:bg-gray-950">
                                 {loading ? (
                                     <tr><td colSpan={3} className="py-10 text-center text-gray-500">Loading...</td></tr>
-                                ) : registrationLogs.length === 0 ? (
+                                ) : paginatedRegistrations.length === 0 ? (
                                     <tr><td colSpan={3} className="py-10 text-center text-gray-500">No registrations found.</td></tr>
                                 ) : (
-                                    registrationLogs.map((log) => (
+                                    paginatedRegistrations.map((log) => (
                                         <tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                                             <td className="whitespace-nowrap py-3 pl-4 pr-3 text-sm text-gray-500 dark:text-gray-400 sm:pl-6">
                                                 {new Date(log.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
@@ -146,6 +154,30 @@ export default function LogsPage() {
                             </tbody>
                         </table>
                     </div>
+                    {/* Pagination Footer */}
+                    {totalRegPages > 1 && (
+                        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+                            <span className="text-sm text-gray-500 dark:text-gray-400">
+                                Page <span className="font-medium">{regPage}</span> of <span className="font-medium">{totalRegPages}</span>
+                            </span>
+                            <div className="flex space-x-2">
+                                <button
+                                    onClick={() => setRegPage(p => Math.max(1, p - 1))}
+                                    disabled={regPage === 1}
+                                    className="inline-flex items-center rounded-md bg-white dark:bg-gray-800 px-3 py-1 text-sm font-semibold text-gray-900 dark:text-gray-300 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Prev
+                                </button>
+                                <button
+                                    onClick={() => setRegPage(p => Math.min(totalRegPages, p + 1))}
+                                    disabled={regPage === totalRegPages}
+                                    className="inline-flex items-center rounded-md bg-white dark:bg-gray-800 px-3 py-1 text-sm font-semibold text-gray-900 dark:text-gray-300 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Entry Scans Table */}

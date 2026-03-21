@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
+import { DeletedMember } from "@/models/DeletedMember";
 import { EntryLog } from "@/models/EntryLog";
 import { Attendance } from "@/models/Attendance";
 import { Plan } from "@/models/Plan";
@@ -31,7 +32,7 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: "Unauthorized", code: "FORBIDDEN" }, { status: 401 });
     }
 
-    await connectDB();
+    await dbConnect();
 
     const now = new Date();
     const results = {
@@ -96,9 +97,34 @@ export async function GET(req: Request) {
         const entryLogPurge = await EntryLog.deleteMany({ scanTime: { $lt: fiveDaysAgo } });
         results.logsDeleted += entryLogPurge.deletedCount || 0;
 
-        // Still purge attendance logs for soft-deleted members > 3 days ago
+        // ─── STEP 4: Hard-delete members ───────
+        let hardDeleteDate;
+        if (isEntertainment) {
+            hardDeleteDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000); // 3 days post expiry
+        } else {
+            hardDeleteDate = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000); // 15 days post expiry
+        }
+
+        const sixDaysAgo = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
+        
+        const hardDeleteQuery = {
+            $or: [
+                { planEndDate: { $lt: hardDeleteDate } }, // Members fully expired past retention period
+                { isDeleted: true, deletedAt: { $lt: sixDaysAgo } } // Or manually soft-deleted >6 days ago
+            ]
+        };
+
+        // Still purge attendance logs for members about to be hard deleted,
+        // OR soft-deleted > 3 days ago
+        const toLogPurgeQuery = { 
+            $or: [
+                { planEndDate: { $lt: hardDeleteDate } },
+                { isDeleted: true, deletedAt: { $lt: threeDaysAgo } } 
+            ]
+        };
+
         const toLogPurge: { _id: mongoose.Types.ObjectId }[] = await Col
-            .find({ isDeleted: true, deletedAt: { $lt: threeDaysAgo } })
+            .find(toLogPurgeQuery)
             .select("_id")
             .lean();
 
@@ -108,9 +134,24 @@ export async function GET(req: Request) {
             results.attendanceDeleted += attRes.deletedCount;
         }
 
-        // ─── STEP 4: Hard-delete members soft-deleted > 6 days ago ───────
-        const sixDaysAgo = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
-        const hardRes = await Col.deleteMany({ isDeleted: true, deletedAt: { $lt: sixDaysAgo } });
+        // --- Archive before hard deleting ---
+        const toHardDelete = await Col.find(hardDeleteQuery).lean();
+        if (toHardDelete.length > 0) {
+            const archiveDocs = toHardDelete.map((doc: any) => ({
+                originalId: doc._id,
+                memberId: doc.memberId,
+                name: doc.name,
+                phone: doc.phone,
+                poolId: doc.poolId,
+                deletedAt: now,
+                deletionType: "auto",
+                collectionSource: isEntertainment ? "entertainment_members" : "members",
+                fullData: doc,
+            }));
+            await DeletedMember.insertMany(archiveDocs);
+        }
+
+        const hardRes = await Col.deleteMany(hardDeleteQuery);
 
         if (isEntertainment) {
             results.entertainmentHardDeleted = hardRes.deletedCount;

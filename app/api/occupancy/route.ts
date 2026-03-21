@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { PoolSession } from "@/models/PoolSession";
 import { EntryLog } from "@/models/EntryLog";
 import { Pool } from "@/models/Pool";
@@ -20,11 +20,20 @@ export async function GET(req: NextRequest) {
         const session = await getServerSession(authOptions);
         if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        const poolId = session.user.role === "superadmin"
-            ? (new URL(req.url).searchParams.get("poolId") ?? session.user.poolId)
-            : session.user.poolId;
+        await dbConnect();
 
-        await connectDB();
+        let poolId = session.user.poolId;
+        const searchParams = new URL(req.url).searchParams;
+        const poolslug = searchParams.get("poolslug");
+
+        // Resolve poolslug to poolId for any role
+        if (poolslug) {
+            const poolDoc = await Pool.findOne({ slug: poolslug }).select("poolId").lean();
+            if (poolDoc) poolId = (poolDoc as any).poolId;
+        } else if (session.user.role === "superadmin") {
+            const queryId = searchParams.get("poolId");
+            if (queryId) poolId = queryId;
+        }
 
         const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
 

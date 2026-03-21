@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { EntryLog } from "@/models/EntryLog";
 import { Payment } from "@/models/Payment";
 import { Member } from "@/models/Member";
@@ -26,7 +26,7 @@ export async function GET(req: Request) {
         const limit  = Math.min(200, Math.max(1, parseInt(searchParams.get("limit") ?? "50")));
         const skip   = (page - 1) * limit;
 
-        await connectDB();
+        await dbConnect();
 
         const baseMatch: Record<string, unknown> =
             session.user.role !== "superadmin" && session.user.poolId
@@ -36,7 +36,7 @@ export async function GET(req: Request) {
         // ── Fetch each log type in parallel based on filter ──────────────
         const [entriesRaw, payments, regularRegistrations, entertainmentRegistrations] = await Promise.all([
             (filterType === "all" || filterType === "entry")
-                ? EntryLog.find(baseMatch)
+                ? EntryLog.find({ ...baseMatch, status: { $in: ["granted", "denied"] } })
                       .sort({ scanTime: -1 })
                       .limit(200)
                       .lean()
@@ -49,10 +49,7 @@ export async function GET(req: Request) {
                       .lean()
                 : Promise.resolve([]),
             (filterType === "all" || filterType === "registration")
-                ? EntertainmentMember.find({ ...baseMatch, isDeleted: false })
-                      .sort({ createdAt: -1 })
-                      .limit(200)
-                      .lean()
+                ? Promise.resolve([])
                 : Promise.resolve([]),
         ]);
 

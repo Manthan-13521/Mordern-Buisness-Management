@@ -23,26 +23,12 @@ A production-ready Next.js 15 application for managing swimming pool memberships
 ## Getting Started
 
 1. **Environment Variables**
-Create a `.env.local` file in the root. Copy `.env.example` and fill in your values:
-```env
-MONGODB_URI="mongodb+srv://..."
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
-NEXTAUTH_SECRET="<generate: openssl rand -base64 64>"
-NEXTAUTH_URL="http://localhost:3000"
-SEED_SECRET="<generate: openssl rand -hex 32>"
-CRON_SECRET="<generate: openssl rand -hex 32>"
-
-# Optional: Twilio WhatsApp
-TWILIO_ACCOUNT_SID=""
-TWILIO_AUTH_TOKEN=""
-TWILIO_WHATSAPP_NUMBER="+14155238886"
-
-# Optional: Cloudinary (photo storage)
-CLOUDINARY_CLOUD_NAME=""
-CLOUDINARY_API_KEY=""
-CLOUDINARY_API_SECRET=""
+Copy `.env.local.example` to `.env.local` and fill in your own values:
+```bash
+cp .env.local.example .env.local
+# Then edit .env.local with your real credentials
 ```
-> ⚠️ **Never commit real secret values.** Generate unique secrets before deploying.
+> ⚠️ **Never commit real secrets.** Copy `.env.local.example` and fill in your own values. Generate unique secrets with `openssl rand -hex 32`.
 
 2. **Install Dependencies**
 ```bash

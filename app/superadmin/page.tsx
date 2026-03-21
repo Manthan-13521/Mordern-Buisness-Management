@@ -1,5 +1,5 @@
 import { Users, Droplets, Target, Activity, Plus, ShieldAlert, MonitorPlay } from "lucide-react";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Pool } from "@/models/Pool";
 import { Member } from "@/models/Member";
 
@@ -12,7 +12,7 @@ export default async function SuperAdminDashboard() {
     let totalMembersCount = 0;
 
     try {
-        await connectDB();
+        await dbConnect();
         pools = await Pool.find({}).sort({ createdAt: -1 }).lean() as any[];
         totalPools = pools.length;
         activePools = pools.filter(p => p.status === "ACTIVE").length;

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { EntryLog } from "@/models/EntryLog";
 import { Payment } from "@/models/Payment";
 import { Member } from "@/models/Member";
@@ -15,7 +15,7 @@ export async function GET(req: Request) {
         const { searchParams } = new URL(req.url);
         const filterType = searchParams.get("type") || "all";
 
-        await connectDB();
+        await dbConnect();
         const unifiedLogs: any[] = [];
 
         const baseMatch = session.user.role !== "superadmin" && session.user.poolId ? { poolId: session.user.poolId } : {};

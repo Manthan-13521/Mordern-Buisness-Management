@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { Plan } from "@/models/Plan";
 import { getServerSession } from "next-auth";
@@ -10,7 +10,7 @@ export async function GET() {
         const session = await getServerSession(authOptions);
         if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        await connectDB();
+        await dbConnect();
 
         // Ensure Plan model is loaded before populate
         await Plan.findOne({});

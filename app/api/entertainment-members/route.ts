@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
 import { Plan } from "@/models/Plan";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import QRCode from "qrcode";
 import crypto from "crypto";
-import { uploadBase64Image, uploadBuffer } from "@/lib/local-upload";
+import { uploadBuffer } from "@/lib/local-upload";
+import { savePhoto } from "@/lib/savePhoto";
+import { signQRToken } from "@/lib/qrSigner";
 
 export async function GET(req: Request) {
     try {
@@ -14,7 +16,7 @@ export async function GET(req: Request) {
         if (!session?.user)
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        await connectDB();
+        await dbConnect();
 
         const url = new URL(req.url);
         const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1"));
@@ -70,7 +72,7 @@ export async function POST(req: Request) {
         if (!name || !phone || !planId)
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
 
-        await connectDB();
+        await dbConnect();
 
         const plan = await Plan.findById(planId);
         if (!plan)
@@ -80,13 +82,14 @@ export async function POST(req: Request) {
         if (!poolId)
             return NextResponse.json({ error: "Pool ID required" }, { status: 400 });
 
-        // Atomic counter
-        const updatedPlan = await Plan.findByIdAndUpdate(
-            planId,
+        // Atomic counter from Pool (not Plan) to avoid duplicates
+        const { Pool } = await import("@/models/Pool");
+        const updatedPool = await Pool.findOneAndUpdate(
+            { poolId },
             { $inc: { entertainmentMemberCounter: 1 } },
             { new: true }
         );
-        const counter = updatedPlan!.entertainmentMemberCounter;
+        const counter = updatedPool!.entertainmentMemberCounter;
         const memberId = `MS${counter.toString().padStart(4, "0")}`;
 
         let age: number | undefined;
@@ -101,17 +104,18 @@ export async function POST(req: Request) {
         let photoUrl = "";
         if (photoBase64) {
             try {
-                photoUrl = await uploadBase64Image(photoBase64, "swimming-pool/photos", `${poolId}_${memberId}_photo`);
-            } catch { /* skip if Cloudinary not configured */ }
+                photoUrl = await savePhoto(photoBase64);
+            } catch { /* skip if local save fails */ }
         }
 
         const qrToken = crypto.randomUUID();
         let qrCodeUrl = "";
+        const qrPayloadObject = await signQRToken(memberId);
         try {
-            const buf = await QRCode.toBuffer(`${memberId}:${qrToken}`, { width: 300 });
+            const buf = await QRCode.toBuffer(qrPayloadObject, { width: 300 });
             qrCodeUrl = await uploadBuffer(buf, "swimming-pool/qrcodes", `${poolId}_${memberId}_qr`);
         } catch {
-            try { qrCodeUrl = await QRCode.toDataURL(`${memberId}:${qrToken}`, { width: 300 }); } catch { /* ignore */ }
+            try { qrCodeUrl = await QRCode.toDataURL(qrPayloadObject, { width: 300 }); } catch { /* ignore */ }
         }
 
         const startDate = new Date();

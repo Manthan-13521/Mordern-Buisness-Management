@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { StudentMember } from "@/models/StudentMember";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 
 export async function POST(req: Request) {
     try {
-        await connectDB();
+        const ip = getClientIp(req);
+        if (!checkRateLimit(ip, "login", 5)) {
+            return NextResponse.json({ error: "Too many login attempts. Try again later." }, { status: 429 });
+        }
+
+        await dbConnect();
         const body = await req.json();
         const { phone, memberId } = body;
 

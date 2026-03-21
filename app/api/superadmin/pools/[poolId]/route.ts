@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Pool } from "@/models/Pool";
 import { Member } from "@/models/Member";
 import { getServerSession } from "next-auth";
@@ -17,7 +17,7 @@ export async function DELETE(req: Request, props: { params: Promise<{ poolId: st
             return NextResponse.json({ error: "Missing pool ID" }, { status: 400 });
         }
 
-        await connectDB();
+        await dbConnect();
 
         // Find the pool first
         const pool = await Pool.findOne({ poolId });

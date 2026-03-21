@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
 import { getServerSession } from "next-auth";
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
             );
         }
 
-        await connectDB();
+        await dbConnect();
 
         const poolId =
             session.user.role !== "superadmin"

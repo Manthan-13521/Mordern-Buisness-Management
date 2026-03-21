@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Payment } from "@/models/Payment";
 import { Member } from "@/models/Member";
 import { Plan } from "@/models/Plan";
@@ -13,7 +13,7 @@ export async function GET() {
         const session = await getServerSession(authOptions);
         if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        await connectDB();
+        await dbConnect();
         const baseMatch = session.user.role !== "superadmin" && session.user.poolId ? { poolId: session.user.poolId } : {};
 
         const payments = await Payment.find({ ...baseMatch })

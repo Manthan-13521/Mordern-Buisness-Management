@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { Plan } from "@/models/Plan"; // Added import for group QR handling
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { EntryLog } from "@/models/EntryLog";
 import { PoolSession } from "@/models/PoolSession";
@@ -9,6 +9,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
+import { verifyQRToken } from "@/lib/qrSigner";
 import mongoose from "mongoose";
 import { runOccupancyCleanupInBackground } from "@/lib/cleanup";
 
@@ -17,10 +18,10 @@ export const dynamic = "force-dynamic";
 const SCAN_COOLDOWN_MS = 3000; // 3-second cooldown
 
 export async function POST(req: Request) {
-    // ── Rate limit: max 60 scans / minute per IP ──────────────────────────────
+    // ── Rate limit: max 50 scans / minute per IP (Section 8B)
     const ip = getClientIp(req);
-    const rl = checkRateLimit(ip, "entry", { limit: 60, windowSec: 60 });
-    if (!rl.allowed) {
+    const isAllowed = checkRateLimit(ip, "entry", 50);
+    if (!isAllowed) {
         logger.warn("Entry rate limit hit", { ip });
         return NextResponse.json({ error: "Too many scan requests. Slow down." }, { status: 429 });
     }
@@ -38,20 +39,23 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Missing QR payload" }, { status: 400 });
         }
 
-        // Parse payload — support both new "memberId:token" and legacy plain memberId
-        let memberId: string = ""; // Initialized to fix lint
+        // Parse payload — support JWT (Section 10), legacy "memberId:token", and legacy plain memberId
+        let memberId: string = "";
         let providedToken: string | null = null;
         let planId: string | null = null;
 
-        if (qrPayload.includes(":")) {
+        // Try JWT verification first
+        const jwtVerifiedId = await verifyQRToken(qrPayload);
+        if (jwtVerifiedId) {
+            memberId = jwtVerifiedId;
+            providedToken = qrPayload; // Treat the JWT string as the token for logs
+        } else if (qrPayload.includes(":")) {
             const parts = qrPayload.split(":");
             const possibleId = parts[0];
             const possibleToken = parts.slice(1).join(":");
 
-            // Connect for lookup
-            await connectDB();
+            await dbConnect();
 
-            // Check if this is a group PLAN QR (static token on plan template)
             const plan = await Plan.findById(possibleId).catch(() => null);
             if (plan && plan.groupToken && plan.groupToken === possibleToken) {
                 planId = possibleId;
@@ -64,7 +68,7 @@ export async function POST(req: Request) {
             memberId = qrPayload;
         }
 
-        await connectDB();
+        await dbConnect();
         
         // Auto-cleanup expired sessions before checking capacity
         await runOccupancyCleanupInBackground();
@@ -119,7 +123,11 @@ export async function POST(req: Request) {
                 if (plan.durationSeconds) expiryTime.setSeconds(expiryTime.getSeconds() + plan.durationSeconds);
                 else if (plan.durationMinutes) expiryTime.setMinutes(expiryTime.getMinutes() + plan.durationMinutes);
                 else if (plan.durationHours) expiryTime.setHours(expiryTime.getHours() + plan.durationHours);
-                else expiryTime.setDate(expiryTime.getDate() + (plan.durationDays || 30));
+                else {
+                    const settings = await getSettings();
+                    const durationMinutes = settings.occupancyDurationMinutes || 60;
+                    expiryTime.setMinutes(expiryTime.getMinutes() + durationMinutes);
+                }
 
                 // Create PoolSession for automated checkout
                 await PoolSession.create({
@@ -241,7 +249,8 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Membership has expired" }, { status: 403 });
         }
 
-        // ── Entry Limit Check ────────────────────────────────────────────────
+        // ── Entry Limit Check (Total & Daily) ───────────────────────────────
+        // Preliminary check for fast rejection
         if (!isEntertainment) {
             const entriesUsed = (member as any).entriesUsed || 0;
             const totalEntriesAllowed = (member as any).totalEntriesAllowed || 1;
@@ -258,6 +267,33 @@ export async function POST(req: Request) {
                 logger.scan("QR scan denied — entry limit", { memberId, entriesUsed, totalEntriesAllowed });
                 return NextResponse.json({ error: "Entry limit reached" }, { status: 400 });
             }
+        }
+
+        // ── Daily 1-Time Entry Limit Check ───────────────────────────────────
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const alreadyEnteredToday = await EntryLog.findOne({
+            poolId: session.user.poolId,
+            memberId: member._id,
+            status: "granted",
+            createdAt: { $gte: startOfDay },
+        });
+
+        if (alreadyEnteredToday) {
+            await EntryLog.create({
+                poolId: session.user.poolId,
+                memberId: member._id,
+                status: "denied",
+                reason: "Already Entered Today",
+                operatorId: new mongoose.Types.ObjectId(session.user.id),
+                rawPayload: qrPayload,
+            });
+            logger.scan("QR scan denied — already entered today", { memberId });
+            return NextResponse.json(
+                { error: "Member has already entered once today." },
+                { status: 403 }
+            );
         }
 
         // ── Pool Capacity Check ──────────────────────────────────────────────
@@ -297,19 +333,53 @@ export async function POST(req: Request) {
             );
         }
 
-        // ── Grant Entry ──────────────────────────────────────────────────────
-        if (!isEntertainment) {
-            (member as any).entriesUsed = ((member as any).entriesUsed || 0) + 1;
-        }
-        member.lastScannedAt = new Date();
-
-        // Rotate QR token after successful scan (prevents screenshot reuse)
+        // ── Grant Entry (Atomic Update - Section 9) ──────────────────────────
         const oldToken = member.qrToken;
-        member.qrToken = require("crypto").randomUUID();
-        await member.save();
+        const newToken = require("crypto").randomUUID();
+
+        if (!isEntertainment) {
+            // Use findOneAndUpdate to atomically increment entriesUsed while ensuring it's strictly less than total allowed
+            const updatedMember = await mongoose.models.Member.findOneAndUpdate(
+                { 
+                    _id: member._id, 
+                    entriesUsed: { $lt: (member as any).totalEntriesAllowed || 1 } 
+                },
+                { 
+                    $inc: { entriesUsed: 1 },
+                    $set: { lastScannedAt: new Date(), qrToken: newToken }
+                },
+                { new: true }
+            );
+
+            if (!updatedMember) {
+                // Race condition! Another request beat us to the limit.
+                return NextResponse.json({ error: "Entry limit reached (Double Scan Prevented)" }, { status: 400 });
+            }
+            member = updatedMember; // Sync local object for logging
+        } else {
+            // Entertainment members don't have entry limits
+            member.lastScannedAt = new Date();
+            member.qrToken = newToken;
+            await member.save();
+        }
 
         // Create PoolSession for automated checkout
-        const expiryFieldValueForSession = isEntertainment ? (member as any).planEndDate : (member as any).expiryDate;
+        let expiryFieldValueForSession = new Date();
+        const planObj = (member as any).planId;
+        const settings = await getSettings();
+        const durationMinutes = settings.occupancyDurationMinutes || 60;
+
+        if (!isEntertainment && planObj && planObj.durationHours && !planObj.durationDays) {
+            // Hourly plan
+            expiryFieldValueForSession.setHours(expiryFieldValueForSession.getHours() + planObj.durationHours);
+            if (planObj.durationMinutes) {
+                expiryFieldValueForSession.setMinutes(expiryFieldValueForSession.getMinutes() + planObj.durationMinutes);
+            }
+        } else {
+            // Daily/Monthly/Yearly plan or Entertainment member -> use occupancy setting
+            expiryFieldValueForSession.setMinutes(expiryFieldValueForSession.getMinutes() + durationMinutes);
+        }
+
         await PoolSession.create({
             poolId: session.user.poolId,
             memberId: member._id,

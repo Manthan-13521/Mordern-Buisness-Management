@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { EntryLog } from "@/models/EntryLog";
 import ExcelJS from "exceljs";
 
@@ -10,7 +10,7 @@ export async function GET(req: Request) {
         
         if (!poolId) return NextResponse.json({ error: "Pool ID required for exports" }, { status: 400 });
 
-        await connectDB();
+        await dbConnect();
         
         const logs = await EntryLog.find({ poolId })
             .populate("memberId", "name memberId status")

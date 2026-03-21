@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { Pool } from "@/models/Pool";
 import bcrypt from "bcryptjs";
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
         );
     }
 
-    await connectDB();
+    await dbConnect();
 
     // Idempotent — don't create duplicates
     const existing = await Pool.findOne({ slug: "demo-pool" }).lean();
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
         status: "ACTIVE",
     });
 
-    const passwordHash = await bcrypt.hash("admin123", 10);
+    const passwordHash = await bcrypt.hash("admin123", 12);
     await User.create({
         name: "Demo Admin",
         email: "admin@demo.com",
@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
         isActive: true,
     });
 
+    console.warn("⚠️  Seed complete. Change these passwords immediately.");
     return NextResponse.json({ message: "Seed data created successfully." }, { status: 201 });
 }
 

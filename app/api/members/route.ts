@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
 import { PoolSession } from "@/models/PoolSession";
@@ -9,52 +9,18 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import QRCode from "qrcode";
 import crypto from "crypto";
-import { uploadBase64Image, uploadBuffer } from "@/lib/local-upload";
+import { uploadBuffer } from "@/lib/local-upload";
+import { savePhoto } from "@/lib/savePhoto";
+import { signQRToken } from "@/lib/qrSigner";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-async function getNextMemberId(
-    poolId: string,
-    isEntertainment: boolean
-): Promise<string> {
-    const { Pool } = await import("@/models/Pool");
+// Fields to exclude from list queries for performance (Section 6C)
+const LIST_SELECT = "-faceDescriptor -photoUrl";
 
-    const field = isEntertainment
-        ? "entertainmentMemberCounter"
-        : "memberCounter";
-
-    let updatedPool = await Pool.findOneAndUpdate(
-        { poolId },
-        { $inc: { [field]: 1 } },
-        { new: true, upsert: false }
-    );
-
-    if (!updatedPool) throw new Error("Pool not found");
-
-    let counter = isEntertainment
-        ? (updatedPool as any).entertainmentMemberCounter
-        : (updatedPool as any).memberCounter;
-
-    // Self-healing: If counter is 1, it might be the first time we use Pool counters.
-    // Ensure we don't collide with members created via the old Plan-level counters.
-    if (counter === 1) {
-        const Model = isEntertainment ? mongoose.models.EntertainmentMember || EntertainmentMember : mongoose.models.Member || Member;
-        const allMembers = await Model.find({ poolId }).select("memberId").lean();
-        let maxNum = 0;
-        for (const m of allMembers as any[]) {
-            const numStr = (m.memberId || "").replace(/[^0-9]/g, "");
-            const num = parseInt(numStr, 10);
-            if (!isNaN(num) && num > maxNum) maxNum = num;
-        }
-        if (maxNum > 0) {
-            counter = maxNum + 1;
-            await Pool.findOneAndUpdate({ poolId }, { $set: { [field]: counter } });
-        }
-    }
-
-    const prefix = isEntertainment ? "MS" : "M";
-    return `${prefix}${counter.toString().padStart(4, "0")}`;
-}
+import { generateMemberId } from "@/lib/generateMemberId";
+import { MemberCreateSchema } from "@/lib/validators";
 
 export async function GET(req: Request) {
     try {
@@ -62,13 +28,13 @@ export async function GET(req: Request) {
         if (!session?.user)
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        await connectDB();
+        await dbConnect();
 
         const url = new URL(req.url);
         const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1"));
         const limit = Math.min(
             100,
-            Math.max(1, parseInt(url.searchParams.get("limit") ?? "20"))
+            Math.max(1, parseInt(url.searchParams.get("limit") ?? "10"))
         );
         const skip = (page - 1) * limit;
 
@@ -97,35 +63,68 @@ export async function GET(req: Request) {
         const balanceOnly = url.searchParams.get("balanceOnly");
         if (balanceOnly === "true") query.balanceAmount = { $gt: 0 };
 
-        // Query both Member and EntertainmentMember collections
+        // ── Server-side paginated queries on both collections ────────────
         const populateFields = "name durationDays durationHours durationMinutes price voiceAlert hasTokenPrint quickDelete";
-        const [regularMembers, regularTotal, entertainmentMembers, entertainmentTotal] = await Promise.all([
-            Member.find(query)
-                .populate("planId", populateFields)
-                .sort({ createdAt: -1 })
-                .lean(),
+
+        // Get totals first
+        const [regularTotal, entertainmentTotal] = await Promise.all([
             Member.countDocuments(query),
-            EntertainmentMember.find(query)
-                .populate("planId", populateFields)
-                .sort({ createdAt: -1 })
-                .lean(),
             EntertainmentMember.countDocuments(query),
         ]);
-
-        // Tag entertainment members and merge
-        const taggedEntertainment = entertainmentMembers.map((m: any) => ({ ...m, _source: "entertainment" }));
-        const allMembers = [...regularMembers, ...taggedEntertainment]
-            .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
         const combinedTotal = regularTotal + entertainmentTotal;
-        const paged = allMembers.slice(skip, skip + limit);
+
+        // Determine which collection(s) to query based on skip/limit offset
+        // Regular members come first (sorted by createdAt desc), then entertainment
+        let data: any[] = [];
+
+        if (skip < regularTotal) {
+            // We need some (or all) records from the regular collection
+            const regularLimit = Math.min(limit, regularTotal - skip);
+            const regularMembers = await Member.find(query)
+                .select(LIST_SELECT)
+                .populate("planId", populateFields)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(regularLimit)
+                .lean();
+            data = [...regularMembers];
+
+            // If we still need more records, get from entertainment
+            const remaining = limit - regularMembers.length;
+            if (remaining > 0) {
+                const entertainmentMembers = await EntertainmentMember.find(query)
+                    .select(LIST_SELECT)
+                    .populate("planId", populateFields)
+                    .sort({ createdAt: -1 })
+                    .skip(0)
+                    .limit(remaining)
+                    .lean();
+                data = [
+                    ...data,
+                    ...entertainmentMembers.map((m: any) => ({ ...m, _source: "entertainment" })),
+                ];
+            }
+        } else {
+            // skip is past all regular members — only query entertainment
+            const entertainmentSkip = skip - regularTotal;
+            const entertainmentMembers = await EntertainmentMember.find(query)
+                .select(LIST_SELECT)
+                .populate("planId", populateFields)
+                .sort({ createdAt: -1 })
+                .skip(entertainmentSkip)
+                .limit(limit)
+                .lean();
+            data = entertainmentMembers.map((m: any) => ({ ...m, _source: "entertainment" }));
+        }
 
         return NextResponse.json({
-            data: paged,
+            data,
             total: combinedTotal,
             page,
             limit,
             totalPages: Math.ceil(combinedTotal / limit),
+        }, {
+            headers: { "Cache-Control": "no-store" },
         });
     } catch (error) {
         console.error("[GET /api/members]", error);
@@ -136,31 +135,54 @@ export async function GET(req: Request) {
     }
 }
 
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
+
 export async function POST(req: Request) {
     try {
+        const ip = getClientIp(req);
+        if (!checkRateLimit(ip, "member-create", 20)) {
+            return NextResponse.json({ error: "Too many member creations. Slow down." }, { status: 429 });
+        }
+
         const session = await getServerSession(authOptions);
         if (!session?.user)
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
         const body = await req.json();
+        
+        // Map frontend fields to match Zod schema expectations
+        const mappedBody = {
+            ...body,
+            paymentMethod: body.paymentMode || body.paymentMethod || "cash",
+            photo: body.photoBase64 || body.photo,
+        };
+
+        const result = MemberCreateSchema.safeParse(mappedBody);
+        if (!result.success) {
+            const errs = result.error.flatten().fieldErrors;
+            const errMsg = Object.entries(errs).map(([f, m]) => `${f}: ${m?.join(", ")}`).join(" | ");
+            console.error("Zod Validation Failed:", errMsg, mappedBody);
+            // Return error string explicitly to prevent [object Object] on UI
+            return NextResponse.json({ error: String(errMsg) }, { status: 400 });
+        }
+        const data = result.data;
+
+        // Use standard structure now that we've validated
         const {
             name,
             phone,
             planId,
-            photoBase64,
-            planQuantity = 1,
-            paidAmount = 0,
-            balanceAmount = 0,
-        } = body;
+            paymentMethod,
+            transactionId,
+            planQuantity,
+            paidAmount,
+            balanceAmount
+        } = data;
+        
+        // Handle photo separately (since the Zod schema expects photo as string but the UI might send photoBase64)
+        const photoBase64 = body.photoBase64 || data.photo;
 
-        if (!name || !phone || !planId) {
-            return NextResponse.json(
-                { error: "Missing required fields: name, phone, planId" },
-                { status: 400 }
-            );
-        }
-
-        await connectDB();
+        await dbConnect();
 
         const { Plan } = await import("@/models/Plan");
         const plan = await Plan.findById(planId);
@@ -178,30 +200,26 @@ export async function POST(req: Request) {
                 { status: 400 }
             );
 
-        // Atomic ID generation via $inc (no race conditions)
+        // Atomic ID generation via Counters collection (Section 5)
         const isEntertainment = plan.hasEntertainment ?? false;
-        const memberId = await getNextMemberId(poolId, isEntertainment);
+        const memberId = await generateMemberId(isEntertainment);
 
-        // Upload photo to Cloudinary (skip if not configured)
+        // Save photo locally (Section 6)
         let photoUrl = "";
         if (photoBase64) {
             try {
-                photoUrl = await uploadBase64Image(
-                    photoBase64,
-                    "swimming-pool/photos",
-                    `${poolId}_${memberId}_photo`
-                );
-            } catch (uploadErr) {
-                console.warn("Cloudinary photo upload failed, skipping:", uploadErr);
+                photoUrl = await savePhoto(photoBase64);
+            } catch (err) {
+                console.warn("Local photo save failed, skipping:", err);
             }
         }
 
-        // Generate and upload QR code
-        const qrToken = crypto.randomUUID();
+        // Generate and upload Secure JWT QR code (Section 10)
+        const qrPayloadObject = await signQRToken(memberId);
         let qrCodeUrl = "";
         try {
             const qrPngBuffer = await QRCode.toBuffer(
-                `${memberId}:${qrToken}`,
+                qrPayloadObject,
                 { width: 300 }
             );
             qrCodeUrl = await uploadBuffer(
@@ -211,13 +229,17 @@ export async function POST(req: Request) {
             );
         } catch {
             try {
-                qrCodeUrl = await QRCode.toDataURL(`${memberId}:${qrToken}`, {
+                qrCodeUrl = await QRCode.toDataURL(qrPayloadObject, {
                     width: 300,
                 });
             } catch {
                 console.warn("QR generation failed");
             }
         }
+        
+        // We still need a unique token for the DB `qrToken` field as a uniqueness/fallback marker 
+        // to rotate in the `Member` document. We'll use a random UUID.
+        const qrToken = crypto.randomUUID();
 
         // Calculate plan end date — duration is NOT multiplied by qty
         // Qty means N people using the same plan, not extended duration
@@ -283,19 +305,8 @@ export async function POST(req: Request) {
 
         await newMember.save();
 
-        // Create a PoolSession so occupancy updates immediately
-        try {
-            await PoolSession.create({
-                memberId: newMember._id,
-                poolId,
-                numPersons: qty,
-                entryTime: startDate,
-                expiryTime: planEndDate,
-                status: "active",
-            });
-        } catch (sessionErr) {
-            console.warn("PoolSession creation failed (non-critical):", sessionErr);
-        }
+        // NOTE: PoolSession is NOT created here — occupancy only increases
+        // when a member scans in via the QR Entry page (/api/entry).
 
         // Auto-create Payment record so it shows on the Payments page
         if (paidAmount > 0) {

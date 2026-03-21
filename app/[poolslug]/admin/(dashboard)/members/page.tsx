@@ -103,7 +103,7 @@ export default function MembersPage() {
     const [searchDebounced, setSearchDebounced] = useState("");
     const { print: printThermal } = useThermalPrint();
 
-    const LIMIT = 20;
+    const LIMIT = 10;
 
     // Debounce search
     useEffect(() => {

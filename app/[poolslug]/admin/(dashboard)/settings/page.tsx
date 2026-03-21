@@ -3,18 +3,23 @@
 import { useState, useEffect } from "react";
 import { Save, HardDrive, Moon, Sun, Monitor, Download, Users, Activity, Server } from "lucide-react";
 import { useSession } from "next-auth/react";
+import { useParams } from "next/navigation";
 
 
 export default function SettingsPage() {
     const { data: session } = useSession();
-    const isAdmin = session?.user?.role === "admin";
+    const isAdmin = session?.user?.role === "admin" || session?.user?.role === "superadmin";
+    const params = useParams();
+    const poolslug = params.poolslug as string;
 
     const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
     const [poolCapacity, setPoolCapacity] = useState<number>(50);
     const [currentOccupancy, setCurrentOccupancy] = useState<number>(0);
+    const [occupancyDurationMinutes, setOccupancyDurationMinutes] = useState<number>(60);
     const [capacityLoading, setCapacityLoading] = useState(false);
     const [capacitySaved, setCapacitySaved] = useState(false);
     const [excelLoading, setExcelLoading] = useState(false);
+    const [deletedExcelLoading, setDeletedExcelLoading] = useState(false);
 
     const applyTheme = (newTheme: "light" | "dark" | "system") => {
         const root = window.document.documentElement;
@@ -32,12 +37,12 @@ export default function SettingsPage() {
     }, []);
 
     useEffect(() => {
-        if (!isAdmin) return;
-        fetch("/api/settings/capacity")
+        if (!isAdmin || !poolslug) return;
+        fetch(`/api/settings/capacity?poolslug=${poolslug}`)
             .then(r => r.json())
-            .then(d => { setPoolCapacity(d.poolCapacity ?? 50); setCurrentOccupancy(d.currentOccupancy ?? 0); })
+            .then(d => { setPoolCapacity(d.poolCapacity ?? 50); setCurrentOccupancy(d.currentOccupancy ?? 0); setOccupancyDurationMinutes(d.occupancyDurationMinutes ?? 60); })
             .catch(() => {});
-    }, [isAdmin]);
+    }, [isAdmin, poolslug]);
 
     const handleThemeChange = (newTheme: "light" | "dark" | "system") => {
         setTheme(newTheme); localStorage.setItem("theme", newTheme); applyTheme(newTheme);
@@ -46,10 +51,10 @@ export default function SettingsPage() {
     const handleCapacitySave = async () => {
         setCapacityLoading(true);
         try {
-            const res = await fetch("/api/settings/capacity", {
+            const res = await fetch(`/api/settings/capacity?poolslug=${poolslug}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ poolCapacity, currentOccupancy }),
+                body: JSON.stringify({ poolCapacity, currentOccupancy, occupancyDurationMinutes }),
             });
             if (res.ok) { setCapacitySaved(true); setTimeout(() => setCapacitySaved(false), 3000); }
         } finally { setCapacityLoading(false); }
@@ -71,6 +76,22 @@ export default function SettingsPage() {
             URL.revokeObjectURL(url);
         } catch { alert("Error generating backup"); }
         finally { setExcelLoading(false); }
+    };
+
+    const handleDeletedExcelBackup = async () => {
+        setDeletedExcelLoading(true);
+        try {
+            const res = await fetch("/api/settings/backup/deleted-members");
+            if (!res.ok) { alert("Failed to generate Deleted Members backup"); return; }
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `ts_pools_deleted_members_${new Date().toISOString().split("T")[0]}.xlsx`;
+            document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(url);
+        } catch { alert("Error generating backup"); }
+        finally { setDeletedExcelLoading(false); }
     };
 
     return (
@@ -146,6 +167,17 @@ export default function SettingsPage() {
                                             className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                         />
                                     </div>
+                                    <div className="col-span-2 sm:col-span-1 border-t sm:border-t-0 pt-4 sm:pt-0 border-gray-200 dark:border-gray-800">
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Occupancy Duration (minutes)</label>
+                                        <p className="text-xs text-gray-500 mb-2">Auto-checkout time for daily/monthly plans</p>
+                                        <input
+                                            type="number"
+                                            min={1}
+                                            value={occupancyDurationMinutes}
+                                            onChange={(e) => setOccupancyDurationMinutes(parseInt(e.target.value) || 60)}
+                                            className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        />
+                                    </div>
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <button
@@ -188,6 +220,14 @@ export default function SettingsPage() {
                                     >
                                         <Download className="w-4 h-4" />
                                         {excelLoading ? "Generating..." : "Download Excel Backup (.xlsx)"}
+                                    </button>
+                                    <button
+                                        onClick={handleDeletedExcelBackup}
+                                        disabled={deletedExcelLoading}
+                                        className="inline-flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 disabled:opacity-60 transition-colors"
+                                    >
+                                        <Download className="w-4 h-4" />
+                                        {deletedExcelLoading ? "Generating..." : "Download Deleted Members (.xlsx)"}
                                     </button>
                                     <button
                                         onClick={handleJsonBackup}

@@ -1,4 +1,4 @@
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Pool } from "@/models/Pool";
 import { notFound } from "next/navigation";
 import RegistrationForm from "./RegistrationForm";
@@ -6,7 +6,7 @@ import RegistrationForm from "./RegistrationForm";
 export const dynamic = "force-dynamic";
 
 export default async function PoolRegistrationPage({ params }: { params: Promise<{ poolSlug: string }> }) {
-    await connectDB();
+    await dbConnect();
     const { poolSlug } = await params;
     const pool = await Pool.findOne({ slug: poolSlug }).lean();
     

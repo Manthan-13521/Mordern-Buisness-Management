@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
 import { getServerSession } from "next-auth";
@@ -9,13 +9,15 @@ import { authOptions } from "@/lib/auth";
  * GET /api/export/members
  * Export all members (regular + entertainment) as CSV (Excel-compatible).
  */
+export const dynamic = "force-dynamic";
+
 export async function GET() {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user)
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        await connectDB();
+        await dbConnect();
 
         const query: Record<string, unknown> = {};
         if (session.user.role !== "superadmin" && session.user.poolId) {
@@ -24,17 +26,6 @@ export async function GET() {
 
         const populateFields = "name price";
 
-        const [regularMembers, entertainmentMembers] = await Promise.all([
-            Member.find(query).populate("planId", populateFields).sort({ createdAt: -1 }).lean(),
-            EntertainmentMember.find(query).populate("planId", populateFields).sort({ createdAt: -1 }).lean(),
-        ]);
-
-        const taggedEntertainment = entertainmentMembers.map((m: any) => ({ ...m, _type: "Entertainment" }));
-        const taggedRegular = regularMembers.map((m: any) => ({ ...m, _type: "Regular" }));
-        const allMembers = [...taggedRegular, ...taggedEntertainment]
-            .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-        // Build CSV
         const headers = [
             "Member ID",
             "Name",
@@ -60,7 +51,7 @@ export async function GET() {
             return val ?? "";
         };
 
-        const rows = allMembers.map((m: any) => {
+        const generateRow = (m: any, type: string) => {
             const plan = m.planId as any;
             const endDate = m.planEndDate || m.expiryDate || "";
             const isExpired = m.isExpired || (endDate && new Date(endDate) < new Date());
@@ -78,20 +69,36 @@ export async function GET() {
                 m.balanceAmount ?? 0,
                 m.paymentStatus ?? "",
                 m.paymentMode ?? "",
-                m._type ?? "Regular",
+                type,
                 status,
                 endDate ? new Date(endDate).toLocaleDateString("en-IN") : "",
                 m.createdAt ? new Date(m.createdAt).toLocaleDateString("en-IN") : "",
-            ].map((v: any) => escapeCSV(String(v)));
+            ].map((v: any) => escapeCSV(String(v))).join(",") + "\n";
+        };
+
+        const stream = new ReadableStream({
+            async start(controller) {
+                // Add BOM for Excel UTF-8 support
+                controller.enqueue("\ufeff"); 
+                controller.enqueue(headers.join(",") + "\n");
+                
+                // Stream Regular Members
+                const memberCursor = Member.find(query).populate("planId", populateFields).sort({ createdAt: -1 }).lean().cursor();
+                for await (const doc of memberCursor) {
+                    controller.enqueue(generateRow(doc, "Regular"));
+                }
+                
+                // Stream Entertainment Members
+                const entertainmentCursor = EntertainmentMember.find(query).populate("planId", populateFields).sort({ createdAt: -1 }).lean().cursor();
+                for await (const doc of entertainmentCursor) {
+                    controller.enqueue(generateRow(doc, "Entertainment"));
+                }
+
+                controller.close();
+            }
         });
 
-        const csv = [headers.join(","), ...rows.map((r: string[]) => r.join(","))].join("\n");
-
-        // Add BOM for Excel to correctly detect UTF-8
-        const bom = "\ufeff";
-        const csvWithBom = bom + csv;
-
-        return new Response(csvWithBom, {
+        return new Response(stream, {
             status: 200,
             headers: {
                 "Content-Type": "text/csv; charset=utf-8",

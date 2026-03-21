@@ -63,5 +63,10 @@ paymentSchema.index({ razorpayOrderId: 1 }, { unique: true, sparse: true });
 paymentSchema.index({ poolId: 1, createdAt: -1 });
 paymentSchema.index({ poolId: 1, memberId: 1 });
 
+// Section 2C — additional performance indexes
+paymentSchema.index({ memberId: 1 });
+paymentSchema.index({ createdAt: -1 });
+paymentSchema.index({ paymentMethod: 1 });
+
 export const Payment: Model<IPayment> =
     mongoose.models.Payment || mongoose.model<IPayment>("Payment", paymentSchema);

@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Pool } from "@/models/Pool";
 import { User } from "@/models/User";
 import Link from "next/link";
@@ -18,7 +18,7 @@ export default async function PlatformPoolsList() {
         redirect("/superadmin/login");
     }
 
-    await connectDB();
+    await dbConnect();
     const pools = await Pool.find().lean();
     
     // Group pools with their admins if needed

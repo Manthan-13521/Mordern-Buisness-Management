@@ -54,6 +54,10 @@ entryLogSchema.index({ poolId: 1, createdAt: -1 });
 entryLogSchema.index({ poolId: 1, scanTime: 1 });
 entryLogSchema.index({ memberId: 1, scanTime: -1 }); // kept for cooldown checks
 
+// Section 2B — additional indexes
+entryLogSchema.index({ memberId: 1, createdAt: -1 });
+entryLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: 31536000 }); // TTL: auto-delete after 1 year
+
 export const EntryLog: Model<IEntryLog> =
     mongoose.models.EntryLog ||
     mongoose.model<IEntryLog>("EntryLog", entryLogSchema);

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -17,7 +17,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
         const memberId = id;
         if (!memberId) return NextResponse.json({ error: "Missing member ID" }, { status: 400 });
 
-        await connectDB();
+        await dbConnect();
         // Since id route parameter is the generated human string (e.g. M0002) or DB ID, fallback appropriately
         const idQuery = {
             $or: [

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { Plan } from "@/models/Plan";
 import { NotificationLog } from "@/models/NotificationLog";
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     }
 
     try {
-        await connectDB();
+        await dbConnect();
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 

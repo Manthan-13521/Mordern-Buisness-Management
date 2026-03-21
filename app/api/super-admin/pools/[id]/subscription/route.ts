@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Pool } from "@/models/Pool";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -27,7 +27,7 @@ export async function PATCH(
             return NextResponse.json({ error: "Invalid status value" }, { status: 400 });
         }
 
-        await connectDB();
+        await dbConnect();
 
         const pId = await params;
         const pool = await Pool.findOneAndUpdate(

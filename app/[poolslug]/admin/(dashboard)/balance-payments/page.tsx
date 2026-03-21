@@ -118,7 +118,7 @@ export default function BalancePaymentsPage() {
     const [loading, setLoading] = useState(true);
     const [selected, setSelected] = useState<Member | null>(null);
 
-    const LIMIT = 20;
+    const LIMIT = 7;
 
     const fetchMembers = useCallback(() => {
         setLoading(true);

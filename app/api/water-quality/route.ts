@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { WaterQualityLog } from "@/models/WaterQualityLog";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
         const since = new Date();
         since.setDate(since.getDate() - days);
 
-        await connectDB();
+        await dbConnect();
 
         const filter = { poolId, recordedAt: { $gte: since } };
 
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
 
         const status = deriveStatus(phNum, chlorNum);
 
-        await connectDB();
+        await dbConnect();
 
         const log = await WaterQualityLog.create({
             poolId:      session.user.poolId,

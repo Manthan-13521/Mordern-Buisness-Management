@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Competition } from "@/models/Competition";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
             ? (searchParams.get("poolId") ?? session.user.poolId)
             : session.user.poolId;
 
-        await connectDB();
+        await dbConnect();
 
         const filter: Record<string, unknown> = { poolId };
         if (status === "completed") filter.isCompleted = true;
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "name, date, and category are required" }, { status: 400 });
         }
 
-        await connectDB();
+        await dbConnect();
 
         const competition = await Competition.create({
             poolId:       session.user.poolId,

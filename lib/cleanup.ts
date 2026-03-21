@@ -1,9 +1,9 @@
 import { PoolSession } from "@/models/PoolSession";
-import connectDB from "./mongodb";
+import { dbConnect } from "./mongodb";
 
 export async function runOccupancyCleanupInBackground() {
     try {
-        await connectDB();
+        await dbConnect();
         const now = new Date();
         const expiredSessions = await PoolSession.find({
             status: "active",

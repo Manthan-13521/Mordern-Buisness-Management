@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -19,7 +19,7 @@ export async function POST(req: Request, props: RouteContext) {
         }
 
         const { id } = await props.params;
-        await connectDB();
+        await dbConnect();
 
         // Optionally accept a new planEndDate for renewal-on-restore
         let body: { planEndDate?: string } = {};

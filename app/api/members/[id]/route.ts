@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -18,13 +18,13 @@ export async function GET(_req: Request, props: RouteContext) {
         if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
         const { id } = await props.params;
-        await connectDB();
+        await dbConnect();
 
         const populateFields = "name price durationDays durationHours durationMinutes hasTokenPrint quickDelete hasEntertainment hasFaceScan";
-        let member: any = await Member.findById(id).populate("planId", populateFields).lean();
+        let member: any = await Member.findById(id).select("+photoUrl").populate("planId", populateFields).lean();
 
         if (!member) {
-            member = await EntertainmentMember.findById(id).populate("planId", populateFields).lean();
+            member = await EntertainmentMember.findById(id).select("+photoUrl").populate("planId", populateFields).lean();
         }
 
         if (!member) return NextResponse.json({ error: "Member not found" }, { status: 404 });
@@ -51,7 +51,7 @@ export async function PATCH(req: Request, props: RouteContext) {
         if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
         const { id } = await props.params;
-        await connectDB();
+        await dbConnect();
 
         const body = await req.json();
         const { isDeleted, deletedAt, memberId, poolId, ...safeUpdates } = body;
@@ -93,7 +93,7 @@ export async function DELETE(req: Request, props: RouteContext) {
         const { id } = await props.params;
         if (!id) return NextResponse.json({ error: "Missing member ID" }, { status: 400 });
 
-        await connectDB();
+        await dbConnect();
 
         const deletePayload = {
             $set: {

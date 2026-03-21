@@ -27,7 +27,7 @@ export default function ExpiredMembersPage() {
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch(`/api/members/expired?page=${p}&limit=20`);
+            const res = await fetch(`/api/members/expired?page=${p}&limit=10`);
             if (!res.ok) throw new Error("Failed to fetch");
             const data = await res.json();
             setMembers(data.members || []);

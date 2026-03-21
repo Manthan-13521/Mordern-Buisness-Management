@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
 import { getServerSession } from "next-auth";
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
         if (!uid)
             return NextResponse.json({ error: "uid query parameter required" }, { status: 400 });
 
-        await connectDB();
+        await dbConnect();
 
         const poolId = session.user.role !== "superadmin" ? session.user.poolId : undefined;
         const query: Record<string, unknown> = { memberId: { $regex: `^${uid}$`, $options: "i" } };

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Competition } from "@/models/Competition";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -17,7 +17,7 @@ export async function GET(_req: Request, props: RouteContext) {
         if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
         const { id } = await props.params;
-        await connectDB();
+        await dbConnect();
 
         const competition = await Competition.findById(id).lean();
 
@@ -47,7 +47,7 @@ export async function PATCH(req: Request, props: RouteContext) {
 
         const { id } = await props.params;
         const body = await req.json();
-        await connectDB();
+        await dbConnect();
 
         const competition = await Competition.findById(id);
         if (!competition) return NextResponse.json({ error: "Not found" }, { status: 404 });

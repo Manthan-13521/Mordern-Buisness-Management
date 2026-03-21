@@ -1,6 +1,6 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import connectDB from "./mongodb";
+import { dbConnect } from "./mongodb";
 import { User as UserModel, IUser } from "@/models/User";
 import { PlatformAdmin } from "@/models/PlatformAdmin";
 import { Pool } from "@/models/Pool";
@@ -62,7 +62,7 @@ export const authOptions: NextAuthOptions = {
                     throw new Error("Invalid credentials");
                 }
 
-                await connectDB();
+                await dbConnect();
 
                 if (credentials.isSuperAdmin === 'true') {
                     const platformAdmin = await PlatformAdmin.findOne({ email: credentials.username }).lean();

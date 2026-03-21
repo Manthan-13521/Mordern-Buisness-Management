@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Pool } from "@/models/Pool";
 import { User } from "@/models/User";
 import bcrypt from "bcryptjs";
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
-        await connectDB();
+        await dbConnect();
 
         // Check if email is already in use
         const existingUser = await User.findOne({ email: adminEmail });

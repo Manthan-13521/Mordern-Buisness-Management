@@ -23,5 +23,10 @@ const notificationLogSchema = new Schema<INotificationLog>(
     { timestamps: true }
 );
 
+// Section 2D — performance indexes
+notificationLogSchema.index({ memberId: 1 });
+notificationLogSchema.index({ date: -1 });  // sentAt equivalent
+notificationLogSchema.index({ status: 1 });
+
 export const NotificationLog: Model<INotificationLog> =
     mongoose.models.NotificationLog || mongoose.model<INotificationLog>("NotificationLog", notificationLogSchema);

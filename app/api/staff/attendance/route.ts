@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Staff } from "@/models/Staff";
 import { StaffAttendance } from "@/models/StaffAttendance";
 import { getServerSession } from "next-auth";
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
             since.setDate(since.getDate() - days);
         }
 
-        await connectDB();
+        await dbConnect();
 
         const filter: Record<string, unknown> = {
             poolId,
@@ -72,7 +72,7 @@ export async function POST(req: Request) {
         const session = await getServerSession(authOptions);
         if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        await connectDB();
+        await dbConnect();
         const body = await req.json();
         const { staffId, method, type } = body;
 

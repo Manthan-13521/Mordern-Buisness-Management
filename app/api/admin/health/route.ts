@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { getSettings } from "@/models/Settings";
 import { EntryLog } from "@/models/EntryLog";
 import { Member } from "@/models/Member";
@@ -19,7 +19,7 @@ export async function GET() {
             return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
         }
 
-        await connectDB();
+        await dbConnect();
 
         const settings = await getSettings();
 

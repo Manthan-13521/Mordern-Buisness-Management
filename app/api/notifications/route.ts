@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { NotificationLog } from "@/models/NotificationLog";
 import { Member } from "@/models/Member";
 import { getServerSession } from "next-auth";
@@ -10,7 +10,7 @@ export async function GET(req: Request) {
         const session = await getServerSession(authOptions);
         if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        await connectDB();
+        await dbConnect();
         const baseMatch = session.user.role !== "superadmin" && session.user.poolId ? { poolId: session.user.poolId } : {};
 
         const logs = await NotificationLog.find({ ...baseMatch })

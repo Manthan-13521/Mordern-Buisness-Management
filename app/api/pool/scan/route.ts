@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Pool } from "@/models/Pool";
 import { Member } from "@/models/Member";
 import { StudentMember } from "@/models/StudentMember";
@@ -11,7 +11,7 @@ import { memberCache } from "@/lib/cache";
 export async function POST(req: Request) {
     try {
         const startTime = Date.now();
-        await connectDB();
+        await dbConnect();
         const body = await req.json();
         const { poolId, scanToken, type, method } = body; // type: "entry" | "exit", method: "qr" | "face"
 

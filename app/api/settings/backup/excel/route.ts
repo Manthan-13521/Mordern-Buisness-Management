@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { Plan } from "@/models/Plan";
 import { Payment } from "@/models/Payment";
@@ -31,7 +31,7 @@ export async function GET(req: Request) {
     }
 
     try {
-        await connectDB();
+        await dbConnect();
         
         // Ensure pool separation for non-superadmins
         const session = await getServerSession(authOptions);

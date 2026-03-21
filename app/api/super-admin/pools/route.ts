@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Pool } from "@/models/Pool";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: "Superadmin only", code: "FORBIDDEN" }, { status: 403 });
         }
 
-        await connectDB();
+        await dbConnect();
 
         const url    = new URL(req.url);
         const page   = Math.max(1, parseInt(url.searchParams.get("page")  ?? "1"));
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Superadmin only", code: "FORBIDDEN" }, { status: 403 });
         }
 
-        await connectDB();
+        await dbConnect();
 
         const body = await req.json();
         const { poolName, slug, adminEmail, capacity, location, plan = "free" } = body;
@@ -131,7 +131,7 @@ export async function PATCH(req: NextRequest) {
             return NextResponse.json({ error: "Superadmin only", code: "FORBIDDEN" }, { status: 403 });
         }
 
-        await connectDB();
+        await dbConnect();
 
         const { poolId, status } = await req.json();
         if (!poolId || !status) {

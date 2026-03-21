@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Payment } from "@/models/Payment";
 import { Member } from "@/models/Member";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import mongoose from "mongoose";
+import { PaymentSchema } from "@/lib/validators";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ export async function GET(req: Request) {
         if (!session?.user)
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        await connectDB();
+        await dbConnect();
 
         const url = new URL(req.url);
         const page  = Math.max(1, parseInt(url.searchParams.get("page")  ?? "1"));
@@ -80,6 +81,14 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
         const body = await req.json();
+        const result = PaymentSchema.safeParse(body);
+        if (!result.success) {
+            return NextResponse.json(
+                { error: result.error.flatten() },
+                { status: 400 }
+            );
+        }
+        
         const {
             memberId,
             planId,
@@ -88,16 +97,8 @@ export async function POST(req: Request) {
             transactionId,
             notes,
             idempotencyKey,
-            memberCollection = "members",
-        } = body;
-
-        if (!memberId || !planId || !amount || !paymentMethod) {
-            return NextResponse.json(
-                { error: "Missing required fields: memberId, planId, amount, paymentMethod" },
-                { status: 400 }
-            );
-        }
-
+            memberCollection,
+        } = result.data;
         if (paymentMethod === "upi" && !transactionId) {
             return NextResponse.json(
                 { error: "UPI payments require a transactionId" },
@@ -105,7 +106,7 @@ export async function POST(req: Request) {
             );
         }
 
-        await connectDB();
+        await dbConnect();
 
         // ── Idempotency check ──────────────────────────────────────────────
         if (idempotencyKey) {

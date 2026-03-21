@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { Payment } from "@/models/Payment";
 import { EntryLog } from "@/models/EntryLog";
@@ -14,9 +14,8 @@ export async function GET() {
         const session = await getServerSession(authOptions);
         if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        await connectDB();
+        await dbConnect();
         
-        // Run background occupancy cleanup asynchronously to keep stats fresh without blocking
         runOccupancyCleanupInBackground();
 
         const today = new Date();
@@ -27,112 +26,83 @@ export async function GET() {
         const baseMatch = session.user.role !== "superadmin" && session.user.poolId 
             ? { poolId: session.user.poolId } 
             : {};
-
-        // 1. Members Stats by planQuantity
-        const totalMembersAgg = await Member.aggregate([
-            { $match: { ...baseMatch, status: { $ne: "deleted" } } },
-            { $group: { _id: null, total: { $sum: { $ifNull: ["$planQuantity", 1] } } } }
-        ]);
-        const totalMembers = totalMembersAgg.length > 0 ? totalMembersAgg[0].total : 0;
-
-        const activeMembersAgg = await Member.aggregate([
-            { $match: { ...baseMatch, status: "active" } },
-            { $group: { _id: null, total: { $sum: { $ifNull: ["$planQuantity", 1] } } } }
-        ]);
-        const activeMembers = activeMembersAgg.length > 0 ? activeMembersAgg[0].total : 0;
-
-        const expiredMembersAgg = await Member.aggregate([
-            { $match: { ...baseMatch, status: "expired" } },
-            { $group: { _id: null, total: { $sum: { $ifNull: ["$planQuantity", 1] } } } }
-        ]);
-        const expiredMembers = expiredMembersAgg.length > 0 ? expiredMembersAgg[0].total : 0;
-
-        // 2. Entries Today
-        const todaysEntriesAgg = await EntryLog.aggregate([
-            { $match: { ...baseMatch, scanTime: { $gte: today }, status: "granted" } },
-            { $group: { _id: null, total: { $sum: { $ifNull: ["$numPersons", 1] } } } }
-        ]);
-        const todaysEntries = todaysEntriesAgg.length > 0 ? todaysEntriesAgg[0].total : 0;
-
-        // 3. Revenue Stats
-        const todaysRevenueData = await Payment.aggregate([
-            { $match: { ...baseMatch, date: { $gte: today }, status: "success" } },
-            { $group: { _id: null, total: { $sum: "$amount" } } }
-        ]);
-        const todaysRevenue = todaysRevenueData.length > 0 ? todaysRevenueData[0].total : 0;
-
-        const monthlyRevenueData = await Payment.aggregate([
-            { $match: { ...baseMatch, date: { $gte: firstDayOfMonth }, status: "success" } },
-            { $group: { _id: null, total: { $sum: "$amount" } } }
-        ]);
-        const monthlyRevenue = monthlyRevenueData.length > 0 ? monthlyRevenueData[0].total : 0;
-
-        // 4. Charts Data
-        // Payment Methods
-        const paymentMethods = await Payment.aggregate([
-            { $match: { ...baseMatch, status: "success" } },
-            { $group: { _id: "$paymentMethod", count: { $sum: 1 } } }
-        ]);
-        const pieChartData = paymentMethods.map(item => ({
-            name: item._id.toUpperCase(),
-            value: item.count
-        }));
-
-        // Plan Popularity
-        const planGroups = await Member.aggregate([
-            { $match: { ...baseMatch, status: { $ne: "deleted" } } },
-            { $group: { _id: "$planId", count: { $sum: 1 } } }
+            
+        // Execute all independent queries in parallel
+        const [
+            memberStats,
+            entriesToday,
+            revenueStats,
+            expiringMembers
+        ] = await Promise.all([
+            Member.aggregate([
+                { $match: { ...baseMatch, status: { $ne: "deleted" } } },
+                { $group: {
+                    _id: "$status",
+                    total: { $sum: { $ifNull: ["$planQuantity", 1] } }
+                }}
+            ]),
+            EntryLog.aggregate([
+                { $match: { ...baseMatch, scanTime: { $gte: today }, status: "granted" } },
+                { $group: { _id: null, total: { $sum: { $ifNull: ["$numPersons", 1] } } } }
+            ]),
+            Payment.aggregate([
+                { $match: { ...baseMatch, status: "success", date: { $gte: firstDayOfMonth } } },
+                { $group: {
+                    _id: { $cond: [{ $gte: ["$date", today] }, "today", "month"] },
+                    total: { $sum: "$amount" }
+                }}
+            ]),
+            Member.find({
+                ...baseMatch,
+                status: "active",
+                expiryDate: { 
+                    $gte: today, 
+                    $lte: new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000) 
+                }
+            })
+            .select('memberId name phone expiryDate planQuantity')
+            .lean()
         ]);
 
-        await connectDB();
-        const { Plan } = await import("@/models/Plan");
-        // Populate plan names (only non-deleted plans show in chart)
-        await Plan.populate(planGroups, { path: "_id", select: "name deletedAt" });
+        // Process Member Stats
+        let activeMembers = 0, expiredMembers = 0;
+        memberStats.forEach((stat: any) => {
+            if (stat._id === 'active') activeMembers = stat.total;
+            if (stat._id === 'expired') expiredMembers = stat.total;
+        });
+        const totalMembers = activeMembers + expiredMembers;
 
-        const planPopularityData = planGroups
-            .filter((p: any) => p._id && !p._id.deletedAt) // strictly hide deleted or missing plans
-            .map((p: any) => ({
-                name: p._id?.name || "Unknown Plan",
-                count: p.count
-            }));
-
-        // 5. Expiring Members (Alerts)
-        const threeDaysFromNow = new Date(today);
-        threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
-
-        const expiringToday = await Member.find({
-            ...baseMatch,
-            status: "active",
-            expiryDate: { $gte: today, $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000) }
-        }).select("name memberId expiryDate phone").lean();
-
-        const expiringSoon = await Member.find({
-            ...baseMatch,
-            status: "active",
-            expiryDate: { $gt: new Date(today.getTime() + 24 * 60 * 60 * 1000), $lte: threeDaysFromNow }
-        }).select("name memberId expiryDate phone").lean();
+        // Process Revenue Stats
+        let todaysRevenue = 0, monthlyRevenue = 0;
+        revenueStats.forEach((stat: any) => {
+            if (stat._id === 'today') todaysRevenue = stat.total;
+            // Month includes today + older days in month
+            monthlyRevenue += stat.total; 
+        });
 
         return NextResponse.json({
             stats: {
                 totalMembers,
                 activeMembers,
                 expiredMembers,
-                todaysEntries,
+                todaysEntries: entriesToday[0]?.total || 0,
                 todaysRevenue,
-                monthlyRevenue,
-            },
-            charts: {
-                paymentMethods: pieChartData,
-                planPopularity: planPopularityData,
+                monthlyRevenue
             },
             alerts: {
-                expiringToday,
-                expiringSoon,
+                expiringMembers: expiringMembers.map((m: any) => ({
+                    id: m._id,
+                    memberId: m.memberId,
+                    name: m.name,
+                    phone: m.phone,
+                    qty: m.planQuantity || 1,
+                    remainingDays: Math.ceil((new Date(m.expiryDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+                }))
             }
         });
 
     } catch (error) {
-        console.error(error);
-        return NextResponse.json({ error: "Failed to fetch dashboard data" }, { status: 500 });
+        console.error("[GET /api/dashboard]", error);
+        return NextResponse.json({ error: "Failed to fetch dashboard" }, { status: 500 });
     }
 }

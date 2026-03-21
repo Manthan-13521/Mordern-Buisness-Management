@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Pool } from "@/models/Pool";
 import { Member } from "@/models/Member";
 import { Payment } from "@/models/Payment";
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: "Superadmin only", code: "FORBIDDEN" }, { status: 403 });
         }
 
-        await connectDB();
+        await dbConnect();
 
         const now = new Date();
         const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);

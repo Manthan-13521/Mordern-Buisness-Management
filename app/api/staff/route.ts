@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Staff } from "@/models/Staff";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
             ? (searchParams.get("poolId") ?? "")
             : (session.user.poolId ?? "");
 
-        await connectDB();
+        await dbConnect();
 
         const filter: Record<string, unknown> = { poolId };
         if (search) {
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: `role must be one of: ${validRoles.join(", ")}` }, { status: 400 });
         }
 
-        await connectDB();
+        await dbConnect();
 
         const staffId = generateStaffId(role);
         const staff = await Staff.create({

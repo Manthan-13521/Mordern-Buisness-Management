@@ -138,6 +138,13 @@ memberSchema.index({ poolId: 1, balanceAmount: 1 });
 memberSchema.index({ poolId: 1, createdAt: -1 });
 memberSchema.index({ poolId: 1, isDeleted: 1, isExpired: 1 });
 
+// ── Section 2A — additional performance indexes ─────────────────────
+memberSchema.index({ status: 1 });
+memberSchema.index({ expiryDate: 1 });
+memberSchema.index({ name: "text", phone: "text" }); // text search
+memberSchema.index({ planId: 1 });
+// TODO: migrate photoUrl from base64 to URL after running photo migration script
+
 // ── Method: rotate QR token after each successful scan ───────────────
 memberSchema.methods.rotateQrToken = async function () {
     this.qrToken = crypto.randomUUID();

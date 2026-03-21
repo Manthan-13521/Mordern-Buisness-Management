@@ -1,6 +1,6 @@
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Pool } from "@/models/Pool";
 import { XCircle } from "lucide-react";
 
@@ -14,7 +14,7 @@ export default async function DashboardLayout({
     children: React.ReactNode;
     params: Promise<{ poolslug: string }>;
 }) {
-    await connectDB();
+    await dbConnect();
     const pSlug = await params;
     const pool = await Pool.findOne({ slug: pSlug.poolslug }).lean() as any;
 

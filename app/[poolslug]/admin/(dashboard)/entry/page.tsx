@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useParams } from "next/navigation";
 import { Scanner } from "@yudiel/react-qr-scanner";
 import { UserCheck, UserX, ScanFace, WifiOff, Wifi, Users, Search, ScanLine, X } from "lucide-react";
 
@@ -45,6 +46,9 @@ interface LookupMember {
 const COOLDOWN_MS = 3500;
 
 export default function EntryPage() {
+    const params = useParams();
+    const poolslug = params.poolslug as string;
+
     const [scanResult, setScanResult] = useState<ScanResult | null>(null);
     const [isScanning, setIsScanning] = useState(false); // Camera starts paused
     const [cameraActive, setCameraActive] = useState(false); // True when user clicks "Start Scan"
@@ -87,13 +91,13 @@ export default function EntryPage() {
     // ── Fetch pool occupancy ───────────────────────────────────────────────
     const fetchOccupancy = useCallback(async () => {
         try {
-            const res = await fetch("/api/occupancy");
+            const res = await fetch(poolslug ? `/api/occupancy?poolslug=${poolslug}` : "/api/occupancy");
             if (res.ok) {
                 const data = await res.json();
                 setOccupancy({ current: data.currentOccupancy, capacity: data.capacity });
             }
         } catch {}
-    }, []);
+    }, [poolslug]);
 
     useEffect(() => {
         fetchOccupancy();
@@ -155,7 +159,7 @@ export default function EntryPage() {
             localStorage.setItem("pendingScans", JSON.stringify(newPending));
             setScanResult({ success: false, message: "Offline — Scan Queued for Sync" });
             setLoading(false);
-            setTimeout(() => { setScanResult(null); setIsScanning(true); }, 5000);
+            setTimeout(() => { setScanResult(null); setIsScanning(true); }, 3000);
             return;
         }
 
@@ -200,7 +204,7 @@ export default function EntryPage() {
             setScanResult({ success: false, message: "Network Error — Check Connection" });
         } finally {
             setLoading(false);
-            setTimeout(() => { setScanResult(null); setIsScanning(true); }, 8000);
+            setTimeout(() => { setScanResult(null); setIsScanning(true); }, 3000);
         }
     };
 

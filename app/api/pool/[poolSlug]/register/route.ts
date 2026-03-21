@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Pool } from "@/models/Pool";
 import { Member } from "@/models/Member";
 import { StudentMember } from "@/models/StudentMember";
 
 export async function POST(req: Request, { params }: { params: Promise<{ poolSlug: string }> }) {
     try {
-        await connectDB();
+        await dbConnect();
         const { poolSlug } = await params;
         const body = await req.json();
         

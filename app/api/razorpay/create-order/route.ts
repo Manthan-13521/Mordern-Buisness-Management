@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import Razorpay from "razorpay";
-import connectDB from "@/lib/mongodb";
+import { dbConnect } from "@/lib/mongodb";
 import { Plan } from "@/models/Plan";
 
 // Initialize Razorpay instance conditionally
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Plan ID is required" }, { status: 400 });
         }
 
-        await connectDB();
+        await dbConnect();
         const plan = await Plan.findById(planId);
 
         if (!plan) {
