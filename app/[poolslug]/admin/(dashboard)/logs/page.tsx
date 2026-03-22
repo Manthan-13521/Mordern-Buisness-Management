@@ -20,7 +20,7 @@ export default function LogsPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [regPage, setRegPage] = useState(1);
     const [entryPage, setEntryPage] = useState(1);
-    const ITEMS_PER_PAGE = 9;
+    const ITEMS_PER_PAGE = 8;
 
     useEffect(() => {
         setLoading(true);
