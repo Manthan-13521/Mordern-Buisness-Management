@@ -137,11 +137,16 @@ memberSchema.index({ poolId: 1, planEndDate: 1 });
 memberSchema.index({ poolId: 1, balanceAmount: 1 });
 memberSchema.index({ poolId: 1, createdAt: -1 });
 memberSchema.index({ poolId: 1, isDeleted: 1, isExpired: 1 });
+memberSchema.index({ poolId: 1, isDeleted: 1 });
 
 // ── Section 2A — additional performance indexes ─────────────────────
 memberSchema.index({ status: 1 });
 memberSchema.index({ expiryDate: 1 });
-memberSchema.index({ name: "text", phone: "text" }); // text search
+memberSchema.index({ createdAt: -1 });
+memberSchema.index(
+  { name: "text", phone: "text", memberId: "text" },
+  { weights: { memberId: 3, name: 2, phone: 1 } }
+);
 memberSchema.index({ planId: 1 });
 // TODO: migrate photoUrl from base64 to URL after running photo migration script
 

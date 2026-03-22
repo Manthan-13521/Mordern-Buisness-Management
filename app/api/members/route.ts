@@ -138,16 +138,17 @@ export async function POST(req: Request) {
     try {
         await dbConnect();
 
-        const session = await getServerSession(authOptions);
-        if (!session?.user)
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
         const ip = getClientIp(req);
         if (!checkRateLimit(ip, "member-create", 20)) {
             return NextResponse.json({ error: "Too many member creations. Slow down." }, { status: 429 });
         }
 
-        const body = await req.json();
+        const [session, body] = await Promise.all([
+            getServerSession(authOptions),
+            req.json(),
+        ]);
+        if (!session?.user)
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
         // Map frontend fields to match Zod schema expectations
         const mappedBody = {

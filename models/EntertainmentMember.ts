@@ -112,6 +112,14 @@ entertainmentMemberSchema.index({ poolId: 1, planEndDate: 1 });
 entertainmentMemberSchema.index({ poolId: 1, balanceAmount: 1 });
 entertainmentMemberSchema.index({ poolId: 1, createdAt: -1 });
 entertainmentMemberSchema.index({ poolId: 1, isDeleted: 1, isExpired: 1 });
+entertainmentMemberSchema.index({ poolId: 1, isDeleted: 1 });
+entertainmentMemberSchema.index({ createdAt: -1 });
+entertainmentMemberSchema.index({ planEndDate: 1 });
+entertainmentMemberSchema.index({ isExpired: 1 });
+entertainmentMemberSchema.index(
+  { name: "text", phone: "text", memberId: "text" },
+  { weights: { memberId: 3, name: 2, phone: 1 } }
+);
 
 export const EntertainmentMember: Model<IEntertainmentMember> =
     mongoose.models.EntertainmentMember ||
