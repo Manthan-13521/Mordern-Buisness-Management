@@ -10,8 +10,6 @@ import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import ExcelJS from "exceljs";
-import path from "path";
-import fs from "fs";
 
 export async function GET(req: Request) {
     // Allow cron job OR authenticated admin
@@ -49,6 +47,7 @@ export async function GET(req: Request) {
             Payment.find({ ...baseMatch })
                 .populate("memberId", "name memberId")
                 .populate("planId", "name")
+                .limit(5000)
                 .lean(),
             EntryLog.find({ ...baseMatch })
                 .sort({ scanTime: -1 })
@@ -216,7 +215,7 @@ export async function GET(req: Request) {
         
         const buffer = await workbook.xlsx.writeBuffer();
 
-        return new NextResponse(buffer as ArrayBuffer, {
+        return new NextResponse(buffer, {
             status: 200,
             headers: {
                 "Content-Disposition": `attachment; filename="${filename}"`,

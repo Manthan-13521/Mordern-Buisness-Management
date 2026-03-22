@@ -16,6 +16,10 @@ function formatEntry(level: string, message: string, meta?: object): string {
 }
 
 function writeLog(file: string, entry: string) {
+    // Skip file logging in production (Vercel read-only filesystem)
+    if (process.env.NODE_ENV === "production" || process.env.VERCEL) {
+        return;
+    }
     try {
         ensureLogDir();
         fs.appendFileSync(path.join(LOG_DIR, file), entry, "utf8");

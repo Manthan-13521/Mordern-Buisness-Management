@@ -92,7 +92,7 @@ export async function GET(req: Request) {
 
         const buffer = await workbook.xlsx.writeBuffer();
 
-        return new NextResponse(buffer as ArrayBuffer, {
+        return new NextResponse(buffer, {
             status: 200,
             headers: {
                 "Content-Disposition": `attachment; filename="${filename}"`,
