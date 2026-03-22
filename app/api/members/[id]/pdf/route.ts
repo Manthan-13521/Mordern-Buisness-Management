@@ -90,22 +90,38 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
                 }
 
                 if (imagePath.startsWith('http')) {
-                    const response = await fetch(imagePath);
+                    const fetchUrl = imagePath;
+
+                    console.log(`[PDF DEBUG] Final Fetch URL: ${fetchUrl}`);
+                    const response = await fetch(fetchUrl, {
+                        headers: { 'User-Agent': 'Mozilla/5.0' }
+                    });
+
+                    if (!response.ok) {
+                        console.error(`[PDF DEBUG] Fetch failed: ${response.status} ${response.statusText}`);
+                        return null;
+                    }
+                    
+                    const contentType = response.headers.get('content-type');
                     const arrayBuffer = await response.arrayBuffer();
                     const bytes = Buffer.from(arrayBuffer);
-                    const type = imagePath.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
+                    
+                    console.log(`[PDF DEBUG] Received ${bytes.length} bytes, Content-Type: ${contentType}`);
+                    const type = contentType?.includes('png') ? 'png' : 'jpg';
                     return { bytes, type };
                 }
 
-                // Local path fallback
+                // Local path fallback (works locally but not on Vercel for old uploads)
                 const fullPath = path.join(process.cwd(), "public", imagePath);
                 if (fs.existsSync(fullPath)) {
+                    console.log(`[PDF DEBUG] Found local file: ${fullPath}`);
                     const bytes = fs.readFileSync(fullPath);
                     const type = imagePath.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
                     return { bytes, type };
                 }
+                console.warn(`[PDF DEBUG] Photo not found locally or remote: ${imagePath}`);
             } catch (err) {
-                console.error("Error fetching image bytes:", err);
+                console.error("[PDF DEBUG] getImageBytes Fatal Error:", err);
             }
             return null;
         }
@@ -203,7 +219,10 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
             const qrData = await getImageBytes(member.qrCodeUrl);
             if (qrData) {
                 try {
-                    const qrImage = await pdfDoc.embedPng(qrData.bytes);
+                    const qrImage = qrData.type === 'png' 
+                        ? await pdfDoc.embedPng(qrData.bytes)
+                        : await pdfDoc.embedJpg(qrData.bytes);
+                    
                     const qrSize = 85;
                     page.drawImage(qrImage, {
                         x: width - qrSize - 20,
@@ -212,7 +231,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
                         height: qrSize,
                     });
                 } catch (err) {
-                    console.error("Failed to embed QR code", err);
+                    console.error("[PDF DEBUG] Failed to embed QR code:", err);
                 }
             }
         }
