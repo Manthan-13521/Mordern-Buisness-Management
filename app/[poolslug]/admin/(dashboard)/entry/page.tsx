@@ -238,7 +238,7 @@ export default function EntryPage() {
                 const data = await res.json();
                 setLookupResult(data);
                 if (autoClear) {
-                    setTimeout(() => setLookupResult(null), 5000);
+                    setTimeout(() => setLookupResult(null), 7000);
                 }
             } else {
                 const err = await res.json();
@@ -426,14 +426,14 @@ export default function EntryPage() {
                                 </div>
                                 
                                 {/* Body */}
-                                <div className="p-5 flex gap-5 items-start">
+                                <div className="p-5 flex flex-col sm:flex-row gap-6 items-center sm:items-start">
                                     {/* Photo Area */}
                                     <div className="flex-shrink-0">
                                         {lookupResult.photoUrl ? (
-                                            <img src={lookupResult.photoUrl} alt="" className="h-28 w-24 object-cover border-4 border-gray-100 dark:border-gray-800 rounded shadow-sm" />
+                                            <img src={lookupResult.photoUrl} alt="" className="h-56 w-48 object-cover border-4 border-gray-100 dark:border-gray-800 rounded-lg shadow-sm" />
                                         ) : (
-                                            <div className="h-28 w-24 bg-gray-100 dark:bg-gray-800 border-4 border-gray-50 flex items-center justify-center rounded shadow-sm">
-                                                <UserCheck className="h-10 w-10 text-gray-400" />
+                                            <div className="h-56 w-48 bg-gray-100 dark:bg-gray-800 border-4 border-gray-50 flex items-center justify-center rounded-lg shadow-sm">
+                                                <UserCheck className="h-16 w-16 text-gray-400" />
                                             </div>
                                         )}
                                     </div>
