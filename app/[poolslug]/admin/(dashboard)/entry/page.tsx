@@ -350,27 +350,52 @@ export default function EntryPage() {
 
                         {/* Scan Result Member Card */}
                         {scanResult && scanResult.success && scanResult.member && (
-                            <div className="w-full mt-6 bg-gray-50 dark:bg-gray-800 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 fade-in flex flex-col items-center">
-                                <div className="p-4 w-full text-center border-b border-gray-200 dark:border-gray-700 bg-gradient-to-b from-green-50 to-white dark:from-green-900/20 dark:to-gray-800">
-                                    {scanResult.member.photoUrl ? (
-                                        <img src={scanResult.member.photoUrl} alt="" className="h-16 w-16 rounded-full object-cover ring-4 ring-white mx-auto mb-3 shadow-sm" />
-                                    ) : (
-                                        <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center mx-auto mb-3 ring-4 ring-white shadow-sm">
-                                            <span className="text-2xl font-bold text-green-700 dark:text-green-400">{scanResult.member.name.charAt(0).toUpperCase()}</span>
-                                        </div>
-                                    )}
-                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Active Member Verified</h3>
-                                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{scanResult.member.name}</p>
-                                    <p className="text-xs text-gray-500">{scanResult.member.memberId}</p>
+                            <div className="w-full mt-6 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-md fade-in bg-white dark:bg-gray-900 relative">
+                                {/* Header (Deep Blue) */}
+                                <div className="bg-indigo-900 px-4 py-2 flex justify-between items-center text-white shrink-0">
+                                    <span className="text-xs font-bold uppercase tracking-wider">Member ID Card</span>
+                                    <span className="text-xs font-bold bg-green-500 text-white px-2 py-0.5 rounded shadow-sm">Verified</span>
                                 </div>
+                                
+                                {/* Body */}
+                                <div className="p-5 flex gap-5 items-start">
+                                    {/* Photo Area */}
+                                    <div className="flex-shrink-0">
+                                        {scanResult.member.photoUrl ? (
+                                            <img src={scanResult.member.photoUrl} alt="" className="h-28 w-24 object-cover border-4 border-gray-100 dark:border-gray-800 rounded shadow-sm" />
+                                        ) : (
+                                            <div className="h-28 w-24 bg-gray-100 dark:bg-gray-800 border-4 border-gray-50 flex items-center justify-center rounded shadow-sm">
+                                                <UserCheck className="h-10 w-10 text-gray-400" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    {/* Details Area */}
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="text-xl font-bold text-gray-900 dark:text-white truncate">
+                                            {scanResult.member.name.toUpperCase()}
+                                        </h3>
+                                        <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400 mt-1">
+                                            {scanResult.member.memberId}
+                                        </p>
+                                        
+                                        <div className="mt-3 space-y-1">
+                                            {scanResult.member.planQuantity && scanResult.member.planQuantity > 1 && (
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                    Group Size: <span className="font-semibold text-gray-900 dark:text-white">{scanResult.member.planQuantity}</span>
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Footer / Expiry */}
                                 {scanResult.member.expiryDate && (
-                                    <div className="p-4 w-full text-center bg-indigo-50 dark:bg-gray-900">
-                                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                            Expires: {new Date(scanResult.member.expiryDate).toLocaleString()}
-                                        </p>
-                                        <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400 mt-1">
+                                    <div className="bg-gray-50 dark:bg-gray-800 px-5 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                                        <span className="text-xs text-gray-500 font-medium">Valid Till: {new Date(scanResult.member.expiryDate).toLocaleDateString()}</span>
+                                        <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
                                             ⏱ {getRemainingTimeText(scanResult.member.expiryDate)}
-                                        </p>
+                                        </span>
                                     </div>
                                 )}
                             </div>
@@ -422,74 +447,74 @@ export default function EntryPage() {
                             </div>
                         )}
                         {lookupResult && (
-                            <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden fade-in">
+                            <div className="rounded-xl border border-gray-200 dark:border-gray-700 shadow-md fade-in bg-white dark:bg-gray-900 relative">
                                 {/* Header */}
-                                <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-5 py-4 flex items-center gap-4">
-                                    {lookupResult.photoUrl ? (
-                                        <img src={lookupResult.photoUrl} alt="" className="h-14 w-14 rounded-full object-cover ring-2 ring-white/50" />
-                                    ) : (
-                                        <div className="h-14 w-14 rounded-full bg-white/20 flex items-center justify-center">
-                                            <span className="text-xl font-bold text-white">{lookupResult.name.charAt(0).toUpperCase()}</span>
-                                        </div>
-                                    )}
-                                    <div>
-                                        <p className="text-white font-bold text-lg">{lookupResult.name}</p>
-                                        <p className="text-indigo-100 text-sm">
+                                <div className={`px-4 py-2 flex justify-between items-center text-white shrink-0 ${
+                                    lookupResult.isDeleted ? "bg-gray-600" :
+                                    lookupResult.isExpired ? "bg-red-700" :
+                                    "bg-indigo-900"
+                                }`}>
+                                    <span className="text-xs font-bold uppercase tracking-wider">
+                                        {lookupResult._source === "entertainment" ? "Entertainment ID" : "Member ID Card"}
+                                    </span>
+                                    <span className={`text-xs font-bold px-2 py-0.5 rounded shadow-sm ${
+                                        lookupResult.isDeleted ? "bg-gray-500 text-white" :
+                                        lookupResult.isExpired ? "bg-red-500 text-white" :
+                                        "bg-green-500 text-white"
+                                    }`}>
+                                        {lookupResult.isDeleted ? "DELETED" : lookupResult.isExpired ? "EXPIRED" : "ACTIVE"}
+                                    </span>
+                                </div>
+                                
+                                {/* Body */}
+                                <div className="p-5 flex gap-5 items-start">
+                                    {/* Photo Area */}
+                                    <div className="flex-shrink-0">
+                                        {lookupResult.photoUrl ? (
+                                            <img src={lookupResult.photoUrl} alt="" className="h-28 w-24 object-cover border-4 border-gray-100 dark:border-gray-800 rounded shadow-sm" />
+                                        ) : (
+                                            <div className="h-28 w-24 bg-gray-100 dark:bg-gray-800 border-4 border-gray-50 flex items-center justify-center rounded shadow-sm">
+                                                <UserCheck className="h-10 w-10 text-gray-400" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    {/* Details Area */}
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="text-xl font-bold text-gray-900 dark:text-white truncate">
+                                            {lookupResult.name.toUpperCase()}
+                                        </h3>
+                                        <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400 mt-1">
                                             {lookupResult.memberId}
-                                            {lookupResult._source === "entertainment" && " 🎭"}
                                         </p>
+                                        
+                                        <div className="mt-3 space-y-1">
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                Phone: <span className="font-semibold text-gray-900 dark:text-white">{lookupResult.phone}</span>
+                                            </p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                Plan: <span className="font-semibold text-gray-900 dark:text-white">{lookupResult.planId?.name ?? "N/A"}</span>
+                                            </p>
+                                            {lookupResult.planQuantity && lookupResult.planQuantity > 1 && (
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                    Group: <span className="font-semibold text-gray-900 dark:text-white">{lookupResult.planQuantity}</span>
+                                                </p>
+                                            )}
+                                            {(lookupResult.balanceAmount ?? 0) > 0 && (
+                                                <p className="text-xs text-red-500 font-bold mt-2">
+                                                    Balance Due: ₹{lookupResult.balanceAmount}
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-                                {/* Details */}
-                                <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                                    <div className="px-5 py-3 flex justify-between text-sm">
-                                        <span className="text-gray-500 dark:text-gray-400">Phone</span>
-                                        <span className="font-medium text-gray-900 dark:text-white">{lookupResult.phone}</span>
-                                    </div>
-                                    <div className="px-5 py-3 flex justify-between text-sm">
-                                        <span className="text-gray-500 dark:text-gray-400">Plan</span>
-                                        <span className="font-medium text-gray-900 dark:text-white">{lookupResult.planId?.name ?? "N/A"} — ₹{lookupResult.planId?.price ?? 0}</span>
-                                    </div>
-                                    {lookupResult.planQuantity && lookupResult.planQuantity > 1 && (
-                                        <div className="px-5 py-3 flex justify-between text-sm">
-                                            <span className="text-gray-500 dark:text-gray-400">Quantity</span>
-                                            <span className="font-medium text-gray-900 dark:text-white">{lookupResult.planQuantity}</span>
-                                        </div>
-                                    )}
-                                    <div className="px-5 py-3 flex justify-between text-sm">
-                                        <span className="text-gray-500 dark:text-gray-400">Valid Till</span>
-                                        <span className="font-medium text-gray-900 dark:text-white">
-                                            {new Date(lookupResult.planEndDate || lookupResult.expiryDate || "").toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-                                        </span>
-                                    </div>
-                                    <div className="px-5 py-3 flex justify-between text-sm">
-                                        <span className="text-gray-500 dark:text-gray-400">Remaining</span>
-                                        <span className={`font-bold ${lookupResult.isExpired ? "text-red-600" : "text-indigo-600 dark:text-indigo-400"}`}>
-                                            {lookupResult.isExpired
-                                                ? "Expired"
-                                                : getRemainingTimeText(lookupResult.planEndDate || lookupResult.expiryDate || "")}
-                                        </span>
-                                    </div>
-                                    <div className="px-5 py-3 flex justify-between text-sm">
-                                        <span className="text-gray-500 dark:text-gray-400">Paid</span>
-                                        <span className="font-medium text-green-600">₹{lookupResult.paidAmount ?? 0}</span>
-                                    </div>
-                                    {(lookupResult.balanceAmount ?? 0) > 0 && (
-                                        <div className="px-5 py-3 flex justify-between text-sm">
-                                            <span className="text-gray-500 dark:text-gray-400">Balance Due</span>
-                                            <span className="font-bold text-red-600">₹{lookupResult.balanceAmount}</span>
-                                        </div>
-                                    )}
-                                    <div className="px-5 py-3 flex justify-between text-sm">
-                                        <span className="text-gray-500 dark:text-gray-400">Status</span>
-                                        <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${
-                                            lookupResult.isDeleted ? "bg-gray-100 text-gray-600 ring-gray-500/20" :
-                                            lookupResult.isExpired ? "bg-red-50 text-red-700 ring-red-600/20" :
-                                            "bg-green-50 text-green-700 ring-green-600/20"
-                                        }`}>
-                                            {lookupResult.isDeleted ? "DELETED" : lookupResult.isExpired ? "EXPIRED" : "ACTIVE"}
-                                        </span>
-                                    </div>
+
+                                {/* Footer / Expiry */}
+                                <div className="bg-gray-50 dark:bg-gray-800 px-5 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                                    <span className="text-xs text-gray-500 font-medium">Valid Till: {new Date(lookupResult.planEndDate || lookupResult.expiryDate || "").toLocaleDateString()}</span>
+                                    <span className={`text-xs font-bold ${lookupResult.isExpired ? "text-red-600" : "text-indigo-600 dark:text-indigo-400"}`}>
+                                        {lookupResult.isExpired ? "Expired" : `⏱ ${getRemainingTimeText(lookupResult.planEndDate || lookupResult.expiryDate || "")}`}
+                                    </span>
                                 </div>
                             </div>
                         )}
