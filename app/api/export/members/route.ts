@@ -13,11 +13,11 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user)
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-        await dbConnect();
 
         const query: Record<string, unknown> = {};
         if (session.user.role !== "superadmin" && session.user.poolId) {

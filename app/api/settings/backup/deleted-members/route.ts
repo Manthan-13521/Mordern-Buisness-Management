@@ -4,6 +4,7 @@ import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
 import { DeletedMember } from "@/models/DeletedMember";
 import { getServerSession } from "next-auth";
+import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import ExcelJS from "exceljs";
@@ -11,11 +12,13 @@ import ExcelJS from "exceljs";
 export async function GET(req: Request) {
     const authHeader = req.headers.get("authorization");
     let isAuthorized = false;
+    let session: Session | null = null;
 
     if (authHeader === `Bearer ${process.env.CRON_SECRET || "cron123"}`) {
         isAuthorized = true;
     } else {
-        const session = await getServerSession(authOptions);
+        await dbConnect();
+        session = await getServerSession(authOptions);
         if (session?.user && session.user.role === "admin") {
             isAuthorized = true;
         }
@@ -27,8 +30,6 @@ export async function GET(req: Request) {
 
     try {
         await dbConnect();
-        
-        const session = await getServerSession(authOptions);
         const baseMatch = session?.user && session.user.role !== "superadmin" && session.user.poolId 
             ? { poolId: session.user.poolId } : {};
 

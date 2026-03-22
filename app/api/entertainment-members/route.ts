@@ -12,11 +12,11 @@ import { signQRToken } from "@/lib/qrSigner";
 
 export async function GET(req: Request) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user)
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-        await dbConnect();
 
         const url = new URL(req.url);
         const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1"));
@@ -62,6 +62,8 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user)
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -72,9 +74,7 @@ export async function POST(req: Request) {
         if (!name || !phone || !planId)
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
 
-        await dbConnect();
-
-        const plan = await Plan.findById(planId);
+        const plan = await Plan.findById(planId).lean();
         if (!plan)
             return NextResponse.json({ error: "Invalid Plan" }, { status: 400 });
 

@@ -7,6 +7,8 @@ import { authOptions } from "@/lib/auth";
 
 export async function DELETE(req: Request, props: { params: Promise<{ poolId: string }> }) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user || session.user.role !== "superadmin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -16,8 +18,6 @@ export async function DELETE(req: Request, props: { params: Promise<{ poolId: st
         if (!poolId) {
             return NextResponse.json({ error: "Missing pool ID" }, { status: 400 });
         }
-
-        await dbConnect();
 
         // Find the pool first
         const pool = await Pool.findOne({ poolId });

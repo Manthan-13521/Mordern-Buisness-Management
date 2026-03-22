@@ -39,14 +39,14 @@ const PLAN_LIMITS: Record<string, { maxMembers: number; maxStaff: number; featur
  */
 export async function POST(req: NextRequest) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions) as any;
 
         // Allow superadmin OR authenticated admins upgrading their own pool
         if (!session?.user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-
-        await dbConnect();
 
         const body = await req.json();
         const { poolId, plan, durationMonths = 1 } = body;
@@ -120,12 +120,12 @@ export async function POST(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions) as any;
         if (!session?.user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-
-        await dbConnect();
 
         const url    = new URL(req.url);
         const poolId = session.user.role === "superadmin"

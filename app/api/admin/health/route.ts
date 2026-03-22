@@ -14,12 +14,12 @@ let dashboardCache: { data: any; expiresAt: number } | null = null;
 
 export async function GET() {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user || session.user.role !== "admin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
         }
-
-        await dbConnect();
 
         const settings = await getSettings();
 

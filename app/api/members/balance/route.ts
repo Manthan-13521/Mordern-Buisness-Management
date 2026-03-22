@@ -13,11 +13,11 @@ import { EntertainmentMember } from "@/models/EntertainmentMember";
  */
 export async function GET(req: Request) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user)
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-        await dbConnect();
 
         const url = new URL(req.url);
         const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1"));

@@ -8,7 +8,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
 
 /**
  * GET /api/logs
@@ -17,6 +16,8 @@ export const revalidate = 0;
  */
 export async function GET(req: Request) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -25,8 +26,6 @@ export async function GET(req: Request) {
         const page   = Math.max(1, parseInt(searchParams.get("page")  ?? "1"));
         const limit  = Math.min(200, Math.max(1, parseInt(searchParams.get("limit") ?? "50")));
         const skip   = (page - 1) * limit;
-
-        await dbConnect();
 
         const baseMatch: Record<string, unknown> =
             session.user.role !== "superadmin" && session.user.poolId

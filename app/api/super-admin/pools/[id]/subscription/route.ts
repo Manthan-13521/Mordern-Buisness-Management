@@ -15,6 +15,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user || session.user.role !== "superadmin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -26,8 +28,6 @@ export async function PATCH(
         if (status !== "active" && status !== "paused") {
             return NextResponse.json({ error: "Invalid status value" }, { status: 400 });
         }
-
-        await dbConnect();
 
         const pId = await params;
         const pool = await Pool.findOneAndUpdate(

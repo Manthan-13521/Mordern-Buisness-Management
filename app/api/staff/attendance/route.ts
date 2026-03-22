@@ -12,6 +12,8 @@ import { authOptions } from "@/lib/auth";
  */
 export async function GET(req: NextRequest) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -37,8 +39,6 @@ export async function GET(req: NextRequest) {
             since = new Date();
             since.setDate(since.getDate() - days);
         }
-
-        await dbConnect();
 
         const filter: Record<string, unknown> = {
             poolId,
@@ -69,10 +69,11 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: Request) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        await dbConnect();
         const body = await req.json();
         const { staffId, method, type } = body;
 

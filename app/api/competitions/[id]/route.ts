@@ -13,11 +13,12 @@ type RouteContext = { params: Promise<{ id: string }> };
  */
 export async function GET(_req: Request, props: RouteContext) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
         const { id } = await props.params;
-        await dbConnect();
 
         const competition = await Competition.findById(id).lean();
 
@@ -40,6 +41,8 @@ export async function GET(_req: Request, props: RouteContext) {
  */
 export async function PATCH(req: Request, props: RouteContext) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user || !["admin", "superadmin"].includes(session.user.role)) {
             return NextResponse.json({ error: "Admin only" }, { status: 403 });
@@ -47,9 +50,8 @@ export async function PATCH(req: Request, props: RouteContext) {
 
         const { id } = await props.params;
         const body = await req.json();
-        await dbConnect();
 
-        const competition = await Competition.findById(id);
+        const competition = await Competition.findById(id).lean();
         if (!competition) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
         const updates: Record<string, unknown> = {};

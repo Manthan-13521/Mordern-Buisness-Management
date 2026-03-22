@@ -12,6 +12,8 @@ import { authOptions } from "@/lib/auth";
  */
 export async function POST(req: Request) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user)
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -25,8 +27,6 @@ export async function POST(req: Request) {
                 { status: 400 }
             );
         }
-
-        await dbConnect();
 
         const poolId =
             session.user.role !== "superadmin"

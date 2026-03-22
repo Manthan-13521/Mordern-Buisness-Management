@@ -7,13 +7,13 @@ import { authOptions } from "@/lib/auth";
 
 export async function GET() {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        await dbConnect();
-
         // Ensure Plan model is loaded before populate
-        await Plan.findOne({});
+        await Plan.findOne({}).lean();
 
         const now = new Date();
 
@@ -24,7 +24,7 @@ export async function GET() {
             ...baseMatch,
             status: "active",
             expiryDate: { $lte: now }
-        }).populate("planId");
+        }).populate("planId").lean();
 
         if (expiredMembersRaw.length === 0) {
             return NextResponse.json({ alerts: [] }, { status: 200 });

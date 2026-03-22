@@ -6,12 +6,12 @@ import { authOptions } from "@/lib/auth";
 
 export async function GET(req: Request) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-
-        await dbConnect();
 
         const { searchParams } = new URL(req.url);
         const page = Math.max(1, parseInt(searchParams.get("page") || "1"));

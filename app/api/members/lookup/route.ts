@@ -12,6 +12,8 @@ import { authOptions } from "@/lib/auth";
  */
 export async function GET(req: NextRequest) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user)
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -19,8 +21,6 @@ export async function GET(req: NextRequest) {
         const uid = req.nextUrl.searchParams.get("uid")?.trim();
         if (!uid)
             return NextResponse.json({ error: "uid query parameter required" }, { status: 400 });
-
-        await dbConnect();
 
         const poolId = session.user.role !== "superadmin" ? session.user.poolId : undefined;
         const query: Record<string, unknown> = { memberId: { $regex: `^${uid}$`, $options: "i" } };

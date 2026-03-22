@@ -9,13 +9,13 @@ import ExcelJS from "exceljs";
 
 export async function GET(req: Request) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
         const { searchParams } = new URL(req.url);
         const filterType = searchParams.get("type") || "all";
-
-        await dbConnect();
         const unifiedLogs: any[] = [];
 
         const baseMatch = session.user.role !== "superadmin" && session.user.poolId ? { poolId: session.user.poolId } : {};

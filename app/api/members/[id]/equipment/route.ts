@@ -14,6 +14,8 @@ type RouteContext = { params: Promise<{ id: string }> };
  */
 export async function POST(req: Request, props: RouteContext) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -23,8 +25,6 @@ export async function POST(req: Request, props: RouteContext) {
         if (!itemName?.trim()) {
             return NextResponse.json({ error: "itemName is required" }, { status: 400 });
         }
-
-        await dbConnect();
 
         let member: any = await Member.findByIdAndUpdate(
             id,
@@ -72,6 +72,8 @@ export async function POST(req: Request, props: RouteContext) {
  */
 export async function PATCH(req: Request, props: RouteContext) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -81,8 +83,6 @@ export async function PATCH(req: Request, props: RouteContext) {
         if (!equipmentItemId) {
             return NextResponse.json({ error: "equipmentItemId is required" }, { status: 400 });
         }
-
-        await dbConnect();
 
         let member: any = await Member.findOneAndUpdate(
             { _id: id, "equipmentTaken._id": equipmentItemId },

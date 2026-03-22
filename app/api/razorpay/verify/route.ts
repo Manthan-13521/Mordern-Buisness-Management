@@ -60,11 +60,11 @@ export async function POST(req: Request) {
             }
         }
 
-        const plan = await Plan.findById(memberData.planId);
+        const plan = await Plan.findById(memberData.planId).lean();
         if (!plan) return NextResponse.json({ error: "Plan not found" }, { status: 404 });
 
         // Generate Member ID locally scoped to the tenant pool
-        const lastMember = await Member.findOne({ poolId: plan.poolId }).sort({ createdAt: -1 });
+        const lastMember = await Member.findOne({ poolId: plan.poolId }).sort({ createdAt: -1 }).lean();
         let newIdNum = 1;
         if (lastMember && lastMember.memberId.startsWith("M")) {
             newIdNum = parseInt(lastMember.memberId.replace("M", "")) + 1;

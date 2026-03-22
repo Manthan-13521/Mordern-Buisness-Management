@@ -12,6 +12,7 @@ import crypto from "crypto";
 import { uploadBuffer } from "@/lib/local-upload";
 import { savePhoto } from "@/lib/savePhoto";
 import { signQRToken } from "@/lib/qrSigner";
+import { PRIVATE_API_STALE_MS } from "@/lib/apiCache";
 
 export const dynamic = "force-dynamic";
 
@@ -121,7 +122,9 @@ export async function GET(req: Request) {
             limit,
             totalPages: Math.ceil(combinedTotal / limit),
         }, {
-            headers: { "Cache-Control": "private, max-age=10, stale-while-revalidate=30" },
+            headers: {
+                "Cache-Control": `private, max-age=${Math.floor(PRIVATE_API_STALE_MS / 1000)}, stale-while-revalidate=30`,
+            },
         });
     } catch (error) {
         console.error("[GET /api/members]", error);
@@ -182,10 +185,8 @@ export async function POST(req: Request) {
         // Handle photo separately (since the Zod schema expects photo as string but the UI might send photoBase64)
         const photoBase64 = body.photoBase64 || data.photo;
 
-        await dbConnect();
-
         const { Plan } = await import("@/models/Plan");
-        const plan = await Plan.findById(planId);
+        const plan = await Plan.findById(planId).lean();
         if (!plan)
             return NextResponse.json({ error: "Invalid Plan" }, { status: 400 });
 

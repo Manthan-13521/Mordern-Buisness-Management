@@ -12,12 +12,12 @@ import { nanoid } from "nanoid";
  */
 export async function GET(req: NextRequest) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions) as any;
         if (!session?.user || session.user.role !== "superadmin") {
             return NextResponse.json({ error: "Superadmin only", code: "FORBIDDEN" }, { status: 403 });
         }
-
-        await dbConnect();
 
         const url    = new URL(req.url);
         const page   = Math.max(1, parseInt(url.searchParams.get("page")  ?? "1"));
@@ -69,12 +69,12 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions) as any;
         if (!session?.user || session.user.role !== "superadmin") {
             return NextResponse.json({ error: "Superadmin only", code: "FORBIDDEN" }, { status: 403 });
         }
-
-        await dbConnect();
 
         const body = await req.json();
         const { poolName, slug, adminEmail, capacity, location, plan = "free" } = body;
@@ -126,12 +126,12 @@ export async function POST(req: NextRequest) {
  */
 export async function PATCH(req: NextRequest) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions) as any;
         if (!session?.user || session.user.role !== "superadmin") {
             return NextResponse.json({ error: "Superadmin only", code: "FORBIDDEN" }, { status: 403 });
         }
-
-        await dbConnect();
 
         const { poolId, status } = await req.json();
         if (!poolId || !status) {

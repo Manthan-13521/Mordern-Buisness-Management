@@ -14,12 +14,12 @@ import { authOptions } from "@/lib/auth";
  */
 export async function GET(req: NextRequest) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions) as any;
         if (!session?.user || session.user.role !== "superadmin") {
             return NextResponse.json({ error: "Superadmin only", code: "FORBIDDEN" }, { status: 403 });
         }
-
-        await dbConnect();
 
         const now = new Date();
         const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);

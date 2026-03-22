@@ -43,6 +43,8 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user || !["admin", "superadmin"].includes(session.user.role)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
@@ -50,8 +52,6 @@ export async function POST(req: Request) {
 
         const body = await req.json();
         const { poolCapacity, currentOccupancy, occupancyDurationMinutes } = body;
-
-        await dbConnect();
         const settings = await getSettings();
 
         const url = new URL(req.url);

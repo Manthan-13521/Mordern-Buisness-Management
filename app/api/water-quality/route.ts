@@ -27,6 +27,8 @@ function deriveStatus(ph: number, chlorine: number): "safe" | "warning" | "criti
  */
 export async function GET(req: NextRequest) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -40,8 +42,6 @@ export async function GET(req: NextRequest) {
 
         const since = new Date();
         since.setDate(since.getDate() - days);
-
-        await dbConnect();
 
         const filter = { poolId, recordedAt: { $gte: since } };
 
@@ -69,6 +69,8 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -88,8 +90,6 @@ export async function POST(req: NextRequest) {
         if (isNaN(tempNum))                           return NextResponse.json({ error: "invalid temperature" }, { status: 400 });
 
         const status = deriveStatus(phNum, chlorNum);
-
-        await dbConnect();
 
         const log = await WaterQualityLog.create({
             poolId:      session.user.poolId,

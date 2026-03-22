@@ -7,17 +7,20 @@ import { Payment } from "@/models/Payment";
 import { EntryLog } from "@/models/EntryLog";
 import { NotificationLog } from "@/models/NotificationLog";
 import { getServerSession } from "next-auth";
+import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
 export async function GET(req: Request) {
     // Allow Cron Jobs with Secret OR Authenticated Admins
     const authHeader = req.headers.get("authorization");
     let isAuthorized = false;
+    let session: Session | null = null;
 
     if (authHeader === `Bearer ${process.env.CRON_SECRET || "cron123"}`) {
         isAuthorized = true;
     } else {
-        const session = await getServerSession(authOptions);
+        await dbConnect();
+        session = await getServerSession(authOptions);
         if (session?.user && session.user.role === "admin") {
             isAuthorized = true;
         }
@@ -31,7 +34,6 @@ export async function GET(req: Request) {
         await dbConnect();
         
         // Ensure pool separation for non-superadmins
-        const session = await getServerSession(authOptions);
         const baseMatch = session?.user && session.user.role !== "superadmin" && session.user.poolId 
             ? { poolId: session.user.poolId } : {};
 

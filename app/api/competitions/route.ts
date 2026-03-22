@@ -11,6 +11,8 @@ import { authOptions } from "@/lib/auth";
  */
 export async function GET(req: NextRequest) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -21,8 +23,6 @@ export async function GET(req: NextRequest) {
         const poolId   = session.user.role === "superadmin"
             ? (searchParams.get("poolId") ?? session.user.poolId)
             : session.user.poolId;
-
-        await dbConnect();
 
         const filter: Record<string, unknown> = { poolId };
         if (status === "completed") filter.isCompleted = true;
@@ -52,6 +52,8 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user || !["admin", "superadmin"].includes(session.user.role)) {
             return NextResponse.json({ error: "Admin only" }, { status: 403 });
@@ -63,8 +65,6 @@ export async function POST(req: NextRequest) {
         if (!name?.trim() || !date || !category?.trim()) {
             return NextResponse.json({ error: "name, date, and category are required" }, { status: 400 });
         }
-
-        await dbConnect();
 
         const competition = await Competition.create({
             poolId:       session.user.poolId,

@@ -16,11 +16,11 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: Request) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user)
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-        await dbConnect();
 
         const url = new URL(req.url);
         const page  = Math.max(1, parseInt(url.searchParams.get("page")  ?? "1"));
@@ -76,6 +76,8 @@ export async function GET(req: Request) {
  */
 export async function POST(req: Request) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user)
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -105,8 +107,6 @@ export async function POST(req: Request) {
                 { status: 400 }
             );
         }
-
-        await dbConnect();
 
         // ── Idempotency check ──────────────────────────────────────────────
         if (idempotencyKey) {

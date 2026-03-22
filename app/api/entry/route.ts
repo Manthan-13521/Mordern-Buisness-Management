@@ -27,6 +27,8 @@ export async function POST(req: Request) {
     }
 
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -54,9 +56,7 @@ export async function POST(req: Request) {
             const possibleId = parts[0];
             const possibleToken = parts.slice(1).join(":");
 
-            await dbConnect();
-
-            const plan = await Plan.findById(possibleId).catch(() => null);
+            const plan = await Plan.findById(possibleId).lean().catch(() => null);
             if (plan && plan.groupToken && plan.groupToken === possibleToken) {
                 planId = possibleId;
                 providedToken = possibleToken;
@@ -68,15 +68,13 @@ export async function POST(req: Request) {
             memberId = qrPayload;
         }
 
-        await dbConnect();
-        
         // Auto-cleanup expired sessions before checking capacity
         await runOccupancyCleanupInBackground();
 
         let member = null;
         if (planId) {
             // Group QR handling
-            const plan = await Plan.findById(planId);
+            const plan = await Plan.findById(planId).lean();
             if (!plan) {
                 logger.scan("QR scan denied — plan not found", { planId });
                 await EntryLog.create({

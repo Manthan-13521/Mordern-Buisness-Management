@@ -67,6 +67,7 @@ paymentSchema.index({ poolId: 1, memberId: 1 });
 paymentSchema.index({ memberId: 1 });
 paymentSchema.index({ createdAt: -1 });
 paymentSchema.index({ paymentMethod: 1 });
+paymentSchema.index({ poolId: 1, status: 1, date: -1 });
 
 export const Payment: Model<IPayment> =
     mongoose.models.Payment || mongoose.model<IPayment>("Payment", paymentSchema);

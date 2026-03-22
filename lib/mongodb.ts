@@ -1,5 +1,9 @@
 import mongoose from 'mongoose'
 
+/**
+ * Deploy Vercel in `bom1` (Mumbai) and MongoDB Atlas in `ap-south-1` (Mumbai) so RTT stays low.
+ * Use Atlas Performance Advisor / Slow Query Log to add indexes for real query patterns.
+ */
 const MONGODB_URI = process.env.MONGODB_URI!
 if (!MONGODB_URI) throw new Error('MONGODB_URI is not defined')
 

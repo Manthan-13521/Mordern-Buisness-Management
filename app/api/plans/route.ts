@@ -25,7 +25,7 @@ export async function GET(req: Request) {
             const pool = await PoolModel.findOne({ slug }).lean() as any;
             if (!pool) return NextResponse.json({ error: "Pool not found" }, { status: 404 });
 
-            const plans = await Plan.find({ deletedAt: null, poolId: pool.poolId, isActive: true }).sort({ price: 1 });
+            const plans = await Plan.find({ deletedAt: null, poolId: pool.poolId, isActive: true }).sort({ price: 1 }).lean();
             return NextResponse.json({ poolName: pool.poolName, adminPhone: pool.adminPhone, plans });
         }
 
@@ -66,6 +66,8 @@ export async function GET(req: Request) {
  */
 export async function POST(req: Request) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user || !["admin", "superadmin"].includes(session.user.role)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -84,8 +86,6 @@ export async function POST(req: Request) {
             hasEntertainment, hasFaceScan, quickDelete, hasTokenPrint,
             poolId: bodyPoolId,
         } = { ...body, ...data }; // Merge specific body items that are not in schema
-
-        await dbConnect();
 
         const poolId = session.user.role === "superadmin" ? bodyPoolId : session.user.poolId;
         if (!poolId) return NextResponse.json({ error: "Pool ID required" }, { status: 400 });

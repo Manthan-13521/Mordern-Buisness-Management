@@ -14,11 +14,12 @@ type RouteContext = { params: Promise<{ id: string }> };
  */
 export async function GET(_req: Request, props: RouteContext) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
         const { id } = await props.params;
-        await dbConnect();
 
         const populateFields = "name price durationDays durationHours durationMinutes hasTokenPrint quickDelete hasEntertainment hasFaceScan";
         let member: any = await Member.findById(id).select("+photoUrl").populate("planId", populateFields).lean();
@@ -47,11 +48,12 @@ export async function GET(_req: Request, props: RouteContext) {
  */
 export async function PATCH(req: Request, props: RouteContext) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
         const { id } = await props.params;
-        await dbConnect();
 
         const body = await req.json();
         const { isDeleted, deletedAt, memberId, poolId, ...safeUpdates } = body;
@@ -85,6 +87,8 @@ export async function PATCH(req: Request, props: RouteContext) {
  */
 export async function DELETE(req: Request, props: RouteContext) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user || session.user.role !== "admin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -92,8 +96,6 @@ export async function DELETE(req: Request, props: RouteContext) {
 
         const { id } = await props.params;
         if (!id) return NextResponse.json({ error: "Missing member ID" }, { status: 400 });
-
-        await dbConnect();
 
         const deletePayload = {
             $set: {

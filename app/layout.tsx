@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 import RazorpayScript from "@/components/RazorpayScript";
@@ -22,6 +23,7 @@ export default function RootLayout({
         <Providers>
           {children}
         </Providers>
+        <Analytics />
         <RazorpayScript />
       </body>
     </html>

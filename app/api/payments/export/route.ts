@@ -10,10 +10,10 @@ import ExcelJS from "exceljs";
 
 export async function GET() {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-        await dbConnect();
         const baseMatch = session.user.role !== "superadmin" && session.user.poolId ? { poolId: session.user.poolId } : {};
 
         const payments = await Payment.find({ ...baseMatch })

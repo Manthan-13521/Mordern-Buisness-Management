@@ -13,13 +13,14 @@ type RouteContext = { params: Promise<{ id: string }> };
  */
 export async function POST(req: Request, props: RouteContext) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user || session.user.role !== "admin") {
             return NextResponse.json({ error: "Admin only" }, { status: 403 });
         }
 
         const { id } = await props.params;
-        await dbConnect();
 
         // Optionally accept a new planEndDate for renewal-on-restore
         let body: { planEndDate?: string } = {};

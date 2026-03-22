@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AddMemberModal } from "./AddMemberModal";
 import { Plus, Search, Download, Printer, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { useThermalPrint } from "@/components/printing/useThermalPrint";
+import { PRIVATE_API_STALE_MS, membersListQueryKeyPrefix } from "@/lib/apiCache";
 
 interface Plan {
     _id: string;
@@ -94,16 +96,18 @@ function statusBadge(member: Member) {
 }
 
 export default function MembersPage() {
+    const queryClient = useQueryClient();
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [members, setMembers] = useState<Member[]>([]);
-    const [total, setTotal] = useState(0);
     const [page, setPage] = useState(1);
-    const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [searchDebounced, setSearchDebounced] = useState("");
     const { print: printThermal } = useThermalPrint();
 
     const LIMIT = 10;
+
+    const invalidateMembersList = () => {
+        queryClient.invalidateQueries({ queryKey: [...membersListQueryKeyPrefix] });
+    };
 
     // Debounce search
     useEffect(() => {
@@ -111,38 +115,36 @@ export default function MembersPage() {
         return () => clearTimeout(t);
     }, [searchTerm]);
 
-    const fetchMembers = useCallback(() => {
-        setLoading(true);
-        const params = new URLSearchParams({
-            page: String(page),
-            limit: String(LIMIT),
-            ...(searchDebounced ? { search: searchDebounced } : {}),
-        });
-        fetch(`/api/members?${params}`)
-            .then((res) => res.json())
-            .then((data) => {
-                // API returns { data: [], total, page, limit }
-                const rows = Array.isArray(data) ? data : (data.data ?? []);
-                setMembers(rows);
-                setTotal(data.total ?? rows.length);
-                setLoading(false);
-            })
-            .catch((err) => {
-                console.error("Failed to fetch members", err);
-                setLoading(false);
-            });
-    }, [page, searchDebounced]);
-
-    useEffect(() => { fetchMembers(); }, [fetchMembers]);
-
     // Reset to page 1 when search changes
     useEffect(() => { setPage(1); }, [searchDebounced]);
+
+    const { data, isFetching, error } = useQuery({
+        queryKey: [...membersListQueryKeyPrefix, page, searchDebounced, LIMIT],
+        queryFn: async () => {
+            const params = new URLSearchParams({
+                page: String(page),
+                limit: String(LIMIT),
+                ...(searchDebounced ? { search: searchDebounced } : {}),
+            });
+            const res = await fetch(`/api/members?${params}`);
+            if (!res.ok) throw new Error("Failed to fetch members");
+            const json = await res.json();
+            const rows = Array.isArray(json) ? json : (json.data ?? []);
+            const total = json.total ?? rows.length;
+            return { members: rows as Member[], total };
+        },
+        staleTime: PRIVATE_API_STALE_MS,
+    });
+
+    const members = data?.members ?? [];
+    const total = data?.total ?? 0;
+    const loading = isFetching;
 
     const handleDelete = async (id: string, name: string) => {
         if (!confirm(`Soft-delete ${name}? They can be restored later.`)) return;
         try {
             const res = await fetch(`/api/members/${id}`, { method: "DELETE" });
-            if (res.ok) fetchMembers();
+            if (res.ok) invalidateMembersList();
             else alert((await res.json()).error || "Failed to delete member");
         } catch { alert("Server error"); }
     };
@@ -212,6 +214,12 @@ export default function MembersPage() {
                 <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-red-100 dark:bg-red-950/60 border border-red-200" /> Expired / Deleted</span>
                 <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-amber-100 dark:bg-amber-950/60 border border-amber-200" /> Expiring ≤ 7 days</span>
             </div>
+
+            {error && (
+                <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+                    {(error as Error).message || "Could not load members."}
+                </p>
+            )}
 
             {/* Table */}
             <div className="flow-root">
@@ -353,7 +361,7 @@ export default function MembersPage() {
                 </div>
             </div>
 
-            <AddMemberModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} onSuccess={fetchMembers} />
+            <AddMemberModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} onSuccess={invalidateMembersList} />
         </div>
     );
 }

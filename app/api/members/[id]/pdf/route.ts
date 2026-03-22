@@ -27,12 +27,12 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
         };
         
         // Try regular member first
-        let member: any = await Member.findOne(idQuery).populate("planId", "name");
+        let member: any = await Member.findOne(idQuery).populate("planId", "name").lean();
         
         // Fallback to entertainment member
         if (!member) {
             const { EntertainmentMember } = await import("@/models/EntertainmentMember");
-            member = await EntertainmentMember.findOne(idQuery).populate("planId", "name");
+            member = await EntertainmentMember.findOne(idQuery).populate("planId", "name").lean();
         }
 
         if (!member) return NextResponse.json({ error: "Member not found" }, { status: 404 });

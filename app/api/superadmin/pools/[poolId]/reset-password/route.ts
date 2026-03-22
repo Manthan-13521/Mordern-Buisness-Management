@@ -9,12 +9,12 @@ import bcrypt from "bcryptjs";
 
 export async function POST(req: Request, { params }: { params: Promise<{ poolId: string }> }) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user || session.user.role !== "superadmin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-
-        await dbConnect();
         
         const { poolId } = await params;
         

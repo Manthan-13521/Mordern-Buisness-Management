@@ -5,6 +5,7 @@ import { Plan } from "@/models/Plan";
 import { NotificationLog } from "@/models/NotificationLog";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { getServerSession } from "next-auth";
+import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
 export async function POST(req: Request) {
@@ -12,11 +13,12 @@ export async function POST(req: Request) {
 
     // Allow Cron Jobs with Secret OR Authenticated Admins
     let isAuthorized = false;
+    let session: Session | null = null;
     if (authHeader === `Bearer ${process.env.CRON_SECRET || "cron123"}`) {
         isAuthorized = true;
     } else {
-        // Check session
-        const session = await getServerSession(authOptions);
+        await dbConnect();
+        session = await getServerSession(authOptions);
         if (session?.user && session.user.role === "admin") {
             isAuthorized = true;
         }
@@ -47,7 +49,6 @@ export async function POST(req: Request) {
         inEightDays.setDate(inEightDays.getDate() + 8);
 
         // Pool isolation — superadmin or cron sees all, admin sees only their pool
-        const session = await getServerSession(authOptions);
         const poolFilter: Record<string, unknown> = {};
         if (session?.user?.role === "admin" && session.user.poolId) {
             poolFilter.poolId = session.user.poolId;
@@ -60,7 +61,7 @@ export async function POST(req: Request) {
                 { status: "active", expiryDate: { $gte: inTwoDays,  $lt: inThreeDays } }, // Expiring in 2 days
                 { expiryDate: { $gte: yesterday, $lt: today } } // Expired yesterday
             ]
-        }).populate("planId");
+        }).populate("planId").lean();
 
 
         let sentCount = 0;

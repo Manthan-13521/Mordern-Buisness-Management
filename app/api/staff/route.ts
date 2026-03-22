@@ -18,6 +18,8 @@ function generateStaffId(role: string): string {
  */
 export async function GET(req: NextRequest) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -28,8 +30,6 @@ export async function GET(req: NextRequest) {
         const poolId = session.user.role === "superadmin"
             ? (searchParams.get("poolId") ?? "")
             : (session.user.poolId ?? "");
-
-        await dbConnect();
 
         const filter: Record<string, unknown> = { poolId };
         if (search) {
@@ -63,6 +63,8 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user || session.user.role !== "admin") {
             return NextResponse.json({ error: "Admin only" }, { status: 403 });
@@ -79,8 +81,6 @@ export async function POST(req: NextRequest) {
         if (!validRoles.includes(role)) {
             return NextResponse.json({ error: `role must be one of: ${validRoles.join(", ")}` }, { status: 400 });
         }
-
-        await dbConnect();
 
         const staffId = generateStaffId(role);
         const staff = await Staff.create({

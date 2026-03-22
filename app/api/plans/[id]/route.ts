@@ -9,6 +9,8 @@ export async function PUT(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user || session.user.role !== "admin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
@@ -23,8 +25,6 @@ export async function PUT(
         // Strip potentially dangerous fields from body
         delete body._id;
         delete body.deletedAt;
-
-        await dbConnect();
 
         const updatedPlan = await Plan.findByIdAndUpdate(id, body, { new: true });
 
@@ -44,6 +44,8 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        await dbConnect();
+
         const session = await getServerSession(authOptions);
         if (!session?.user || session.user.role !== "admin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
@@ -53,8 +55,6 @@ export async function DELETE(
         if (!id) {
             return NextResponse.json({ error: "Plan ID is required" }, { status: 400 });
         }
-
-        await dbConnect();
 
         // Soft-delete: set deletedAt timestamp so it disappears from charts
         // but historical data (member records, payments) stays intact

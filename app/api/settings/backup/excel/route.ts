@@ -6,6 +6,7 @@ import { Payment } from "@/models/Payment";
 import { EntryLog } from "@/models/EntryLog";
 import { Settings } from "@/models/Settings";
 import { getServerSession } from "next-auth";
+import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import ExcelJS from "exceljs";
@@ -16,11 +17,13 @@ export async function GET(req: Request) {
     // Allow cron job OR authenticated admin
     const authHeader = req.headers.get("authorization");
     let isAuthorized = false;
+    let session: Session | null = null;
 
     if (authHeader === `Bearer ${process.env.CRON_SECRET || "cron123"}`) {
         isAuthorized = true;
     } else {
-        const session = await getServerSession(authOptions);
+        await dbConnect();
+        session = await getServerSession(authOptions);
         if (session?.user && session.user.role === "admin") {
             isAuthorized = true;
         }
@@ -34,7 +37,6 @@ export async function GET(req: Request) {
         await dbConnect();
         
         // Ensure pool separation for non-superadmins
-        const session = await getServerSession(authOptions);
         const baseMatch = session?.user && session.user.role !== "superadmin" && session.user.poolId 
             ? { poolId: session.user.poolId } : {};
 
