@@ -64,56 +64,63 @@ export async function GET(req: Request) {
         const balanceOnly = url.searchParams.get("balanceOnly");
         if (balanceOnly === "true") query.balanceAmount = { $gt: 0 };
 
-        // ── Server-side paginated queries on both collections ────────────
-        const populateFields = "name durationDays durationHours durationMinutes price voiceAlert hasTokenPrint quickDelete";
+        // ── Unified Search Pipeline with $unionWith for Stack Order (LIFO) ──
+        const populateFields = ["name", "durationDays", "durationHours", "durationMinutes", "price", "voiceAlert", "hasTokenPrint", "quickDelete"];
 
-        // Get totals first
+        // Get totals first (still efficient)
         const [regularTotal, entertainmentTotal] = await Promise.all([
             Member.countDocuments(query),
             EntertainmentMember.countDocuments(query),
         ]);
         const combinedTotal = regularTotal + entertainmentTotal;
 
-        let data: any[] = [];
+        // Use Aggregate for global sorting across both collections
+        const pipeline: any[] = [
+            { $match: query },
+            { $addFields: { _origin: "regular" } },
+            {
+                $unionWith: {
+                    coll: "entertainment_members",
+                    pipeline: [
+                        { $match: query },
+                        { $addFields: { _origin: "entertainment" } }
+                    ]
+                }
+            },
+            { $sort: { createdAt: -1 } },
+            { $skip: skip },
+            { $limit: limit },
+            {
+                $lookup: {
+                    from: "plans", // Collection name
+                    localField: "planId",
+                    foreignField: "_id",
+                    as: "planId"
+                }
+            },
+            { $unwind: { path: "$planId", preserveNullAndEmptyArrays: true } },
+            // Project fields for performance (similar to LIST_SELECT)
+            {
+                $project: {
+                    faceDescriptor: 0,
+                    photoUrl: 0,
+                    "planId.features": 0,
+                    "planId.description": 0,
+                    "planId.memberCounter": 0,
+                    "planId.entertainmentMemberCounter": 0,
+                }
+            }
+        ];
 
-        if (skip < regularTotal) {
-            const regularLimit = Math.min(limit, regularTotal - skip);
-            const remaining = limit - regularLimit;
+        const dataRaw = await Member.aggregate(pipeline);
 
-            const [regularMembers, entertainmentMembers] = await Promise.all([
-                Member.find(query)
-                    .select(LIST_SELECT)
-                    .populate("planId", populateFields)
-                    .sort({ createdAt: -1 })
-                    .skip(skip)
-                    .limit(regularLimit)
-                    .lean(),
-                remaining > 0
-                    ? EntertainmentMember.find(query)
-                        .select(LIST_SELECT)
-                        .populate("planId", populateFields)
-                        .sort({ createdAt: -1 })
-                        .skip(0)
-                        .limit(remaining)
-                        .lean()
-                    : Promise.resolve([]),
-            ]);
-
-            data = [
-                ...regularMembers,
-                ...entertainmentMembers.map((m: any) => ({ ...m, _source: "entertainment" })),
-            ];
-        } else {
-            const entertainmentSkip = skip - regularTotal;
-            const entertainmentMembers = await EntertainmentMember.find(query)
-                .select(LIST_SELECT)
-                .populate("planId", populateFields)
-                .sort({ createdAt: -1 })
-                .skip(entertainmentSkip)
-                .limit(limit)
-                .lean();
-            data = entertainmentMembers.map((m: any) => ({ ...m, _source: "entertainment" }));
-        }
+        // Map them back to the expected structure
+        const data = dataRaw.map(m => ({
+            ...m,
+            _source: m._origin === "entertainment" ? "entertainment" : undefined,
+            // Convert plain object back to match the previous .lean() structure if needed
+            // (e.g. converting _id to string or keeping it as ObjectId depending on UI needs)
+        }));
 
         return NextResponse.json({
             data,
