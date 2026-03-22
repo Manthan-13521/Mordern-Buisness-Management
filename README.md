@@ -57,3 +57,5 @@ Navigate to `http://localhost:3000/<pool-slug>/admin/login` and sign in.
 - `lib/mongodb.ts`: Centralized MongoDB connector utilizing connection caching to prevent hot-reload connection spikes next dev.
 
 Developed keeping real-world production constraints in mind with robust global boundaries and comprehensive UI componentry utilizing Lucide icons and pure Tailwind logic.
+
+# Last deploy trigger: Sun Mar 22 13:23:51 IST 2026
