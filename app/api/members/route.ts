@@ -320,21 +320,25 @@ export async function POST(req: Request) {
             ? await EntertainmentMember.findById(newMember._id).populate("planId", "name hasTokenPrint quickDelete price")
             : await Member.findById(newMember._id).populate("planId", "name hasTokenPrint quickDelete price");
 
-        // Fire background job without awaiting
+        // Await background job so it doesn't get killed prematurely by Next.js
         const baseUrl = process.env.NEXTAUTH_URL || `http://${req.headers.get("host")}`;
-        fetch(`${baseUrl}/api/jobs/generate-card`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${process.env.CRON_SECRET}`,
-            },
-            body: JSON.stringify({
-                memberObjId: newMember._id,
-                memberId,
-                poolId,
-                isEntertainment,
-            }),
-        }).catch(err => console.error("Failed to enqueue generate-card job:", err));
+        try {
+            await fetch(`${baseUrl}/api/jobs/generate-card`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${process.env.CRON_SECRET}`,
+                },
+                body: JSON.stringify({
+                    memberObjId: newMember._id,
+                    memberId,
+                    poolId,
+                    isEntertainment,
+                }),
+            });
+        } catch (err) {
+            console.error("Failed to execute generate-card job:", err);
+        }
 
         return NextResponse.json(savedMember, { status: 201 });
     } catch (error: any) {

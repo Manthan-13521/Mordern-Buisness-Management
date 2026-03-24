@@ -55,58 +55,62 @@ function buildReceiptHTML(data: MemberReceiptData): string {
 
     body {
       font-family: 'Courier Prime', 'Courier New', Courier, monospace;
-      font-size: 7px;
-      width: 36mm;
-      padding: 2mm;
+      font-size: 14px;
+      width: 72mm;
+      padding: 4mm;
       background: white;
       color: #000;
+      /* Apply direct scaling for EXACT half size */
+      transform: scale(0.5);
+      transform-origin: top left;
+      zoom: 0.5; /* Safari support */
     }
 
     .center { text-align: center; }
     .bold { font-weight: bold; }
     
     .text-line {
-      font-size: 7px;
-      letter-spacing: 0.25px;
+      font-size: 14px;
+      letter-spacing: 0.5px;
       text-align: center;
-      margin: 1px 0;
+      margin: 2px 0;
       white-space: pre;
     }
 
     .pool-name {
-      font-size: 9px;
+      font-size: 18px;
       font-weight: bold;
       text-align: center;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 2px;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
     }
 
     .receipt-title {
-      font-size: 6.5px;
+      font-size: 13px;
       text-align: center;
-      margin-bottom: 2px;
-      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+      letter-spacing: 1px;
     }
 
-    table { width: 100%; border-collapse: collapse; margin: 2px 0; }
-    td { padding: 1px 0; vertical-align: top; }
+    table { width: 100%; border-collapse: collapse; margin: 4px 0; }
+    td { padding: 2px 0; vertical-align: top; }
     td:first-child { width: 42%; color: #444; }
-    td:last-child { font-weight: 500; font-size: 7.5px; }
+    td:last-child { font-weight: 500; font-size: 15px; }
 
     .balance-row td { color: #cc0000; font-weight: bold; }
-    .footer { text-align: center; margin-top: 3px; font-size: 6.5px; }
+    .footer { text-align: center; margin-top: 6px; font-size: 13px; }
     .member-id {
-      font-size: 10px;
+      font-size: 20px;
       font-weight: bold;
       text-align: center;
-      letter-spacing: 1.5px;
-      margin: 3px 0;
+      letter-spacing: 3px;
+      margin: 6px 0;
     }
 
     @media print {
-      @page { width: 40mm; margin: 0; }
-      body { width: 36mm; padding: 2mm; }
+      @page { width: 80mm; margin: 0; }
+      body { width: 72mm; padding: 4mm; }
     }
   </style>
 </head>
