@@ -6,7 +6,7 @@ import { Plan } from "@/models/Plan";
 import { User } from "@/models/User";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import ExcelJS from "exceljs";
+
 
 export async function GET() {
     try {
@@ -24,6 +24,7 @@ export async function GET() {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             .lean() as any[];
 
+        const ExcelJS = (await import("exceljs")).default;
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet("Payments");
 

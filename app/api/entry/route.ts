@@ -300,12 +300,14 @@ export async function POST(req: Request) {
         // ── Pool Capacity Check ──────────────────────────────────────────────
         // Dynamic tenant occupancy lookup calculation again for individual members
         let currentOccupancy = 0;
-        const pool = await Pool.findOne({ poolId: session.user.poolId }).select("capacity").lean();
-        const poolCapacity = pool?.capacity || 100;
-        const sessionAgg = await PoolSession.aggregate([
-            { $match: { poolId: session.user.poolId, status: "active" } },
-            { $group: { _id: null, total: { $sum: "$numPersons" } } }
+        const [pool, sessionAgg] = await Promise.all([
+            Pool.findOne({ poolId: session.user.poolId }).select("capacity").lean(),
+            PoolSession.aggregate([
+                { $match: { poolId: session.user.poolId, status: "active" } },
+                { $group: { _id: null, total: { $sum: "$numPersons" } } }
+            ]),
         ]);
+        const poolCapacity = pool?.capacity || 100;
         if (sessionAgg.length > 0) currentOccupancy = sessionAgg[0].total;
 
         const numPersons = member.planQuantity || 1;

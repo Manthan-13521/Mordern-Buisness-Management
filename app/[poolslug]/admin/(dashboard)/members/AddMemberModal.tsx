@@ -65,6 +65,14 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
         }
     }, [isOpen]);
 
+    // Stop webcam stream on unmount to prevent camera leak
+    useEffect(() => {
+        return () => {
+            const stream = webcamRef.current?.video?.srcObject as MediaStream | null;
+            stream?.getTracks().forEach(track => track.stop());
+        };
+    }, []);
+
     const handleCapture = () => {
         const imageSrc = webcamRef.current?.getScreenshot();
         if (imageSrc) {

@@ -7,7 +7,7 @@ import { getServerSession } from "next-auth";
 import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { logger } from "@/lib/logger";
-import ExcelJS from "exceljs";
+import type ExcelJSType from "exceljs";
 import { checkBackupExists, uploadBackup } from "@/lib/s3";
 
 export async function GET(req: Request) {
@@ -71,6 +71,7 @@ export async function GET(req: Request) {
                 .lean(),
         ]);
 
+        const ExcelJS = (await import("exceljs")).default;
         const workbook = new ExcelJS.Workbook();
         workbook.creator = "TS Pools System (S3 Optimized)";
         workbook.created = new Date();

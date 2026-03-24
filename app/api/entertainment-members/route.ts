@@ -12,9 +12,10 @@ import { signQRToken } from "@/lib/qrSigner";
 
 export async function GET(req: Request) {
     try {
-        await dbConnect();
-
-        const session = await getServerSession(authOptions);
+        const [, session] = await Promise.all([
+            dbConnect(),
+            getServerSession(authOptions),
+        ]);
         if (!session?.user)
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -62,9 +63,10 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
     try {
-        await dbConnect();
-
-        const session = await getServerSession(authOptions);
+        const [, session] = await Promise.all([
+            dbConnect(),
+            getServerSession(authOptions),
+        ]);
         if (!session?.user)
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -138,7 +140,10 @@ export async function POST(req: Request) {
         });
 
         await newMember.save();
-        const saved = await EntertainmentMember.findById(newMember._id).populate("planId", "name hasTokenPrint price");
+        const saved = await EntertainmentMember.findById(newMember._id)
+            .populate("planId", "name hasTokenPrint price")
+            .select("memberId name phone planId planQuantity planStartDate planEndDate paidAmount balanceAmount paymentStatus photoUrl qrCodeUrl")
+            .lean();
         return NextResponse.json(saved, { status: 201 });
     } catch (error) {
         console.error("[POST /api/entertainment-members]", error);

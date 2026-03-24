@@ -13,18 +13,34 @@ export async function GET(req: Request) {
         if (!session?.user)
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+        const url = new URL(req.url);
+        const page  = Math.max(1, parseInt(url.searchParams.get("page") ?? "1"));
+        const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "20")));
+        const skip  = (page - 1) * limit;
+
         const baseMatch =
             session.user.role !== "superadmin" && session.user.poolId
                 ? { poolId: session.user.poolId }
                 : {};
 
-        const logs = await NotificationLog.find({ ...baseMatch })
-            .populate("memberId", "name memberId phone")
-            .sort({ date: -1 })
-            .limit(100)
-            .lean();
+        const [logs, total] = await Promise.all([
+            NotificationLog.find({ ...baseMatch })
+                .populate("memberId", "name memberId phone")
+                .select("memberId type message status date sentAt")
+                .sort({ date: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+            NotificationLog.countDocuments({ ...baseMatch }),
+        ]);
 
-        return NextResponse.json(logs, {
+        return NextResponse.json({
+            data: logs,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        }, {
             headers: { "Cache-Control": "private, max-age=10, stale-while-revalidate=30" },
         });
     } catch (error) {

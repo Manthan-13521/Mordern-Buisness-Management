@@ -6,9 +6,10 @@ import { authOptions } from "@/lib/auth";
 
 export async function GET(req: Request) {
     try {
-        await dbConnect();
-
-        const session = await getServerSession(authOptions);
+        const [, session] = await Promise.all([
+            dbConnect(),
+            getServerSession(authOptions),
+        ]);
         if (!session?.user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
@@ -23,6 +24,7 @@ export async function GET(req: Request) {
         const [members, total] = await Promise.all([
             Member.find({ status: "expired", ...baseMatch })
                 .populate("planId", "name durationDays durationHours price")
+                .select("memberId name phone age planId expiryDate status photoUrl createdAt")
                 .sort({ expiryDate: -1 })
                 .skip(skip)
                 .limit(limit)

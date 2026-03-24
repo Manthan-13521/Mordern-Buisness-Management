@@ -13,9 +13,10 @@ import { EntertainmentMember } from "@/models/EntertainmentMember";
  */
 export async function GET(req: Request) {
     try {
-        await dbConnect();
-
-        const session = await getServerSession(authOptions);
+        const [, session] = await Promise.all([
+            dbConnect(),
+            getServerSession(authOptions),
+        ]);
         if (!session?.user)
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -32,9 +33,10 @@ export async function GET(req: Request) {
             query.poolId = session.user.poolId;
         }
 
+        const selectFields = "memberId name phone planId planQuantity paidAmount balanceAmount paymentStatus createdAt photoUrl";
         const [regularMembers, entertainmentMembers] = await Promise.all([
-            Member.find(query).populate("planId", "name price").lean() as any,
-            EntertainmentMember.find(query).populate("planId", "name price").lean() as any,
+            Member.find(query).populate("planId", "name price").select(selectFields).lean() as any,
+            EntertainmentMember.find(query).populate("planId", "name price").select(selectFields).lean() as any,
         ]);
 
         const taggedEntertainment = entertainmentMembers.map((m: any) => ({ ...m, _source: "entertainment" }));

@@ -5,7 +5,7 @@ import { Payment } from "@/models/Payment";
 import { Member } from "@/models/Member";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import ExcelJS from "exceljs";
+
 
 export async function GET(req: Request) {
     try {
@@ -20,33 +20,38 @@ export async function GET(req: Request) {
 
         const baseMatch = session.user.role !== "superadmin" && session.user.poolId ? { poolId: session.user.poolId } : {};
 
-        if (filterType === "all" || filterType === "entry") {
-            const entries = await EntryLog.find({ ...baseMatch }).populate("memberId", "name memberId").sort({ scanTime: -1 }).limit(500).lean();
-            entries.forEach((e: any) => unifiedLogs.push({
-                date: e.scanTime, type: "Entry Scan", description: `Entry ${e.status.toUpperCase()} ${e.reason ? `(${e.reason})` : ""}`,
-                member: e.memberId?.name || "Unknown", memberId: e.memberId?.memberId || "N/A"
-            }));
-        }
+        // Fetch all log types in parallel
+        const [entries, payments, registrations] = await Promise.all([
+            filterType === "all" || filterType === "entry"
+                ? EntryLog.find({ ...baseMatch }).populate("memberId", "name memberId").sort({ scanTime: -1 }).limit(500).lean()
+                : Promise.resolve([]),
+            filterType === "all" || filterType === "payment"
+                ? Payment.find({ ...baseMatch }).populate("memberId", "name memberId").sort({ date: -1 }).limit(500).lean()
+                : Promise.resolve([]),
+            filterType === "all" || filterType === "registration"
+                ? Member.find({ ...baseMatch }).sort({ createdAt: -1 }).limit(500).lean()
+                : Promise.resolve([]),
+        ]);
 
-        if (filterType === "all" || filterType === "payment") {
-            const payments = await Payment.find({ ...baseMatch }).populate("memberId", "name memberId").sort({ date: -1 }).limit(500).lean();
-            payments.forEach((p: any) => unifiedLogs.push({
-                date: p.date, type: "Payment", description: `₹${p.amount} via ${p.paymentMethod.toUpperCase()} (${p.status})`,
-                member: p.memberId?.name || "Unknown", memberId: p.memberId?.memberId || "N/A"
-            }));
-        }
+        (entries as any[]).forEach((e: any) => unifiedLogs.push({
+            date: e.scanTime, type: "Entry Scan", description: `Entry ${e.status.toUpperCase()} ${e.reason ? `(${e.reason})` : ""}`,
+            member: e.memberId?.name || "Unknown", memberId: e.memberId?.memberId || "N/A"
+        }));
 
-        if (filterType === "all" || filterType === "registration") {
-            const registrations = await Member.find({ ...baseMatch }).sort({ createdAt: -1 }).limit(500).lean();
-            registrations.forEach((m: any) => unifiedLogs.push({
-                date: m.createdAt, type: "Registration", description: "New member registered",
-                member: m.name, memberId: m.memberId
-            }));
-        }
+        (payments as any[]).forEach((p: any) => unifiedLogs.push({
+            date: p.date, type: "Payment", description: `₹${p.amount} via ${p.paymentMethod.toUpperCase()} (${p.status})`,
+            member: p.memberId?.name || "Unknown", memberId: p.memberId?.memberId || "N/A"
+        }));
+
+        (registrations as any[]).forEach((m: any) => unifiedLogs.push({
+            date: m.createdAt, type: "Registration", description: "New member registered",
+            member: m.name, memberId: m.memberId
+        }));
 
         unifiedLogs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
         // Create Excel
+        const ExcelJS = (await import("exceljs")).default;
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet("System Logs");
         worksheet.columns = [

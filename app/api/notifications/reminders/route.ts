@@ -61,7 +61,9 @@ export async function POST(req: Request) {
                 { status: "active", expiryDate: { $gte: inTwoDays,  $lt: inThreeDays } }, // Expiring in 2 days
                 { expiryDate: { $gte: yesterday, $lt: today } } // Expired yesterday
             ]
-        }).populate("planId").lean();
+        }).populate("planId", "whatsAppAlert durationDays durationHours")
+          .select("name phone memberId expiryDate planId")
+          .lean();
 
 
         let sentCount = 0;

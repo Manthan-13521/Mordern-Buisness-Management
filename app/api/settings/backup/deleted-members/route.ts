@@ -7,7 +7,7 @@ import { getServerSession } from "next-auth";
 import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { logger } from "@/lib/logger";
-import ExcelJS from "exceljs";
+import type ExcelJSType from "exceljs";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 export async function GET(req: Request) {
@@ -34,13 +34,14 @@ export async function GET(req: Request) {
         const baseMatch = session?.user && session.user.role !== "superadmin" && session.user.poolId 
             ? { poolId: session.user.poolId } : {};
 
-        // Fetch soft-deleted members
-        const softDeletedMembers = await Member.find({ isDeleted: true, ...baseMatch }).lean();
-        const softDeletedEntertainment = await EntertainmentMember.find({ isDeleted: true, ...baseMatch }).lean();
-        
-        // Fetch hard-deleted (archived) members
-        const hardDeletedMembers = await DeletedMember.find({ ...baseMatch }).lean();
+        // Fetch all deleted member types in parallel
+        const [softDeletedMembers, softDeletedEntertainment, hardDeletedMembers] = await Promise.all([
+            Member.find({ isDeleted: true, ...baseMatch }).lean(),
+            EntertainmentMember.find({ isDeleted: true, ...baseMatch }).lean(),
+            DeletedMember.find({ ...baseMatch }).lean(),
+        ]);
 
+        const ExcelJS = (await import("exceljs")).default;
         const workbook = new ExcelJS.Workbook();
         workbook.creator = "TS Pools Management System";
         workbook.created = new Date();

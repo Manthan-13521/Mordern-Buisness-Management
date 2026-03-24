@@ -54,6 +54,14 @@ export function FaceDetector({ onFaceDetected, continuous = false, size = 200 }:
         };
     }, []);
 
+    // Stop webcam stream on unmount to prevent camera leak
+    useEffect(() => {
+        return () => {
+            const stream = webcamRef.current?.video?.srcObject as MediaStream | null;
+            stream?.getTracks().forEach(track => track.stop());
+        };
+    }, []);
+
     const detectFace = useCallback(async () => {
         if (!webcamRef.current?.video || detected || !faceapi) return;
 

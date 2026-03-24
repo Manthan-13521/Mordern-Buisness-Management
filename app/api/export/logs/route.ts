@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { EntryLog } from "@/models/EntryLog";
-import ExcelJS from "exceljs";
+
 
 export async function GET(req: Request) {
     try {
@@ -18,6 +18,7 @@ export async function GET(req: Request) {
             .limit(1000)
             .lean();
 
+        const ExcelJS = (await import("exceljs")).default;
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet("Entry Logs");
 
