@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
+import "@/models/Plan";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import fs from "fs";

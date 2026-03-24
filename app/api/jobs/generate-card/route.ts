@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
-import { Plan } from "@/models/Plan";
+import "@/models/Plan";
 import QRCode from "qrcode";
 import { uploadBuffer } from "@/lib/local-upload";
 import { signQRToken } from "@/lib/qrSigner";
