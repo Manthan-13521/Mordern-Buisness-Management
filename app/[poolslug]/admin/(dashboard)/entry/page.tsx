@@ -56,7 +56,7 @@ export default function EntryPage() {
     const [isOnline, setIsOnline] = useState(true);
     const [pendingScans, setPendingScans] = useState<PendingScan[]>([]);
     const [occupancy, setOccupancy] = useState<{ current: number; capacity: number } | null>(null);
-    const lastScanTime = useRef<number>(0);
+    const recentScansRef = useRef<Map<string, number>>(new Map());
 
     // UID Lookup state
     const [uid, setUid] = useState("");
@@ -147,8 +147,13 @@ export default function EntryPage() {
         if (!isManual && !isScanning) return;
 
         const now = Date.now();
-        if (now - lastScanTime.current < COOLDOWN_MS) return;
-        lastScanTime.current = now;
+        const lastScanForPayload = recentScansRef.current.get(text) || 0;
+        
+        // Prevent duplicate scans of the SAME person within 4 seconds, but allow a line of different people
+        if (now - lastScanForPayload < 4000) return;
+        
+        // Register this new scan payload
+        recentScansRef.current.set(text, now);
 
         setLoading(true);
         setIsScanning(false);

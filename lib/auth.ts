@@ -7,6 +7,34 @@ import { Pool } from "@/models/Pool";
 import bcrypt from "bcryptjs";
 import { DefaultSession } from "next-auth";
 
+// Basic in-memory rate limiter to prevent brute force attacks (e.g. 5 attempts / 15 mins)
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_MINUTES = 15;
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(key: string) {
+    const now = Date.now();
+    const record = rateLimitMap.get(key);
+
+    if (record) {
+        if (now > record.resetAt) {
+            // Expired lockout, reset
+            rateLimitMap.set(key, { count: 1, resetAt: now + LOCKOUT_MINUTES * 60 * 1000 });
+        } else if (record.count >= MAX_ATTEMPTS) {
+            const minsLeft = Math.ceil((record.resetAt - now) / 60000);
+            throw new Error(`Too many login attempts. Please try again in ${minsLeft} minutes.`);
+        } else {
+            record.count += 1;
+        }
+    } else {
+        rateLimitMap.set(key, { count: 1, resetAt: now + LOCKOUT_MINUTES * 60 * 1000 });
+    }
+}
+
+function clearRateLimit(key: string) {
+    rateLimitMap.delete(key);
+}
+
 declare module "next-auth" {
     interface Session {
         user: {
@@ -57,10 +85,15 @@ export const authOptions: NextAuthOptions = {
                 poolSlug: { label: "Pool Slug", type: "text" },
                 isSuperAdmin: { label: "Super Admin", type: "text" }
             },
-            async authorize(credentials) {
+            async authorize(credentials, req) {
                 if (!credentials?.username || !credentials?.password) {
                     throw new Error("Invalid credentials");
                 }
+
+                const clientIp = (req?.headers as any)?.["x-forwarded-for"] || "unknown_ip";
+                const rlKey = `${clientIp}_${credentials.username.toLowerCase()}`;
+                
+                checkRateLimit(rlKey);
 
                 await dbConnect();
 
@@ -70,6 +103,8 @@ export const authOptions: NextAuthOptions = {
                         const isMatch = await bcrypt.compare(credentials.password, platformAdmin.passwordHash);
                         if (!isMatch) throw new Error("Invalid password");
                         
+                        clearRateLimit(rlKey);
+
                         return {
                             id: platformAdmin._id.toString(),
                             name: "Super Admin",
@@ -111,6 +146,8 @@ export const authOptions: NextAuthOptions = {
                 if (!isMatch) {
                     throw new Error("Invalid password");
                 }
+
+                clearRateLimit(rlKey);
 
                 // If logged in via generic route, lookup the Pool to get the slug for session
                 let effectiveSlug = credentials.poolSlug;
