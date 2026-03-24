@@ -20,7 +20,7 @@ export async function GET(req: Request) {
         let errors = [];
 
         // Fix missing qrCodeUrls / pending cardStatus in both collections
-        for (const Model of [Member, EntertainmentMember]) {
+        for (const Model of [Member, EntertainmentMember] as any[]) {
             const stuckMembers = await Model.find({ cardStatus: "pending" });
             
             for (const member of stuckMembers) {
