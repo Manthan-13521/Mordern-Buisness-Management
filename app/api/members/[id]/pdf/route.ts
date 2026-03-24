@@ -8,6 +8,9 @@ import { authOptions } from "@/lib/auth";
 import fs from "fs";
 import path from "path";
 
+export const maxDuration = 60;
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
     try {
         const { searchParams } = new URL(req.url);
