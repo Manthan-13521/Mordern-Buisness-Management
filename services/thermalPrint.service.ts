@@ -54,63 +54,55 @@ function buildReceiptHTML(data: MemberReceiptData): string {
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      font-family: 'Courier Prime', 'Courier New', Courier, monospace;
-      font-size: 14px;
+      font-family: 'Courier Prime', Courier, monospace;
+      font-size: 11.5px;
       width: 72mm;
-      padding: 4mm;
+      padding: 0mm;
       background: white;
       color: #000;
-      /* Apply direct scaling for EXACT half size */
-      transform: scale(0.5);
-      transform-origin: top left;
-      zoom: 0.5; /* Safari support */
+      line-height: 1.1;
     }
 
-    .center { text-align: center; }
-    .bold { font-weight: bold; }
-    
     .text-line {
-      font-size: 14px;
-      letter-spacing: 0.5px;
+      font-size: 11.5px;
+      letter-spacing: 0px;
       text-align: center;
-      margin: 2px 0;
+      margin: 1px 0;
       white-space: pre;
     }
 
     .pool-name {
-      font-size: 18px;
+      font-size: 14px;
       font-weight: bold;
       text-align: center;
       text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 4px;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+      margin-top: 2px;
     }
 
     .receipt-title {
-      font-size: 13px;
+      font-size: 11px;
       text-align: center;
-      margin-bottom: 4px;
-      letter-spacing: 1px;
+      margin-bottom: 2px;
     }
 
-    table { width: 100%; border-collapse: collapse; margin: 4px 0; }
-    td { padding: 2px 0; vertical-align: top; }
-    td:first-child { width: 42%; color: #444; }
-    td:last-child { font-weight: 500; font-size: 15px; }
+    table { width: 100%; border-collapse: collapse; margin: 1px 0; }
+    td { padding: 0px 0; vertical-align: top; }
+    td:first-child { width: 38%; color: #333; }
+    td:last-child { font-weight: bold; font-size: 11.5px; }
 
-    .balance-row td { color: #cc0000; font-weight: bold; }
-    .footer { text-align: center; margin-top: 6px; font-size: 13px; }
     .member-id {
-      font-size: 20px;
+      font-size: 15px;
       font-weight: bold;
       text-align: center;
-      letter-spacing: 3px;
-      margin: 6px 0;
+      letter-spacing: 2px;
+      margin: 2px 0;
     }
 
     @media print {
       @page { width: 80mm; margin: 0; }
-      body { width: 72mm; padding: 4mm; }
+      body { width: 72mm; padding: 0mm 4mm; }
     }
   </style>
 </head>
@@ -118,6 +110,8 @@ function buildReceiptHTML(data: MemberReceiptData): string {
   <div class="pool-name">${data.poolName}</div>
   <div class="receipt-title">TOKEN / RECEIPT</div>
   <div class="text-line">${doubleLine}</div>
+
+  <div class="member-id">${data.memberId}</div>
 
   <table>
     <tr><td>Name</td><td>: ${data.name}</td></tr>
@@ -128,7 +122,7 @@ function buildReceiptHTML(data: MemberReceiptData): string {
 
   <table>
     <tr><td>Plan</td><td>: ${data.planName}</td></tr>
-    <tr><td>Qty</td><td>: <span class="bold">${data.planQty} unit${data.planQty > 1 ? "s" : ""}</span></td></tr>
+    <tr><td>Qty</td><td>: ${data.planQty} unit${data.planQty > 1 ? "s" : ""}</td></tr>
     <tr><td>Total Price</td><td>: ${formatCurrency(data.planPrice)}</td></tr>
   </table>
 
@@ -136,7 +130,7 @@ function buildReceiptHTML(data: MemberReceiptData): string {
 
   <table>
     <tr><td>Paid</td><td>: ${formatCurrency(data.paidAmount)}</td></tr>
-    ${data.balance > 0 ? `<tr class="balance-row"><td>Balance</td><td>: ${formatCurrency(data.balance)}</td></tr>` : '<tr><td>Balance</td><td>: Nil</td></tr>'}
+    <tr><td>Balance</td><td>: ${formatCurrency(data.balance > 0 ? data.balance : 0)}</td></tr>
   </table>
 
   <div class="text-line">${dashedLine}</div>
@@ -144,15 +138,10 @@ function buildReceiptHTML(data: MemberReceiptData): string {
   <table>
     <tr><td>Date</td><td>: ${formatDate(data.registeredAt)}</td></tr>
     <tr><td>Time</td><td>: ${formatTime(data.registeredAt)}</td></tr>
-    <tr><td>Valid Till</td><td>: ${formatDate(data.validTill)}<br>&nbsp;&nbsp;${formatTime(data.validTill)}</td></tr>
+    <tr><td>Valid Till</td><td>: ${formatDate(data.validTill)}<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${formatTime(data.validTill)}</td></tr>
   </table>
 
-  <div class="text-line">${dashedLine}</div>
-
-  <div class="member-id">${data.memberId}</div>
-
   <div class="text-line">${doubleLine}</div>
-  <br />
 </body>
 </html>`;
 }
