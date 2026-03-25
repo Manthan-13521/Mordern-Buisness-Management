@@ -104,7 +104,7 @@ export default function MembersPage() {
     const [searchDebounced, setSearchDebounced] = useState("");
     const { print: printThermal } = useThermalPrint();
 
-    const LIMIT = 50;
+    const LIMIT = 12;
 
     const invalidateMembersList = () => {
         queryClient.invalidateQueries({ queryKey: [...membersListQueryKeyPrefix] });
