@@ -7,6 +7,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import fs from "fs";
 import path from "path";
+import QRCode from "qrcode";
+import { signQRToken } from "@/lib/qrSigner";
+import { uploadBuffer } from "@/lib/local-upload";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -40,6 +43,26 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
         }
 
         if (!member) return NextResponse.json({ error: "Member not found" }, { status: 404 });
+
+        // Lazy QR Code Generation if missing
+        if (!member.qrCodeUrl) {
+            try {
+                const qrPayloadObject = await signQRToken(member.memberId);
+                const qrPngBuffer = await QRCode.toBuffer(qrPayloadObject, { width: 300 });
+                const poolId = member.poolId || "default";
+                const newQrUrl = await uploadBuffer(qrPngBuffer, "swimming-pool/qrcodes", `${poolId}_${member.memberId}_qr`);
+
+                // Save back to DB so it's cached
+                const Model = member.planId?.hasEntertainment ? (await import("@/models/EntertainmentMember")).EntertainmentMember : Member;
+                await (Model as any).updateOne({ _id: member._id }, { $set: { qrCodeUrl: newQrUrl } });
+
+                member.qrCodeUrl = newQrUrl;
+                
+
+            } catch (err) {
+                console.error("Lazy QR generation failed:", err);
+            }
+        }
 
         // Create a new PDF Document
         const pdfDoc = await PDFDocument.create();

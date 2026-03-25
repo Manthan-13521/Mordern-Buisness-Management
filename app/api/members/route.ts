@@ -266,17 +266,9 @@ export async function POST(req: Request) {
             }
         }
 
-        // Inline QR Code Generation
+        // Random token for physical card/QR (instant)
         const qrToken = crypto.randomUUID();
-        const qrPayloadObject = await signQRToken(memberId);
-        let qrCodeUrl = "";
-        try {
-            const qrPngBuffer = await QRCode.toBuffer(qrPayloadObject, { width: 300 });
-            qrCodeUrl = await uploadBuffer(qrPngBuffer, "swimming-pool/qrcodes", `${poolId}_${memberId}_qr`);
-        } catch (e) {
-            console.error("QR Code local upload failed, falling back to Data URL", e);
-            qrCodeUrl = await QRCode.toDataURL(qrPayloadObject, { width: 300 });
-        }
+        const qrCodeUrl = ""; // Will be generated on-demand during PDF download
 
         // Calculate plan end date — duration is NOT multiplied by qty
         // Qty means N people using the same plan, not extended duration
