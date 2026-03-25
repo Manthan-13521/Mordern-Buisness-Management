@@ -73,9 +73,7 @@ export async function GET(req: Request) {
         if (statusFilter === "expired") baseMatch.isExpired = true;
         if (balanceOnly === "true") baseMatch.balanceAmount = { $gt: 0 };
 
-        // ── Aggregation pipeline with $unionWith + verdict computation ──
-        const now = new Date();
-
+        // ── Aggregation pipeline with $unionWith ─────────────────────────
         const pipeline: mongoose.PipelineStage[] = [
             { $match: baseMatch },
             { $addFields: { _source: "regular" } },
@@ -88,10 +86,9 @@ export async function GET(req: Request) {
                     ],
                 },
             },
-            { $sort: { createdAt: -1 as const } },
+            { $sort: { createdAt: -1 } },
             { $skip: skip },
             { $limit: limit },
-            // ── Populate planId via $lookup ──
             {
                 $lookup: {
                     from: "plans",
@@ -104,100 +101,63 @@ export async function GET(req: Request) {
                 },
             },
             { $addFields: { planId: { $arrayElemAt: ["$_plan", 0] } } },
-            // ── Compute verdict, daysLeft, verdictClass server-side ──
-            {
-                $addFields: {
-                    _endDate: { $ifNull: ["$planEndDate", "$expiryDate"] },
-                },
-            },
-            {
-                $addFields: {
-                    _msLeft: { $subtract: [{ $ifNull: ["$_endDate", now] }, now] },
-                },
-            },
-            {
-                $addFields: {
-                    daysLeft: {
-                        $cond: {
-                            if: { $lte: ["$_msLeft", 0] },
-                            then: 0,
-                            else: { $ceil: { $divide: ["$_msLeft", 86400000] } },
-                        },
-                    },
-                    verdict: {
-                        $switch: {
-                            branches: [
-                                { case: { $eq: ["$isDeleted", true] }, then: "DELETED" },
-                                {
-                                    case: {
-                                        $or: [
-                                            { $eq: ["$isExpired", true] },
-                                            { $lte: ["$_msLeft", 0] },
-                                        ],
-                                    },
-                                    then: "EXPIRED",
-                                },
-                                {
-                                    case: { $lte: ["$_msLeft", 604800000] }, // 7 days in ms
-                                    then: "EXPIRING",
-                                },
-                            ],
-                            default: "ACTIVE",
-                        },
-                    },
-                },
-            },
-            {
-                $addFields: {
-                    verdictClass: {
-                        $switch: {
-                            branches: [
-                                { case: { $eq: ["$verdict", "DELETED"] }, then: "bg-gray-100 text-gray-600 ring-gray-500/20 dark:bg-gray-800 dark:text-gray-400" },
-                                { case: { $eq: ["$verdict", "EXPIRED"] }, then: "bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-500/10 dark:text-red-400" },
-                                { case: { $eq: ["$verdict", "EXPIRING"] }, then: "bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400" },
-                            ],
-                            default: "bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-500/10 dark:text-green-400",
-                        },
-                    },
-                    rowClass: {
-                        $switch: {
-                            branches: [
-                                { case: { $in: ["$verdict", ["DELETED", "EXPIRED"]] }, then: "bg-red-50 dark:bg-red-950/30" },
-                                { case: { $eq: ["$verdict", "EXPIRING"] }, then: "bg-amber-50 dark:bg-amber-950/30" },
-                            ],
-                            default: "",
-                        },
-                    },
-                    daysLeftLabel: {
-                        $switch: {
-                            branches: [
-                                { case: { $eq: ["$verdict", "DELETED"] }, then: "Deleted" },
-                                { case: { $eq: ["$verdict", "EXPIRED"] }, then: "Expired" },
-                                {
-                                    case: { $and: [{ $gt: ["$daysLeft", 0] }, { $lte: ["$daysLeft", 1] }] },
-                                    then: "Expires today",
-                                },
-                            ],
-                            default: { $concat: [{ $toString: "$daysLeft" }, " days left"] },
-                        },
-                    },
-                },
-            },
-            // ── Final projection — exclude heavy/temp fields ──
             {
                 $project: {
                     _plan: 0, faceDescriptor: 0,
-                    _endDate: 0, _msLeft: 0,
                 },
             },
         ];
 
-        const [data, regularTotal, entertainmentTotal] = await Promise.all([
+        const [rawData, regularTotal, entertainmentTotal] = await Promise.all([
             Member.aggregate(pipeline),
             Member.countDocuments(baseMatch),
             EntertainmentMember.countDocuments(baseMatch),
         ]);
         const total = regularTotal + entertainmentTotal;
+
+        // ── Compute verdict server-side in JS (fast, resilient) ──────────
+        const now = Date.now();
+        const data = rawData.map((m: any) => {
+            const endDate = new Date(m.planEndDate || m.expiryDate || 0);
+            const msLeft = endDate.getTime() - now;
+
+            let verdict = "ACTIVE";
+            let verdictClass = "bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-500/10 dark:text-green-400";
+            let rowClass = "";
+            let daysLeftLabel = "";
+
+            if (m.isDeleted) {
+                verdict = "DELETED";
+                verdictClass = "bg-gray-100 text-gray-600 ring-gray-500/20 dark:bg-gray-800 dark:text-gray-400";
+                rowClass = "bg-red-50 dark:bg-red-950/30";
+                daysLeftLabel = "Deleted";
+            } else if (m.isExpired || msLeft <= 0) {
+                verdict = "EXPIRED";
+                verdictClass = "bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-500/10 dark:text-red-400";
+                rowClass = "bg-red-50 dark:bg-red-950/30";
+                daysLeftLabel = "Expired";
+            } else {
+                const daysLeft = Math.ceil(msLeft / 86400000);
+                if (daysLeft <= 1) {
+                    daysLeftLabel = "Expires today";
+                } else {
+                    daysLeftLabel = `${daysLeft} days left`;
+                }
+                if (daysLeft <= 7) {
+                    verdict = "EXPIRING";
+                    verdictClass = "bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400";
+                    rowClass = "bg-amber-50 dark:bg-amber-950/30";
+                }
+                m.daysLeft = daysLeft;
+            }
+
+            m.verdict = verdict;
+            m.verdictClass = verdictClass;
+            m.rowClass = rowClass;
+            m.daysLeftLabel = daysLeftLabel;
+            if (!m.daysLeft) m.daysLeft = 0;
+            return m;
+        });
 
         const response = {
             data,
