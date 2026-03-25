@@ -89,7 +89,7 @@ function buildReceiptHTML(data: MemberReceiptData): string {
 
     table { width: 100%; border-collapse: collapse; margin: 1px 0; }
     td { padding: 0px 0; vertical-align: top; }
-    td:first-child { width: 1%; white-space: nowrap; color: #333; padding-right: 2px; }
+    td:first-child { width: 1%; white-space: nowrap; color: #333; padding-right: 0px; }
     td:last-child { font-weight: bold; font-size: 10.5px; word-break: break-word; }
 
     .member-id {
@@ -117,30 +117,30 @@ function buildReceiptHTML(data: MemberReceiptData): string {
   <div class="text-line">${dashedLine}</div>
 
   <table>
-    <tr><td>Name</td><td>:${data.name}</td></tr>
-    <tr><td>Phone</td><td>:${data.phone}</td></tr>
+    <tr><td>Name</td><td>&nbsp;: ${data.name}</td></tr>
+    <tr><td>Phone</td><td>&nbsp;: ${data.phone}</td></tr>
   </table>
 
   <div class="text-line">${dashedLine}</div>
 
   <table>
-    <tr><td>Plan</td><td>:${data.planName}</td></tr>
-    <tr><td>Qty</td><td>:${data.planQty} unit${data.planQty > 1 ? "s" : ""}</td></tr>
-    <tr><td>Total</td><td>:${formatCurrency(data.planPrice)}</td></tr>
+    <tr><td>Plan</td><td>&nbsp;: ${data.planName}</td></tr>
+    <tr><td>Qty</td><td>&nbsp;: ${data.planQty} unit${data.planQty > 1 ? "s" : ""}</td></tr>
+    <tr><td>Total</td><td>&nbsp;: ${formatCurrency(data.planPrice)}</td></tr>
   </table>
 
   <div class="text-line">${dashedLine}</div>
 
   <table>
-    <tr><td>Paid</td><td>:${formatCurrency(data.paidAmount)}</td></tr>
-    <tr><td>Balance</td><td>:${formatCurrency(data.balance > 0 ? data.balance : 0)}</td></tr>
+    <tr><td>Paid</td><td>&nbsp;: ${formatCurrency(data.paidAmount)}</td></tr>
+    <tr><td>Balance</td><td>&nbsp;: ${formatCurrency(data.balance > 0 ? data.balance : 0)}</td></tr>
   </table>
 
   <div class="text-line">${dashedLine}</div>
 
   <table>
-    <tr><td>Date</td><td>:${formatDate(data.registeredAt)} &nbsp;${formatTime(data.registeredAt)}</td></tr>
-    <tr><td>Till</td><td>:${formatDate(data.validTill)} &nbsp;${formatTime(data.validTill)}<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${formatTime(data.validTill)}</td></tr>
+    <tr><td>Date</td><td>&nbsp;: ${formatDate(data.registeredAt)} &nbsp;${formatTime(data.registeredAt)}</td></tr>
+    <tr><td>Till</td><td>&nbsp;: ${formatDate(data.validTill)} &nbsp;${formatTime(data.validTill)}<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${formatTime(data.validTill)}</td></tr>
   </table>
 
   <div class="text-line">${doubleLine}</div>
@@ -158,7 +158,7 @@ export function printThermalReceipt(data: MemberReceiptData): void {
     if (typeof window === "undefined") return; // SSR guard
 
     const html = buildReceiptHTML(data);
-    const win = window.open("", "_blank", "width=170,height=310,toolbar=0,menubar=0,scrollbars=1");
+    const win = window.open("", "_blank", "width=340,height=400,toolbar=0,menubar=0,scrollbars=1");
 
     if (!win) {
         console.warn("[ThermalPrint] Popup blocked. Please allow popups for this site.");
