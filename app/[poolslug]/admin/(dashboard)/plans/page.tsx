@@ -297,10 +297,7 @@ export default function PlansPage() {
                                         <input type="checkbox" checked={formData.hasEntertainment} onChange={e => setFormData({ ...formData, hasEntertainment: e.target.checked })} className="mt-0.5 rounded border-gray-300 text-purple-600 dark:border-gray-600 dark:bg-gray-800" />
                                         <span>🎭 <strong>Entertainment Member</strong> — uses MS-series ID</span>
                                     </label>
-                                    <label className="flex items-start gap-2 text-sm dark:text-gray-300 cursor-pointer" title="Entry gate requires face scan for this plan">
-                                        <input type="checkbox" checked={formData.hasFaceScan} onChange={e => setFormData({ ...formData, hasFaceScan: e.target.checked })} className="mt-0.5 rounded border-gray-300 text-blue-600 dark:border-gray-600 dark:bg-gray-800" />
-                                        <span>📷 <strong>Face Scan Entry</strong> — biometric required at gate</span>
-                                    </label>
+
                                     <label className="flex items-start gap-2 text-sm dark:text-gray-300 cursor-pointer" title="Auto-purge 1 day after expiry (default is 15 days)">
                                         <input type="checkbox" checked={formData.quickDelete} onChange={e => setFormData({ ...formData, quickDelete: e.target.checked })} className="mt-0.5 rounded border-gray-300 text-orange-600 dark:border-gray-600 dark:bg-gray-800" />
                                         <span>⚡ <strong>Quick Delete</strong> — auto-purge 1 day after expiry</span>
