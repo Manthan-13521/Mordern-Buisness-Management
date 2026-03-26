@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Search, ChevronLeft, ChevronRight, RefreshCw, UserCog, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Plus, Search, ChevronLeft, ChevronRight, RefreshCw, UserCog, Clock, CheckCircle, XCircle, Trash2 } from "lucide-react";
 
 interface StaffMember {
     _id: string;
@@ -9,7 +9,6 @@ interface StaffMember {
     name: string;
     phone: string;
     role: "Trainer" | "Manager" | "Staff";
-    faceScanEnabled: boolean;
     createdAt: string;
 }
 
@@ -29,7 +28,7 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 function AddStaffModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
-    const [form, setForm] = useState({ name: "", phone: "", role: "Staff", faceScanEnabled: false });
+    const [form, setForm] = useState({ name: "", phone: "", role: "Staff" });
     const [saving, setSaving] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -69,11 +68,6 @@ function AddStaffModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
                             <option value="Manager">Manager</option>
                         </select>
                     </div>
-                    <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
-                        <input type="checkbox" checked={form.faceScanEnabled} onChange={e => setForm({ ...form, faceScanEnabled: e.target.checked })}
-                            className="rounded border-gray-300 text-indigo-600 dark:border-gray-600 dark:bg-gray-800" />
-                        Enable Face Scan
-                    </label>
                     <div className="flex justify-end gap-3 pt-2">
                         <button type="button" onClick={onClose}
                             className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
@@ -176,7 +170,7 @@ export default function StaffPage() {
                     <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-800">
                         <thead className="bg-gray-50 dark:bg-gray-900">
                             <tr>
-                                {["Staff Member", "Role", "Phone", "Face Scan", ""].map(h => (
+                                {["Staff Member", "Role", "Phone", ""].map(h => (
                                     <th key={h} className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 first:pl-6">{h}</th>
                                 ))}
                             </tr>
@@ -204,13 +198,24 @@ export default function StaffPage() {
                                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${ROLE_COLORS[s.role]}`}>{s.role}</span>
                                     </td>
                                     <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">{s.phone}</td>
-                                    <td className="px-4 py-4 text-sm">
-                                        {s.faceScanEnabled
-                                            ? <span className="text-green-600 dark:text-green-400 text-xs font-medium">✓ Enabled</span>
-                                            : <span className="text-gray-400 text-xs">—</span>}
-                                    </td>
-                                    <td className="px-4 py-4 text-sm text-right">
-                                        <UserCog className="h-4 w-4 text-gray-400 inline" />
+                                    <td className="px-4 py-4 text-sm text-right space-x-3">
+                                        <UserCog className="h-4 w-4 text-gray-400 inline cursor-pointer hover:text-indigo-600" />
+                                        <Trash2 className="h-4 w-4 text-gray-400 inline cursor-pointer hover:text-red-600" 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (window.confirm(`Delete staff member ${s.name}?`)) {
+                                                    fetch(`/api/staff?staffId=${s.staffId}`, { method: 'DELETE' })
+                                                        .then(res => {
+                                                            if (res.ok) {
+                                                                fetchStaff();
+                                                                if (selected?.staffId === s.staffId) setSelected(null);
+                                                            } else {
+                                                                res.json().then(data => alert(data.error || "Failed to delete"));
+                                                            }
+                                                        });
+                                                }
+                                            }}
+                                        />
                                     </td>
                                 </tr>
                             ))}

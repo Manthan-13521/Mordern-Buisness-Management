@@ -14,8 +14,6 @@ export interface IEntertainmentMember extends Document {
     aadharCard?: string;
     address?: string;
     photoUrl?: string;
-    faceDescriptor?: number[];
-    faceScanEnabled?: boolean;
     entertainmentFeatures: string[];
     // Plan linkage
     planId: mongoose.Types.ObjectId;
@@ -55,8 +53,6 @@ const entertainmentMemberSchema = new Schema<IEntertainmentMember>(
     {
         memberId: { type: String, required: true },
         poolId: { type: String, required: true, index: true },
-        faceScanEnabled: { type: Boolean, default: false },
-        faceDescriptor: { type: [Number] },
         entertainmentFeatures: { type: [String], default: [] },
         name: { type: String, required: true },
         phone: { type: String, required: true },

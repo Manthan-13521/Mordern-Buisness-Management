@@ -6,7 +6,6 @@ export interface IStaff extends Document {
     name: string;
     phone: string;
     role: "Trainer" | "Manager" | "Staff";
-    faceScanEnabled?: boolean;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -18,7 +17,6 @@ const staffSchema = new Schema<IStaff>(
         name: { type: String, required: true },
         phone: { type: String, required: true },
         role: { type: String, enum: ["Trainer", "Manager", "Staff"], required: true },
-        faceScanEnabled: { type: Boolean, default: false },
     },
     { timestamps: true }
 );

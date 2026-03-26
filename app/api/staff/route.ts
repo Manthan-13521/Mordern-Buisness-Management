@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { name, phone, role, faceScanEnabled } = body;
+        const { name, phone, role } = body;
 
         if (!name?.trim() || !phone?.trim() || !role) {
             return NextResponse.json({ error: "name, phone, and role are required" }, { status: 400 });
@@ -93,7 +93,6 @@ export async function POST(req: NextRequest) {
             name:   name.trim(),
             phone:  phone.trim(),
             role,
-            faceScanEnabled: faceScanEnabled ?? false,
         });
 
         return NextResponse.json(staff, { status: 201 });
@@ -102,6 +101,39 @@ export async function POST(req: NextRequest) {
         if (error.code === 11000) {
             return NextResponse.json({ error: "Staff ID conflict — please retry" }, { status: 409 });
         }
+        return NextResponse.json({ error: "Server error" }, { status: 500 });
+    }
+}
+
+export async function DELETE(req: NextRequest) {
+    try {
+        const [, session] = await Promise.all([
+            dbConnect(),
+            getServerSession(authOptions),
+        ]);
+        if (!session?.user || session.user.role !== "admin") {
+            return NextResponse.json({ error: "Admin only" }, { status: 403 });
+        }
+
+        const { searchParams } = new URL(req.url);
+        const staffId = searchParams.get("staffId");
+
+        if (!staffId) {
+            return NextResponse.json({ error: "staffId is required" }, { status: 400 });
+        }
+
+        const deletedStaff = await Staff.findOneAndDelete({ 
+            staffId, 
+            poolId: session.user.poolId 
+        });
+
+        if (!deletedStaff) {
+            return NextResponse.json({ error: "Staff not found" }, { status: 404 });
+        }
+
+        return NextResponse.json({ success: true }, { status: 200 });
+    } catch (error) {
+        console.error("[DELETE /api/staff]", error);
         return NextResponse.json({ error: "Server error" }, { status: 500 });
     }
 }

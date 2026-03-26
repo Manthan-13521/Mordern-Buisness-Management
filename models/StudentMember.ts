@@ -4,7 +4,6 @@ import crypto from "crypto";
 export interface IStudentMember extends Document {
     memberId: string; // Will be MSXXXX
     poolId: string;
-    faceScanEnabled?: boolean;
     name: string;
     phone: string;
     age?: number;
@@ -30,7 +29,6 @@ const studentMemberSchema = new Schema<IStudentMember>(
     {
         memberId: { type: String, required: true, index: true },
         poolId: { type: String, required: true, index: true },
-        faceScanEnabled: { type: Boolean, default: false },
         name: { type: String, required: true },
         phone: { type: String, required: true, index: true },
         age: { type: Number },

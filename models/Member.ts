@@ -18,8 +18,6 @@ export interface IMember extends Document {
     aadharCard?: string;
     address?: string;
     photoUrl?: string;
-    faceDescriptor?: number[];
-    faceScanEnabled?: boolean;
     // Plan linkage
     planId: mongoose.Types.ObjectId;
     planQuantity: number;
@@ -71,8 +69,6 @@ const memberSchema = new Schema<IMember>(
     {
         memberId: { type: String, required: true, index: true },
         poolId: { type: String, required: true, index: true },
-        faceScanEnabled: { type: Boolean, default: false },
-        faceDescriptor: { type: [Number] },
         name: { type: String, required: true },
         phone: { type: String, required: true },
         age: { type: Number },

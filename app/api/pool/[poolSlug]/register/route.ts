@@ -3,6 +3,7 @@ import { dbConnect } from "@/lib/mongodb";
 import { Pool } from "@/models/Pool";
 import { Member } from "@/models/Member";
 import { StudentMember } from "@/models/StudentMember";
+import { generateMemberId } from "@/lib/generateMemberId";
 
 export async function POST(req: Request, { params }: { params: Promise<{ poolSlug: string }> }) {
     try {
@@ -18,13 +19,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ poolSlu
         }
 
         const isStudent = body.isStudent;
-        const faceScanEnabled = body.faceAuth;
 
         const TargetModel = isStudent ? StudentMember : Member;
-        const prefix = isStudent ? "MS" : "M";
         
-        const count = await (TargetModel as any).countDocuments({ poolId: pool.poolId });
-        const memberId = `${prefix}${(count + 1).toString().padStart(4, "0")}`;
+        const memberId = await generateMemberId(pool.poolId, isStudent);
 
         const newMember = await TargetModel.create({
             memberId,
@@ -32,8 +30,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ poolSlu
             name: body.name,
             phone: body.phone,
             age: parseInt(body.age),
-            faceScanEnabled,
-            // Face embedding stored off-page in Phase 3
             planId: "000000000000000000000000", 
             startDate: new Date(),
             expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)

@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from "react";
 import Webcam from "react-webcam";
 import { Camera, X, RefreshCw, Printer, ScanFace } from "lucide-react";
 import { useThermalPrint } from "@/components/printing/useThermalPrint";
-import { FaceDetector } from "@/components/FaceDetector";
 
 interface Plan {
     _id: string;
@@ -16,7 +15,6 @@ interface Plan {
     durationSeconds?: number;
     hasTokenPrint?: boolean;
     hasEntertainment?: boolean;
-    hasFaceScan?: boolean;
     allowQuantity?: boolean;
 }
 
@@ -33,9 +31,6 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
     const [loading, setLoading] = useState(false);
     const webcamRef = useRef<Webcam>(null);
     const { print: printThermal } = useThermalPrint();
-
-    // Face descriptor from auto-detection
-    const [faceDescriptor, setFaceDescriptor] = useState<number[] | null>(null);
 
     const [formData, setFormData] = useState({
         name: "",
@@ -84,12 +79,6 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // If plan requires face scan, enforce it
-        if (selectedPlan?.hasFaceScan && !faceDescriptor) {
-            alert("This plan requires face scan. Please wait for face to be auto-detected.");
-            return;
-        }
-
         setLoading(true);
         try {
             const res = await fetch("/api/members", {
@@ -105,7 +94,6 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                     paymentMode: formData.paymentMode,
                     equipmentTaken: formData.equipmentTaken || undefined,
                     photoBase64: photoPreview,
-                    faceDescriptor: faceDescriptor || undefined,
                 }),
             });
 
@@ -144,7 +132,6 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
             onClose();
             setFormData({ name: "", phone: "", planId: "", planQuantity: 1, paidAmount: 0, paymentMode: "cash", equipmentTaken: "" });
             setPhotoPreview(null);
-            setFaceDescriptor(null);
         } catch (error: any) {
             console.error(error);
             alert(error.message || "Error adding member");
@@ -201,7 +188,6 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                                     required value={formData.planId}
                                     onChange={(e) => {
                                         setFormData({ ...formData, planId: e.target.value, planQuantity: 1, paidAmount: 0 });
-                                        setFaceDescriptor(null);
                                     }}
                                     className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white sm:text-sm"
                                 >
@@ -214,7 +200,6 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                                     <div className="mt-1.5 flex flex-wrap gap-1">
                                         {selectedPlan.hasTokenPrint && <span className="inline-flex items-center rounded-full bg-teal-50 px-2 py-0.5 text-xs text-teal-700 ring-1 ring-teal-200 dark:bg-teal-900/30 dark:text-teal-400 dark:ring-teal-800">🖨️ Token</span>}
                                         {selectedPlan.hasEntertainment && <span className="inline-flex items-center rounded-full bg-purple-50 px-2 py-0.5 text-xs text-purple-700 ring-1 ring-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:ring-purple-800">🎭 Entertainment</span>}
-                                        {selectedPlan.hasFaceScan && <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700 ring-1 ring-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:ring-blue-800">📷 Face Scan</span>}
                                         {selectedPlan.allowQuantity && <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-700 ring-1 ring-green-200 dark:bg-green-900/30 dark:text-green-400 dark:ring-green-800">🔢 Multi-Qty</span>}
                                     </div>
                                 )}
@@ -326,38 +311,6 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                                     </div>
                                 )}
                             </div>
-
-                            {/* Face Scan — auto-detect, shown only if plan requires it */}
-                            {selectedPlan?.hasFaceScan && (
-                                <div className={`rounded-lg border-2 p-4 ${faceDescriptor ? "border-green-400 bg-green-50/50 dark:border-green-700 dark:bg-green-900/20" : "border-blue-300 dark:border-blue-700 bg-blue-50/30 dark:bg-blue-900/10"}`}>
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <ScanFace className="h-5 w-5 text-blue-600" />
-                                        <span className="text-sm font-semibold text-blue-700 dark:text-blue-400">
-                                            {faceDescriptor ? "✅ Face Captured" : "Auto Face Scan"}
-                                        </span>
-                                    </div>
-                                    {faceDescriptor ? (
-                                        <div className="text-center space-y-2">
-                                            <p className="text-sm text-green-600 dark:text-green-400">Face data captured automatically.</p>
-                                            <button
-                                                type="button"
-                                                onClick={() => setFaceDescriptor(null)}
-                                                className="text-xs text-blue-600 hover:underline"
-                                            >
-                                                Re-scan
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <FaceDetector
-                                            onFaceDetected={(desc, img) => {
-                                                setFaceDescriptor(desc);
-                                                if (img) setPhotoPreview(img);
-                                            }}
-                                            size={180}
-                                        />
-                                    )}
-                                </div>
-                            )}
                         </div>
                     </div>
 

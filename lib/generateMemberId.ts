@@ -1,7 +1,7 @@
 import { Counter } from '@/models/Counter'
 
-export async function generateMemberId(isEntertainment: boolean = false): Promise<string> {
-  const counterId = isEntertainment ? 'entertainmentMemberId' : 'memberId'
+export async function generateMemberId(poolId: string, isEntertainment: boolean = false): Promise<string> {
+  const counterId = isEntertainment ? `entertainmentMemberId_${poolId}` : `memberId_${poolId}`
   const prefix = isEntertainment ? 'MS' : 'M'
 
   const counter = await Counter.findByIdAndUpdate(

@@ -254,7 +254,7 @@ export async function POST(req: Request) {
 
         // Atomic ID generation via Counters collection (Section 5)
         const isEntertainment = plan.hasEntertainment ?? false;
-        const memberId = await generateMemberId(isEntertainment);
+        const memberId = await generateMemberId(poolId, isEntertainment);
 
         // Save photo locally (Section 6)
         let photoUrl = "";
@@ -322,8 +322,6 @@ export async function POST(req: Request) {
             paymentStatus,
             paymentMode: body.paymentMode ?? "cash",
             equipmentTaken: equipmentArr,
-            faceScanEnabled: plan.hasFaceScan ?? false,
-            faceDescriptor: body.faceDescriptor ?? [],
             qrCodeUrl,
             qrToken,
             isActive: true,
