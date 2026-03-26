@@ -6,8 +6,11 @@ import { EntryLog } from "@/models/EntryLog";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { runOccupancyCleanupInBackground } from "@/lib/cleanup";
+import { getCache, setCache } from "@/lib/membersCache";
 
 export const dynamic = "force-dynamic";
+
+const DASHBOARD_TTL_S = 300; // 5 minutes — safe for free Redis quota
 
 export async function GET() {
     try {
@@ -18,6 +21,17 @@ export async function GET() {
         if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         
         runOccupancyCleanupInBackground();
+
+        const poolKey = session.user.role === "superadmin" ? "superadmin" : (session.user.poolId ?? "unknown");
+        const cacheKey = `dashboard-stats-${poolKey}`;
+
+        // ── Cache check ─────────────────────────────────────────────────────
+        const cached = await getCache(cacheKey);
+        if (cached) {
+            return NextResponse.json(cached, {
+                headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60", "X-Cache": "HIT" },
+            });
+        }
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -77,11 +91,10 @@ export async function GET() {
         let todaysRevenue = 0, monthlyRevenue = 0;
         revenueStats.forEach((stat: any) => {
             if (stat._id === 'today') todaysRevenue = stat.total;
-            // Month includes today + older days in month
             monthlyRevenue += stat.total; 
         });
 
-        return NextResponse.json({
+        const response = {
             stats: {
                 totalMembers,
                 activeMembers,
@@ -100,8 +113,13 @@ export async function GET() {
                     remainingDays: Math.ceil((new Date(m.expiryDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
                 }))
             }
-        }, {
-            headers: { "Cache-Control": "private, max-age=2, stale-while-revalidate=30" },
+        };
+
+        // ── Cache result (non-blocking) ──────────────────────────────────────
+        setCache(cacheKey, response).catch(() => {});
+
+        return NextResponse.json(response, {
+            headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60", "X-Cache": "MISS" },
         });
 
     } catch (error) {

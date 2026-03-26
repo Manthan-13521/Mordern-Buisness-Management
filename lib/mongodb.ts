@@ -1,8 +1,9 @@
 import mongoose from 'mongoose'
 
 /**
- * Deploy Vercel in `bom1` (Mumbai) and MongoDB Atlas in `ap-south-1` (Mumbai) so RTT stays low.
- * Use Atlas Performance Advisor / Slow Query Log to add indexes for real query patterns.
+ * Atlas M0 free tier: max 500 total connections across all functions.
+ * Keep maxPoolSize=5 so even a spike of 100 concurrent serverless calls stays safe.
+ * Deploy Vercel in `bom1` (Mumbai) + Atlas in `ap-south-1` (Mumbai) to keep RTT low.
  */
 const MONGODB_URI = process.env.MONGODB_URI!
 if (!MONGODB_URI) throw new Error('MONGODB_URI is not defined')
@@ -17,10 +18,15 @@ export async function dbConnect() {
   if (!cached.promise) {
     cached.promise = mongoose.connect(MONGODB_URI, {
       bufferCommands: false,
-      maxPoolSize: 20,
+      maxPoolSize: 5,              // Atlas M0: keep low — 500 total connections shared
+      minPoolSize: 1,
       serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 30000,
+      connectTimeoutMS: 10000,
+      heartbeatFrequencyMS: 10000,
+      maxIdleTimeMS: 30000,        // Kill idle connections — critical for free tier
     }).catch(err => {
-      cached.promise = null;
+      cached.promise = null;       // Reset on failure so next request retries
       throw err;
     })
   }

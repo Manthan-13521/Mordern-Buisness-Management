@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     // Allow Cron Jobs with Secret OR Authenticated Admins
     let isAuthorized = false;
     let session: Session | null = null;
-    if (authHeader === `Bearer ${process.env.CRON_SECRET || "cron123"}`) {
+    if (authHeader === `Bearer ${process.env.CRON_SECRET}`) {
         isAuthorized = true;
     } else {
         await dbConnect();
