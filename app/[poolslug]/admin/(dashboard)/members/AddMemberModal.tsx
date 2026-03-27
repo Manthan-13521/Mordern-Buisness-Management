@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import Webcam from "react-webcam";
 import { Camera, X, RefreshCw, Printer, ScanFace } from "lucide-react";
 import { useThermalPrint } from "@/components/printing/useThermalPrint";
@@ -30,6 +31,7 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const webcamRef = useRef<Webcam>(null);
+    const { data: session } = useSession();
     const { print: printThermal } = useThermalPrint();
 
     const [formData, setFormData] = useState({
@@ -113,7 +115,7 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                     : undefined;
 
                 printThermal({
-                    poolName:     "Swimming Pool",
+                    poolName:     session?.user?.poolName || "Swimming Pool",
                     memberId:     newMember.memberId,
                     name:         newMember.name,
                     phone:        newMember.phone,

@@ -94,10 +94,10 @@ html, body {
 </head>
 <body>
 <div class="receipt">
-<div class="row c">SWIMMING POOL</div>
+<div class="row c b">${data.poolName}</div>
 <div class="row c">(Token/Receipt)</div>
 <div class="hr"></div>
-<div class="row b">MID: ${data.memberId}</div>
+<div class="row c b">MID: ${data.memberId}</div>
 <div class="row">Name: ${data.name}</div>
 <div class="row">Phone: ${data.phone}</div>
 <div class="hr"></div>
@@ -107,7 +107,7 @@ html, body {
 <div class="row b">Total: ${total}</div>
 <div class="row">Balance: ${bal}</div>
 <div class="hr"></div>
-<div class="row">Date: ${regDT}</div>
+<div class="row">Date:      ${regDT}</div>
 <div class="row">ValidTill: ${tillDT}</div>
 </div>
 <script>
