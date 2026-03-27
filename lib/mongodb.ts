@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import '@/lib/env'
 
 /**
  * Atlas M0 free tier: max 500 total connections across all functions.

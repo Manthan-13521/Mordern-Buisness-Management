@@ -6,16 +6,17 @@ import { DeletedMember } from "@/models/DeletedMember";
 import { getServerSession } from "next-auth";
 import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { requireCronAuth } from "@/lib/requireCronAuth";
 import { logger } from "@/lib/logger";
 import type ExcelJSType from "exceljs";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 export async function GET(req: Request) {
-    const authHeader = req.headers.get("authorization");
     let isAuthorized = false;
     let session: Session | null = null;
 
-    if (authHeader === `Bearer ${process.env.CRON_SECRET || "cron123"}`) {
+    const cronErr = requireCronAuth(req);
+    if (!cronErr) {
         isAuthorized = true;
     } else {
         await dbConnect();

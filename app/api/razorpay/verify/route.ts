@@ -103,13 +103,10 @@ export async function POST(req: Request) {
             );
         }
 
-        // Generate Member ID locally scoped to the tenant pool
-        const lastMember = await Member.findOne({ poolId: plan.poolId }).sort({ createdAt: -1 }).lean();
-        let newIdNum = 1;
-        if (lastMember && lastMember.memberId.startsWith("M")) {
-            newIdNum = parseInt(lastMember.memberId.replace("M", "")) + 1;
-        }
-        const generatedMemberId = `M${newIdNum.toString().padStart(4, "0")}`;
+        // Generate Member ID locally scoped to the tenant pool (atomic)
+        const { generateMemberId } = await import("@/lib/generateMemberId");
+        const isEntertainment = plan.hasEntertainment ?? false;
+        const generatedMemberId = await generateMemberId(plan.poolId, isEntertainment);
 
         // Age & DOB
         const dob = memberData.dob ? new Date(memberData.dob) : new Date();

@@ -8,15 +8,16 @@ import { EntryLog } from "@/models/EntryLog";
 import { NotificationLog } from "@/models/NotificationLog";
 import { getServerSession } from "next-auth";
 import type { Session } from "next-auth";
+import { requireCronAuth } from "@/lib/requireCronAuth";
 import { authOptions } from "@/lib/auth";
 
 export async function GET(req: Request) {
     // Allow Cron Jobs with Secret OR Authenticated Admins
-    const authHeader = req.headers.get("authorization");
     let isAuthorized = false;
     let session: Session | null = null;
 
-    if (authHeader === `Bearer ${process.env.CRON_SECRET || "cron123"}`) {
+    const cronErr = requireCronAuth(req);
+    if (!cronErr) {
         isAuthorized = true;
     } else {
         await dbConnect();

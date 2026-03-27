@@ -4,9 +4,17 @@ import crypto from "crypto";
  * CSRF Token utilities.
  * Tokens are generated server-side and must be sent back by the frontend
  * in the `x-csrf-token` header on all mutating requests (POST/PUT/DELETE).
+ *
+ * ⚠️  NEVER use a fallback secret. If NEXTAUTH_SECRET is missing, crash.
  */
 
-const CSRF_SECRET = process.env.NEXTAUTH_SECRET || process.env.CSRF_SECRET || "fallback-csrf-secret";
+function getSecret(): string {
+    const secret = process.env.NEXTAUTH_SECRET || process.env.CSRF_SECRET;
+    if (!secret) {
+        throw new Error("[Security] NEXTAUTH_SECRET or CSRF_SECRET must be set for CSRF protection.");
+    }
+    return secret;
+}
 
 /**
  * Generate a CSRF token.
@@ -16,7 +24,7 @@ const CSRF_SECRET = process.env.NEXTAUTH_SECRET || process.env.CSRF_SECRET || "f
 export function generateCSRFToken(): string {
     const timestamp = Date.now().toString();
     const signature = crypto
-        .createHmac("sha256", CSRF_SECRET)
+        .createHmac("sha256", getSecret())
         .update(timestamp)
         .digest("hex");
     return `${timestamp}.${signature}`;
@@ -45,7 +53,7 @@ export function verifyCSRFToken(token: string): boolean {
 
     // Verify signature using timing-safe comparison
     const expectedSignature = crypto
-        .createHmac("sha256", CSRF_SECRET)
+        .createHmac("sha256", getSecret())
         .update(timestamp)
         .digest("hex");
 

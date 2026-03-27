@@ -103,25 +103,7 @@ function detectAbuse(key: string): boolean {
     return false;
 }
 
-// ── CSRF Validation (edge-compatible, HMAC-based) ───────────────────────
-// Uses a simple HMAC approach that works in edge runtime without crypto.timingSafeEqual
-function verifyCSRF(token: string | null): boolean {
-    if (!token || typeof token !== "string") return false;
-    const parts = token.split(".");
-    if (parts.length !== 2) return false;
-
-    const [timestamp] = parts;
-    const ts = parseInt(timestamp, 10);
-    if (isNaN(ts)) return false;
-
-    // Token must be less than 24 hours old
-    const MAX_AGE = 24 * 60 * 60 * 1000;
-    if (Date.now() - ts > MAX_AGE) return false;
-
-    // Signature validation happens server-side in the API route handlers
-    // Middleware only checks token freshness and format
-    return true;
-}
+import { verifyCSRFToken } from "@/lib/csrf";
 
 // ── Security headers ────────────────────────────────────────────────────
 const SECURITY_HEADERS: Record<string, string> = {
@@ -241,7 +223,7 @@ export default withAuth(
                 // Fallback: x-csrf-token header
                 const csrfToken = req.headers.get("x-csrf-token");
 
-                if (!sameOrigin && !verifyCSRF(csrfToken)) {
+                if (!sameOrigin && !verifyCSRFToken(csrfToken || "")) {
                     const res = NextResponse.json(
                         { error: "Invalid or missing CSRF token" },
                         { status: 403 }
