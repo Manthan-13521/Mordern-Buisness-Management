@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { Users, UserX, Activity, DollarSign, ArrowUpRight, TrendingUp, Heart } from "lucide-react";
+import { Users, UserX, Activity, DollarSign, ArrowUpRight, TrendingUp, Heart, Gamepad2, UserPlus } from "lucide-react";
 import ChartSkeleton from "@/components/ChartSkeleton";
 import { getCachedDashboardCounts, getCachedAnalyticsSummary } from "@/lib/queries";
 import { Member } from "@/models/Member";
@@ -12,11 +12,12 @@ async function DashboardStats({ poolId, isAdmin }: { poolId: string, isAdmin: bo
     const summary = await getCachedAnalyticsSummary(poolId);
     const counts = await getCachedDashboardCounts(poolId);
 
-    const stats = [
+    const stats: { name: string; stat: string | number; icon: any; color: string }[] = [
         { name: "Total Members", stat: counts.totalMembers, icon: Users, color: "bg-blue-500" },
         { name: "Active Members", stat: counts.activeMembers, icon: Activity, color: "bg-green-500" },
         { name: "Expired Members", stat: counts.totalMembers - counts.activeMembers, icon: UserX, color: "bg-red-500" },
-        { name: "Today's Entries", stat: counts.todaysEntries, icon: ArrowUpRight, color: "bg-indigo-500" },
+        { name: "Today's Members", stat: counts.todaysMemberEntries, icon: UserPlus, color: "bg-indigo-500" },
+        { name: "Today's Entertainment", stat: counts.todaysEntertainmentEntries, icon: Gamepad2, color: "bg-pink-500" },
     ];
 
     if (isAdmin) {

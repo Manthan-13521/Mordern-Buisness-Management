@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
+import { EntertainmentMember } from "@/models/EntertainmentMember";
 import { Plan } from "@/models/Plan";
 import { NotificationLog } from "@/models/NotificationLog";
 import { Payment } from "@/models/Payment";
@@ -75,7 +76,9 @@ export const getCachedAnalyticsSummary = unstable_cache(
             activeMembers,
             todaysRevenue,
             monthlyRevenue,
-            entriesToday
+            entriesToday,
+            todaysMemberEntries,
+            todaysEntertainmentEntries
         ] = await Promise.all([
             // Active = not deleted AND expiryDate is in the future
             Member.countDocuments({
@@ -100,7 +103,19 @@ export const getCachedAnalyticsSummary = unstable_cache(
             EntryLog.aggregate([
                 { $match: { ...baseMatch, scanTime: { $gte: startOfDayIST, $lte: endOfDayIST }, status: "granted" } },
                 { $group: { _id: null, total: { $sum: { $ifNull: ["$numPersons", 1] } } } }
-            ])
+            ]),
+            // Today's regular member registrations
+            Member.countDocuments({
+                ...baseMatch,
+                isDeleted: false,
+                createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
+            }),
+            // Today's entertainment member registrations
+            EntertainmentMember.countDocuments({
+                ...baseMatch,
+                isDeleted: false,
+                createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
+            })
         ]);
 
         return {
@@ -108,10 +123,12 @@ export const getCachedAnalyticsSummary = unstable_cache(
             totalRevenue: todaysRevenue[0]?.total || 0,
             monthlyRevenue: monthlyRevenue[0]?.total || 0,
             entriesToday: entriesToday[0]?.total || 0,
+            todaysMemberEntries,
+            todaysEntertainmentEntries,
         };
     },
     ["cached-analytics-summary"],
-    { revalidate: 10 } // Reduced from 60s to 10s for near real-time updates
+    { revalidate: 10 }
 );
 
 /**
@@ -154,7 +171,7 @@ export const getCachedDashboardCounts = unstable_cache(
         const baseMatch = poolId && poolId !== "superadmin" ? { poolId } : {};
         const { startOfDayIST, endOfDayIST, now } = getISTDayBounds();
 
-        const [totalMembers, activeMembers, todaysEntries] = await Promise.all([
+        const [totalMembers, activeMembers, todaysEntries, todaysMemberEntries, todaysEntertainmentEntries] = await Promise.all([
             Member.countDocuments({ ...baseMatch, isDeleted: false }),
             // Active = not deleted AND expiry is in the future (real-time, not legacy status)
             Member.countDocuments({
@@ -168,15 +185,29 @@ export const getCachedDashboardCounts = unstable_cache(
             EntryLog.aggregate([
                 { $match: { ...baseMatch, scanTime: { $gte: startOfDayIST, $lte: endOfDayIST }, status: "granted" } },
                 { $group: { _id: null, total: { $sum: { $ifNull: ["$numPersons", 1] } } } }
-            ])
+            ]),
+            // Today's regular member registrations
+            Member.countDocuments({
+                ...baseMatch,
+                isDeleted: false,
+                createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
+            }),
+            // Today's entertainment member registrations
+            EntertainmentMember.countDocuments({
+                ...baseMatch,
+                isDeleted: false,
+                createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
+            })
         ]);
 
         return {
             totalMembers,
             activeMembers,
             todaysEntries: todaysEntries[0]?.total || 0,
+            todaysMemberEntries,
+            todaysEntertainmentEntries,
         };
     },
     ["cached-dashboard-counts"],
-    { revalidate: 10 } // Reduced from 30s to 10s for near real-time updates
+    { revalidate: 10 }
 );

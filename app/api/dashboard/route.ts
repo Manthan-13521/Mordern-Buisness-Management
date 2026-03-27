@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
+import { EntertainmentMember } from "@/models/EntertainmentMember";
 import { Payment } from "@/models/Payment";
 import { EntryLog } from "@/models/EntryLog";
 import { getServerSession } from "next-auth";
@@ -56,7 +57,9 @@ export async function GET() {
             entriesToday,
             todaysRevenueAgg,
             monthlyRevenueAgg,
-            expiringMembers
+            expiringMembers,
+            todaysMemberEntries,
+            todaysEntertainmentEntries
         ] = await Promise.all([
             // Total non-deleted members
             Member.countDocuments({ ...baseMatch, isDeleted: false }),
@@ -99,7 +102,20 @@ export async function GET() {
                 ]
             })
             .select('memberId name phone expiryDate planEndDate planQuantity')
-            .lean()
+            .lean(),
+
+            // Today's regular member registrations
+            Member.countDocuments({
+                ...baseMatch,
+                isDeleted: false,
+                createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
+            }),
+            // Today's entertainment member registrations
+            EntertainmentMember.countDocuments({
+                ...baseMatch,
+                isDeleted: false,
+                createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
+            })
         ]);
 
         const expiredMembers = totalMembers - activeMembers;
@@ -112,6 +128,8 @@ export async function GET() {
                 todaysEntries: entriesToday[0]?.total || 0,
                 todaysRevenue: todaysRevenueAgg[0]?.total || 0,
                 monthlyRevenue: monthlyRevenueAgg[0]?.total || 0,
+                todaysMemberEntries,
+                todaysEntertainmentEntries,
             },
             alerts: {
                 expiringMembers: expiringMembers.map((m: any) => ({
