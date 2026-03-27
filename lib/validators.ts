@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 export const MemberCreateSchema = z.object({
   name: z.string().min(2).max(100).trim(),
-  phone: z.string().min(10).max(15).regex(/^[0-9+\-\s]+$/, 'Invalid phone number'),
+  phone: z.string().min(1).max(25),
   planId: z.string().min(1).max(50),
   paymentMethod: z.enum(['cash', 'upi', 'razorpay_online', 'card', 'online']),
   transactionId: z.string().max(100).optional(),
@@ -14,7 +14,7 @@ export const MemberCreateSchema = z.object({
 
 export const EntertainmentMemberCreateSchema = z.object({
   name: z.string().min(2).max(100).trim(),
-  phone: z.string().min(10).max(15).regex(/^[0-9+\-\s]+$/, 'Invalid phone number'),
+  phone: z.string().min(1).max(25),
   planId: z.string().min(1).max(50),
   dob: z.string().optional(),
   photoBase64: z.string().optional(),
