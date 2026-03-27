@@ -204,6 +204,8 @@ export default withAuth(
             }
 
             // 3. CSRF check for mutating methods (POST/PUT/DELETE)
+            //    Defence: same-origin check via Origin/Referer header (primary),
+            //    or x-csrf-token header (fallback for programmatic clients).
             //    Skip for: NextAuth endpoints, public registration, webhooks, cron jobs
             const CSRF_EXEMPT = [
                 "/api/auth",
@@ -222,8 +224,24 @@ export default withAuth(
             const isExempt = CSRF_EXEMPT.some((p) => path.startsWith(p));
 
             if (isMutating && !isExempt) {
+                // Primary: same-origin validation via Origin or Referer header
+                const origin = req.headers.get("origin");
+                const referer = req.headers.get("referer");
+                const requestUrl = req.nextUrl.origin;
+
+                let sameOrigin = false;
+                if (origin) {
+                    sameOrigin = origin === requestUrl;
+                } else if (referer) {
+                    try {
+                        sameOrigin = new URL(referer).origin === requestUrl;
+                    } catch { /* invalid referer */ }
+                }
+
+                // Fallback: x-csrf-token header
                 const csrfToken = req.headers.get("x-csrf-token");
-                if (!verifyCSRF(csrfToken)) {
+
+                if (!sameOrigin && !verifyCSRF(csrfToken)) {
                     const res = NextResponse.json(
                         { error: "Invalid or missing CSRF token" },
                         { status: 403 }
