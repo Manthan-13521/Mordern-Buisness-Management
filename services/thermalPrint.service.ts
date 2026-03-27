@@ -22,7 +22,7 @@ export interface MemberReceiptData {
 function fmtDateTime(date: Date): string {
     const d = new Date(date);
     const day = String(d.getDate()).padStart(2, "0");
-    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const mon = months[d.getMonth()];
     const yr = d.getFullYear();
     let h = d.getHours();
@@ -33,10 +33,10 @@ function fmtDateTime(date: Date): string {
 }
 
 function buildReceiptHTML(data: MemberReceiptData): string {
-    const regDT  = fmtDateTime(data.registeredAt);
+    const regDT = fmtDateTime(data.registeredAt);
     const tillDT = fmtDateTime(data.validTill);
-    const total  = `₹${data.planPrice}`;
-    const bal    = `₹${data.balance > 0 ? data.balance : 0}`;
+    const total = `₹${data.planPrice}`;
+    const bal = `₹${data.balance > 0 ? data.balance : 0}`;
 
     return `<!DOCTYPE html>
 <html>
@@ -94,10 +94,10 @@ html, body {
 </head>
 <body>
 <div class="receipt">
-<div class="row c b">${data.poolName}</div>
+<div align="center" class="row c b">${data.poolName}</div>
 <div class="row c">(Token/Receipt)</div>
 <div class="hr"></div>
-<div class="row c b">MID: ${data.memberId}</div>
+<div align="center" class="row c b">MID: ${data.memberId}</div>
 <div class="hr"></div>
 <div class="row">Name: ${data.name}</div>
 <div class="row">Phone: ${data.phone}</div>
