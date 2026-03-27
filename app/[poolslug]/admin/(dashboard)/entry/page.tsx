@@ -236,7 +236,7 @@ export default function EntryPage() {
     };
 
     // ── UID Lookup ─────────────────────────────────────────────────────────
-    const handleUidLookup = async (overrideUid?: string, autoClear: boolean = false) => {
+    const handleUidLookup = async (overrideUid?: string, autoClear: boolean = true) => {
         const searchUid = (overrideUid || uid).trim();
         if (!searchUid) return;
         setLookupLoading(true);
@@ -248,16 +248,16 @@ export default function EntryPage() {
                 const data = await res.json();
                 setLookupResult(data);
                 if (autoClear) {
-                    setTimeout(() => setLookupResult(null), 7000);
+                    setTimeout(() => setLookupResult(null), 12000);
                 }
             } else {
                 const err = await res.json();
                 setLookupError(err.error || "Member not found");
-                if (autoClear) setTimeout(() => setLookupError(""), 3000);
+                if (autoClear) setTimeout(() => setLookupError(""), 5000);
             }
         } catch {
             setLookupError("Network error");
-            if (autoClear) setTimeout(() => setLookupError(""), 3000);
+            if (autoClear) setTimeout(() => setLookupError(""), 5000);
         } finally {
             setLookupLoading(false);
         }

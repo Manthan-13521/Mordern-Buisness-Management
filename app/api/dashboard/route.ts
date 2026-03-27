@@ -33,10 +33,19 @@ export async function GET() {
             });
         }
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        // ── Timezone Fix: Force IST (UTC +5:30) for daily resets ──────────────
+        // Server runs in UTC, so we must calculate "Today in IST" manually
+        const now = new Date();
+        const istOffsetMs = 5.5 * 60 * 60 * 1000;
+        const nowIST = new Date(now.getTime() + istOffsetMs);
+        
+        // Start of Day IST: Zero out the hours in the IST representation, then convert back to true UTC for querying MongoDB
+        const startOfDayIST = new Date(Date.UTC(nowIST.getUTCFullYear(), nowIST.getUTCMonth(), nowIST.getUTCDate(), 0, 0, 0, 0));
+        startOfDayIST.setTime(startOfDayIST.getTime() - istOffsetMs); // True UTC time for 12:00 AM IST
 
-        const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        // Start of Month IST
+        const firstDayOfMonthIST = new Date(Date.UTC(nowIST.getUTCFullYear(), nowIST.getUTCMonth(), 1, 0, 0, 0, 0));
+        firstDayOfMonthIST.setTime(firstDayOfMonthIST.getTime() - istOffsetMs); // True UTC time for 1st of Month 12:00 AM IST
 
         const baseMatch = session.user.role !== "superadmin" && session.user.poolId 
             ? { poolId: session.user.poolId } 
@@ -57,13 +66,13 @@ export async function GET() {
                 }}
             ]),
             EntryLog.aggregate([
-                { $match: { ...baseMatch, scanTime: { $gte: today }, status: "granted" } },
+                { $match: { ...baseMatch, scanTime: { $gte: startOfDayIST }, status: "granted" } },
                 { $group: { _id: null, total: { $sum: { $ifNull: ["$numPersons", 1] } } } }
             ]),
             Payment.aggregate([
-                { $match: { ...baseMatch, status: "success", date: { $gte: firstDayOfMonth } } },
+                { $match: { ...baseMatch, status: "success", date: { $gte: firstDayOfMonthIST } } },
                 { $group: {
-                    _id: { $cond: [{ $gte: ["$date", today] }, "today", "month"] },
+                    _id: { $cond: [{ $gte: ["$date", startOfDayIST] }, "today", "month"] },
                     total: { $sum: "$amount" }
                 }}
             ]),
@@ -71,8 +80,8 @@ export async function GET() {
                 ...baseMatch,
                 status: "active",
                 expiryDate: { 
-                    $gte: today, 
-                    $lte: new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000) 
+                    $gte: startOfDayIST, 
+                    $lte: new Date(startOfDayIST.getTime() + 3 * 24 * 60 * 60 * 1000) 
                 }
             })
             .select('memberId name phone expiryDate planQuantity')
@@ -110,7 +119,7 @@ export async function GET() {
                     name: m.name,
                     phone: m.phone,
                     qty: m.planQuantity || 1,
-                    remainingDays: Math.ceil((new Date(m.expiryDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+                    remainingDays: Math.ceil((new Date(m.expiryDate).getTime() - startOfDayIST.getTime()) / (1000 * 60 * 60 * 24))
                 }))
             }
         };
