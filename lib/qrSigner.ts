@@ -12,7 +12,7 @@ export async function signQRToken(memberId: string): Promise<string> {
   return new SignJWT({ memberId })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('10y') // Practically unlimited, controlled by DB token versioning
+    .setExpirationTime('8h') // 8 hour expiration to prevent copied QR codes from living forever
     .sign(getSigningSecret())
 }
 

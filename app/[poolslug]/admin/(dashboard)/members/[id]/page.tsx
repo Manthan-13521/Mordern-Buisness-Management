@@ -206,7 +206,7 @@ export default function MemberDetailPage() {
             <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm overflow-hidden">
                 <div className="flex items-start gap-6 p-6">
                     {member.photoUrl
-                        ? <img src={member.photoUrl} alt="" className="h-20 w-20 rounded-xl object-cover ring-1 ring-gray-200 dark:ring-gray-700 shrink-0" />
+                        ? <img src={`/api/members/${member._id}/photo`} alt="" className="h-20 w-20 rounded-xl object-cover ring-1 ring-gray-200 dark:ring-gray-700 shrink-0" />
                         : <div className="h-20 w-20 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center shrink-0">
                             <span className="text-3xl font-bold text-indigo-700 dark:text-indigo-300">{member.name.charAt(0).toUpperCase()}</span>
                           </div>

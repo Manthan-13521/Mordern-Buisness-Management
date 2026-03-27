@@ -139,7 +139,7 @@ export default function LogsPage() {
                                             </td>
                                             <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-900 dark:text-white flex items-center gap-3">
                                                 {log.photoUrl ? (
-                                                    <img src={log.photoUrl} alt="" className="h-8 w-8 rounded-full object-cover ring-1 ring-gray-200 dark:ring-gray-700" />
+                                                    <img src={`/api/members/${(log.memberId as any)?._id || log.memberId}/photo`} alt="" className="h-8 w-8 rounded-full object-cover ring-1 ring-gray-200 dark:ring-gray-700" />
                                                 ) : (
                                                     <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
                                                         <span className="text-indigo-700 dark:text-indigo-300 font-bold text-xs">{log.member.charAt(0).toUpperCase()}</span>
@@ -224,7 +224,7 @@ export default function LogsPage() {
                                                     </td>
                                                     <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-900 dark:text-white flex items-center gap-3">
                                                         {log.photoUrl ? (
-                                                            <img src={log.photoUrl} alt="" className="h-8 w-8 rounded-full object-cover ring-1 ring-gray-200 dark:ring-gray-700" />
+                                                            <img src={`/api/members/${(log.memberId as any)?._id || log.memberId}/photo`} alt="" className="h-8 w-8 rounded-full object-cover ring-1 ring-gray-200 dark:ring-gray-700" />
                                                         ) : (
                                                             <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
                                                                 <span className="text-blue-700 dark:text-blue-300 font-bold text-xs">{log.member.charAt(0).toUpperCase()}</span>

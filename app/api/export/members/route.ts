@@ -16,8 +16,9 @@ export async function GET() {
         await dbConnect();
 
         const session = await getServerSession(authOptions);
-        if (!session?.user)
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!session?.user || !["admin", "superadmin"].includes(session.user.role)) {
+            return NextResponse.json({ error: "Unauthorized: Admins only" }, { status: 401 });
+        }
 
         const query: Record<string, unknown> = {};
         if (session.user.role !== "superadmin" && session.user.poolId) {

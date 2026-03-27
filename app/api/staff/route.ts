@@ -3,6 +3,8 @@ import { dbConnect } from "@/lib/mongodb";
 import { Staff } from "@/models/Staff";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { StaffCreateSchema } from "@/lib/validators";
+import { apiError } from "@/lib/apiError";
 
 let _staffCounter = 0;
 
@@ -75,16 +77,8 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { name, phone, role } = body;
-
-        if (!name?.trim() || !phone?.trim() || !role) {
-            return NextResponse.json({ error: "name, phone, and role are required" }, { status: 400 });
-        }
-
-        const validRoles = ["Trainer", "Manager", "Staff"];
-        if (!validRoles.includes(role)) {
-            return NextResponse.json({ error: `role must be one of: ${validRoles.join(", ")}` }, { status: 400 });
-        }
+        const parsed = StaffCreateSchema.parse(body);
+        const { name, phone, role } = parsed;
 
         const staffId = generateStaffId(role);
         const staff = await Staff.create({
@@ -133,7 +127,6 @@ export async function DELETE(req: NextRequest) {
 
         return NextResponse.json({ success: true }, { status: 200 });
     } catch (error) {
-        console.error("[DELETE /api/staff]", error);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+        return apiError(error);
     }
 }

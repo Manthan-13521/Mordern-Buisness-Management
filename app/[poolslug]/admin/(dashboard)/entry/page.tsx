@@ -440,7 +440,7 @@ export default function EntryPage() {
                                     {/* Photo Area */}
                                     <div className="flex-shrink-0">
                                         {lookupResult.photoUrl ? (
-                                            <img src={lookupResult.photoUrl} alt="" className="h-56 w-48 object-cover border-4 border-gray-100 dark:border-gray-800 rounded-lg shadow-sm" />
+                                            <img src={`/api/members/${lookupResult._id}/photo`} alt="" className="h-56 w-48 object-cover border-4 border-gray-100 dark:border-gray-800 rounded-lg shadow-sm" />
                                         ) : (
                                             <div className="h-56 w-48 bg-gray-100 dark:bg-gray-800 border-4 border-gray-50 flex items-center justify-center rounded-lg shadow-sm">
                                                 <UserCheck className="h-16 w-16 text-gray-400" />

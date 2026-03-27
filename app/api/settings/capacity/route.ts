@@ -5,6 +5,8 @@ import { Pool } from "@/models/Pool";
 import { PoolSession } from "@/models/PoolSession";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { SettingsCapacitySchema } from "@/lib/validators";
+import { apiError } from "@/lib/apiError";
 
 export async function GET(req: Request) {
     try {
@@ -38,8 +40,7 @@ export async function GET(req: Request) {
             lastBackupAt: settings.lastBackupAt,
         });
     } catch (error) {
-        console.error(error);
-        return NextResponse.json({ error: "Failed to fetch capacity" }, { status: 500 });
+        return apiError(error);
     }
 }
 
@@ -54,7 +55,8 @@ export async function POST(req: Request) {
         }
 
         const body = await req.json();
-        const { poolCapacity, currentOccupancy, occupancyDurationMinutes } = body;
+        const parsed = SettingsCapacitySchema.parse(body);
+        const { poolCapacity, currentOccupancy, occupancyDurationMinutes } = parsed;
         const settings = await getSettings();
 
         const url = new URL(req.url);
@@ -130,7 +132,6 @@ export async function POST(req: Request) {
             available: Math.max(0, activeCapacity - settings.currentOccupancy),
         });
     } catch (error) {
-        console.error(error);
-        return NextResponse.json({ error: "Failed to update capacity" }, { status: 500 });
+        return apiError(error);
     }
 }

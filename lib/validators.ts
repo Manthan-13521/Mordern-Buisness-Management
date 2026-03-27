@@ -73,3 +73,15 @@ export const RazorpayOrderSchema = z.object({
   planId: z.string().min(1).max(50),
   cartQuantity: z.number().int().min(1).max(100).optional().default(1),
 })
+
+export const StaffCreateSchema = z.object({
+  name: z.string().min(2).max(100).trim(),
+  phone: z.string().min(1).max(25),
+  role: z.enum(['Trainer', 'Manager', 'Staff']),
+})
+
+export const SettingsCapacitySchema = z.object({
+  poolCapacity: z.number().int().min(1).max(10_000).optional(),
+  currentOccupancy: z.number().int().min(0).max(10_000).optional(),
+  occupancyDurationMinutes: z.number().int().min(1).max(1440).optional(),
+})

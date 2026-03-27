@@ -1,16 +1,28 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { EntryLog } from "@/models/EntryLog";
-
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export async function GET(req: Request) {
     try {
-        const { searchParams } = new URL(req.url);
-        const poolId = searchParams.get("poolId");
-        
-        if (!poolId) return NextResponse.json({ error: "Pool ID required for exports" }, { status: 400 });
-
         await dbConnect();
+
+        const session = await getServerSession(authOptions);
+        if (!session?.user || !["admin", "superadmin"].includes(session.user.role)) {
+            return NextResponse.json({ error: "Unauthorized: Admins only" }, { status: 401 });
+        }
+
+        const { searchParams } = new URL(req.url);
+        let poolId = searchParams.get("poolId");
+
+        // Enforce pool isolation: only superadmin can export other pools
+        if (session.user.role !== "superadmin") {
+            if (!session.user.poolId) return NextResponse.json({ error: "No pool assigned" }, { status: 403 });
+            poolId = session.user.poolId; // Override requested pool ID with actual assigned pool ID
+        }
+
+        if (!poolId) return NextResponse.json({ error: "Pool ID required for exports" }, { status: 400 });
         
         const logs = await EntryLog.find({ poolId })
             .populate("memberId", "name memberId status")

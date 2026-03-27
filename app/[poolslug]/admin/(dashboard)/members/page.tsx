@@ -268,7 +268,7 @@ export default function MembersPage() {
                                                     <a href={`members/${member._id}`} className="flex items-center gap-3 group">
                                                         {member.photoUrl
                                                             ? <Image 
-                                                                src={member.photoUrl} 
+                                                                src={`/api/members/${member._id}/photo`} 
                                                                 alt={member.name} 
                                                                 width={36} 
                                                                 height={36} 
