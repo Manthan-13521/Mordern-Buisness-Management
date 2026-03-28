@@ -33,7 +33,13 @@ function getISTDayBounds() {
     );
     startOfMonthIST.setTime(startOfMonthIST.getTime() - IST_OFFSET);
 
-    return { startOfDayIST, endOfDayIST, startOfMonthIST, now };
+    // Start of year in IST, converted back to UTC
+    const startOfYearIST = new Date(
+        Date.UTC(istNow.getUTCFullYear(), 0, 1, 0, 0, 0, 0)
+    );
+    startOfYearIST.setTime(startOfYearIST.getTime() - IST_OFFSET);
+
+    return { startOfDayIST, endOfDayIST, startOfMonthIST, startOfYearIST, now };
 }
 
 /**
@@ -70,12 +76,13 @@ export const getCachedAnalyticsSummary = unstable_cache(
     async (poolId: string) => {
         await dbConnect();
         const baseMatch = poolId && poolId !== "superadmin" ? { poolId } : {};
-        const { startOfDayIST, endOfDayIST, startOfMonthIST, now } = getISTDayBounds();
+        const { startOfDayIST, endOfDayIST, startOfMonthIST, startOfYearIST, now } = getISTDayBounds();
 
         const [
             activeMembers,
             todaysRevenue,
             monthlyRevenue,
+            yearlyRevenue,
             entriesToday,
             todaysMemberEntries,
             todaysEntertainmentEntries
@@ -97,6 +104,11 @@ export const getCachedAnalyticsSummary = unstable_cache(
             // Monthly revenue — payments created this month (IST)
             Payment.aggregate([
                 { $match: { ...baseMatch, status: "success", createdAt: { $gte: startOfMonthIST } } },
+                { $group: { _id: null, total: { $sum: "$amount" } } }
+            ]),
+            // Yearly revenue — payments created this year (IST)
+            Payment.aggregate([
+                { $match: { ...baseMatch, status: "success", createdAt: { $gte: startOfYearIST } } },
                 { $group: { _id: null, total: { $sum: "$amount" } } }
             ]),
             // Today's entries — scans within IST day bounds
@@ -122,6 +134,7 @@ export const getCachedAnalyticsSummary = unstable_cache(
             activeMembers,
             totalRevenue: todaysRevenue[0]?.total || 0,
             monthlyRevenue: monthlyRevenue[0]?.total || 0,
+            yearlyRevenue: yearlyRevenue[0]?.total || 0,
             entriesToday: entriesToday[0]?.total || 0,
             todaysMemberEntries,
             todaysEntertainmentEntries,

@@ -16,13 +16,14 @@ async function DashboardStats({ poolId, isAdmin }: { poolId: string, isAdmin: bo
         { name: "Total Members", stat: counts.totalMembers, icon: Users, color: "bg-blue-500" },
         { name: "Active Members", stat: counts.activeMembers, icon: Activity, color: "bg-green-500" },
         { name: "Expired Members", stat: counts.totalMembers - counts.activeMembers, icon: UserX, color: "bg-red-500" },
-        { name: "Today's Members", stat: counts.todaysMemberEntries, icon: UserPlus, color: "bg-indigo-500" },
-        { name: "Today's Entertainment", stat: counts.todaysEntertainmentEntries, icon: Gamepad2, color: "bg-pink-500" },
+        { name: "Today's Members Added", stat: counts.todaysMemberEntries, icon: UserPlus, color: "bg-indigo-500" },
+        { name: "Today's Entertainment Members Added", stat: counts.todaysEntertainmentEntries, icon: Gamepad2, color: "bg-pink-500" },
     ];
 
     if (isAdmin) {
         stats.push({ name: "Today's Revenue", stat: `₹${summary.totalRevenue}`, icon: DollarSign, color: "bg-yellow-500" });
         stats.push({ name: "Monthly Revenue", stat: `₹${summary.monthlyRevenue}`, icon: TrendingUp, color: "bg-purple-500" });
+        stats.push({ name: "Yearly Income", stat: `₹${summary.yearlyRevenue || 0}`, icon: DollarSign, color: "bg-emerald-500" });
     }
 
     return (
