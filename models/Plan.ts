@@ -1,5 +1,10 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
 
+export interface IPlanMessage {
+    text: string;
+    mediaUrl?: string | null;
+}
+
 export interface IPlan extends Document {
     name: string;
     poolId: string;
@@ -16,9 +21,15 @@ export interface IPlan extends Document {
     quickDelete: boolean;        // Delete 1 day after expiry (vs 15 days)
     hasTokenPrint: boolean;      // Auto-print thermal receipt on join
     // Alerts
-    whatsAppAlert?: boolean;
+    whatsAppAlert?: boolean;         // Legacy field — kept for compat
+    enableWhatsAppAlerts?: boolean;  // Canonical field
     voiceAlert?: boolean;
     allowQuantity?: boolean;
+    // WhatsApp message templates
+    messages?: {
+        beforeExpiry: IPlanMessage;
+        afterExpiry: IPlanMessage;
+    };
     // Atomic ID counters — incremented via $inc to prevent race conditions
     memberCounter: number;
     entertainmentMemberCounter: number;
@@ -49,9 +60,21 @@ const planSchema = new Schema<IPlan>(
         quickDelete: { type: Boolean, default: false },
         hasTokenPrint: { type: Boolean, default: false },
         // Alerts
-        whatsAppAlert: { type: Boolean, default: false },
-        allowQuantity: { type: Boolean, default: false },
-        voiceAlert: { type: Boolean, default: false },
+        whatsAppAlert:          { type: Boolean, default: false }, // legacy — kept for compat
+        enableWhatsAppAlerts:   { type: Boolean, default: false }, // canonical
+        allowQuantity:          { type: Boolean, default: false },
+        voiceAlert:             { type: Boolean, default: false },
+        // WhatsApp message templates per plan
+        messages: {
+            beforeExpiry: {
+                text:     { type: String, default: "⏳ Your membership expires in 2 days. Please renew to continue enjoying the pool!" },
+                mediaUrl: { type: String, default: null },
+            },
+            afterExpiry: {
+                text:     { type: String, default: "❌ Your membership has expired. Please renew to regain access to the pool!" },
+                mediaUrl: { type: String, default: null },
+            },
+        },
         // Atomic counters for member ID assignment — never use findOne+sort
         memberCounter: { type: Number, default: 0 },
         entertainmentMemberCounter: { type: Number, default: 0 },

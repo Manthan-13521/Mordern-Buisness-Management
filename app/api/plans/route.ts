@@ -87,25 +87,31 @@ export async function POST(req: Request) {
             durationDays, durationHours, durationMinutes, durationSeconds,
             features, whatsAppAlert, allowQuantity, voiceAlert, description,
             hasEntertainment, hasFaceScan, quickDelete, hasTokenPrint,
+            enableWhatsAppAlerts,
             poolId: bodyPoolId,
         } = { ...body, ...data }; // Merge specific body items that are not in schema
 
         const poolId = session.user.role === "superadmin" ? bodyPoolId : session.user.poolId;
         if (!poolId) return NextResponse.json({ error: "Pool ID required" }, { status: 400 });
 
+        // Use enableWhatsAppAlerts as canonical; fall back to whatsAppAlert for legacy
+        const alertEnabled = enableWhatsAppAlerts ?? whatsAppAlert ?? false;
+
         const plan = new Plan({
             name, description, poolId,
             durationDays, durationHours, durationMinutes, durationSeconds,
             price: Number(price),
-            features:        features        ?? [],
-            whatsAppAlert:   whatsAppAlert   ?? false,
-            allowQuantity:   allowQuantity   ?? false,
-            voiceAlert:      voiceAlert      ?? false,
-            hasEntertainment:hasEntertainment ?? false,
-            hasFaceScan:     hasFaceScan     ?? false,
-            quickDelete:     quickDelete     ?? false,
-            hasTokenPrint:   hasTokenPrint   ?? false,
-            isActive:        true,
+            features:              features              ?? [],
+            whatsAppAlert:         alertEnabled,
+            enableWhatsAppAlerts:  alertEnabled,
+            allowQuantity:         allowQuantity         ?? false,
+            voiceAlert:            voiceAlert            ?? false,
+            hasEntertainment:      hasEntertainment      ?? false,
+            hasFaceScan:           hasFaceScan           ?? false,
+            quickDelete:           quickDelete           ?? false,
+            hasTokenPrint:         hasTokenPrint         ?? false,
+            isActive:              true,
+            ...(body.messages ? { messages: body.messages } : {}),
         });
 
         await plan.save();

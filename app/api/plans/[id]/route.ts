@@ -32,7 +32,22 @@ export async function PUT(
 
         const data = result.data;
 
-        const updatedPlan = await Plan.findByIdAndUpdate(id, { $set: data }, { new: true });
+        // Build a safe update set — include messages and alert flags explicitly
+        const updateFields: Record<string, unknown> = { ...data };
+
+        // Sync legacy whatsAppAlert with canonical enableWhatsAppAlerts
+        if (typeof data.enableWhatsAppAlerts === "boolean") {
+            updateFields.whatsAppAlert = data.enableWhatsAppAlerts;
+        } else if (typeof (data as any).whatsAppAlert === "boolean") {
+            updateFields.enableWhatsAppAlerts = (data as any).whatsAppAlert;
+        }
+
+        // Merge messages sub-document (from body directly if Zod strips it)
+        if (body.messages) {
+            updateFields.messages = body.messages;
+        }
+
+        const updatedPlan = await Plan.findByIdAndUpdate(id, { $set: updateFields }, { new: true });
 
         if (!updatedPlan) {
             return NextResponse.json({ error: "Plan not found" }, { status: 404 });

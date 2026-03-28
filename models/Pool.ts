@@ -1,5 +1,12 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
 
+export interface IPoolTwilio {
+    sid: string;
+    authToken_encrypted: string;  // AES-256-GCM ciphertext (hex)
+    iv: string;                   // AES-256-GCM IV (hex)
+    whatsappNumber: string;       // e.g. "whatsapp:+14155238886"
+}
+
 export interface IPool extends Document {
     // Core identity
     poolId: string;
@@ -27,6 +34,9 @@ export interface IPool extends Document {
     // Pool isolated ID counters
     memberCounter: number;
     entertainmentMemberCounter: number;
+    // ── Per-pool Twilio credentials (multi-tenant WhatsApp) ────────────
+    twilio?: IPoolTwilio;
+    isTwilioConnected: boolean;
     // ──────────────────────────────────────────────────────────────────
     createdAt: Date;
     updatedAt: Date;
@@ -71,6 +81,14 @@ const poolSchema = new Schema<IPool>(
         // Pool isolated ID counters
         memberCounter:     { type: Number, default: 0 },
         entertainmentMemberCounter: { type: Number, default: 0 },
+        // ── Per-pool Twilio (multi-tenant WhatsApp alerts) ─────────────
+        twilio: {
+            sid:                  { type: String },
+            authToken_encrypted:  { type: String },
+            iv:                   { type: String },
+            whatsappNumber:       { type: String },
+        },
+        isTwilioConnected: { type: Boolean, default: false, index: true },
     },
     { timestamps: true }
 );

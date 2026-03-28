@@ -18,6 +18,7 @@ import {
     IndianRupee,
     UserCog,
     Trophy,
+    MessageSquare,
 } from "lucide-react";
 
 export function Sidebar() {
@@ -42,6 +43,7 @@ export function Sidebar() {
         { name: "Logs",             href: `${basePath}/logs`,              icon: History,          roles: ["admin", "operator"] },
         { name: "Notifications",    href: `${basePath}/notifications`,     icon: Bell,             roles: ["admin", "operator"] },
         { name: "Settings",         href: `${basePath}/settings`,          icon: Settings,         roles: ["admin"] },
+        { name: "WhatsApp",         href: `${basePath}/twilio`,            icon: MessageSquare,    roles: ["admin"] },
     ];
 
     const filteredLinks = links.filter(link => role && link.roles.includes(role));

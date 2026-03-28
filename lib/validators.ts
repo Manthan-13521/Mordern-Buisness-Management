@@ -46,6 +46,7 @@ export const PlanSchema = z.object({
   description: z.string().max(200).optional(),
   features: z.array(z.string().max(100)).max(20).optional().default([]),
   whatsAppAlert: z.boolean().optional(),
+  enableWhatsAppAlerts: z.boolean().optional(),
   allowQuantity: z.boolean().optional(),
   hasEntertainment: z.boolean().optional(),
   hasFaceScan: z.boolean().optional(),
@@ -53,6 +54,16 @@ export const PlanSchema = z.object({
   hasTokenPrint: z.boolean().optional(),
   voiceAlert: z.boolean().optional(),
   maxEntriesPerQR: z.number().int().min(1).max(1000).optional().default(1),
+  messages: z.object({
+    beforeExpiry: z.object({
+      text: z.string().max(1000).optional(),
+      mediaUrl: z.string().url().nullable().optional(),
+    }).optional(),
+    afterExpiry: z.object({
+      text: z.string().max(1000).optional(),
+      mediaUrl: z.string().url().nullable().optional(),
+    }).optional(),
+  }).optional(),
 })
 
 export const PaginationSchema = z.object({
@@ -84,4 +95,11 @@ export const SettingsCapacitySchema = z.object({
   poolCapacity: z.number().int().min(1).max(10_000).optional(),
   currentOccupancy: z.number().int().min(0).max(10_000).optional(),
   occupancyDurationMinutes: z.number().int().min(1).max(1440).optional(),
+})
+
+export const TwilioConnectSchema = z.object({
+  sid: z.string().min(1).max(50).regex(/^AC/, { message: "Twilio SID must start with AC" }),
+  authToken: z.string().min(1).max(100),
+  whatsappNumber: z.string().min(1).max(30),
+  testPhone: z.string().min(10).max(20),
 })
