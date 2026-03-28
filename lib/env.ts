@@ -7,7 +7,7 @@ const REQUIRED_ENV_VARS = [
     "MONGODB_URI",
     "NEXTAUTH_SECRET",
     "NEXTAUTH_URL",
-    "CRON_SECRET",
+    // "CRON_SECRET", // Now optional — will warn instead of crash
 ];
 
 const isBuild = 
@@ -18,8 +18,15 @@ const isBuild =
 if (!isBuild) {
     for (const key of REQUIRED_ENV_VARS) {
         if (!process.env[key]) {
-            throw new Error(`[Startup] Missing required environment variable: ${key}`);
+            throw new Error(`[Startup] Missing CRITICAL environment variable: ${key}. Please set it in Vercel Settings.`);
         }
+    }
+
+    if (!process.env.CRON_SECRET) {
+        console.warn("⚠️ [Startup] CRON_SECRET is missing. WhatsApp automation crons will fail to run.");
+    }
+    if (!process.env.ENCRYPTION_KEY) {
+        console.warn("⚠️ [Startup] ENCRYPTION_KEY is missing. Twilio connection will fail.");
     }
 }
 

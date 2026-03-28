@@ -55,7 +55,11 @@ export async function POST(req: Request) {
             adminPhone,
             location: city,
             status: "ACTIVE",
-            capacity: plan === "enterprise" ? 500 : (plan === "pro" ? 200 : 100)
+            plan: plan || "free",
+            capacity: plan === "enterprise" ? 1000 : (plan === "pro" ? 500 : 200),
+            maxMembers: plan === "enterprise" ? 5000 : (plan === "pro" ? 2000 : 1000),
+            maxStaff: plan === "enterprise" ? 100 : (plan === "pro" ? 50 : 20),
+            subscriptionStatus: "active", // Or "trial"
         });
 
         await newPool.save();
