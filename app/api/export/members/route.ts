@@ -21,8 +21,8 @@ export async function GET() {
         }
 
         const query: Record<string, unknown> = {};
-        if (session.user.role !== "superadmin" && session.user.poolId) {
-            query.poolId = session.user.poolId;
+        if (session.user.role !== "superadmin") {
+            query.poolId = session.user.poolId || "UNASSIGNED_POOL";
         }
 
         const populateFields = "name price";

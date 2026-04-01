@@ -18,7 +18,7 @@ export async function GET(req: Request) {
         const filterType = searchParams.get("type") || "all";
         const unifiedLogs: any[] = [];
 
-        const baseMatch = session.user.role !== "superadmin" && session.user.poolId ? { poolId: session.user.poolId } : {};
+        const baseMatch = session.user.role !== "superadmin" ? { poolId: session.user.poolId || "UNASSIGNED_POOL" } : {};
 
         // Fetch all log types in parallel
         const [entries, payments, registrations] = await Promise.all([

@@ -41,8 +41,8 @@ export async function GET(req: Request) {
 
         const query: Record<string, unknown> = { deletedAt: null };
 
-        if (session.user.role !== "superadmin" && session.user.poolId) {
-            query.poolId = session.user.poolId;
+        if (session.user.role !== "superadmin") {
+            query.poolId = session.user.poolId || "UNASSIGNED_POOL";
         }
 
         const activeFilter = searchParams.get("isActive");

@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
         if (!uid)
             return NextResponse.json({ error: "uid query parameter required" }, { status: 400 });
 
-        const poolId = session.user.role !== "superadmin" ? session.user.poolId : undefined;
+        const poolId = session.user.role !== "superadmin" ? (session.user.poolId || "UNASSIGNED_POOL") : undefined;
         const query: Record<string, unknown> = { memberId: { $regex: `^${uid}$`, $options: "i" } };
         if (poolId) query.poolId = poolId;
 

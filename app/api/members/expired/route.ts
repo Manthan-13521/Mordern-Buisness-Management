@@ -31,8 +31,8 @@ export async function GET(req: Request) {
             ]
         };
 
-        if (session.user.role !== "superadmin" && session.user.poolId) {
-            baseMatch.poolId = session.user.poolId;
+        if (session.user.role !== "superadmin") {
+            baseMatch.poolId = session.user.poolId || "UNASSIGNED_POOL";
         }
 
         const pipeline: any[] = [

@@ -29,8 +29,8 @@ export async function GET(req: Request) {
         const skip   = (page - 1) * limit;
 
         const baseMatch: Record<string, unknown> =
-            session.user.role !== "superadmin" && session.user.poolId
-                ? { poolId: session.user.poolId }
+            session.user.role !== "superadmin"
+                ? { poolId: session.user.poolId || "UNASSIGNED_POOL" }
                 : {};
 
         // ── Fetch each log type in parallel based on filter ──────────────

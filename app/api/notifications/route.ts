@@ -19,8 +19,8 @@ export async function GET(req: Request) {
         const skip  = (page - 1) * limit;
 
         const baseMatch =
-            session.user.role !== "superadmin" && session.user.poolId
-                ? { poolId: session.user.poolId }
+            session.user.role !== "superadmin"
+                ? { poolId: session.user.poolId || "UNASSIGNED_POOL" }
                 : {};
 
         const [logs, total] = await Promise.all([

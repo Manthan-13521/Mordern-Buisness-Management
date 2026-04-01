@@ -159,7 +159,7 @@ export async function POST(req: Request) {
             }
         }
         // Existing individual member flow
-        const baseMatch = session.user.role !== "superadmin" && session.user.poolId ? { poolId: session.user.poolId } : {};
+        const baseMatch = session.user.role !== "superadmin" ? { poolId: session.user.poolId || "UNASSIGNED_POOL" } : {};
         member = await Member.findOne({ memberId, ...baseMatch }).populate("planId");
 
         // Fallback to EntertainmentMember if not found in regular Member collection

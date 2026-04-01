@@ -284,6 +284,7 @@ export default function TwilioSetupPage() {
                 <p className="text-sm font-semibold text-amber-800 dark:text-amber-400 mb-2">How it works</p>
                 <ul className="text-xs text-amber-700 dark:text-amber-400/80 space-y-1.5 list-disc list-inside">
                     <li>A test WhatsApp message is sent to verify credentials before saving.</li>
+                    <li><strong>Important:</strong> If using a Twilio Sandbox, you MUST send <code className="bg-amber-100 dark:bg-amber-800 px-1 rounded">join &lt;your-sandbox-word&gt;</code> to your Twilio number from your WhatsApp first, otherwise Twilio will drop the message silently!</li>
                     <li>If the test fails, credentials are <strong>not saved</strong>.</li>
                     <li>Once connected, the system sends automated messages daily based on plan settings.</li>
                     <li>Enable <strong>WhatsApp Alerts</strong> on individual plans to set custom messages.</li>

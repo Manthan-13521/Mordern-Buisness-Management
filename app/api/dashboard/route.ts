@@ -51,8 +51,8 @@ export async function GET(req: Request) {
         const baseMatch: any = { isDeleted: false };
         if (targetPoolId && session.user.role === "superadmin") {
             baseMatch.poolId = targetPoolId;
-        } else if (session.user.role !== "superadmin" && session.user.poolId) {
-            baseMatch.poolId = session.user.poolId;
+        } else if (session.user.role !== "superadmin") {
+            baseMatch.poolId = session.user.poolId || "UNASSIGNED_POOL";
         }
             
         // Execute all independent queries in parallel — NO CACHE, always fresh

@@ -25,6 +25,20 @@ async function alreadySentToday(
     return !!existing;
 }
 
+// Returns true if a message of this type was EVER sent for this member
+async function alreadySentEver(
+    memberId: string,
+    type: "before_expiry" | "after_expiry"
+): Promise<boolean> {
+    const existing = await MessageLog.findOne({
+        memberId,
+        type,
+        status: "sent",
+    }).lean();
+
+    return !!existing;
+}
+
 // ── Main cron function ───────────────────────────────────────────────────────
 
 export interface ExpiryAlertResult {
@@ -59,6 +73,9 @@ export async function runExpiryAlerts(): Promise<ExpiryAlertResult> {
     const twoDaysFromNowEnd = new Date(twoDaysFromNow);
     twoDaysFromNowEnd.setHours(23, 59, 59, 999);
 
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
     // ── Get all pools with Twilio connected ──────────────────────────────
     const pools = await Pool.find({ isTwilioConnected: true, status: "ACTIVE" }).lean();
 
@@ -90,8 +107,8 @@ export async function runExpiryAlerts(): Promise<ExpiryAlertResult> {
                 $or: [
                     // Before expiry: expires in 2 days window
                     { expiryDate: { $gte: twoDaysFromNow, $lte: twoDaysFromNowEnd } },
-                    // After expiry: past today and not yet marked expired
-                    { expiryDate: { $lt: today }, status: { $ne: "expired" }, isExpired: false },
+                    // After expiry: expired recently (within last 7 days)
+                    { expiryDate: { $lt: today, $gte: sevenDaysAgo } },
                 ],
             })
                 .select("_id name phone expiryDate status isExpired planId poolId")
@@ -126,18 +143,21 @@ export async function runExpiryAlerts(): Promise<ExpiryAlertResult> {
                     }
 
                     // ── AFTER EXPIRY ─────────────────────────────────────────────
-                    if (expiryDate < today && !member.isExpired && member.status !== "expired") {
-                        // Mark member as expired first
-                        await Member.findByIdAndUpdate(member._id, {
-                            $set: {
-                                isExpired: true,
-                                expiredAt: now,
-                                status: "expired",
-                                isActive: false,
-                            },
-                        });
+                    if (expiryDate < today) {
+                        // Ensure member is officially marked as expired in DB
+                        if (!member.isExpired || member.status !== "expired") {
+                            await Member.findByIdAndUpdate(member._id, {
+                                $set: {
+                                    isExpired: true,
+                                    expiredAt: now,
+                                    status: "expired",
+                                    isActive: false,
+                                },
+                            });
+                        }
 
-                        const alreadySent = await alreadySentToday(member._id.toString(), "after_expiry");
+                        // Send exactly ONCE forever for after_expiry
+                        const alreadySent = await alreadySentEver(member._id.toString(), "after_expiry");
                         if (!alreadySent) {
                             const text = plan.messages?.afterExpiry?.text ||
                                 `❌ Hello ${member.name}, your membership has expired. Please renew to regain access to the pool!`;

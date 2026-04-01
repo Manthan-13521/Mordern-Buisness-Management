@@ -17,7 +17,7 @@ export async function GET() {
 
         const now = new Date();
 
-        const baseMatch = session.user.role !== "superadmin" && session.user.poolId ? { poolId: session.user.poolId } : {};
+        const baseMatch = session.user.role !== "superadmin" ? { poolId: session.user.poolId || "UNASSIGNED_POOL" } : {};
 
         // Find all active members past expiry
         const expiredMembersRaw = await Member.find({

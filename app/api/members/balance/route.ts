@@ -29,8 +29,8 @@ export async function GET(req: Request) {
             isDeleted: false,
         };
 
-        if (session.user.role !== "superadmin" && session.user.poolId) {
-            query.poolId = session.user.poolId;
+        if (session.user.role !== "superadmin") {
+            query.poolId = session.user.poolId || "UNASSIGNED_POOL";
         }
 
         const selectFields = "memberId name phone planId planQuantity paidAmount balanceAmount paymentStatus createdAt photoUrl";

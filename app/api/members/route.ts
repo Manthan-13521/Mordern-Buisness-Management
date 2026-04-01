@@ -61,8 +61,8 @@ export async function GET(req: Request) {
 
         // ── Build match filter ───────────────────────────────────────────
         const baseMatch: Record<string, unknown> = { isDeleted: false };
-        if (sessionUser.role !== "superadmin" && sessionUser.poolId) {
-            baseMatch.poolId = sessionUser.poolId;
+        if (sessionUser.role !== "superadmin") {
+            baseMatch.poolId = sessionUser.poolId || "UNASSIGNED_POOL";
         }
 
         if (search) {
@@ -238,7 +238,7 @@ export async function POST(req: Request) {
 
         const poolId =
             sessionUser.role !== "superadmin"
-                ? sessionUser.poolId
+                ? (sessionUser.poolId || "UNASSIGNED_POOL")
                 : body.poolId;
 
         if (!poolId)
