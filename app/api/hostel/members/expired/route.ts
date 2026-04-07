@@ -20,13 +20,13 @@ export async function GET(req: Request) {
         const skip = (page - 1) * limit;
         const search = url.searchParams.get("search") || "";
 
-        const baseMatch: Record<string, unknown> = { hostelId, isDeleted: false, isExpired: true };
+        const baseMatch: Record<string, unknown> = { hostelId, isDeleted: false, status: "active", balance: { $lt: 0 } };
         if (search) baseMatch.$text = { $search: search };
 
         const [members, total] = await Promise.all([
             HostelMember.find(baseMatch)
                 .populate("planId", "name durationDays price")
-                .sort({ planEndDate: -1 })
+                .sort({ balance: 1 })
                 .skip(skip)
                 .limit(limit)
                 .lean(),

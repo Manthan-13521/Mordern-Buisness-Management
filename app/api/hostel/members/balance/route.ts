@@ -38,27 +38,17 @@ export async function GET(req: Request) {
             baseMatch.blockId = blockObj._id;
         }
 
-        // Get all active non-deleted members with pending balance
-        const members = await HostelMember.find(baseMatch)
+        const members = await HostelMember.find({ ...baseMatch, balance: { $lt: 0 }, status: "active" })
             .populate("planId", "name price durationDays")
-            .sort({ createdAt: -1 })
+            .sort({ balance: 1 })
             .lean() as any[];
 
-        // For each member, compute actual paid from payments collection
-        const memberIds = members.map((m: any) => m._id);
-        const paymentAgg = await HostelPayment.aggregate([
-            { $match: { hostelId, memberId: { $in: memberIds }, status: "success" } },
-            { $group: { _id: "$memberId", totalPaid: { $sum: "$amount" } } },
-        ]);
-        const paidMap = new Map(paymentAgg.map((p: any) => [p._id.toString(), p.totalPaid]));
-
-        const withBalance = members
-            .map((m: any) => ({
-                ...m,
-                totalPaid: paidMap.get(m._id.toString()) ?? 0,
-                balance: m.totalFee - (paidMap.get(m._id.toString()) ?? 0),
-            }))
-            .filter((m: any) => m.balance > 0);
+        const withBalance = members.map((m: any) => ({
+            ...m,
+            totalFee: m.rent_amount || 0,
+            totalPaid: 0,
+            balance: Math.abs(m.balance),
+        }));
 
         const totalBalance = withBalance.reduce((sum, m) => sum + m.balance, 0);
 

@@ -38,8 +38,8 @@ export async function GET(req: Request) {
 
         const baseMatch: Record<string, unknown> = { hostelId, isDeleted: false };
         if (search) baseMatch.$text = { $search: search };
-        if (statusFilter === "active") baseMatch.isExpired = false;
-        if (statusFilter === "expired") baseMatch.isExpired = true;
+        if (statusFilter === "active") { baseMatch.status = "active"; baseMatch.balance = { $gte: 0 }; }
+        if (statusFilter === "expired") { baseMatch.status = "active"; baseMatch.balance = { $lt: 0 }; }
         if (blockFilter) {
             const b = await HostelBlock.findOne({ hostelId, name: blockFilter }).lean() as any;
             if (b) baseMatch.blockId = b._id;

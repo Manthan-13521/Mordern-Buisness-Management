@@ -37,7 +37,7 @@ export async function GET(req: Request) {
         const roomIds = rooms.map(r => r._id);
 
         const occupancyCounts = await HostelMember.aggregate([
-            { $match: { hostelId, roomId: { $in: roomIds }, isActive: true, isDeleted: false, isExpired: false } },
+            { $match: { hostelId, roomId: { $in: roomIds }, status: "active", isDeleted: false } },
             { $group: { _id: "$roomId", count: { $sum: 1 } } }
         ]);
 

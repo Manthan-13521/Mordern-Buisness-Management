@@ -90,12 +90,12 @@ export async function GET(req: Request) {
             occupiedBeds,
         ] = await Promise.all([
             HostelMember.countDocuments(memberBase),
-            HostelMember.countDocuments({ ...memberBase, isActive: true, isExpired: false }),
-            HostelMember.countDocuments({ ...memberBase, isExpired: true }),
-            HostelMember.countDocuments({ ...memberBase, isActive: true, planEndDate: { $gte: now, $lte: in3Days } }),
+            HostelMember.countDocuments({ ...memberBase, status: "active", balance: { $gte: 0 } }),
+            HostelMember.countDocuments({ ...memberBase, status: "active", balance: { $lt: 0 } }),
+            HostelMember.countDocuments({ ...memberBase, status: "active", due_date: { $gte: now, $lte: in3Days } }),
             HostelMember.countDocuments({ ...memberBase, createdAt: { $gte: startOfMonth } }),
             HostelMember.countDocuments({ ...memberBase, createdAt: { $gte: startOfYear } }),
-            HostelMember.countDocuments({ ...memberBase, isActive: true }),
+            HostelMember.countDocuments({ ...memberBase, status: "active" }),
         ]);
 
         // ── Income stats ───────────────────────────────────────────────────────
@@ -151,11 +151,11 @@ export async function GET(req: Request) {
         // ── Expiring soon list ─────────────────────────────────────────────────
         const expiringList = await HostelMember.find({
             ...memberBase,
-            isActive: true,
-            planEndDate: { $gte: now, $lte: in3Days },
+            status: "active",
+            due_date: { $gte: now, $lte: in3Days },
         })
-            .select("memberId name phone planEndDate blockNo floorNo roomNo")
-            .sort({ planEndDate: 1 })
+            .select("memberId name phone due_date blockNo floorNo roomNo")
+            .sort({ due_date: 1 })
             .limit(20)
             .lean();
 
