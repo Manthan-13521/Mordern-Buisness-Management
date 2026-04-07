@@ -6,6 +6,7 @@ import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getTenantFilter } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -24,14 +25,26 @@ export async function GET(req: Request) {
 
         const { searchParams } = new URL(req.url);
         const filterType = searchParams.get("type") || "all";
+        const memberType = searchParams.get("memberType") || "all";
         const page   = Math.max(1, parseInt(searchParams.get("page")  ?? "1"));
         const limit  = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? "50")));
         const skip   = (page - 1) * limit;
 
-        const baseMatch: Record<string, unknown> =
-            session.user.role !== "superadmin"
-                ? { poolId: session.user.poolId || "UNASSIGNED_POOL" }
-                : {};
+        // ── Tenant isolation guard ───────────────────────────────────────────
+        if (session.user.role !== "superadmin" && !session.user.poolId) {
+            return NextResponse.json({ error: "No pool assigned to this account" }, { status: 400 });
+        }
+        const baseMatch: Record<string, unknown> = getTenantFilter(session.user);
+        
+        let registrationMatch = { ...baseMatch };
+        if (memberType === "member") {
+            registrationMatch.memberId = { $regex: /^M(?!S)/i };
+        } else if (memberType === "entertainment") {
+            registrationMatch.memberId = { $regex: /^MS/i };
+        }
+
+        const includeRegular = memberType === "all" || memberType === "member";
+        const includeEntertainment = memberType === "all" || memberType === "entertainment";
 
         // ── Fetch each log type in parallel based on filter ──────────────
         const [entriesRaw, payments, regularRegistrations, entertainmentRegistrations] = await Promise.all([
@@ -43,15 +56,19 @@ export async function GET(req: Request) {
                       .lean()
                 : Promise.resolve([]),
             Promise.resolve([]),
-            (filterType === "all" || filterType === "registration")
-                ? Member.find({ ...baseMatch, isDeleted: false })
+            ((filterType === "all" || filterType === "registration") && includeRegular)
+                ? Member.find({ ...registrationMatch, isDeleted: false })
                       .select("name memberId photoUrl planId createdAt")
                       .sort({ createdAt: -1 })
                       .limit(200)
                       .lean()
                 : Promise.resolve([]),
-            (filterType === "all" || filterType === "registration")
-                ? Promise.resolve([])
+            ((filterType === "all" || filterType === "registration") && includeEntertainment)
+                ? EntertainmentMember.find({ ...registrationMatch, isDeleted: false })
+                      .select("name memberId photoUrl planId createdAt")
+                      .sort({ createdAt: -1 })
+                      .limit(200)
+                      .lean()
                 : Promise.resolve([]),
         ]);
 
@@ -74,6 +91,16 @@ export async function GET(req: Request) {
                 e.memberId = memberMap.get(e.memberId.toString()) || null;
             }
             return e;
+        }).filter(e => {
+            if (memberType === "all") return true;
+            if (!e.memberId) return false;
+            // Filter entries. membersFound are regular, entMembersFound are entertainment
+            const isRegular = membersFound.some((m: any) => m._id.toString() === e.memberId._id.toString());
+            const isEntertainment = entMembersFound.some((m: any) => m._id.toString() === e.memberId._id.toString());
+            
+            if (memberType === "member" && isRegular) return true;
+            if (memberType === "entertainment" && isEntertainment) return true;
+            return false;
         });
 
         // ── Normalise to unified shape ────────────────────────────────────

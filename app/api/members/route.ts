@@ -13,6 +13,8 @@ import { uploadBuffer } from "@/lib/local-upload";
 import { savePhoto } from "@/lib/savePhoto";
 import { signQRToken } from "@/lib/qrSigner";
 import { PRIVATE_API_STALE_MS } from "@/lib/apiCache";
+import { getTenantFilter, requirePoolId, resolvePoolId } from "@/lib/tenant";
+import { secureFindById } from "@/lib/tenantSecurity"; 
 
 export const dynamic = "force-dynamic";
 
@@ -48,10 +50,11 @@ export async function GET(req: Request) {
         const planFilter = url.searchParams.get("planId") || "";
         const statusFilter = url.searchParams.get("status") || "";
         const balanceOnly = url.searchParams.get("balanceOnly") || "";
+        const memberType = url.searchParams.get("type") || "all";
 
         // ── Cache check (Redis → in-memory fallback) ─────────────────────
         const poolKey = sessionUser.poolId || "superadmin";
-        const cacheKey = `members-${poolKey}-${page}-${limit}-${search}-${planFilter}-${statusFilter}-${balanceOnly}`;
+        const cacheKey = `members-${poolKey}-${page}-${limit}-${search}-${planFilter}-${statusFilter}-${balanceOnly}-${memberType}`;
         const cached = await getCache(cacheKey);
         if (cached) {
             return NextResponse.json(cached, {
@@ -59,11 +62,21 @@ export async function GET(req: Request) {
             });
         }
 
-        // ── Build match filter ───────────────────────────────────────────
-        const baseMatch: Record<string, unknown> = { isDeleted: false };
-        if (sessionUser.role !== "superadmin") {
-            baseMatch.poolId = sessionUser.poolId || "UNASSIGNED_POOL";
+        // ── Tenant isolation guard ────────────────────────────────────────
+        // For non-superadmin sessions, poolId MUST be present. If the session is
+        // somehow missing a poolId (e.g. misconfigured user), we reject hard — 
+        // we never fall back to an "UNASSIGNED_POOL" ghost value.
+        if (sessionUser.role !== "superadmin" && !sessionUser.poolId) {
+            return NextResponse.json({ error: "No pool assigned to this account" }, { status: 400 });
         }
+
+        // ── Build match filter ───────────────────────────────────────────
+        const tenantFilter = getTenantFilter(sessionUser);
+        
+        const deletedFilter = url.searchParams.get("deleted");
+        const isDeletedValue = deletedFilter === "true" ? true : false;
+        
+        const baseMatch: Record<string, unknown> = { isDeleted: isDeletedValue, ...tenantFilter };
 
         if (search) {
             baseMatch.$text = { $search: search };
@@ -73,11 +86,29 @@ export async function GET(req: Request) {
         if (statusFilter === "expired") baseMatch.isExpired = true;
         if (balanceOnly === "true") baseMatch.balanceAmount = { $gt: 0 };
 
-        // ── Aggregation pipeline with $unionWith ─────────────────────────
-        const pipeline: mongoose.PipelineStage[] = [
-            { $match: baseMatch },
-            { $addFields: { _source: "regular" } },
-            {
+        if (memberType === "member") {
+            baseMatch.memberId = { $regex: /^M(?!S)/i };
+        } else if (memberType === "entertainment") {
+            baseMatch.memberId = { $regex: /^MS/i };
+        }
+
+        // ── Check if we should query Members, Entertainment, or both ─────
+        const includeRegular = memberType === "all" || memberType === "member";
+        const includeEntertainment = memberType === "all" || memberType === "entertainment";
+
+        // ── Aggregation pipeline with optional $unionWith ────────────────
+        const pipeline: mongoose.PipelineStage[] = [];
+        
+        if (includeRegular) {
+            pipeline.push({ $match: baseMatch });
+            pipeline.push({ $addFields: { _source: "regular" } });
+        } else if (includeEntertainment) {
+            // Seed pipeline with empty match to satisfy $unionWith standard pattern
+            pipeline.push({ $match: { _id: null } }); 
+        }
+
+        if (includeEntertainment) {
+            pipeline.push({
                 $unionWith: {
                     coll: "entertainment_members",
                     pipeline: [
@@ -85,7 +116,15 @@ export async function GET(req: Request) {
                         { $addFields: { _source: "entertainment" } },
                     ],
                 },
-            },
+            });
+        }
+        
+        // Exclude the mock { _id: null } document if used for seeding
+        if (!includeRegular && includeEntertainment) {
+            pipeline.push({ $match: { _source: "entertainment" } });
+        }
+
+        pipeline.push(
             { $sort: { createdAt: -1 } },
             { $skip: skip },
             { $limit: limit },
@@ -105,21 +144,42 @@ export async function GET(req: Request) {
                 $project: {
                     _plan: 0, faceDescriptor: 0,
                 },
-            },
-        ];
+            }
+        );
 
-        const [rawData, regularTotal, entertainmentTotal] = await Promise.all([
-            Member.aggregate(pipeline),
-            Member.countDocuments(baseMatch),
-            EntertainmentMember.countDocuments(baseMatch),
+        const regularBaseCount = includeRegular ? await Member.countDocuments(baseMatch) : 0;
+        const entertainmentBaseCount = includeEntertainment ? await EntertainmentMember.countDocuments(baseMatch) : 0;
+
+        // ── Self Healing Fallback Due Generation ────────────────────────────
+        // Trigger natively decoupled in-memory preventing dashboard blocking
+        if (sessionUser.poolId) {
+            import("@/lib/billingEngine").then(m => m.processDueGenerations(sessionUser.poolId).catch(() => {}));
+        }
+
+        const [rawData] = await Promise.all([
+            Member.aggregate(pipeline)
         ]);
-        const total = regularTotal + entertainmentTotal;
+        const total = regularBaseCount + entertainmentBaseCount;
 
         // ── Compute verdict server-side in JS (fast, resilient) ──────────
         const now = Date.now();
-        const data = rawData.map((m: any) => {
+        const { resolveDefaulterState } = await import("@/lib/defaulterEngine");
+
+        const data = await Promise.all(rawData.map(async (m: any) => {
             const endDate = new Date(m.planEndDate || m.expiryDate || 0);
             const msLeft = endDate.getTime() - now;
+            
+            // ── STEP 8: Inject Native Defaulter UI Matrix ────────────────────
+            const isEntertainment = !('status' in m) && m._source === "entertainment";
+            let defaulterObj = { isDefaulter: false, overdueDays: 0, defaulterStatus: "active" as ("active"|"warning"|"blocked") };
+            
+            if (!isEntertainment && !m.isDeleted) {
+                defaulterObj = await resolveDefaulterState(m._id, sessionUser.poolId);
+            }
+            
+            m.isDefaulter = defaulterObj.isDefaulter;
+            m.defaulterStatus = defaulterObj.defaulterStatus;
+            m.overdueDays = defaulterObj.overdueDays;
 
             let verdict = "ACTIVE";
             let verdictClass = "bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-500/10 dark:text-green-400";
@@ -128,9 +188,19 @@ export async function GET(req: Request) {
 
             if (m.isDeleted) {
                 verdict = "DELETED";
-                verdictClass = "bg-gray-100 text-gray-600 ring-gray-500/20 dark:bg-gray-800 dark:text-gray-400";
+                verdictClass = "bg-gray-100 text-gray-600 ring-gray-500/20 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg dark:text-gray-400";
                 rowClass = "bg-red-50 dark:bg-red-950/30";
                 daysLeftLabel = "Deleted";
+            } else if (defaulterObj.defaulterStatus === "blocked") {
+                verdict = "BLOCKED";
+                verdictClass = "bg-red-600 text-white ring-red-600/30 shadow animate-pulse";
+                rowClass = "bg-red-50/80 dark:bg-red-900/40 border-l-4 border-red-500";
+                daysLeftLabel = `Blocked: ${defaulterObj.overdueDays}d overdue`;
+            } else if (defaulterObj.defaulterStatus === "warning") {
+                verdict = "WARNING";
+                verdictClass = "bg-rose-50 text-rose-700 ring-rose-600/30 dark:bg-rose-500/20 dark:text-rose-400 font-bold border border-rose-200 dark:border-rose-800";
+                rowClass = "bg-rose-50/50 dark:bg-rose-950/20 border-l-4 border-rose-400";
+                daysLeftLabel = `Warning: ${defaulterObj.overdueDays}d overdue`;
             } else if (m.isExpired || msLeft <= 0) {
                 verdict = "EXPIRED";
                 verdictClass = "bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-500/10 dark:text-red-400";
@@ -157,7 +227,7 @@ export async function GET(req: Request) {
             m.daysLeftLabel = daysLeftLabel;
             if (!m.daysLeft) m.daysLeft = 0;
             return m;
-        });
+        }));
 
         const response = {
             data,
@@ -198,6 +268,18 @@ export async function POST(req: Request) {
         const sessionUser = token as any;
 
         // Rate limiting is now handled globally by middleware
+        
+        // --- STEP 12 SaaS Gating: Enforce Tenant Limits ---
+        try {
+            const { enforceMemberCreationLimit } = await import("@/lib/saasGuard");
+            const poolId = resolvePoolId(sessionUser, body.poolId);
+            await enforceMemberCreationLimit(poolId);
+        } catch (e: any) {
+            if (e.message === "SaaS_Member_Limit_Reached") {
+                return NextResponse.json({ error: "Organization member limit reached. Please upgrade your SaaS plan." }, { status: 403 });
+            }
+        }
+        // ------------------------------------------------
 
         // Map frontend fields to match Zod schema expectations
         const mappedBody = {
@@ -232,20 +314,11 @@ export async function POST(req: Request) {
         const photoBase64 = body.photoBase64 || data.photo;
 
         const { Plan } = await import("@/models/Plan");
-        const plan = await Plan.findById(planId).lean();
+        const plan = await secureFindById(Plan, planId, sessionUser, { lean: true });
         if (!plan)
             return NextResponse.json({ error: "Invalid Plan" }, { status: 400 });
 
-        const poolId =
-            sessionUser.role !== "superadmin"
-                ? (sessionUser.poolId || "UNASSIGNED_POOL")
-                : body.poolId;
-
-        if (!poolId)
-            return NextResponse.json(
-                { error: "Pool ID required" },
-                { status: 400 }
-            );
+        const poolId = resolvePoolId(sessionUser, body.poolId);
 
         // Atomic ID generation via Counters collection (Section 5)
         const isEntertainment = plan.hasEntertainment ?? false;
@@ -281,8 +354,12 @@ export async function POST(req: Request) {
             planEndDate.setDate(planEndDate.getDate() + (plan.durationDays || 30));
         }
 
+        // ── Safe-amount guards (prevent Infinity/NaN from reaching DB) ────────
+        const safePaid    = Number.isFinite(paidAmount)    ? Math.min(9_999_999_999, paidAmount)    : 0;
+        const safeBalance = Number.isFinite(balanceAmount) ? Math.min(9_999_999_999, balanceAmount) : 0;
+
         const paymentStatus =
-            balanceAmount <= 0 ? "paid" : paidAmount > 0 ? "partial" : "pending";
+            safeBalance <= 0 ? "paid" : safePaid > 0 ? "partial" : "pending";
 
         // Build equipment array from string (if provided)
         let equipmentArr: { itemName: string; issuedDate: Date; isReturned: boolean }[] = [];
@@ -312,8 +389,8 @@ export async function POST(req: Request) {
             planEndDate,
             startDate,
             expiryDate: planEndDate,
-            paidAmount,
-            balanceAmount,
+            paidAmount:    safePaid,
+            balanceAmount: safeBalance,
             paymentStatus,
             paymentMode: body.paymentMode ?? "cash",
             equipmentTaken: equipmentArr,
@@ -328,11 +405,51 @@ export async function POST(req: Request) {
 
         await newMember.save();
 
+        // ── STEP 7B: Automated Subscription & Revenue Ledger Generation ──────────────
+        try {
+            const initialDue = (plan.price || 0) * qty;
+            const { Ledger } = await import("@/models/Ledger");
+            const { Subscription } = await import("@/models/Subscription");
+
+            await Promise.all([
+                Ledger.create({
+                    memberId: newMember._id,
+                    poolId,
+                    totalDue: initialDue,
+                    totalPaid: safePaid,
+                    balance: initialDue - safePaid,
+                }),
+                Subscription.create({
+                    memberId: newMember._id,
+                    poolId,
+                    planId,
+                    startDate,
+                    nextDueDate: planEndDate,
+                    status: "active",
+                })
+            ]);
+        } catch (dbErr) {
+            console.error("Failed to generate Subscription and Ledger artifacts:", dbErr);
+        }
+
+        // ── Real-Time Pool Analytics Update (New Member) ───────────────────
+        const memberDateStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+        try {
+            const { PoolAnalytics } = await import("@/models/PoolAnalytics");
+            await PoolAnalytics.findOneAndUpdate(
+                { poolId, yearMonth: memberDateStr },
+                { $inc: { newMembers: 1 } },
+                { upsert: true }
+            );
+        } catch (analyticsErr) {
+            console.error("Failed to update Pool Analytics newMembers:", analyticsErr);
+        }
+
         // NOTE: PoolSession is NOT created here — occupancy only increases
         // when a member scans in via the QR Entry page (/api/entry).
 
         // Auto-create Payment record so it shows on the Payments page
-        if (paidAmount > 0) {
+        if (safePaid > 0) {
             try {
                 const modeMap: Record<string, string> = { cash: "cash", upi: "upi", card: "cash", online: "razorpay_online" };
                 await Payment.create({
@@ -340,7 +457,7 @@ export async function POST(req: Request) {
                     planId,
                     poolId,
                     memberCollection: isEntertainment ? "entertainment_members" : "members",
-                    amount: paidAmount,
+                    amount: safePaid,
                     paymentMethod: modeMap[body.paymentMode] || "cash",
                     recordedBy: (typeof sessionUser.id === "string" && sessionUser.id.length === 24)
                         ? new mongoose.Types.ObjectId(sessionUser.id)
@@ -348,14 +465,22 @@ export async function POST(req: Request) {
                     status: "success",
                     notes: `Auto-recorded on member registration`,
                 });
+
+                // ── Real-Time Pool Analytics Update (Income) ───────────────────
+                const { PoolAnalytics } = await import("@/models/PoolAnalytics");
+                await PoolAnalytics.findOneAndUpdate(
+                    { poolId, yearMonth: memberDateStr },
+                    { $inc: { totalIncome: safePaid } },
+                    { upsert: true }
+                );
             } catch (payErr) {
                 console.warn("Payment creation failed (non-critical):", payErr);
             }
         }
 
         const savedMember = isEntertainment
-            ? await EntertainmentMember.findById(newMember._id).populate("planId", "name hasTokenPrint quickDelete price")
-            : await Member.findById(newMember._id).populate("planId", "name hasTokenPrint quickDelete price");
+            ? await secureFindById(EntertainmentMember, newMember._id.toString(), sessionUser, { populate: { path: "planId", select: "name hasTokenPrint quickDelete price" } })
+            : await secureFindById(Member, newMember._id.toString(), sessionUser, { populate: { path: "planId", select: "name hasTokenPrint quickDelete price" } });
 
         // No background job needed since generation is inline
 

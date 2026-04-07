@@ -146,19 +146,9 @@ export async function GET(req: Request) {
         const hh = String(now.getHours()).padStart(2, '0');
         const mm = String(now.getMinutes()).padStart(2, '0');
         const filename = `backup_${dateStrDay}_${hh}_${mm}.xlsx`;
-        const s3Key = `backups/${poolFolder}/${filename}`;
 
-        // Module-based S3 Upload
-        try {
-            await uploadBackup(
-                Buffer.from(buffer), 
-                s3Key, 
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            );
-            logger.info(`Successfully uploaded optimized backup to S3: ${s3Key}`);
-        } catch (s3Error) {
-            logger.warn("AWS S3 upload skipped or failed", { error: String(s3Error) });
-        }
+        // Module-based S3 Upload logic has been extracted to dedicated AWS export buttons.
+        // Return local file directly.
 
         return new NextResponse(buffer, {
             status: 200,

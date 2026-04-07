@@ -4,6 +4,7 @@ import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { secureFindById } from "@/lib/tenantSecurity";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -17,9 +18,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
         await dbConnect();
 
-        let member: any = await Member.findById(id).select("+photoUrl").lean();
+        let member = await secureFindById(Member, id, session.user, { select: "+photoUrl" });
         if (!member) {
-            member = await EntertainmentMember.findById(id).select("+photoUrl").lean();
+            member = await secureFindById(EntertainmentMember, id, session.user, { select: "+photoUrl" });
         }
 
         if (!member || !member.photoUrl) {

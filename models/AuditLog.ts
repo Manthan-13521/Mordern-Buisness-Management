@@ -23,6 +23,7 @@ const auditLogSchema = new Schema<IAuditLog>(
 
 auditLogSchema.index({ entityId: 1 });
 auditLogSchema.index({ createdAt: -1 });
+auditLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: 1296000 }); // 15 days TTL
 
 export const AuditLog: Model<IAuditLog> =
     mongoose.models.AuditLog || mongoose.model<IAuditLog>("AuditLog", auditLogSchema);

@@ -12,6 +12,8 @@ import { logger } from "@/lib/logger";
 import { verifyQRToken } from "@/lib/qrSigner";
 import mongoose from "mongoose";
 import { runOccupancyCleanupInBackground } from "@/lib/cleanup";
+import { getOccupancy, incrOccupancy } from "@/lib/redisOccupancy"; // 1.3 Fast Occupancy
+import { redis } from "@/lib/redis"; // 1.3 Safe fallback checking
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +22,7 @@ const SCAN_COOLDOWN_MS = 3000; // 3-second cooldown
 export async function POST(req: Request) {
     // Rate limiting is now handled globally by middleware
 
+    const startTime = Date.now(); // 1.3 Perf Tracking
     try {
         const [, session, body] = await Promise.all([
             dbConnect(),
@@ -85,15 +88,11 @@ export async function POST(req: Request) {
 
             const numPersons = plan.maxEntriesPerQR || 1;
             
-            // Dynamic tenant occupancy lookup
-            let currentOccupancy = 0;
+            // 1.3 Hybrid Occupancy Lookup
             const pool = await Pool.findOne({ poolId: session.user.poolId }).select("capacity").lean();
             const poolCapacity = pool?.capacity || 100;
-            const sessionAgg = await PoolSession.aggregate([
-                { $match: { poolId: session.user.poolId, status: "active" } },
-                { $group: { _id: null, total: { $sum: "$numPersons" } } }
-            ]);
-            if (sessionAgg.length > 0) currentOccupancy = sessionAgg[0].total;
+            
+            let currentOccupancy = await getOccupancy(session.user.poolId || "UNKNOWN");
 
             // Check capacity for the whole group
             if (currentOccupancy + numPersons > poolCapacity) {
@@ -130,6 +129,8 @@ export async function POST(req: Request) {
                     expiryTime,
                     status: "active",
                 });
+                
+                await incrOccupancy(session.user.poolId || "UNKNOWN", numPersons); // 1.3 Atomic sync
 
                 // Log entry without member association
                 await EntryLog.create({
@@ -139,6 +140,8 @@ export async function POST(req: Request) {
                     rawPayload: qrPayload,
                     numPersons,
                 });
+                
+                console.log(`[PERF] entry: ${Date.now() - startTime}ms (group: ${planId})`);
                 
                 return NextResponse.json({ 
                     message: "Group entry granted", 
@@ -158,6 +161,12 @@ export async function POST(req: Request) {
                 return NextResponse.json({ error: "Group QR token has no remaining entries" }, { status: 403 });
             }
         }
+
+        // 1.3 Pre-fetch occupancy for early rejection (Individual & Entertainment)
+        const pool = await Pool.findOne({ poolId: session.user.poolId }).select("capacity").lean();
+        const poolCapacity = pool?.capacity || 100;
+        let currentOccupancy = await getOccupancy(session.user.poolId || "UNKNOWN");
+
         // Existing individual member flow
         const baseMatch = session.user.role !== "superadmin" ? { poolId: session.user.poolId || "UNASSIGNED_POOL" } : {};
         member = await Member.findOne({ memberId, ...baseMatch }).populate("planId");
@@ -243,6 +252,56 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Membership has expired" }, { status: 403 });
         }
 
+        // ── STEP 8: Defaulter Gate Enforcement ───────────────────────────────
+        if (!isEntertainment) {
+            // 1.3 Fast Access State Check (Short-circuit heavy joins)
+            const fastAccess = (member as any).accessState;
+            const mAccess = (member as any).accessStatus;
+            
+            // If denormalized accessState says active, we can skip the heavy defaulterEngine logic
+            // UNLESS it's explicitly blocked in accessStatus
+            if (fastAccess === "active" && mAccess === "active") {
+                // Skip to next step
+            } else if (mAccess === "blocked" || mAccess === "suspended") {
+                let overdueDays = 0;
+                if (mAccess === "blocked") {
+                    const { resolveDefaulterState } = await import("@/lib/defaulterEngine");
+                    const defaulterObj = await resolveDefaulterState(member._id, session.user.poolId || "UNASSIGNED_POOL");
+                    overdueDays = defaulterObj.overdueDays;
+                }
+
+                const isSuspended = mAccess === "suspended";
+                const reasonStr = isSuspended ? "Admin Suspended" : `Defaulter Blocked (${overdueDays} days overdue)`;
+                const failReason = isSuspended ? "suspended_admin" : "blocked_defaulter";
+
+                await EntryLog.create({
+                    poolId: session.user.poolId,
+                    memberId: member._id,
+                    status: "denied",
+                    reason: reasonStr,
+                    failReason: failReason,
+                    operatorId: session.user.id ? new mongoose.Types.ObjectId(session.user.id) : undefined,
+                    rawPayload: qrPayload,
+                });
+                logger.scan(`QR scan denied — ${failReason}`, { memberId, overdueDays });
+
+                if (isSuspended) {
+                    return NextResponse.json({ 
+                        reason: "suspended_admin",
+                        message: "Access suspended by administrator." 
+                    }, { status: 403 });
+                }
+
+                return NextResponse.json({ 
+                    error: "Access denied due to pending dues", // keep legacy error string for UI compatibility
+                    reason: "blocked_defaulter",
+                    overdueDays,
+                    balance: (member as any).balanceAmount || 0,
+                    message: "Access denied due to pending dues" 
+                }, { status: 403 });
+            }
+        }
+
         // ── Entry Limit Check (Total & Daily) ───────────────────────────────
         // Preliminary check for fast rejection
         if (!isEntertainment) {
@@ -263,15 +322,20 @@ export async function POST(req: Request) {
             }
         }
 
-        // ── Daily 1-Time Entry Limit Check ───────────────────────────────────
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
+        // ── Daily 1-Time Entry Limit Check (C-6 FIX: IST midnight, not UTC) ───
+        // IST = UTC+5:30. We compute today's midnight in IST, then convert back to UTC for the DB query.
+        const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+        const nowForIST = new Date(Date.now() + IST_OFFSET_MS);
+        const istMidnightUTC = new Date(
+            Date.UTC(nowForIST.getUTCFullYear(), nowForIST.getUTCMonth(), nowForIST.getUTCDate())
+            - IST_OFFSET_MS
+        );
 
         const alreadyEnteredToday = await EntryLog.findOne({
             poolId: session.user.poolId,
             memberId: member._id,
             status: "granted",
-            createdAt: { $gte: startOfDay },
+            createdAt: { $gte: istMidnightUTC },
         });
 
         if (alreadyEnteredToday) {
@@ -290,20 +354,7 @@ export async function POST(req: Request) {
             );
         }
 
-        // ── Pool Capacity Check ──────────────────────────────────────────────
-        // Dynamic tenant occupancy lookup calculation again for individual members
-        let currentOccupancy = 0;
-        const [pool, sessionAgg] = await Promise.all([
-            Pool.findOne({ poolId: session.user.poolId }).select("capacity").lean(),
-            PoolSession.aggregate([
-                { $match: { poolId: session.user.poolId, status: "active" } },
-                { $group: { _id: null, total: { $sum: "$numPersons" } } }
-            ]),
-        ]);
-        const poolCapacity = pool?.capacity || 100;
-        if (sessionAgg.length > 0) currentOccupancy = sessionAgg[0].total;
-
-        const numPersons = member.planQuantity || 1;
+        const numPersons = (member as any).planQuantity || 1;
 
         if (currentOccupancy + numPersons > poolCapacity) {
             await EntryLog.create({
@@ -343,7 +394,7 @@ export async function POST(req: Request) {
                     $inc: { entriesUsed: 1 },
                     $set: { lastScannedAt: new Date(), qrToken: newToken }
                 },
-                { new: true }
+                { returnDocument: 'after' }
             );
 
             if (!updatedMember) {
@@ -383,6 +434,8 @@ export async function POST(req: Request) {
             status: "active",
         });
 
+        await incrOccupancy(session.user.poolId || "UNKNOWN", numPersons); // 1.3 Atomic sync
+
         const entry = await EntryLog.create({
             poolId: session.user.poolId,
             memberId: member._id,
@@ -401,6 +454,13 @@ export async function POST(req: Request) {
             occupancy: currentOccupancy + numPersons,
             capacity: poolCapacity,
         });
+
+        import("@/lib/events").then(mod => {
+            mod.dispatchEvent("entry.logged", { poolId: session.user.poolId, count: currentOccupancy + numPersons });
+        }).catch(() => {});
+
+        const endTime = Date.now();
+        console.log(`[PERF] entry: ${endTime - startTime}ms (member: ${memberId || planId})`);
 
         return NextResponse.json(
             {

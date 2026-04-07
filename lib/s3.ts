@@ -4,6 +4,7 @@ import {
     ListObjectsV2Command,
     GetObjectCommand,
     HeadObjectCommand,
+    DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 
 const s3Client = new S3Client({
@@ -106,4 +107,33 @@ export async function downloadBackup(key: string) {
         stream: res.Body,
         contentType: res.ContentType,
     };
+}
+
+/**
+ * Safely deletes an object from S3.
+ */
+export async function deleteS3Object(key: string) {
+    if (!BUCKET || !key) return false;
+    
+    // Extract key if a full URL was passed
+    let objectKey = key;
+    if (key.includes(".amazonaws.com/")) {
+        const parts = key.split(".amazonaws.com/");
+        if (parts.length === 2) objectKey = parts[1];
+    } else if (key.startsWith("https://") && key.includes(BUCKET)) {
+        const baseUrl = `https://${BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/`;
+        if (key.startsWith(baseUrl)) {
+            objectKey = key.slice(baseUrl.length);
+        }
+    }
+
+    try {
+        await s3Client.send(
+            new DeleteObjectCommand({ Bucket: BUCKET, Key: objectKey })
+        );
+        return true;
+    } catch (e) {
+        console.error("Failed to delete S3 object:", e);
+        return false;
+    }
 }

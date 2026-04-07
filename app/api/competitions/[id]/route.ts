@@ -108,7 +108,7 @@ export async function PATCH(req: Request, props: RouteContext) {
             return NextResponse.json({ message: "Participant updated" });
         }
 
-        const updated = await Competition.findByIdAndUpdate(id, { $set: updates }, { new: true });
+        const updated = await Competition.findByIdAndUpdate(id, { $set: updates }, { returnDocument: 'after' });
         return NextResponse.json(updated);
     } catch (error) {
         console.error("[PATCH /api/competitions/[id]]", error);

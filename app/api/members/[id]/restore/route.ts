@@ -3,6 +3,7 @@ import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { secureUpdateById } from "@/lib/tenantSecurity";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -42,13 +43,9 @@ export async function POST(req: Request, props: RouteContext) {
             updates.expiryDate  = new Date(body.planEndDate);
         }
 
-        const member = await Member.findByIdAndUpdate(
-            id,
-            { $set: updates },
-            { new: true }
-        ).populate("planId", "name price hasTokenPrint");
+        const member = await secureUpdateById(Member, id, { $set: updates }, session.user, { populate: { path: "planId", select: "name price hasTokenPrint" } });
 
-        if (!member) return NextResponse.json({ error: "Member not found" }, { status: 404 });
+        if (!member) return NextResponse.json({ error: "Not Found" }, { status: 404 });
 
         return NextResponse.json({ message: "Member restored successfully.", member });
     } catch (error) {

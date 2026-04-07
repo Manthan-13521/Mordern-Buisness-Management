@@ -9,6 +9,7 @@ export interface IEquipmentItem {
 }
 
 export interface IMember extends Document {
+    organizationId?: string; // Prompt 0.1 Partion Key
     memberId: string;
     poolId: string;
     name: string;
@@ -43,13 +44,22 @@ export interface IMember extends Document {
     // Lifecycle
     isActive: boolean;
     isExpired: boolean;
+    expiryAlertNextDaySent?: boolean;
     expiredAt?: Date;
     isDeleted: boolean;
     deletedAt?: Date;
+    deletedBy?: mongoose.Types.ObjectId;
     deleteReason?: "auto_quick" | "auto_standard" | "manual";
-    // Legacy status field (kept for compat)
+    // Legacy status (kept for backward compat)
     status: "active" | "expired" | "deleted";
+    accessStatus: "active" | "blocked" | "suspended";
+    blockedAt?: Date;
+    manualOverride?: boolean;
     deletedAtLegacy?: Date;
+    // ── PROMPT 1.2 Access State (Fast Entry Opt) ──
+    accessState: "active" | "blocked"; // Denormalized flag from defaulter engine
+    cachedBalance: number;             // Denormalized sum from ledger
+    // ──────────────────────────────────────────────
     createdAt: Date;
     updatedAt: Date;
     rotateQrToken(): Promise<string>;
@@ -67,6 +77,7 @@ const equipmentItemSchema = new Schema<IEquipmentItem>(
 
 const memberSchema = new Schema<IMember>(
     {
+        organizationId: { type: String, index: true }, // Prompt 0.1 Partion Key
         memberId: { type: String, required: true, index: true },
         poolId: { type: String, required: true, index: true },
         name: { type: String, required: true },
@@ -113,9 +124,11 @@ const memberSchema = new Schema<IMember>(
         // Lifecycle — new boolean model (replaces status string)
         isActive: { type: Boolean, default: true, index: true },
         isExpired: { type: Boolean, default: false, index: true },
+        expiryAlertNextDaySent: { type: Boolean, default: false, index: true },
         expiredAt: { type: Date },
         isDeleted: { type: Boolean, default: false, index: true },
         deletedAt: { type: Date },
+        deletedBy: { type: Schema.Types.ObjectId, ref: "User" },
         deleteReason: {
             type: String,
             enum: ["auto_quick", "auto_standard", "manual"],
@@ -127,12 +140,31 @@ const memberSchema = new Schema<IMember>(
             default: "active",
             index: true,
         },
+        accessStatus: {
+            type: String,
+            enum: ["active", "blocked", "suspended"],
+            default: "active",
+            index: true
+        },
+        blockedAt: { type: Date },
+        manualOverride: { type: Boolean, default: false },
         deletedAtLegacy: { type: Date },
+        // ── PROMPT 1.2 Access State (Fast Entry Opt) ──
+        accessState: {
+            type: String,
+            enum: ["active", "blocked"],
+            default: "active",
+            index: true
+        },
+        cachedBalance: { type: Number, default: 0 },
+        // ──────────────────────────────────────────────
     },
     { timestamps: true }
 );
 
 // ── Compound indexes ──────────────────────────────────────────────────
+memberSchema.index({ organizationId: 1, _id: 1 }); // Prompt 0.1 Critical Index
+memberSchema.index({ organizationId: 1, qrToken: 1 }); // Prompt 0.1 Fast Entry
 memberSchema.index({ poolId: 1, memberId: 1 }, { unique: true });
 memberSchema.index({ poolId: 1, phone: 1 });
 memberSchema.index({ poolId: 1, planId: 1 });
@@ -157,6 +189,46 @@ memberSchema.methods.rotateQrToken = async function () {
     await this.save();
     return this.qrToken;
 };
+
+// ── Dual Write Hook for UnifiedUser (Prompt 3.1) ──────────────
+async function syncToUnifiedUser(doc: any) {
+    if (!doc) return;
+    try {
+        const { UnifiedUser } = await import("./UnifiedUser");
+        await UnifiedUser.findOneAndUpdate(
+            { originalId: doc._id.toString() },
+            {
+                $set: {
+                    organizationId: doc.organizationId || doc.poolId, // Use poolId as org fallback
+                    name: doc.name,
+                    phone: doc.phone,
+                    type: "pool",
+                    accessState: doc.accessState || "active",
+                    cachedBalance: doc.cachedBalance || 0,
+                }
+            },
+            { upsert: true, new: true }
+        );
+        console.log(`UnifiedUser synced (Pool: ${doc._id})`);
+    } catch (e) {
+        console.error("Failed to sync UnifiedUser for Member:", e);
+    }
+}
+
+memberSchema.post("save", function (doc) {
+    syncToUnifiedUser(doc);
+});
+
+memberSchema.post("findOneAndUpdate", function (doc) {
+    syncToUnifiedUser(doc);
+});
+
+memberSchema.post("updateOne", async function (this: any) {
+    const docQuery = this.getQuery();
+    const doc = await this.model.findOne(docQuery).lean();
+    syncToUnifiedUser(doc);
+});
+// ──────────────────────────────────────────────────────────────
 
 export const Member: Model<IMember> =
     mongoose.models.Member || mongoose.model<IMember>("Member", memberSchema);

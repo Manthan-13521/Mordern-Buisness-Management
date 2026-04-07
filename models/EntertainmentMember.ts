@@ -45,6 +45,10 @@ export interface IEntertainmentMember extends Document {
     isDeleted: boolean;
     deletedAt?: Date;
     deleteReason?: "auto_quick" | "auto_standard" | "manual";
+    // ── PROMPT 1.2 Access State (Fast Entry Opt) ──
+    accessState: "active" | "blocked"; 
+    cachedBalance: number;             
+    // ──────────────────────────────────────────────
     createdAt: Date;
     updatedAt: Date;
 }
@@ -102,6 +106,15 @@ const entertainmentMemberSchema = new Schema<IEntertainmentMember>(
             type: String,
             enum: ["auto_quick", "auto_standard", "manual"],
         },
+        // ── PROMPT 1.2 Access State (Fast Entry Opt) ──
+        accessState: {
+            type: String,
+            enum: ["active", "blocked"],
+            default: "active",
+            index: true
+        },
+        cachedBalance: { type: Number, default: 0 },
+        // ──────────────────────────────────────────────
     },
     { timestamps: true, collection: "entertainment_members" }
 );

@@ -1,33 +1,54 @@
 /**
- * Environment variable validation.
- * Import this at the top of lib/mongodb.ts to fail fast if required vars are missing.
+ * Strict Environment variable validation.
  */
-
-const REQUIRED_ENV_VARS = [
-    "MONGODB_URI",
-    "NEXTAUTH_SECRET",
-    "NEXTAUTH_URL",
-    // "CRON_SECRET", // Now optional — will warn instead of crash
-];
+import { z } from "zod";
 
 const isBuild = 
     process.env.npm_lifecycle_event === "build" || 
-    process.env.NEXT_PHASE === "phase-production-build" ||
-    (process.env.CI === "true" && !process.env.CRON_SECRET);
+    process.env.NEXT_PHASE === "phase-production-build";
+
+const envSchema = z.object({
+  // Required everywhere except isolated build steps
+  MONGODB_URI: z.string().url("MONGODB_URI must be a valid connection string"),
+  UPSTASH_REDIS_REST_URL: z.string().url("Must be valid Upstash URL"),
+  UPSTASH_REDIS_REST_TOKEN: z.string().min(1, "Missing Upstash token"),
+
+  // Security
+  JWT_SECRET: z.string().min(16).optional(),
+  NEXTAUTH_SECRET: z.string().min(16),
+
+  // File Storage / S3
+  AWS_ACCESS_KEY_ID: z.string().min(1).optional(),
+  AWS_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+  AWS_S3_BUCKET_NAME: z.string().min(1).optional(),
+  AWS_S3_REGION: z.string().min(1).optional(),
+
+  // Sentry
+  SENTRY_DSN: z.string().url().optional(),
+
+  // external services
+  RAZORPAY_KEY_ID: z.string().optional(),
+  RAZORPAY_KEY_SECRET: z.string().optional(),
+  TWILIO_ACCOUNT_SID: z.string().optional(),
+  TWILIO_AUTH_TOKEN: z.string().optional(),
+  TWILIO_PHONE_NUMBER: z.string().optional(),
+
+  // Background queues
+  QSTASH_TOKEN: z.string().min(1).optional(),
+});
+
+let parsedEnv = process.env;
 
 if (!isBuild) {
-    for (const key of REQUIRED_ENV_VARS) {
-        if (!process.env[key]) {
-            throw new Error(`[Startup] Missing CRITICAL environment variable: ${key}. Please set it in Vercel Settings.`);
+    try {
+        parsedEnv = envSchema.parse(process.env) as any;
+    } catch (e: any) {
+        if (e instanceof z.ZodError) {
+            console.error("❌ Invalid environment variables:", e.flatten().fieldErrors);
+            process.exit(1);
         }
-    }
-
-    if (!process.env.CRON_SECRET) {
-        console.warn("⚠️ [Startup] CRON_SECRET is missing. WhatsApp automation crons will fail to run.");
-    }
-    if (!process.env.ENCRYPTION_KEY) {
-        console.warn("⚠️ [Startup] ENCRYPTION_KEY is missing. Twilio connection will fail.");
+        throw e;
     }
 }
 
-export {}; // Module marker
+export const env = parsedEnv;

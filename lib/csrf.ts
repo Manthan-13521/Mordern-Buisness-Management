@@ -1,11 +1,9 @@
-import crypto from "crypto";
-
 /**
- * CSRF Token utilities.
- * Tokens are generated server-side and must be sent back by the frontend
- * in the `x-csrf-token` header on all mutating requests (POST/PUT/DELETE).
+ * CSRF Token utilities — Edge Runtime compatible (Web Crypto API only).
+ * No Node.js 'crypto' module import.
  *
- * ⚠️  NEVER use a fallback secret. If NEXTAUTH_SECRET is missing, crash.
+ * Token format: base64url(timestamp) + "." + base64url(HMAC-SHA256 signature)
+ * Max age: 24 hours.
  */
 
 function getSecret(): string {
@@ -16,28 +14,40 @@ function getSecret(): string {
     return secret;
 }
 
-/**
- * Generate a CSRF token.
- * Format: timestamp.signature
- * The signature is HMAC-SHA256 of the timestamp using the server secret.
- */
-export function generateCSRFToken(): string {
-    const timestamp = Date.now().toString();
-    const signature = crypto
-        .createHmac("sha256", getSecret())
-        .update(timestamp)
-        .digest("hex");
-    return `${timestamp}.${signature}`;
+async function importKey(secret: string): Promise<CryptoKey> {
+    const enc = new TextEncoder();
+    return crypto.subtle.importKey(
+        "raw",
+        enc.encode(secret),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign", "verify"]
+    );
+}
+
+function toBase64Url(buffer: ArrayBuffer): string {
+    return btoa(String.fromCharCode(...new Uint8Array(buffer)))
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/, "");
 }
 
 /**
- * Verify a CSRF token.
- * Checks that:
- * 1. Token has valid format
- * 2. Signature matches
- * 3. Token is not older than 24 hours
+ * Generate a CSRF token (async, Edge-safe).
+ * Format: timestamp.hmac-sha256-signature
  */
-export function verifyCSRFToken(token: string): boolean {
+export async function generateCSRFToken(): Promise<string> {
+    const timestamp = Date.now().toString();
+    const key = await importKey(getSecret());
+    const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(timestamp));
+    return `${timestamp}.${toBase64Url(sig)}`;
+}
+
+/**
+ * Verify a CSRF token (async, Edge-safe).
+ * Checks format, HMAC signature, and expiry (24 h).
+ */
+export async function verifyCSRFToken(token: string): Promise<boolean> {
     if (!token || typeof token !== "string") return false;
 
     const parts = token.split(".");
@@ -51,17 +61,18 @@ export function verifyCSRFToken(token: string): boolean {
     const MAX_AGE_MS = 24 * 60 * 60 * 1000;
     if (Date.now() - ts > MAX_AGE_MS) return false;
 
-    // Verify signature using timing-safe comparison
-    const expectedSignature = crypto
-        .createHmac("sha256", getSecret())
-        .update(timestamp)
-        .digest("hex");
-
     try {
-        return crypto.timingSafeEqual(
-            Buffer.from(signature, "hex"),
-            Buffer.from(expectedSignature, "hex")
+        const key = await importKey(getSecret());
+        const expectedSig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(timestamp));
+
+        // Decode incoming signature
+        const incomingSig = Uint8Array.from(
+            atob(signature.replace(/-/g, "+").replace(/_/g, "/")),
+            (c) => c.charCodeAt(0)
         );
+
+        // Constant-time comparison via subtle.verify
+        return await crypto.subtle.verify("HMAC", key, incomingSig, new TextEncoder().encode(timestamp));
     } catch {
         return false;
     }

@@ -1,8 +1,13 @@
 import type { NextConfig } from "next";
+// Fail the build/startup instantly if missing critical env 
+import "./lib/env";
 
 const nextConfig: NextConfig = {
   // Gzip all responses — important for JSON API payloads
   compress: true,
+  compiler: {
+    removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error", "warn"] } : false,
+  },
 
   experimental: {
     optimizePackageImports: [

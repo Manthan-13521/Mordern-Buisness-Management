@@ -10,7 +10,7 @@ export interface IEntryLog extends Document {
     status: "granted" | "denied";
     isValid: boolean;
     reason?: string;
-    failReason?: "expired" | "not_found" | "face_mismatch";
+    failReason?: "expired" | "not_found" | "face_mismatch" | "blocked_defaulter";
     operatorId?: mongoose.Types.ObjectId;
     deviceId?: string;
     qrToken?: string;
@@ -37,7 +37,7 @@ const entryLogSchema = new Schema<IEntryLog>(
         reason: { type: String },
         failReason: {
             type: String,
-            enum: ["expired", "not_found", "face_mismatch"],
+            enum: ["expired", "not_found", "face_mismatch", "blocked_defaulter"],
         },
         operatorId: { type: Schema.Types.ObjectId, ref: "User" },
         deviceId: { type: String },
@@ -56,7 +56,7 @@ entryLogSchema.index({ memberId: 1, scanTime: -1 }); // kept for cooldown checks
 
 // Section 2B — additional indexes
 entryLogSchema.index({ memberId: 1, createdAt: -1 });
-entryLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: 31536000 }); // TTL: auto-delete after 1 year
+entryLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: 1296000 }); // TTL: auto-delete after 15 days
 
 export const EntryLog: Model<IEntryLog> =
     mongoose.models.EntryLog ||

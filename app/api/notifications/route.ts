@@ -3,6 +3,7 @@ import { dbConnect } from "@/lib/mongodb";
 import { NotificationLog } from "@/models/NotificationLog";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getTenantFilter } from "@/lib/tenant";
 
 export async function GET(req: Request) {
     try {
@@ -18,15 +19,16 @@ export async function GET(req: Request) {
         const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "20")));
         const skip  = (page - 1) * limit;
 
-        const baseMatch =
-            session.user.role !== "superadmin"
-                ? { poolId: session.user.poolId || "UNASSIGNED_POOL" }
-                : {};
+        // ── Tenant isolation guard ───────────────────────────────────────────
+        if (session.user.role !== "superadmin" && !session.user.poolId) {
+            return NextResponse.json({ error: "No pool assigned to this account" }, { status: 400 });
+        }
+        const baseMatch = getTenantFilter(session.user);
 
         const [logs, total] = await Promise.all([
             NotificationLog.find({ ...baseMatch })
                 .populate("memberId", "name memberId phone")
-                .select("memberId type message status date sentAt")
+                .select("memberId type message status date sentAt module actionType")
                 .sort({ date: -1 })
                 .skip(skip)
                 .limit(limit)

@@ -4,6 +4,8 @@ import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { auditCrossTenantAccess, secureUpdateById } from "@/lib/tenantSecurity";
+import { getTenantFilter } from "@/lib/tenant";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -26,9 +28,18 @@ export async function POST(req: Request, props: RouteContext) {
             return NextResponse.json({ error: "itemName is required" }, { status: 400 });
         }
 
-        let member: any = await Member.findByIdAndUpdate(
-            id,
-            {
+        let member = await secureUpdateById(Member, id, {
+            $push: {
+                equipmentTaken: {
+                    itemName:    itemName.trim(),
+                    issuedDate:  new Date(),
+                    isReturned:  false,
+                },
+            },
+        }, session.user, { select: "memberId name equipmentTaken" });
+
+        if (!member) {
+            member = await secureUpdateById(EntertainmentMember, id, {
                 $push: {
                     equipmentTaken: {
                         itemName:    itemName.trim(),
@@ -36,27 +47,10 @@ export async function POST(req: Request, props: RouteContext) {
                         isReturned:  false,
                     },
                 },
-            },
-            { new: true }
-        ).select("memberId name equipmentTaken");
-
-        if (!member) {
-            member = await EntertainmentMember.findByIdAndUpdate(
-                id,
-                {
-                    $push: {
-                        equipmentTaken: {
-                            itemName:    itemName.trim(),
-                            issuedDate:  new Date(),
-                            isReturned:  false,
-                        },
-                    },
-                },
-                { new: true }
-            ).select("memberId name equipmentTaken");
+            }, session.user, { select: "memberId name equipmentTaken" });
         }
 
-        if (!member) return NextResponse.json({ error: "Member not found" }, { status: 404 });
+        if (!member) return NextResponse.json({ error: "Not Found" }, { status: 404 });
 
         return NextResponse.json({ message: "Equipment issued.", equipmentTaken: member.equipmentTaken });
     } catch (error) {
@@ -84,33 +78,37 @@ export async function PATCH(req: Request, props: RouteContext) {
             return NextResponse.json({ error: "equipmentItemId is required" }, { status: 400 });
         }
 
+        const tenantFilter = getTenantFilter(session.user);
+
         let member: any = await Member.findOneAndUpdate(
-            { _id: id, "equipmentTaken._id": equipmentItemId },
+            { _id: id, "equipmentTaken._id": equipmentItemId, ...tenantFilter },
             {
                 $set: {
                     "equipmentTaken.$.isReturned":   true,
                     "equipmentTaken.$.returnedDate": new Date(),
                 },
             },
-            { new: true }
+            { returnDocument: 'after' }
         ).select("memberId name equipmentTaken");
 
         if (!member) {
             member = await EntertainmentMember.findOneAndUpdate(
-                { _id: id, "equipmentTaken._id": equipmentItemId },
+                { _id: id, "equipmentTaken._id": equipmentItemId, ...tenantFilter },
                 {
                     $set: {
                         "equipmentTaken.$.isReturned":   true,
                         "equipmentTaken.$.returnedDate": new Date(),
                     },
                 },
-                { new: true }
+                { returnDocument: 'after' }
             ).select("memberId name equipmentTaken");
         }
 
         if (!member) {
+            await auditCrossTenantAccess(Member, id, session.user);
+            await auditCrossTenantAccess(EntertainmentMember, id, session.user);
             return NextResponse.json(
-                { error: "Member or equipment item not found" },
+                { error: "Not Found" },
                 { status: 404 }
             );
         }

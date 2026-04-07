@@ -141,7 +141,7 @@ export async function PATCH(req: NextRequest) {
         const pool = await Pool.findOneAndUpdate(
             { poolId },
             { $set: { status } },
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!pool) {

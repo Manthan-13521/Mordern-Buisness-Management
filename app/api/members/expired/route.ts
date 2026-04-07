@@ -4,6 +4,7 @@ import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getTenantFilter } from "@/lib/tenant";
 
 export async function GET(req: Request) {
     try {
@@ -19,10 +20,19 @@ export async function GET(req: Request) {
         const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
         const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50")));
         const skip = (page - 1) * limit;
+        const memberType = searchParams.get("type") || "all";
 
         const now = new Date();
+
+        // ── Tenant isolation guard ───────────────────────────────────────────
+        if (session.user.role !== "superadmin" && !session.user.poolId) {
+            return NextResponse.json({ error: "No pool assigned to this account" }, { status: 400 });
+        }
+        const tenantFilter = getTenantFilter(session.user);
+
         const baseMatch: any = {
             isDeleted: false,
+            ...tenantFilter,
             $or: [
                 { status: "expired" },
                 { isExpired: true },
@@ -31,20 +41,41 @@ export async function GET(req: Request) {
             ]
         };
 
-        if (session.user.role !== "superadmin") {
-            baseMatch.poolId = session.user.poolId || "UNASSIGNED_POOL";
+        if (memberType === "member") {
+            baseMatch.memberId = { $regex: /^M(?!S)/i };
+        } else if (memberType === "entertainment") {
+            baseMatch.memberId = { $regex: /^MS/i };
         }
 
-        const pipeline: any[] = [
-            { $match: baseMatch },
-            {
+        const includeRegular = memberType === "all" || memberType === "member";
+        const includeEntertainment = memberType === "all" || memberType === "entertainment";
+
+        const pipeline: any[] = [];
+        
+        if (includeRegular) {
+            pipeline.push({ $match: baseMatch });
+            pipeline.push({ $addFields: { _source: "regular" } });
+        } else if (includeEntertainment) {
+            pipeline.push({ $match: { _id: null } }); 
+        }
+
+        if (includeEntertainment) {
+            pipeline.push({
                 $unionWith: {
                     coll: "entertainment_members",
                     pipeline: [
-                        { $match: baseMatch }
+                        { $match: baseMatch },
+                        { $addFields: { _source: "entertainment" } }
                     ]
                 }
-            },
+            });
+        }
+        
+        if (!includeRegular && includeEntertainment) {
+            pipeline.push({ $match: { _source: "entertainment" } });
+        }
+
+        pipeline.push(
             { $sort: { planEndDate: -1, createdAt: -1 } },
             { $skip: skip },
             { $limit: limit },
@@ -77,15 +108,16 @@ export async function GET(req: Request) {
                     createdAt: 1
                 }
             }
-        ];
+        );
 
-        const [members, regularTotal, entTotal] = await Promise.all([
-            Member.aggregate(pipeline),
-            Member.countDocuments(baseMatch),
-            EntertainmentMember.countDocuments(baseMatch),
+        const regularBaseCount = includeRegular ? await Member.countDocuments(baseMatch) : 0;
+        const entertainmentBaseCount = includeEntertainment ? await EntertainmentMember.countDocuments(baseMatch) : 0;
+
+        const [members] = await Promise.all([
+            Member.aggregate(pipeline)
         ]);
         
-        const total = regularTotal + entTotal;
+        const total = regularBaseCount + entertainmentBaseCount;
 
         return NextResponse.json({
             members,

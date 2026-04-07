@@ -23,9 +23,9 @@ export async function GET(req: Request) {
         let pool = null;
 
         if (poolslug) {
-            pool = await Pool.findOne({ slug: poolslug }).select("capacity").lean();
+            pool = await Pool.findOne({ slug: poolslug }).select("capacity slug poolName adminEmail plan subscriptionStatus subscriptionEndsAt isTwilioConnected").lean();
         } else if (session?.user?.poolId) {
-            pool = await Pool.findOne({ poolId: session.user.poolId }).select("capacity").lean();
+            pool = await Pool.findOne({ poolId: session.user.poolId }).select("capacity slug poolName adminEmail plan subscriptionStatus subscriptionEndsAt isTwilioConnected").lean();
         }
 
         if (pool) {
@@ -38,6 +38,16 @@ export async function GET(req: Request) {
             occupancyDurationMinutes: settings.occupancyDurationMinutes || 60,
             available: Math.max(0, activeCapacity - settings.currentOccupancy),
             lastBackupAt: settings.lastBackupAt,
+            // Account Overview data
+            pool: pool ? {
+                slug: (pool as any).slug,
+                poolName: (pool as any).poolName,
+                adminEmail: (pool as any).adminEmail,
+                plan: (pool as any).plan,
+                subscriptionStatus: (pool as any).subscriptionStatus,
+                subscriptionEndsAt: (pool as any).subscriptionEndsAt,
+                isTwilioConnected: (pool as any).isTwilioConnected,
+            } : null
         });
     } catch (error) {
         return apiError(error);

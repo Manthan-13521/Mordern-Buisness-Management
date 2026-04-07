@@ -38,8 +38,14 @@ export default function SuperAdminLoginPage() {
     };
 
     return (
-        <div className="flex min-h-screen flex-1 flex-col justify-center px-6 py-12 lg:px-8 bg-gray-50 dark:bg-gray-950">
-            <div className="sm:mx-auto sm:w-full sm:max-w-sm">
+        <div className="flex min-h-screen flex-1 flex-col justify-center px-6 py-12 lg:px-8 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950">
+            {/* Background glow */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-red-600/10 rounded-full blur-[120px]" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-slate-600/5 rounded-full blur-[100px] delay-700" />
+            </div>
+
+            <div className="relative sm:mx-auto sm:w-full sm:max-w-sm">
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900">
                     <ShieldAlert className="h-8 w-8 text-red-600 dark:text-red-400" />
                 </div>
@@ -51,72 +57,72 @@ export default function SuperAdminLoginPage() {
                 </p>
             </div>
 
-            <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-                <form className="space-y-6" onSubmit={handleSubmit}>
-                    {error && (
-                        <div className="rounded-md bg-red-50 p-4 dark:bg-red-900/50">
-                            <div className="flex">
-                                <div className="text-sm text-red-700 dark:text-red-200">{error}</div>
+            <div className="relative mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
+                <div className="bg-slate-950/40 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl p-8 ring-1 ring-white/5">
+                    <form className="space-y-6" onSubmit={handleSubmit}>
+                        {error && (
+                            <div className="rounded-xl bg-red-500/10 border border-red-500/30 px-4 py-3">
+                                <p className="text-sm text-red-400">{error}</p>
+                            </div>
+                        )}
+
+                        <div>
+                            <label
+                                htmlFor="username"
+                                className="block text-xs font-medium text-white/80 uppercase tracking-wider mb-1.5"
+                            >
+                                Email address
+                            </label>
+                            <div className="mt-2">
+                                <input
+                                    id="username"
+                                    name="username"
+                                    type="text"
+                                    autoComplete="email"
+                                    required
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    className="block w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent disabled:opacity-50 transition"
+                                    disabled={loading}
+                                />
                             </div>
                         </div>
-                    )}
 
-                    <div>
-                        <label
-                            htmlFor="username"
-                            className="block text-sm font-medium leading-6 text-gray-900 dark:text-white"
-                        >
-                            Email address
-                        </label>
-                        <div className="mt-2">
-                            <input
-                                id="username"
-                                name="username"
-                                type="text"
-                                autoComplete="email"
-                                required
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-red-600 sm:text-sm sm:leading-6 dark:bg-gray-800 dark:text-white dark:ring-gray-700 disabled:opacity-50"
-                                disabled={loading}
-                            />
+                        <div>
+                            <div className="flex items-center justify-between">
+                                <label
+                                    htmlFor="password"
+                                    className="block text-xs font-medium text-white/80 uppercase tracking-wider mb-1.5"
+                                >
+                                    Password
+                                </label>
+                            </div>
+                            <div className="mt-2">
+                                <input
+                                    id="password"
+                                    name="password"
+                                    type="password"
+                                    autoComplete="current-password"
+                                    required
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="block w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent disabled:opacity-50 transition"
+                                    disabled={loading}
+                                />
+                            </div>
                         </div>
-                    </div>
 
-                    <div>
-                        <div className="flex items-center justify-between">
-                            <label
-                                htmlFor="password"
-                                className="block text-sm font-medium leading-6 text-gray-900 dark:text-white"
+                        <div>
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="flex w-full justify-center rounded-xl bg-red-600 px-3 py-2.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:opacity-50 transition-all active:scale-[0.98]"
                             >
-                                Password
-                            </label>
+                                {loading ? "Signing in..." : "Sign in"}
+                            </button>
                         </div>
-                        <div className="mt-2">
-                            <input
-                                id="password"
-                                name="password"
-                                type="password"
-                                autoComplete="current-password"
-                                required
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-red-600 sm:text-sm sm:leading-6 dark:bg-gray-800 dark:text-white dark:ring-gray-700 disabled:opacity-50"
-                                disabled={loading}
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="flex w-full justify-center rounded-md bg-red-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:opacity-50 transition-colors"
-                        >
-                            {loading ? "Signing in..." : "Sign in"}
-                        </button>
-                    </div>
-                </form>
+                    </form>
+                </div>
             </div>
         </div>
     );

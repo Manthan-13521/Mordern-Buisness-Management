@@ -44,6 +44,13 @@ declare module "next-auth" {
             poolId?: string;
             poolSlug?: string;
             poolName?: string;
+            // ── Hostel tenant fields (additive) ──
+            hostelId?: string;
+            hostelSlug?: string;
+            hostelName?: string;
+            // ── Subscription fields ──
+            subscriptionStatus?: "active" | "expired" | "none";
+            subscriptionExpiryDate?: string | null;
         } & DefaultSession["user"];
     }
     interface User {
@@ -51,6 +58,13 @@ declare module "next-auth" {
         poolId?: string;
         poolSlug?: string;
         poolName?: string;
+        // ── Hostel tenant fields (additive) ──
+        hostelId?: string;
+        hostelSlug?: string;
+        hostelName?: string;
+        // ── Subscription fields ──
+        subscriptionStatus?: "active" | "expired" | "none";
+        subscriptionExpiryDate?: string | null;
     }
 }
 
@@ -61,6 +75,13 @@ declare module "next-auth/jwt" {
         poolId?: string;
         poolSlug?: string;
         poolName?: string;
+        // ── Hostel tenant fields (additive) ──
+        hostelId?: string;
+        hostelSlug?: string;
+        hostelName?: string;
+        // ── Subscription fields ──
+        subscriptionStatus?: "active" | "expired" | "none";
+        subscriptionExpiryDate?: string | null;
     }
 }
 
@@ -152,11 +173,11 @@ export const authOptions: NextAuthOptions = {
 
                 // Tenant isolation: if pool was specified, verify user belongs to it
                 if (pool && user && user.poolId !== (pool as any).poolId) {
-                    throw new Error("User not found in this pool");
+                    throw new Error("Invalid credentials");
                 }
 
                 if (!user) {
-                    throw new Error("User not found in this pool");
+                    throw new Error("Invalid credentials");
                 }
 
                 const isMatch = await bcrypt.compare(credentials.password, user.passwordHash);
@@ -192,6 +213,31 @@ export const authOptions: NextAuthOptions = {
                     }
                 }
 
+                // ── Compute subscription status dynamically ──
+                const subExpiry = user.subscription?.expiryDate;
+                const subscriptionStatus: "active" | "expired" | "none" = subExpiry
+                    ? (new Date() > new Date(subExpiry) ? "expired" : "active")
+                    : "none";
+                const subscriptionExpiryDate = subExpiry ? new Date(subExpiry).toISOString() : null;
+
+                // ── Hostel admin path (additive — pool flow untouched above) ──
+                if (user.role === "hostel_admin" && user.hostelId) {
+                    const { Hostel } = await import("@/models/Hostel");
+                    const hostel = await Hostel.findOne({ hostelId: user.hostelId }).lean() as any;
+                    clearRateLimit(rlKey);
+                    return {
+                        id: user._id.toString(),
+                        name: user.name,
+                        email: user.email,
+                        role: user.role,
+                        hostelId: user.hostelId,
+                        hostelSlug: hostel?.slug,
+                        hostelName: hostel?.hostelName,
+                        subscriptionStatus,
+                        subscriptionExpiryDate,
+                    };
+                }
+
                 return {
                     id: user._id.toString(),
                     name: user.name,
@@ -200,6 +246,8 @@ export const authOptions: NextAuthOptions = {
                     poolId: user.poolId,
                     poolSlug: effectiveSlug || credentials.poolSlug,
                     poolName: poolNameStr,
+                    subscriptionStatus,
+                    subscriptionExpiryDate,
                 };
             },
         }),
@@ -212,9 +260,16 @@ export const authOptions: NextAuthOptions = {
                 if (user.poolId) token.poolId = user.poolId;
                 if (user.poolSlug) token.poolSlug = user.poolSlug;
                 if (user.poolName) token.poolName = user.poolName;
+                // ── Hostel fields (additive) ──
+                if (user.hostelId) token.hostelId = user.hostelId;
+                if (user.hostelSlug) token.hostelSlug = user.hostelSlug;
+                if (user.hostelName) token.hostelName = user.hostelName;
+                // ── Subscription fields ──
+                token.subscriptionStatus = user.subscriptionStatus ?? "none";
+                token.subscriptionExpiryDate = user.subscriptionExpiryDate ?? null;
             }
             if (trigger === "update" && session) {
-                 token = { ...token, ...session }
+                 token = { ...token, ...session };
             }
             return token;
         },
@@ -225,12 +280,19 @@ export const authOptions: NextAuthOptions = {
                 if (token.poolId) session.user.poolId = token.poolId;
                 if (token.poolSlug) session.user.poolSlug = token.poolSlug;
                 if (token.poolName) session.user.poolName = token.poolName;
+                // ── Hostel fields (additive) ──
+                if (token.hostelId) session.user.hostelId = token.hostelId;
+                if (token.hostelSlug) session.user.hostelSlug = token.hostelSlug;
+                if (token.hostelName) session.user.hostelName = token.hostelName;
+                // ── Subscription fields ──
+                session.user.subscriptionStatus = token.subscriptionStatus ?? "none";
+                session.user.subscriptionExpiryDate = token.subscriptionExpiryDate ?? null;
             }
             return session;
         },
     },
     session: {
         strategy: "jwt",
-        maxAge: 30 * 24 * 60 * 60, // 30 Days
-    },
+        maxAge: 30 * 24 * 60 * 60, // 30 Days expiration for the JWT payload validation itself
+    }
 };

@@ -1,0 +1,53 @@
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { dbConnect } from "@/lib/mongodb";
+import { activateSubscription } from "@/lib/services/subscriptionActivationService";
+
+/**
+ * POST /api/subscription/activate
+ * FALLBACK: Frontend-side Razorpay success verification.
+ * Used when webhook hasn't fired yet (race condition protection).
+ */
+export async function POST(req: Request) {
+    try {
+        const session = await getServerSession(authOptions) as any;
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const body = await req.json();
+        const { razorpayOrderId, razorpayPaymentId, razorpaySignature, isMock, planType, module, blocks } = body;
+
+        if (!planType || !module) {
+            return NextResponse.json({ error: "planType and module are required" }, { status: 400 });
+        }
+
+        if (!isMock && (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature)) {
+            return NextResponse.json({ error: "Payment verification data missing" }, { status: 400 });
+        }
+
+        await dbConnect();
+
+        const { expiryDate, amountINR } = await activateSubscription({
+            razorpayOrderId:   razorpayOrderId || `mock_order_${Date.now()}`,
+            razorpayPaymentId: razorpayPaymentId || `mock_pay_${Date.now()}`,
+            razorpaySignature: razorpaySignature || "",
+            isMock:            isMock === true,
+            userId:            session.user.id,
+            planType,
+            module,
+            blocks:            blocks ? parseInt(blocks) : undefined,
+        });
+
+        return NextResponse.json({
+            success:    true,
+            expiryDate,
+            amountINR,
+            message:    "Subscription activated successfully",
+        });
+    } catch (error: any) {
+        console.error("[POST /api/subscription/activate]", error);
+        return NextResponse.json({ error: error?.message || "Activation failed" }, { status: 400 });
+    }
+}

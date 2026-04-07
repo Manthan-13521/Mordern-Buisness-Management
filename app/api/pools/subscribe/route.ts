@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
                     trialEndsAt:         undefined,
                 },
             },
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!pool) {

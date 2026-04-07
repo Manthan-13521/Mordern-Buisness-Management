@@ -33,7 +33,7 @@ export async function PATCH(
         const pool = await Pool.findOneAndUpdate(
             { poolId: pId.id },
             { $set: { subscriptionStatus: status } },
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!pool) {

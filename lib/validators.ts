@@ -1,48 +1,59 @@
 import { z } from 'zod'
 
+// ── Safe money amount: integer rupees, max 10 digits (₹9,999,999,999) ────────
+const MAX_AMOUNT = 9_999_999_999;
+
+const safeAmount = (min = 0) =>
+  z.number()
+    .min(min, `Amount must be at least ₹${min}`)
+    .max(MAX_AMOUNT, `Amount cannot exceed ₹${MAX_AMOUNT.toLocaleString('en-IN')}`)
+    .refine(v => Number.isFinite(v), 'Amount must be a finite number')
+    .refine(v => !isNaN(v), 'Amount must be a valid number');
+
 export const MemberCreateSchema = z.object({
-  name: z.string().min(2).max(100).trim(),
-  phone: z.string().min(1).max(25),
+  name: z.string().min(2).max(30).trim(),
+  phone: z.string().min(10).max(13),
   planId: z.string().min(1).max(50),
   paymentMethod: z.enum(['cash', 'upi', 'razorpay_online', 'card', 'online']),
   transactionId: z.string().max(100).optional(),
   photo: z.string().optional(),
   planQuantity: z.number().int().min(1).max(100).optional().default(1),
-  paidAmount: z.number().min(0).max(10_00_000).optional().default(0),    // Max ₹10L
-  balanceAmount: z.number().min(0).max(10_00_000).optional().default(0),
+  paidAmount: safeAmount().optional().default(0),
+  balanceAmount: safeAmount().optional().default(0),
 })
 
 export const EntertainmentMemberCreateSchema = z.object({
-  name: z.string().min(2).max(100).trim(),
-  phone: z.string().min(1).max(25),
+  name: z.string().min(2).max(30).trim(),
+  phone: z.string().min(10).max(13),
   planId: z.string().min(1).max(50),
   dob: z.string().optional(),
   photoBase64: z.string().optional(),
   aadharCard: z.string().max(20).optional(),
   address: z.string().max(300).optional(),
   planQuantity: z.number().int().min(1).max(100).optional().default(1),
-  paidAmount: z.number().min(0).max(10_00_000).optional().default(0),
-  balanceAmount: z.number().min(0).max(10_00_000).optional().default(0),
+  paidAmount: safeAmount().optional().default(0),
+  balanceAmount: safeAmount().optional().default(0),
 })
 
 export const PaymentSchema = z.object({
   memberId: z.string().min(1).max(50),
   planId: z.string().min(1).max(50),
   memberCollection: z.enum(['members', 'entertainment_members']).optional().default('members'),
-  amount: z.number().positive().max(10_00_000),  // Max ₹10L per payment
+  amount: safeAmount(1),  // Positive, max ₹9,999,999,999
   paymentMethod: z.enum(['cash', 'upi', 'razorpay_online', 'card', 'online']),
   transactionId: z.string().max(100).optional(),
+  clientId: z.string().max(100).optional(), // 🚀 Offline Sync Deduplication Key
   idempotencyKey: z.string().max(100).optional(),
   notes: z.string().max(500).optional(),
 })
 
 export const PlanSchema = z.object({
-  name: z.string().min(2).max(50).trim(),
+  name: z.string().min(2).max(30).trim(),
   durationDays: z.number().int().min(0).max(3650).optional().default(0),
   durationHours: z.number().int().min(0).max(1000).optional().default(0),
   durationMinutes: z.number().int().min(0).max(1000).optional().default(0),
   durationSeconds: z.number().int().min(0).max(1000).optional().default(0),
-  price: z.number().min(0).max(10_00_000),       // Max ₹10L
+  price: safeAmount(),  // Max ₹9,999,999,999
   description: z.string().max(200).optional(),
   features: z.array(z.string().max(100)).max(20).optional().default([]),
   whatsAppAlert: z.boolean().optional(),
@@ -86,8 +97,8 @@ export const RazorpayOrderSchema = z.object({
 })
 
 export const StaffCreateSchema = z.object({
-  name: z.string().min(2).max(100).trim(),
-  phone: z.string().min(1).max(25),
+  name: z.string().min(2).max(30).trim(),
+  phone: z.string().min(10).max(13),
   role: z.enum(['Trainer', 'Manager', 'Staff']),
 })
 

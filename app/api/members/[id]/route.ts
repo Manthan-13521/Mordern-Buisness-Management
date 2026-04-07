@@ -3,6 +3,7 @@ import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { auditCrossTenantAccess, secureFindById, secureUpdateById } from "@/lib/tenantSecurity";
 
 import { EntertainmentMember } from "@/models/EntertainmentMember";
 import { invalidateCache } from "@/lib/membersCache";
@@ -23,18 +24,13 @@ export async function GET(_req: Request, props: RouteContext) {
         const { id } = await props.params;
 
         const populateFields = "name price durationDays durationHours durationMinutes hasTokenPrint quickDelete hasEntertainment hasFaceScan";
-        let member: any = await Member.findById(id).select("+photoUrl").populate("planId", populateFields).lean();
+        let member = await secureFindById(Member, id, session.user, { select: "+photoUrl", populate: { path: "planId", select: populateFields } });
 
         if (!member) {
-            member = await EntertainmentMember.findById(id).select("+photoUrl").populate("planId", populateFields).lean();
+            member = await secureFindById(EntertainmentMember, id, session.user, { select: "+photoUrl", populate: { path: "planId", select: populateFields } });
         }
 
-        if (!member) return NextResponse.json({ error: "Member not found" }, { status: 404 });
-
-        // Pool isolation
-        if (session.user.role !== "superadmin" && member.poolId !== session.user.poolId) {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-        }
+        if (!member) return NextResponse.json({ error: "Not Found" }, { status: 404 });
 
         return NextResponse.json(member);
     } catch (error) {
@@ -59,21 +55,14 @@ export async function PATCH(req: Request, props: RouteContext) {
         const body = await req.json();
         const { isDeleted, deletedAt, memberId, poolId, ...safeUpdates } = body;
 
-        let member: any = await Member.findByIdAndUpdate(
-            id,
-            { $set: safeUpdates },
-            { new: true }
-        ).populate("planId", "name price hasTokenPrint");
+        // ── Ownership check: strictly scoped via secure wrapper ──
+        let member = await secureUpdateById(Member, id, { $set: safeUpdates }, session.user, { populate: { path: "planId", select: "name price hasTokenPrint" } });
 
         if (!member) {
-            member = await EntertainmentMember.findByIdAndUpdate(
-                id,
-                { $set: safeUpdates },
-                { new: true }
-            ).populate("planId", "name price hasTokenPrint");
+            member = await secureUpdateById(EntertainmentMember, id, { $set: safeUpdates }, session.user, { populate: { path: "planId", select: "name price hasTokenPrint" } });
         }
 
-        if (!member) return NextResponse.json({ error: "Member not found" }, { status: 404 });
+        if (!member) return NextResponse.json({ error: "Not Found" }, { status: 404 });
 
         // Invalidate members list cache
         invalidateCache(member.poolId).catch(() => {});
@@ -101,28 +90,32 @@ export async function DELETE(req: Request, props: RouteContext) {
         const { id } = await props.params;
         if (!id) return NextResponse.json({ error: "Missing member ID" }, { status: 400 });
 
-        const deletePayload = {
-            $set: {
-                isDeleted:    true,
-                deletedAt:    new Date(),
-                deleteReason: "manual",
-                isActive:     false,
-                status:       "deleted",
-            },
+        const updates = {
+            isDeleted:    true,
+            deletedAt:    new Date(),
+            deletedBy:    session.user.id,
+            deleteReason: "manual",
+            isActive:     false,
+            status:       "deleted"
         };
-
-        let member: any = await Member.findByIdAndUpdate(id, deletePayload, { new: true });
-
-        if (!member) {
-            member = await EntertainmentMember.findByIdAndUpdate(id, deletePayload, { new: true });
+        
+        // 1. Soft Delete
+        let updated = await secureUpdateById(Member, id, { $set: updates }, session.user);
+        if (!updated) {
+            updated = await secureUpdateById(EntertainmentMember, id, { $set: updates }, session.user);
         }
 
-        if (!member) return NextResponse.json({ error: "Member not found" }, { status: 404 });
+        if (!updated) {
+            // Log intrusion if existed in another pool
+            await auditCrossTenantAccess(Member, id, session.user);
+            await auditCrossTenantAccess(EntertainmentMember, id, session.user);
+            return NextResponse.json({ error: "Not Found" }, { status: 404 });
+        }
 
-        // Invalidate members list cache
-        invalidateCache(member.poolId).catch(() => {});
+        // 2. Cache Invalidation
+        invalidateCache(updated.poolId).catch(() => {});
 
-        return NextResponse.json({ message: "Member soft-deleted successfully." });
+        return NextResponse.json({ message: "Member moved to recycle bin successfully." });
     } catch (error) {
         console.error("[DELETE /api/members/[id]]", error);
         return NextResponse.json({ error: "Server error deleting member" }, { status: 500 });

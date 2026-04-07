@@ -30,7 +30,7 @@ export async function generateMemberId(poolId: string, isEntertainment: boolean 
     await Counter.findByIdAndUpdate(
       counterId,
       { $setOnInsert: { seq: startSeq } },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     )
   }
 
@@ -42,7 +42,7 @@ export async function generateMemberId(poolId: string, isEntertainment: boolean 
     const counter = await Counter.findByIdAndUpdate(
       counterId,
       { $inc: { seq: 1 } },
-      { new: true }
+      { returnDocument: 'after' }
     )
 
     const candidateId = `${prefix}${String(counter.seq).padStart(4, '0')}`

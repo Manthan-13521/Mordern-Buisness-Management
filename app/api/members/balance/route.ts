@@ -3,6 +3,7 @@ import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getTenantFilter } from "@/lib/tenant";
 
 import { EntertainmentMember } from "@/models/EntertainmentMember";
 
@@ -23,21 +24,38 @@ export async function GET(req: Request) {
         const url = new URL(req.url);
         const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1"));
         const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "20")));
+        const memberType = url.searchParams.get("type") || "all";
+
+        // ── Tenant isolation guard ───────────────────────────────────────────
+        if (session.user.role !== "superadmin" && !session.user.poolId) {
+            return NextResponse.json({ error: "No pool assigned to this account" }, { status: 400 });
+        }
+        const tenantFilter = getTenantFilter(session.user);
 
         const query: Record<string, unknown> = {
             balanceAmount: { $gt: 0 },
             isDeleted: false,
+            ...tenantFilter,
         };
 
-        if (session.user.role !== "superadmin") {
-            query.poolId = session.user.poolId || "UNASSIGNED_POOL";
+        if (memberType === "member") {
+            query.memberId = { $regex: /^M(?!S)/i };
+        } else if (memberType === "entertainment") {
+            query.memberId = { $regex: /^MS/i };
         }
 
         const selectFields = "memberId name phone planId planQuantity paidAmount balanceAmount paymentStatus createdAt photoUrl";
-        const [regularMembers, entertainmentMembers] = await Promise.all([
-            Member.find(query).populate("planId", "name price").select(selectFields).lean() as any,
-            EntertainmentMember.find(query).populate("planId", "name price").select(selectFields).lean() as any,
-        ]);
+        
+        let regularMembers: any[] = [];
+        let entertainmentMembers: any[] = [];
+        
+        if (memberType === "all" || memberType === "member") {
+            regularMembers = await Member.find(query).populate("planId", "name price").select(selectFields).lean() as any[];
+        }
+        
+        if (memberType === "all" || memberType === "entertainment") {
+            entertainmentMembers = await EntertainmentMember.find(query).populate("planId", "name price").select(selectFields).lean() as any[];
+        }
 
         const taggedEntertainment = entertainmentMembers.map((m: any) => ({ ...m, _source: "entertainment" }));
         const allMembers = [...regularMembers, ...taggedEntertainment]
@@ -50,6 +68,7 @@ export async function GET(req: Request) {
         const total = allMembers.length;
         const totalPages = Math.ceil(total / limit);
         const paginatedData = allMembers.slice((page - 1) * limit, page * limit);
+        const totalBalance = allMembers.reduce((sum, m) => sum + (m.balanceAmount || 0), 0);
 
         return NextResponse.json({
             data: paginatedData,
@@ -57,6 +76,7 @@ export async function GET(req: Request) {
             page,
             limit,
             totalPages,
+            totalBalance,
         });
     } catch (error) {
         console.error("[GET /api/members/balance]", error);

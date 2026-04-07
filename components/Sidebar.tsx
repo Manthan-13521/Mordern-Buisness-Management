@@ -19,6 +19,8 @@ import {
     UserCog,
     Trophy,
     MessageSquare,
+    PieChart,
+    BadgeDollarSign,
 } from "lucide-react";
 
 export function Sidebar() {
@@ -26,9 +28,9 @@ export function Sidebar() {
     const { data: session } = useSession();
     const role = session?.user?.role;
 
-    const match = pathname.match(/^\/([^/]+)\/admin/);
-    const poolSlug = match && match[1] !== "superadmin" ? match[1] : "";
-    const basePath = poolSlug ? `/${poolSlug}/admin` : "/admin";
+    const match = pathname.match(/^\/pool\/([^/]+)\/admin/);
+    const poolSlug = match ? match[1] : "";
+    const basePath = poolSlug ? `/pool/${poolSlug}/admin` : "/admin";
 
     const links = [
         { name: "Dashboard",        href: `${basePath}/dashboard`,        icon: LayoutDashboard, roles: ["admin", "operator"] },
@@ -42,8 +44,10 @@ export function Sidebar() {
         { name: "Competitions",     href: `${basePath}/competitions`,      icon: Trophy,           roles: ["admin"] },
         { name: "Logs",             href: `${basePath}/logs`,              icon: History,          roles: ["admin", "operator"] },
         { name: "Notifications",    href: `${basePath}/notifications`,     icon: Bell,             roles: ["admin", "operator"] },
-        { name: "Settings",         href: `${basePath}/settings`,          icon: Settings,         roles: ["admin"] },
+        { name: "Graph Analysis",   href: `${basePath}/graph-analysis`,    icon: PieChart,         roles: ["admin"] },
+        { name: "Revenue Analytics", href: `${basePath}/revenue-analytics`,  icon: BadgeDollarSign,  roles: ["admin"] },
         { name: "WhatsApp",         href: `${basePath}/twilio`,            icon: MessageSquare,    roles: ["admin"] },
+        { name: "Settings",         href: `${basePath}/settings`,          icon: Settings,         roles: ["admin"] },
     ];
 
     const filteredLinks = links.filter(link => role && link.roles.includes(role));

@@ -1,99 +1,115 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import { Building2, Mail, MapPin, Loader2, CheckCircle2, Phone } from "lucide-react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Waves, Eye, EyeOff, CheckCircle, Loader2 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-function SubscribeFormContent() {
-    const searchParams = useSearchParams();
-    const plan = searchParams.get("plan") || "starter";
+const INPUT = "w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition";
+const LABEL = "block text-xs font-medium text-white/80 uppercase tracking-wider mb-1";
 
-    const [loading, setLoading] = useState(false);
-    const [success, setSuccess] = useState(false);
-    const [poolData, setPoolData] = useState<any>(null);
+function PoolRegisterForm() {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const plan = searchParams.get("plan") || "starter";
 
     const [form, setForm] = useState({
         poolName: "",
         city: "",
+        adminName: "",
         adminEmail: "",
+        password: "",
+        confirmPassword: "",
         adminPhone: "",
     });
+    const [showPass, setShowPass] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState<{ poolSlug: string; poolName: string; rawPassword?: string } | null>(null);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+        setError("");
 
         try {
+            // Client-side validation
+            if (!form.adminEmail.includes("@") || !form.adminEmail.includes(".")) {
+                setError("Please enter a valid email address.");
+                setLoading(false);
+                return;
+            }
+            if (form.password.length < 8) {
+                setError("Password must be at least 8 characters long.");
+                setLoading(false);
+                return;
+            }
+
             const res = await fetch("/api/pool/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ...form, plan })
+                body: JSON.stringify({
+                    poolName: form.poolName,
+                    city: form.city,
+                    adminEmail: form.adminEmail,
+                    adminName: form.adminName,
+                    adminPhone: form.adminPhone,
+                    password: form.password,
+                    plan,
+                }),
             });
 
             const data = await res.json();
-            
-            if (res.ok) {
-                setPoolData(data);
-                setSuccess(true);
-            } else {
-                alert(data.error || "Something went wrong.");
+            if (!res.ok) {
+                setError(data.error || "Registration failed. Please try again.");
+                setLoading(false);
+                return;
             }
-        } catch (error) {
-            console.error(error);
-            alert("Error connecting to server.");
+
+            // Support both old (rawPassword in root) and new response shapes
+            setSuccess({
+                poolSlug: data.pool?.slug || data.poolSlug,
+                poolName: data.pool?.poolName || data.poolName,
+                rawPassword: data.rawPassword,
+            });
+        } catch {
+            setError("Network error. Please try again.");
         } finally {
             setLoading(false);
         }
     };
 
-    if (success && poolData) {
+    if (success) {
         return (
-            <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 dark:bg-gray-950">
-                <div className="sm:mx-auto sm:w-full sm:max-w-md">
-                    <div className="flex justify-center text-green-500">
-                        <CheckCircle2 className="w-16 h-16" />
-                    </div>
-                    <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
-                        Pool Registered Successfully!
-                    </h2>
-                    <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-                        Your pool system is ready to use. Save these credentials securely.
-                    </p>
-                </div>
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-sky-950 px-4">
+                <div className="relative w-full max-w-sm">
+                    <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-8 text-center space-y-5">
+                        <div className="flex justify-center">
+                            <div className="h-16 w-16 rounded-2xl bg-emerald-600 flex items-center justify-center shadow-lg">
+                                <CheckCircle className="h-8 w-8 text-white" />
+                            </div>
+                        </div>
+                        <h1 className="text-2xl font-bold text-white">Pool Registered!</h1>
+                        <p className="text-slate-300 text-sm">
+                            <span className="font-semibold text-white">{success.poolName}</span> is ready. Save your credentials below.
+                        </p>
 
-                <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-                    <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 dark:bg-gray-900">
-                        <dl className="space-y-4">
-                            <div>
-                                <dt className="text-sm border-b border-gray-200 dark:border-gray-800 pb-1 font-medium text-gray-500 dark:text-gray-400">Pool Name</dt>
-                                <dd className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">{poolData.pool.poolName}</dd>
+                        {success.rawPassword && (
+                            <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-3 text-left">
+                                <p className="text-xs text-amber-400 font-medium mb-1 uppercase tracking-wider">Admin Password (save this!)</p>
+                                <p className="font-mono text-lg font-bold text-amber-300">{success.rawPassword}</p>
+                                <p className="text-xs text-amber-500 mt-1">This will not be shown again.</p>
                             </div>
-                            <div>
-                                <dt className="text-sm border-b border-gray-200 dark:border-gray-800 pb-1 font-medium text-gray-500 dark:text-gray-400">Admin Email</dt>
-                                <dd className="mt-1 text-sm text-gray-900 dark:text-white">{poolData.admin.email}</dd>
-                            </div>
-                            <div>
-                                <dt className="text-sm border-b border-gray-200 dark:border-gray-800 pb-1 font-medium text-gray-500 dark:text-gray-400">Admin Password</dt>
-                                <dd className="mt-1 text-mono text-lg font-bold text-indigo-600 dark:text-indigo-400">{poolData.rawPassword}</dd>
-                                <p className="text-xs text-red-500 mt-1">Make sure you copy this password, it won't be shown again.</p>
-                            </div>
-                        </dl>
+                        )}
 
-                        <div className="mt-8 space-y-4">
-                            <a 
-                                href={`/${poolData.pool.slug}/admin/login`}
-                                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none transition"
+                        <div className="space-y-2 pt-2">
+                            <button
+                                onClick={() => router.push("/select-plan")}
+                                className="w-full bg-sky-600 hover:bg-sky-500 text-white font-semibold py-3 rounded-xl shadow transition"
                             >
-                                Login to Admin Portal
-                            </a>
-                            <a 
-                                href={`/${poolData.pool.slug}`}
-                                className="w-full flex justify-center py-2 px-4 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none transition"
-                            >
-                                View Public Registration Page
-                            </a>
+                                Continue to Plan Selection →
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -102,118 +118,156 @@ function SubscribeFormContent() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 dark:bg-gray-950">
-            <div className="sm:mx-auto sm:w-full sm:max-w-md">
-                <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
-                    Setup your Pool
-                </h2>
-                <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-                    Signing up for the <span className="font-semibold text-indigo-600 dark:text-indigo-400">{plan.toUpperCase()}</span> plan.
-                </p>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-sky-950 px-4 py-12">
+            {/* Background glow */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-sky-600/20 rounded-full blur-[120px]" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-blue-600/15 rounded-full blur-[100px] delay-700" />
             </div>
 
-            <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-                <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
-                    <form className="space-y-6" onSubmit={handleSubmit}>
-                        <div>
-                            <label htmlFor="poolName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Pool Name
-                            </label>
-                            <div className="mt-1 relative rounded-md shadow-sm">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <Building2 className="h-5 w-5 text-gray-400" />
-                                </div>
+            <div className="relative w-full max-w-lg">
+                <div className="bg-slate-950/40 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl p-8 ring-1 ring-white/5">
+                    {/* Header */}
+                    <div className="flex flex-col items-center mb-8">
+                        <div className="h-14 w-14 rounded-2xl bg-sky-600 flex items-center justify-center shadow-lg shadow-sky-900/50 mb-4">
+                            <Waves className="h-7 w-7 text-white" />
+                        </div>
+                        <h1 className="text-2xl font-bold text-white">Register Your Pool</h1>
+                        <p className="mt-1 text-sm text-slate-400">
+                            Set up your swimming pool management system
+                            {plan !== "starter" && (
+                                <span className="ml-1 text-sky-400 font-medium">· {plan.toUpperCase()} plan</span>
+                            )}
+                        </p>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        {error && (
+                            <div className="rounded-xl bg-red-500/10 border border-red-500/30 px-4 py-3">
+                                <p className="text-sm text-red-400">{error}</p>
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="col-span-2">
+                                <label className={LABEL}>Pool Name</label>
                                 <input
-                                    type="text"
-                                    id="poolName"
                                     required
                                     value={form.poolName}
-                                    onChange={(e) => setForm({ ...form, poolName: e.target.value })}
-                                    className="pl-10 block w-full border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white py-2"
+                                    onChange={e => setForm(p => ({ ...p, poolName: e.target.value }))}
                                     placeholder="Blue Waves Aquatic Center"
+                                    className={INPUT}
                                 />
                             </div>
-                        </div>
-
-                        <div>
-                            <label htmlFor="city" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                City / Location
-                            </label>
-                            <div className="mt-1 relative rounded-md shadow-sm">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <MapPin className="h-5 w-5 text-gray-400" />
-                                </div>
+                            <div>
+                                <label className={LABEL}>City</label>
                                 <input
-                                    type="text"
-                                    id="city"
                                     required
                                     value={form.city}
-                                    onChange={(e) => setForm({ ...form, city: e.target.value })}
-                                    className="pl-10 block w-full border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white py-2"
+                                    onChange={e => setForm(p => ({ ...p, city: e.target.value }))}
                                     placeholder="Hyderabad"
+                                    className={INPUT}
                                 />
                             </div>
-                        </div>
-
-                        <div>
-                            <label htmlFor="adminEmail" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Primary Admin Email
-                            </label>
-                            <div className="mt-1 relative rounded-md shadow-sm">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <Mail className="h-5 w-5 text-gray-400" />
-                                </div>
+                            <div>
+                                <label className={LABEL}>Admin Phone</label>
                                 <input
-                                    type="email"
-                                    id="adminEmail"
-                                    required
-                                    value={form.adminEmail}
-                                    onChange={(e) => setForm({ ...form, adminEmail: e.target.value })}
-                                    className="pl-10 block w-full border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white py-2"
-                                    placeholder="admin@bluewaves.com"
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label htmlFor="adminPhone" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Support Phone Number (Optional)
-                            </label>
-                            <div className="mt-1 relative rounded-md shadow-sm">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <Phone className="h-5 w-5 text-gray-400" />
-                                </div>
-                                <input
-                                    type="tel"
-                                    id="adminPhone"
                                     value={form.adminPhone}
-                                    onChange={(e) => setForm({ ...form, adminPhone: e.target.value })}
-                                    className="pl-10 block w-full border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white py-2"
+                                    onChange={e => setForm(p => ({ ...p, adminPhone: e.target.value }))}
                                     placeholder="9876543210"
+                                    className={INPUT}
+                                />
+                            </div>
+                            <div className="col-span-2">
+                                <label className={LABEL}>Admin Name</label>
+                                <input
+                                    required
+                                    value={form.adminName}
+                                    onChange={e => setForm(p => ({ ...p, adminName: e.target.value }))}
+                                    placeholder="Your full name"
+                                    className={INPUT}
+                                />
+                            </div>
+                            <div className="col-span-2">
+                                <label className={LABEL}>Admin Email</label>
+                                <input
+                                    required
+                                    type="email"
+                                    value={form.adminEmail}
+                                    onChange={e => setForm(p => ({ ...p, adminEmail: e.target.value }))}
+                                    placeholder="admin@bluewaves.com"
+                                    className={`${INPUT} ${error.toLowerCase().includes("email") ? "ring-2 ring-red-500/50 border-red-500/50" : ""}`} 
+                                />
+                                {error.toLowerCase().includes("email") && (
+                                    <p className="mt-1.5 text-[10px] text-red-400 font-medium uppercase tracking-wider">Email Error</p>
+                                )}
+                            </div>
+                            <div>
+                                <label className={LABEL}>Password</label>
+                                <div className="relative">
+                                    <input
+                                        required
+                                        type={showPass ? "text" : "password"}
+                                        value={form.password}
+                                        onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
+                                        placeholder="••••••••"
+                                        minLength={8}
+                                        className={INPUT + " pr-10"}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPass(!showPass)}
+                                        tabIndex={-1}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                                    >
+                                        {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label className={LABEL}>Confirm Password</label>
+                                <input
+                                    required
+                                    type={showPass ? "text" : "password"}
+                                    value={form.confirmPassword}
+                                    onChange={e => setForm(p => ({ ...p, confirmPassword: e.target.value }))}
+                                    placeholder="••••••••"
+                                    minLength={8}
+                                    className={INPUT}
                                 />
                             </div>
                         </div>
 
-                        <div>
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition"
-                            >
-                                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Complete Subscription & Generate System"}
-                            </button>
-                        </div>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 hover:bg-blue-50 dark:hover:bg-blue-500/100 active:bg-indigo-700 text-white text-sm font-semibold py-3 shadow-lg shadow-sky-900/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                        >
+                            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Waves className="h-4 w-4" />}
+                            {loading ? "Creating Pool…" : "Create Pool Account"}
+                        </button>
                     </form>
+
+                    <p className="mt-6 text-center text-xs text-slate-600">
+                        Already have an account?{" "}
+                        <a href="/login" className="text-sky-400 hover:text-sky-300 transition">
+                            Sign in here
+                        </a>
+                    </p>
                 </div>
             </div>
         </div>
     );
 }
 
-export default function SubscribePageWrapper() {
+export default function SubscribePage() {
     return (
-        <Suspense fallback={<div className="min-h-screen flex items-center justify-center dark:bg-gray-950"><Loader2 className="w-8 h-8 animate-spin text-indigo-600"/></div>}>
-            <SubscribeFormContent />
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center bg-slate-900">
+                <Loader2 className="h-8 w-8 animate-spin text-sky-500" />
+            </div>
+        }>
+            <PoolRegisterForm />
         </Suspense>
     );
 }

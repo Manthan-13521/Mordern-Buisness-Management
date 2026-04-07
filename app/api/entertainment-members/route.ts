@@ -92,7 +92,7 @@ export async function POST(req: Request) {
         const updatedPool = await Pool.findOneAndUpdate(
             { poolId },
             { $inc: { entertainmentMemberCounter: 1 } },
-            { new: true }
+            { returnDocument: 'after' }
         );
         const counter = updatedPool!.entertainmentMemberCounter;
         const memberId = `MS${counter.toString().padStart(4, "0")}`;

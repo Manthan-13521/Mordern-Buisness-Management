@@ -4,7 +4,7 @@ export function RowSkeleton({ rows = 8 }: { rows?: number }) {
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i}
           className="animate-pulse h-12 rounded-lg
-                     bg-gray-100 dark:bg-gray-800" />
+                     bg-gray-100 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg" />
       ))}
     </div>
   );

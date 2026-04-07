@@ -4,6 +4,7 @@ import { Plan } from "@/models/Plan";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { PlanSchema } from "@/lib/validators";
+import { secureUpdateById } from "@/lib/tenantSecurity";
 
 export async function PUT(
     req: Request,
@@ -47,10 +48,10 @@ export async function PUT(
             updateFields.messages = body.messages;
         }
 
-        const updatedPlan = await Plan.findByIdAndUpdate(id, { $set: updateFields }, { new: true });
+        const updatedPlan = await secureUpdateById(Plan, id, { $set: updateFields }, session.user);
 
         if (!updatedPlan) {
-            return NextResponse.json({ error: "Plan not found" }, { status: 404 });
+            return NextResponse.json({ error: "Not Found" }, { status: 404 });
         }
 
         return NextResponse.json(updatedPlan, { status: 200 });
@@ -79,14 +80,10 @@ export async function DELETE(
 
         // Soft-delete: set deletedAt timestamp so it disappears from charts
         // but historical data (member records, payments) stays intact
-        const softDeleted = await Plan.findByIdAndUpdate(
-            id,
-            { $set: { deletedAt: new Date() } },
-            { new: true }
-        );
+        const softDeleted = await secureUpdateById(Plan, id, { $set: { deletedAt: new Date() } }, session.user);
 
         if (!softDeleted) {
-            return NextResponse.json({ error: "Plan not found" }, { status: 404 });
+            return NextResponse.json({ error: "Not Found" }, { status: 404 });
         }
 
         return NextResponse.json({ message: "Plan deleted successfully" }, { status: 200 });

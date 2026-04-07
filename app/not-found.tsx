@@ -4,7 +4,7 @@ import { SearchX } from "lucide-react";
 export default function NotFound() {
     return (
         <div className="flex min-h-[50vh] flex-col items-center justify-center p-4 text-center">
-            <div className="rounded-full bg-gray-100 p-4 text-gray-500 mb-6 dark:bg-gray-800 dark:text-gray-400">
+            <div className="rounded-full bg-gray-100 p-4 text-gray-500 mb-6 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg dark:text-gray-400">
                 <SearchX className="h-10 w-10" />
             </div>
             <h2 className="text-3xl font-bold text-gray-900 mb-3 dark:text-white">Page Not Found</h2>
@@ -13,7 +13,7 @@ export default function NotFound() {
             </p>
             <Link
                 href="/admin/dashboard"
-                className="rounded-md bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                className="rounded-md bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-50 dark:hover:bg-blue-500/100"
             >
                 Go back to Dashboard
             </Link>

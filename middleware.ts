@@ -1,6 +1,15 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 import type { NextRequestWithAuth } from "next-auth/middleware";
+import { Redis } from "@upstash/redis";
+
+// Initialize Upstash Redis for distributed rate limit / abuse protection
+const redis = (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN)
+    ? new Redis({
+        url: process.env.UPSTASH_REDIS_REST_URL,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN,
+      })
+    : null;
 
 // ── Edge-compatible rate limiter (in-memory, per-instance) ──────────────
 // Works immediately without Redis. When Upstash Redis is configured,
@@ -28,8 +37,21 @@ const RATE_LIMITS: Record<string, number> = {
     'GET:/api/cron/cleanup': 2,
     'POST:/api/jobs/generate-card': 10,
     'POST:/api/seed': 2,
+    // ── Hostel rate limits (additive) ──────────────────────────────────
+    'POST:/api/hostel/register': 10,
+    'POST:/api/hostel/members': 20,
+    'POST:/api/hostel/payments': 15,
+    'POST:/api/hostel/plans': 10,
+    'GET:/api/cron/hostel-expiry-alerts': 2,
+    // ── Subscription rate limits ──────────────────────────────
+    'POST:/api/subscription/create-order': 10,
+    'POST:/api/subscription/activate':     10,
+    'POST:/api/subscription/webhook':       20,
+    'GET:/api/subscription/status':         30,
+    'GET:/api/cron/subscription-expiry':     2,
+    'POST:/api/cron/subscription-expiry':    2,
 };
-const DEFAULT_LIMIT = 60;
+const DEFAULT_LIMIT = 50;
 const WINDOW_MS = 60_000;
 
 function getIp(req: NextRequestWithAuth): string {
@@ -41,14 +63,29 @@ function getIp(req: NextRequestWithAuth): string {
     );
 }
 
-function rateLimit(ip: string, userId: string, method: string, path: string) {
+async function rateLimit(ip: string, userId: string, method: string, path: string) {
     const normalized = path.replace(/\/[a-f0-9]{24}/g, "").replace(/\/[^/]+\/admin/, "");
     const endpointKey = `${method}:${normalized}`;
     const limit = RATE_LIMITS[endpointKey] || DEFAULT_LIMIT;
     // Use BOTH user ID + IP as the rate limit key
-    const cacheKey = `${endpointKey}:${userId}:${ip}`;
-    const now = Date.now();
+    const cacheKey = `rl:${endpointKey}:${userId}:${ip}`;
+    
+    if (redis) {
+        try {
+            const current = await redis.incr(cacheKey);
+            if (current === 1) {
+                await redis.expire(cacheKey, 60); // 60 seconds
+            }
+            if (current > limit) {
+                return { allowed: false, limit, remaining: 0 };
+            }
+            return { allowed: true, limit, remaining: limit - current };
+        } catch (e) {
+            console.warn("[RateLimit] Redis failed, falling back to memory:", e);
+        }
+    }
 
+    const now = Date.now();
     const record = rateMap.get(cacheKey);
     if (record) {
         if (now > record.resetAt) {
@@ -80,8 +117,31 @@ const ABUSE_WINDOW = 5 * 60_000;   // 5 minutes
 const ABUSE_THRESHOLD = 200;         // requests
 const ABUSE_BLOCK = 15 * 60_000;    // 15 minutes
 
-function detectAbuse(key: string): boolean {
+async function detectAbuse(key: string): Promise<boolean> {
+    const redisKey = `abuse:${key}`;
+    const blockKey = `abuse:block:${key}`;
     const now = Date.now();
+
+    if (redis) {
+        try {
+            // Check if actively blocked
+            const isBlocked = await redis.get(blockKey);
+            if (isBlocked) return true;
+
+            const count = await redis.incr(redisKey);
+            if (count === 1) {
+                await redis.expire(redisKey, 300); // Wait next 5 min window
+            }
+            if (count > ABUSE_THRESHOLD) {
+                await redis.setex(blockKey, 900, "1"); // Block for 15 min
+                return true;
+            }
+            return false;
+        } catch (e) {
+            console.warn("[AbuseLimit] Redis failed, falling back to memory:", e);
+        }
+    }
+
     const record = abuseMap.get(key);
 
     if (record?.blockedUntil && now < record.blockedUntil) return true;
@@ -142,16 +202,22 @@ function applySecurityHeaders(res: NextResponse) {
 
 // ── Main Middleware ─────────────────────────────────────────────────────
 export default withAuth(
-    function middleware(req: NextRequestWithAuth) {
+    async function middleware(req: NextRequestWithAuth) {
         const token = req.nextauth.token;
         const path = req.nextUrl.pathname;
         const method = req.method;
 
+        // ── Tracing 4.1: Request ID Injection ──
+        const requestId = req.headers.get("x-request-id") || crypto.randomUUID();
+        const requestHeaders = new Headers(req.headers);
+        requestHeaders.set("x-request-id", requestId);
+
         // ── Handle CORS preflight ──
         if (method === "OPTIONS") {
-            const res = new NextResponse(null, { status: 204 });
+            const res = new NextResponse(null, { status: 204, headers: requestHeaders });
             applyCORS(req, res);
             applySecurityHeaders(res);
+            res.headers.set("x-request-id", requestId);
             return res;
         }
 
@@ -162,7 +228,7 @@ export default withAuth(
             const abuseKey = `${userId}:${ip}`;
 
             // 1. Abuse detection (blocks 15 min if > 200 req / 5 min)
-            if (detectAbuse(abuseKey)) {
+            if (token?.role !== "superadmin" && (await detectAbuse(abuseKey))) {
                 const res = NextResponse.json(
                     { error: "Suspicious activity detected. Temporarily blocked." },
                     { status: 403 }
@@ -171,18 +237,32 @@ export default withAuth(
                 return res;
             }
 
-            // 2. Rate limiting (per-endpoint, user+IP keyed)
-            const rl = rateLimit(ip, userId, method, path);
-            if (!rl.allowed) {
+            // 1.5 Payload Size Limit (100KB Edge Guard)
+            const contentLength = parseInt(req.headers.get("content-length") || "0", 10);
+            if (contentLength > 100_000) {
                 const res = NextResponse.json(
-                    { error: "Too many requests. Please slow down.", retryAfterSeconds: 60 },
-                    { status: 429 }
+                    { error: "Payload too large. Maximum allowed size is 100KB." },
+                    { status: 413 }
                 );
-                res.headers.set("Retry-After", "60");
-                res.headers.set("X-RateLimit-Limit", String(rl.limit));
-                res.headers.set("X-RateLimit-Remaining", "0");
                 applySecurityHeaders(res);
                 return res;
+            }
+
+            // 2. Rate limiting (per-endpoint, user+IP keyed)
+            let rl = { allowed: true, limit: DEFAULT_LIMIT, remaining: DEFAULT_LIMIT };
+            if (token?.role !== "superadmin") {
+                rl = await rateLimit(ip, userId, method, path);
+                if (!rl.allowed) {
+                    const res = NextResponse.json(
+                        { error: "Too many requests. Please slow down.", retryAfterSeconds: 60 },
+                        { status: 429 }
+                    );
+                    res.headers.set("Retry-After", "60");
+                    res.headers.set("X-RateLimit-Limit", String(rl.limit));
+                    res.headers.set("X-RateLimit-Remaining", "0");
+                    applySecurityHeaders(res);
+                    return res;
+                }
             }
 
             // 3. CSRF check for mutating methods (POST/PUT/DELETE)
@@ -200,7 +280,63 @@ export default withAuth(
                 "/api/member/login",
                 "/api/warmup",
                 "/api/health",
+                // ── Hostel exemptions (additive) ──
+                "/api/hostel/register",
+                // ── Subscription exemptions ──
+                "/api/subscription/webhook",
+                "/api/subscription/",
             ];
+
+            // ── Subscription expiry API guard ────────────────────────────────────
+            // Block protected API calls when subscription is expired.
+            // Only applies to logged-in non-superadmin users.
+            const SUBSCRIPTION_PROTECTED_APIS = [
+                "/api/members",
+                "/api/member/",
+                "/api/payments",
+                "/api/plans",
+                "/api/pool/",
+                "/api/hostel/",
+                "/api/entry",
+                "/api/analytics",
+                "/api/staff",
+                "/api/dashboard",
+                "/api/export",
+                "/api/logs",
+                "/api/settings",
+                "/api/notifications",
+                "/api/backups",
+            ];
+
+            const SUBSCRIPTION_ALWAYS_ALLOW = [
+                "/api/auth",
+                "/api/subscription",
+                "/api/warmup",
+                "/api/health",
+                "/api/cron",
+                "/api/pool/register",
+                "/api/hostel/register",
+            ];
+
+            const isProtectedApi = SUBSCRIPTION_PROTECTED_APIS.some((p) => path.startsWith(p));
+            const isAlwaysAllowed = SUBSCRIPTION_ALWAYS_ALLOW.some((p) => path.startsWith(p));
+
+            if (
+                isProtectedApi &&
+                !isAlwaysAllowed &&
+                token?.role !== "superadmin" &&
+                (token as any)?.subscriptionStatus === "expired"
+            ) {
+                const res = NextResponse.json(
+                    {
+                        error: "Subscription expired. Please renew to continue.",
+                        code:  "SUBSCRIPTION_EXPIRED",
+                    },
+                    { status: 403 }
+                );
+                applySecurityHeaders(res);
+                return res;
+            }
 
             const isMutating = ["POST", "PUT", "DELETE"].includes(method);
             const isExempt = CSRF_EXEMPT.some((p) => path.startsWith(p));
@@ -223,7 +359,7 @@ export default withAuth(
                 // Fallback: x-csrf-token header
                 const csrfToken = req.headers.get("x-csrf-token");
 
-                if (!sameOrigin && !verifyCSRFToken(csrfToken || "")) {
+                if (!sameOrigin && !(await verifyCSRFToken(csrfToken || ""))) {
                     const res = NextResponse.json(
                         { error: "Invalid or missing CSRF token" },
                         { status: 403 }
@@ -233,10 +369,13 @@ export default withAuth(
                 }
             }
 
-            // Pass through with security headers + rate limit info
-            const res = NextResponse.next();
+            // Pass through with security headers + rate limit info + tracing
+            const res = NextResponse.next({
+                request: { headers: requestHeaders }
+            });
             res.headers.set("X-RateLimit-Limit", String(rl.limit));
             res.headers.set("X-RateLimit-Remaining", String(rl.remaining));
+            res.headers.set("x-request-id", requestId);
             applySecurityHeaders(res);
             applyCORS(req, res);
             return res;
@@ -250,33 +389,91 @@ export default withAuth(
                 return res;
             }
             if (!token || token.role !== "superadmin") {
-                return NextResponse.redirect(new URL("/superadmin/login", req.url));
+                // Redirect to unified login page
+                return NextResponse.redirect(new URL("/login", req.url));
             }
             const res = NextResponse.next();
             applySecurityHeaders(res);
             return res;
         }
 
+        // ── Subscription page guard ────────────────────────────────────────────────
+        // Redirect expired admins to /renew-plan when they try to access any admin page.
+        const isAdminPage  = /^\/pool\/[^/]+\/admin(\/|$)/.test(path) || path.startsWith("/hostel/");
+        const isPublicPage = ["/select-plan", "/renew-plan", "/login", "/subscribe", "/api"].some(
+            (p) => path.startsWith(p)
+        );
+        if (
+            isAdminPage &&
+            !isPublicPage &&
+            token?.role !== "superadmin" &&
+            (token as any)?.subscriptionStatus === "expired"
+        ) {
+            const res = NextResponse.redirect(new URL("/renew-plan", req.url));
+            applySecurityHeaders(res);
+            return res;
+        }
+
+        // ── Hostel Admin page protection (additive — runs BEFORE pool check) ──
+        if (path.startsWith("/hostel/")) {
+            const hostelAdminRegex = /^\/hostel\/([^/]+)\/admin(\/.*)?$/;
+            const hostelMatch = path.match(hostelAdminRegex);
+
+            if (hostelMatch) {
+                const hostelSlug = hostelMatch[1];
+                const subRoute = hostelMatch[2] || "";
+
+                // Allow slug-specific and general login pages
+                if (subRoute.includes("/login")) {
+                    const res = NextResponse.next();
+                    applySecurityHeaders(res);
+                    return res;
+                }
+
+                // Not logged in → unified login
+                if (!token || token.role !== "hostel_admin") {
+                    return NextResponse.redirect(new URL("/login", req.url));
+                }
+
+                // Logged-in as wrong hostel → redirect to unified login (not wrong hostel's login)
+                if (token.hostelSlug !== hostelSlug) {
+                    return NextResponse.redirect(new URL("/login", req.url));
+                }
+
+                const res = NextResponse.next();
+                applySecurityHeaders(res);
+                return res;
+            }
+
+            // Public hostel registration pages (/hostel/register etc.)
+            const res = NextResponse.next();
+            applySecurityHeaders(res);
+            return res;
+        }
+
         // ── Pool Admin page protection ──
-        const poolAdminRegex = /^\/([^/]+)\/admin(\/.*)?$/;
+        const poolAdminRegex = /^\/pool\/([^/]+)\/admin(\/.*)?$/;
         const match = path.match(poolAdminRegex);
 
         if (match) {
             const poolSlug = match[1];
             const adminSubRoute = match[2] || "";
 
+            // Allow slug-specific login pages (backward compat)
             if (adminSubRoute.includes("/login")) {
                 const res = NextResponse.next();
                 applySecurityHeaders(res);
                 return res;
             }
 
+            // Not logged in → unified login
             if (!token || (token.role !== "admin" && token.role !== "operator")) {
-                return NextResponse.redirect(new URL(`/${poolSlug}/admin/login`, req.url));
+                return NextResponse.redirect(new URL("/login", req.url));
             }
 
+            // Logged in as wrong pool → unified login
             if (token.poolSlug !== poolSlug) {
-                return NextResponse.redirect(new URL(`/${poolSlug}/admin/login`, req.url));
+                return NextResponse.redirect(new URL("/login", req.url));
             }
 
             const res = NextResponse.next();
@@ -298,7 +495,10 @@ export default withAuth(
 export const config = {
     matcher: [
         "/superadmin/:path*",
-        "/:poolslug/admin/:path*",
+        "/pool/:poolSlug/admin/:path*",
+        "/hostel/:hostelSlug/admin/:path*",
         "/api/:path*",
+        "/select-plan",
+        "/renew-plan",
     ],
 };

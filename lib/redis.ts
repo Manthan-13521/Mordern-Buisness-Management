@@ -12,9 +12,14 @@ try {
             url: process.env.UPSTASH_REDIS_REST_URL,
             token: process.env.UPSTASH_REDIS_REST_TOKEN,
         });
+
+        // ── Prompt 3.1: Health Check ──
+        redis?.ping().catch(() => {
+            console.error("[ERROR] redis down");
+        });
     }
 } catch (err) {
-    console.warn("[Redis] Failed to initialize Upstash Redis:", err);
+    console.error("[ERROR] redis down", err);
 }
 
 export { redis };

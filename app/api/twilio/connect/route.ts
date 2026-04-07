@@ -85,7 +85,7 @@ export async function POST(req: Request) {
                     isTwilioConnected: true,
                 },
             },
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!pool) {

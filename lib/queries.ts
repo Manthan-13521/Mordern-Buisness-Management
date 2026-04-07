@@ -7,6 +7,14 @@ import { NotificationLog } from "@/models/NotificationLog";
 import { Payment } from "@/models/Payment";
 import { EntryLog } from "@/models/EntryLog";
 
+// Helper: build scoped filter. For superadmin ("superadmin" sentinel), no filter.
+// For regular pools, poolId MUST be a non-empty string — otherwise we throw.
+function buildPoolFilter(poolId: string): Record<string, string> {
+    if (poolId === "superadmin") return {};
+    if (!poolId) throw new Error("[queries.ts] poolId is required for tenant-scoped queries");
+    return { poolId };
+}
+
 // ── IST Timezone Helper ────────────────────────────────────────────────
 // Vercel runs in UTC. We must compute IST (UTC+5:30) day boundaries
 // so dashboard resets at exactly 12:00 AM India time.
@@ -48,7 +56,7 @@ function getISTDayBounds() {
 export const getCachedMembers = unstable_cache(
     async (poolId: string, page: number = 1, limit: number = 50) => {
         await dbConnect();
-        const baseMatch = poolId && poolId !== "superadmin" ? { poolId } : {};
+        const baseMatch = buildPoolFilter(poolId);
         
         const skip = (page - 1) * limit;
         
@@ -73,13 +81,22 @@ export const getCachedMembers = unstable_cache(
  * Used for Today's Revenue and Monthly Revenue on the dashboard.
  */
 export const getCachedAnalyticsSummary = unstable_cache(
-    async (poolId: string) => {
+    async (poolId: string, memberType: string = "all") => {
         await dbConnect();
-        const baseMatch = poolId && poolId !== "superadmin" ? { poolId } : {};
+        const baseMatch = buildPoolFilter(poolId);
         const { startOfDayIST, endOfDayIST, startOfMonthIST, startOfYearIST, now } = getISTDayBounds();
 
+        const paymentMatch = { ...baseMatch };
+        if (memberType === "member") paymentMatch.memberCollection = "members";
+        if (memberType === "entertainment") paymentMatch.memberCollection = "entertainment_members";
+
+        const memberQueryMatch = { ...baseMatch, isDeleted: false };
+        let includeRegular = memberType === "all" || memberType === "member";
+        let includeEntertainment = memberType === "all" || memberType === "entertainment";
+
         const [
-            activeMembers,
+            activeRegular,
+            activeEntertainment,
             todaysRevenue,
             monthlyRevenue,
             yearlyRevenue,
@@ -87,51 +104,46 @@ export const getCachedAnalyticsSummary = unstable_cache(
             todaysMemberEntries,
             todaysEntertainmentEntries
         ] = await Promise.all([
-            // Active = not deleted AND expiryDate is in the future
-            Member.countDocuments({
-                ...baseMatch,
-                isDeleted: false,
-                $or: [
-                    { planEndDate: { $gte: now } },
-                    { expiryDate: { $gte: now } },
-                ]
-            }),
-            // Today's revenue — payments created today (IST bounds)
+            (includeRegular ? Member.countDocuments({
+                ...memberQueryMatch,
+                memberId: { $regex: /^M(?!S)/i },
+                $or: [{ planEndDate: { $gte: now } }, { expiryDate: { $gte: now } }]
+            }) : Promise.resolve(0)) as Promise<number>,
+            (includeEntertainment ? EntertainmentMember.countDocuments({
+                ...memberQueryMatch,
+                memberId: { $regex: /^MS/i },
+                $or: [{ planEndDate: { $gte: now } }, { expiryDate: { $gte: now } }]
+            }) : Promise.resolve(0)) as Promise<number>,
             Payment.aggregate([
-                { $match: { ...baseMatch, status: "success", createdAt: { $gte: startOfDayIST, $lte: endOfDayIST } } },
+                { $match: { ...paymentMatch, status: "success", createdAt: { $gte: startOfDayIST, $lte: endOfDayIST } } },
                 { $group: { _id: null, total: { $sum: "$amount" } } }
             ]),
-            // Monthly revenue — payments created this month (IST)
             Payment.aggregate([
-                { $match: { ...baseMatch, status: "success", createdAt: { $gte: startOfMonthIST } } },
+                { $match: { ...paymentMatch, status: "success", createdAt: { $gte: startOfMonthIST } } },
                 { $group: { _id: null, total: { $sum: "$amount" } } }
             ]),
-            // Yearly revenue — payments created this year (IST)
             Payment.aggregate([
-                { $match: { ...baseMatch, status: "success", createdAt: { $gte: startOfYearIST } } },
+                { $match: { ...paymentMatch, status: "success", createdAt: { $gte: startOfYearIST } } },
                 { $group: { _id: null, total: { $sum: "$amount" } } }
             ]),
-            // Today's entries — scans within IST day bounds
             EntryLog.aggregate([
                 { $match: { ...baseMatch, scanTime: { $gte: startOfDayIST, $lte: endOfDayIST }, status: "granted" } },
                 { $group: { _id: null, total: { $sum: { $ifNull: ["$numPersons", 1] } } } }
             ]),
-            // Today's regular member registrations
-            Member.countDocuments({
-                ...baseMatch,
-                isDeleted: false,
+            includeRegular ? Member.countDocuments({
+                ...memberQueryMatch,
+                memberId: { $regex: /^M(?!S)/i },
                 createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
-            }),
-            // Today's entertainment member registrations
-            EntertainmentMember.countDocuments({
-                ...baseMatch,
-                isDeleted: false,
+            }) : 0,
+            includeEntertainment ? EntertainmentMember.countDocuments({
+                ...memberQueryMatch,
+                memberId: { $regex: /^MS/i },
                 createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
-            })
+            }) : 0
         ]);
 
         return {
-            activeMembers,
+            activeMembers: (activeRegular as number) + (activeEntertainment as number),
             totalRevenue: todaysRevenue[0]?.total || 0,
             monthlyRevenue: monthlyRevenue[0]?.total || 0,
             yearlyRevenue: yearlyRevenue[0]?.total || 0,
@@ -150,7 +162,7 @@ export const getCachedAnalyticsSummary = unstable_cache(
 export const getCachedPlans = unstable_cache(
     async (poolId: string) => {
         await dbConnect();
-        const baseMatch = poolId && poolId !== "superadmin" ? { poolId } : {};
+        const baseMatch = buildPoolFilter(poolId);
         return Plan.find({ ...baseMatch, deletedAt: null }).sort({ createdAt: -1 }).lean();
     },
     ["cached-plans-list"],
@@ -163,7 +175,7 @@ export const getCachedPlans = unstable_cache(
 export const getCachedNotificationLogs = unstable_cache(
     async (poolId: string, limit: number = 50) => {
         await dbConnect();
-        const baseMatch = poolId && poolId !== "superadmin" ? { poolId } : {};
+        const baseMatch = buildPoolFilter(poolId);
         return NotificationLog.find(baseMatch)
             .populate("memberId", "name phone memberId")
             .sort({ date: -1 })
@@ -179,43 +191,53 @@ export const getCachedNotificationLogs = unstable_cache(
  * Used for Total Members, Active Members, Today's Entries cards.
  */
 export const getCachedDashboardCounts = unstable_cache(
-    async (poolId: string) => {
+    async (poolId: string, memberType: string = "all") => {
         await dbConnect();
-        const baseMatch = poolId && poolId !== "superadmin" ? { poolId } : {};
+        const baseMatch = buildPoolFilter(poolId);
         const { startOfDayIST, endOfDayIST, now } = getISTDayBounds();
 
-        const [totalMembers, activeMembers, todaysEntries, todaysMemberEntries, todaysEntertainmentEntries] = await Promise.all([
-            Member.countDocuments({ ...baseMatch, isDeleted: false }),
-            // Active = not deleted AND expiry is in the future (real-time, not legacy status)
-            Member.countDocuments({
-                ...baseMatch,
-                isDeleted: false,
-                $or: [
-                    { planEndDate: { $gte: now } },
-                    { expiryDate: { $gte: now } },
-                ]
-            }),
+        const memberQueryMatch = { ...baseMatch, isDeleted: false };
+        let includeRegular = memberType === "all" || memberType === "member";
+        let includeEntertainment = memberType === "all" || memberType === "entertainment";
+
+        const [totalRegular, totalEntertainment, activeRegular, activeEntertainment, todaysEntries, todaysMemberEntries, todaysEntertainmentEntries] = await Promise.all([
+            includeRegular ? Member.countDocuments({
+                ...memberQueryMatch,
+                memberId: { $regex: /^M(?!S)/i }
+            }) : 0,
+            includeEntertainment ? EntertainmentMember.countDocuments({
+                ...memberQueryMatch,
+                memberId: { $regex: /^MS/i }
+            }) : 0,
+            includeRegular ? Member.countDocuments({
+                ...memberQueryMatch,
+                memberId: { $regex: /^M(?!S)/i },
+                $or: [{ planEndDate: { $gte: now } }, { expiryDate: { $gte: now } }]
+            }) : 0,
+            includeEntertainment ? EntertainmentMember.countDocuments({
+                ...memberQueryMatch,
+                memberId: { $regex: /^MS/i },
+                $or: [{ planEndDate: { $gte: now } }, { expiryDate: { $gte: now } }]
+            }) : 0,
             EntryLog.aggregate([
                 { $match: { ...baseMatch, scanTime: { $gte: startOfDayIST, $lte: endOfDayIST }, status: "granted" } },
                 { $group: { _id: null, total: { $sum: { $ifNull: ["$numPersons", 1] } } } }
             ]),
-            // Today's regular member registrations
-            Member.countDocuments({
-                ...baseMatch,
-                isDeleted: false,
+            includeRegular ? Member.countDocuments({
+                ...memberQueryMatch,
+                memberId: { $regex: /^M(?!S)/i },
                 createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
-            }),
-            // Today's entertainment member registrations
-            EntertainmentMember.countDocuments({
-                ...baseMatch,
-                isDeleted: false,
+            }) : 0,
+            includeEntertainment ? EntertainmentMember.countDocuments({
+                ...memberQueryMatch,
+                memberId: { $regex: /^MS/i },
                 createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
-            })
+            }) : 0
         ]);
 
         return {
-            totalMembers,
-            activeMembers,
+            totalMembers: (totalRegular as number) + (totalEntertainment as number),
+            activeMembers: (activeRegular as number) + (activeEntertainment as number),
             todaysEntries: todaysEntries[0]?.total || 0,
             todaysMemberEntries,
             todaysEntertainmentEntries,

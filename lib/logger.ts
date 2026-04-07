@@ -1,33 +1,15 @@
-import fs from "fs";
-import path from "path";
+import pino from "pino";
 
-const LOG_DIR = path.join(process.cwd(), "logs");
-
-function ensureLogDir() {
-    if (!fs.existsSync(LOG_DIR)) {
-        fs.mkdirSync(LOG_DIR, { recursive: true });
-    }
-}
-
-function formatEntry(level: string, message: string, meta?: object): string {
-    const ts = new Date().toISOString();
-    const metaStr = meta ? " " + JSON.stringify(meta) : "";
-    return `[${ts}] [${level}] ${message}${metaStr}\n`;
-}
-
-function writeLog(file: string, entry: string) {
-    // Skip file logging in production (Vercel read-only filesystem)
-    if (process.env.NODE_ENV === "production" || process.env.VERCEL) {
-        return;
-    }
-    try {
-        ensureLogDir();
-        fs.appendFileSync(path.join(LOG_DIR, file), entry, "utf8");
-    } catch (e) {
-        // Never crash the app because of a logging failure
-        console.error("[Logger] Failed to write log:", e);
-    }
-}
+// ── 4.1 Production Grade Pino Setup ──────────────────────────────────────────
+export const pinoLogger = pino({
+    level: process.env.NODE_ENV === "production" ? "info" : "debug",
+    base: { env: process.env.NODE_ENV },
+    timestamp: () => `,"time":"${new Date().toISOString()}"`,
+    transport: process.env.NODE_ENV === "development" ? {
+        target: "pino-pretty",
+        options: { colorize: true }
+    } : undefined
+});
 
 // ── Structured audit event types ─────────────────────────────────────────
 export type AuditEventType =
@@ -48,7 +30,15 @@ export type AuditEventType =
     | "ABUSE_DETECTED"
     | "CSRF_FAILED"
     | "BACKUP_CREATED"
-    | "ADMIN_ACTION";
+    | "ADMIN_ACTION"
+    | "PASSWORD_RESET_REQUESTED"
+    | "PASSWORD_RESET_FAILED"
+    | "PASSWORD_RESET_SUCCESS"
+    | "TENANT_ISOLATION_VIOLATION"
+    // ── Subscription ───────────────────────────────────────────
+    | "SUBSCRIPTION_ACTIVATED"
+    | "SUBSCRIPTION_PAYMENT_FAILED"
+    | "SUBSCRIPTION_WEBHOOK_INVALID_SIG";
 
 interface AuditEvent {
     type: AuditEventType;
@@ -58,49 +48,35 @@ interface AuditEvent {
     meta?: Record<string, unknown>;
 }
 
+/**
+ * Backward-compatible wrapper exposing pino while honoring existing API paths
+ */
 export const logger = {
     info(message: string, meta?: object) {
-        const entry = formatEntry("INFO", message, meta);
-        console.log(entry.trim());
-        writeLog("system.log", entry);
+        pinoLogger.info(meta || {}, message);
     },
     warn(message: string, meta?: object) {
-        const entry = formatEntry("WARN", message, meta);
-        console.warn(entry.trim());
-        writeLog("system.log", entry);
+        pinoLogger.warn(meta || {}, message);
     },
     error(message: string, meta?: object) {
-        const entry = formatEntry("ERROR", message, meta);
-        console.error(entry.trim());
-        writeLog("system.log", entry);
-        writeLog("errors.log", entry);
+        pinoLogger.error(meta || {}, message);
     },
     scan(message: string, meta?: object) {
-        const entry = formatEntry("SCAN", message, meta);
-        console.log(entry.trim());
-        writeLog("entry_scans.log", entry);
-        writeLog("system.log", entry);
+        // Keeping as info level logic internally but tagged as "scan" event
+        pinoLogger.info({ category: "SCAN", ...meta }, message);
     },
 
     /**
      * Structured audit log for security-sensitive events.
-     * Always writes to both console (JSON) and audit.log file.
-     * Events include: payments, logins, member changes, rate limits, abuse.
      */
     audit(event: AuditEvent) {
-        const logEntry = {
-            timestamp: new Date().toISOString(),
-            level: "AUDIT",
-            ...event,
-        };
-        const jsonStr = JSON.stringify(logEntry);
-        console.log(jsonStr);
-        writeLog("audit.log", jsonStr + "\n");
-        writeLog("system.log", formatEntry("AUDIT", event.type, {
+        pinoLogger.info({
+            category: "AUDIT", 
+            type: event.type,
             userId: event.userId,
             poolId: event.poolId,
             ip: event.ip,
-            ...event.meta,
-        }));
+            ...event.meta
+        }, `Audit: ${event.type}`);
     },
 };

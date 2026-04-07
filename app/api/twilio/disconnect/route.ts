@@ -24,7 +24,7 @@ export async function DELETE() {
                 $unset: { twilio: "" },
                 $set: { isTwilioConnected: false },
             },
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!pool) {
