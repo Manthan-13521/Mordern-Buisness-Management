@@ -114,8 +114,8 @@ setInterval(() => {
 // ── Abuse Detection (edge-compatible) ───────────────────────────────────
 const abuseMap = new Map<string, { count: number; windowStart: number; blockedUntil: number }>();
 const ABUSE_WINDOW = 5 * 60_000;   // 5 minutes
-const ABUSE_THRESHOLD = 200;         // requests
-const ABUSE_BLOCK = 15 * 60_000;    // 15 minutes
+const ABUSE_THRESHOLD = 800;         // requests (raised: dashboards fire many parallel calls + polling)
+const ABUSE_BLOCK = 2 * 60_000;     // 2 minutes (reduced: less punishing for false positives)
 
 async function detectAbuse(key: string): Promise<boolean> {
     const redisKey = `abuse:${key}`;
