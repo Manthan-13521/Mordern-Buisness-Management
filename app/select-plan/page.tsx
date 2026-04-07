@@ -16,22 +16,24 @@ const PLAN_CARD = "relative bg-slate-900/50 backdrop-blur-xl border border-white
 const SELECTED_PLAN = "ring-2 ring-sky-500 border-sky-500/50 bg-sky-500/5";
 
 export default function SelectPlanPage() {
-    const { data: session, update: updateSession } = useSession() as any;
+    const { data: session, status, update: updateSession } = useSession() as any;
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [pageLoading, setPageLoading] = useState(true);
     const [trialUsed, setTrialUsed] = useState(false);
     
-    // Determine module from session
+    // Determine module from session (fallback to pool if no session yet)
     const module: SubscriptionModule = session?.user?.hostelId ? "hostel" : "pool";
     const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlanType | null>(null);
     const [selectedBlocks, setSelectedBlocks] = useState<number>(1);
 
     useEffect(() => {
-        if (session) {
+        if (status === "unauthenticated") {
+            router.push("/login");
+        } else if (status === "authenticated" && session) {
             fetchStatus();
         }
-    }, [session]);
+    }, [session, status, router]);
 
     const fetchStatus = async () => {
         try {

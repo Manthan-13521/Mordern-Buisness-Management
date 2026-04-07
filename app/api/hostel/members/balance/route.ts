@@ -4,6 +4,7 @@ import { getToken } from "next-auth/jwt";
 import { HostelMember } from "@/models/HostelMember";
 import { HostelPayment } from "@/models/HostelPayment";
 import { HostelBlock } from "@/models/HostelBlock";
+import { HostelPlan } from "@/models/HostelPlan";
 import mongoose from "mongoose";
 
 export const dynamic = "force-dynamic";

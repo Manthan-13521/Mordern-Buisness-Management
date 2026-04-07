@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { HostelMember } from "@/models/HostelMember";
 import { HostelBlock } from "@/models/HostelBlock";
+import { HostelPlan } from "@/models/HostelPlan";
+import { HostelRoom } from "@/models/HostelRoom";
+import { HostelFloor } from "@/models/HostelFloor";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
