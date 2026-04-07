@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, CheckCircle, Eye, EyeOff } from "lucide-react";
+import { signIn } from "next-auth/react";
 
 const INPUT = "w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition";
 const LABEL = "block text-xs font-medium text-white/80 uppercase tracking-wider mb-1";
@@ -53,6 +54,13 @@ export default function HostelRegisterPage() {
                 setLoading(false);
                 return;
             }
+            // Auto-login to wipe any existing old session (like from a previous pool login)
+            await signIn("credentials", {
+                redirect: false,
+                username: form.adminEmail,
+                password: form.password,
+            });
+
             setSuccess({ hostelSlug: data.hostelSlug, hostelName: data.hostelName });
         } catch (err) {
             setError("Network error. Please try again.");
@@ -68,10 +76,10 @@ export default function HostelRegisterPage() {
                 <h1 className="text-2xl font-bold text-white">Registration Complete!</h1>
                 <p className="text-slate-300 text-sm"><span className="font-semibold text-white">{success.hostelName}</span> has been registered. Your admin account is ready.</p>
                 <button
-                    onClick={() => router.push("/login")}
+                    onClick={() => router.push("/select-plan")}
                     className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 hover:bg-blue-50 dark:hover:bg-blue-500/100 text-white font-semibold py-3 rounded-xl shadow transition"
                 >
-                    Go to Admin Login →
+                    Continue to Plan Selection →
                 </button>
             </div>
         </div>

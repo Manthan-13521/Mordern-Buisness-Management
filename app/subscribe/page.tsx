@@ -3,6 +3,7 @@
 import { useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Waves, Eye, EyeOff, CheckCircle, Loader2 } from "lucide-react";
+import { signIn } from "next-auth/react";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +67,13 @@ function PoolRegisterForm() {
                 setLoading(false);
                 return;
             }
+
+            // Auto-login to wipe any existing old session (like from a previous hostel login)
+            await signIn("credentials", {
+                redirect: false,
+                username: form.adminEmail,
+                password: form.password,
+            });
 
             // Support both old (rawPassword in root) and new response shapes
             setSuccess({
