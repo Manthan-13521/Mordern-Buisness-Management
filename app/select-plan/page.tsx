@@ -87,7 +87,7 @@ export default function SelectPlanPage() {
                     await updateSession();
                     window.location.href = session.user.hostelId 
                         ? `/hostel/${session.user.hostelSlug}/admin/dashboard` 
-                        : `/${session.user.poolSlug}/admin/dashboard`;
+                        : `/pool/${session.user.poolSlug}/admin/dashboard`;
                 }
                 return;
             }
@@ -118,7 +118,7 @@ export default function SelectPlanPage() {
                         await updateSession();
                         window.location.href = session.user.hostelId 
                             ? `/hostel/${session.user.hostelSlug}/admin/dashboard` 
-                            : `/${session.user.poolSlug}/admin/dashboard`;
+                            : `/pool/${session.user.poolSlug}/admin/dashboard`;
                     }
                 },
                 prefill: {
