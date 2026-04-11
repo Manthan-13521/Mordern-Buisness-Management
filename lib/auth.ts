@@ -259,11 +259,11 @@ export const authOptions: NextAuthOptions = {
                 clearRateLimit(rlKey);
 
                 // If logged in via generic route, lookup the Pool to get the slug for session
-                let effectiveSlug = credentials.poolSlug;
-                let poolNameStr = pool ? (pool as any).poolName : undefined;
+                let effectiveSlug = undefined;
+                let poolNameStr = undefined;
 
-                if (!effectiveSlug && user.poolId) {
-                    const userPool = pool || await Pool.findOne({ poolId: user.poolId }).lean();
+                if (user.poolId) {
+                    const userPool = await Pool.findOne({ poolId: user.poolId }).lean();
                     if (userPool) {
                         effectiveSlug = userPool.slug;
                         poolNameStr = userPool.poolName;
