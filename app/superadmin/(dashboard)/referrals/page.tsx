@@ -124,7 +124,8 @@ export default function ReferralsAdminPage() {
                                     <th className="px-6 py-4 font-medium">Uses</th>
                                     <th className="px-6 py-4 font-medium">Revenue Impact</th>
                                     <th className="px-6 py-4 font-medium">Limit</th>
-                                    <th className="px-6 py-4 font-medium rounded-r-lg text-center">Status</th>
+                                    <th className="px-6 py-4 font-medium text-center">Status</th>
+                                    <th className="px-6 py-4 font-medium rounded-r-lg text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -149,6 +150,32 @@ export default function ReferralsAdminPage() {
                                                     Inactive
                                                 </span>
                                             )}
+                                        </td>
+                                        <td className="px-6 py-4 text-right space-x-2">
+                                            <button 
+                                                onClick={async () => {
+                                                    await fetch("/api/superadmin/referrals", {
+                                                        method: "PATCH",
+                                                        headers: { "Content-Type" : "application/json" },
+                                                        body: JSON.stringify({ id: c._id, isActive: !c.isActive })
+                                                    });
+                                                    fetchReferrals();
+                                                }}
+                                                className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
+                                            >
+                                                {c.isActive ? "Disable" : "Enable"}
+                                            </button>
+                                            <button 
+                                                onClick={async () => {
+                                                    if(confirm(`Are you sure you want to delete ${c.code}?`)) {
+                                                        await fetch(`/api/superadmin/referrals?id=${c._id}`, { method: "DELETE" });
+                                                        fetchReferrals();
+                                                    }
+                                                }}
+                                                className="text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+                                            >
+                                                Delete
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}

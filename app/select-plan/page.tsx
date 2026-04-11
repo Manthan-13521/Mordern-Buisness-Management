@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2, Sparkles, Zap, Shield, Blocks } from "lucide-react";
+import { Check, Loader2, Sparkles, Zap, Shield, Blocks, Tag, X } from "lucide-react";
 import { SUBSCRIPTION_PRICES, SubscriptionPlanType, SubscriptionModule } from "@/lib/subscriptionConfig";
 
 declare global {
@@ -26,6 +26,62 @@ export default function SelectPlanPage() {
     const module: SubscriptionModule = session?.user?.hostelId ? "hostel" : "pool";
     const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlanType | null>(null);
     const [selectedBlocks, setSelectedBlocks] = useState<number>(1);
+    
+    // Referral State
+    const [inputCode, setInputCode] = useState("");
+    const [validatingRef, setValidatingRef] = useState(false);
+    const [refError, setRefError] = useState("");
+    const [appliedReferral, setAppliedReferral] = useState<{
+        code: string;
+        discountType: "percentage" | "flat";
+        discountValue: number;
+    } | null>(null);
+
+    const handleApplyReferral = async () => {
+        if (!inputCode) return;
+        setValidatingRef(true);
+        setRefError("");
+        try {
+            const res = await fetch("/api/referral/validate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ referralCode: inputCode }),
+            });
+            const data = await res.json();
+            if (data.error) {
+                setRefError(data.error);
+                setAppliedReferral(null);
+            } else {
+                setAppliedReferral({
+                    code: data.code,
+                    discountType: data.discountType,
+                    discountValue: data.discountValue,
+                });
+                setInputCode("");
+            }
+        } catch (e) {
+            setRefError("Failed to validate code");
+        } finally {
+            setValidatingRef(false);
+        }
+    };
+
+    const removeReferral = () => {
+        setAppliedReferral(null);
+        setRefError("");
+    };
+
+    const getDiscountedPrice = (basePrice: number) => {
+        if (!appliedReferral) return basePrice;
+        let final = basePrice;
+        if (appliedReferral.discountType === "percentage") {
+            final -= (basePrice * appliedReferral.discountValue) / 100;
+        } else {
+            final -= appliedReferral.discountValue;
+        }
+        if (final <= 0) final = 1;
+        return Math.floor(final);
+    };
 
     useEffect(() => {
         if (status === "unauthenticated") {
@@ -59,7 +115,12 @@ export default function SelectPlanPage() {
             const res = await fetch("/api/subscription/create-order", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ planType, module, blocks }),
+                body: JSON.stringify({ 
+                    planType, 
+                    module, 
+                    blocks,
+                    referralCode: appliedReferral?.code 
+                }),
             });
             const orderData = await res.json();
 
@@ -171,6 +232,56 @@ export default function SelectPlanPage() {
                     </p>
                 </div>
 
+                {/* Referral Code UI */}
+                <div className="max-w-md mx-auto mb-16 relative z-10">
+                    <div className="bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-2xl">
+                        {!appliedReferral ? (
+                            <>
+                                <label className="block text-sm font-bold text-slate-300 mb-3 flex items-center gap-2">
+                                    <Tag className="h-4 w-4 text-sky-400" /> Have a referral code?
+                                </label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="Enter code"
+                                        value={inputCode}
+                                        onChange={(e) => setInputCode(e.target.value.toUpperCase())}
+                                        className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-sky-500 uppercase font-mono"
+                                        disabled={validatingRef}
+                                    />
+                                    <button
+                                        onClick={handleApplyReferral}
+                                        disabled={validatingRef || !inputCode}
+                                        className="bg-sky-600 hover:bg-sky-500 text-white px-6 py-3 rounded-xl font-bold transition-all disabled:opacity-50 min-w-[100px]"
+                                    >
+                                        {validatingRef ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : "Apply"}
+                                    </button>
+                                </div>
+                                {refError && <p className="text-red-400 text-sm mt-3 animate-in fade-in">{refError}</p>}
+                                <p className="text-slate-500 text-xs mt-3">Discounts apply to regular SaaS plans. Trial accounts are excluded.</p>
+                            </>
+                        ) : (
+                            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 flex items-center justify-between">
+                                <div>
+                                    <h4 className="text-emerald-400 font-bold flex items-center gap-2">
+                                        <Check className="h-4 w-4" /> Code Applied: {appliedReferral.code}
+                                    </h4>
+                                    <p className="text-sm text-slate-300 mt-1">
+                                        You are getting a {appliedReferral.discountType === "percentage" ? `${appliedReferral.discountValue}%` : `₹${appliedReferral.discountValue}`} discount!
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={removeReferral}
+                                    className="p-2 hover:bg-white/10 rounded-lg transition-all"
+                                    title="Remove Code"
+                                >
+                                    <X className="h-5 w-5 text-slate-400 hover:text-white" />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 items-start">
                     {/* Trial Plan */}
                     {!trialUsed && (
@@ -218,8 +329,18 @@ export default function SelectPlanPage() {
                                     </div>
                                 </div>
                                 <div className="mb-8">
-                                    <span className="text-4xl font-black">₹2,999</span>
-                                    <span className="text-slate-400 ml-2">/ 3 months</span>
+                                    {appliedReferral ? (
+                                        <div className="flex flex-col">
+                                            <span className="text-slate-500 line-through text-2xl font-bold">₹2,999</span>
+                                            <span className="text-4xl font-black text-emerald-400">₹{getDiscountedPrice(2999).toLocaleString()}</span>
+                                            <span className="text-emerald-500/70 text-sm mt-1">Discount applied!</span>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <span className="text-4xl font-black">₹2,999</span>
+                                            <span className="text-slate-400 ml-2">/ 3 months</span>
+                                        </>
+                                    )}
                                 </div>
                                 <ul className="space-y-4 mb-8 flex-grow">
                                     <FeatureItem text="Everything in Trial" />
@@ -251,9 +372,19 @@ export default function SelectPlanPage() {
                                     </div>
                                 </div>
                                 <div className="mb-8">
-                                    <span className="text-4xl font-black">₹7,999</span>
-                                    <span className="text-slate-400 ml-2">/ year</span>
-                                    <div className="mt-2 text-sky-400 text-sm font-medium">Save ₹4,001 vs quarterly</div>
+                                    {appliedReferral ? (
+                                        <div className="flex flex-col">
+                                            <span className="text-slate-500 line-through text-2xl font-bold">₹7,999</span>
+                                            <span className="text-5xl font-black text-emerald-400">₹{getDiscountedPrice(7999).toLocaleString()}</span>
+                                            <span className="text-emerald-500/70 text-sm mt-1">Huge discount applied!</span>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <span className="text-4xl font-black">₹7,999</span>
+                                            <span className="text-slate-400 ml-2">/ year</span>
+                                            <div className="mt-2 text-sky-400 text-sm font-medium">Save ₹4,001 vs quarterly</div>
+                                        </>
+                                    )}
                                 </div>
                                 <ul className="space-y-4 mb-8 flex-grow">
                                     <FeatureItem text="12 Months Access" />
@@ -305,7 +436,14 @@ export default function SelectPlanPage() {
 
                                     <div className="pt-4 border-t border-white/10">
                                         <div className="text-sm text-slate-400 mb-1">Total Fee</div>
-                                        <div className="text-5xl font-black">₹{SUBSCRIPTION_PRICES[`hostel_${selectedBlocks}`]?.toLocaleString()}</div>
+                                        {appliedReferral ? (
+                                            <div className="flex flex-col">
+                                                <span className="text-slate-500 line-through text-2xl font-bold">₹{SUBSCRIPTION_PRICES[`hostel_${selectedBlocks}` as keyof typeof SUBSCRIPTION_PRICES]?.toLocaleString()}</span>
+                                                <span className="text-5xl font-black text-emerald-400">₹{getDiscountedPrice(SUBSCRIPTION_PRICES[`hostel_${selectedBlocks}` as keyof typeof SUBSCRIPTION_PRICES] || 0).toLocaleString()}</span>
+                                            </div>
+                                        ) : (
+                                            <div className="text-5xl font-black">₹{SUBSCRIPTION_PRICES[`hostel_${selectedBlocks}` as keyof typeof SUBSCRIPTION_PRICES]?.toLocaleString()}</div>
+                                        )}
                                         <div className="text-sky-400 text-sm mt-2">Flat 12-month license fee</div>
                                     </div>
                                 </div>

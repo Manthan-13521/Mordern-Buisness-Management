@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
+import { ReferralCode } from "@/models/ReferralCode";
 import { getPriceKey, SUBSCRIPTION_PRICES, SubscriptionPlanType, SubscriptionModule } from "@/lib/subscriptionConfig";
 import Razorpay from "razorpay";
 
@@ -23,10 +24,11 @@ export async function POST(req: Request) {
         }
 
         const body = await req.json();
-        const { planType, module, blocks } = body as {
+        const { planType, module, blocks, referralCode } = body as {
             planType: SubscriptionPlanType;
             module:   SubscriptionModule;
             blocks?:  number;
+            referralCode?: string;
         };
 
         if (!planType || !module) {
@@ -56,7 +58,28 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Invalid plan combination" }, { status: 400 });
         }
 
-        const amountINR   = SUBSCRIPTION_PRICES[priceKey];
+        let amountINR   = SUBSCRIPTION_PRICES[priceKey];
+
+        // Apply Referral Discount if provided
+        if (referralCode && planType !== "trial") {
+            const codeDoc = await ReferralCode.findOne({
+                code: referralCode.toUpperCase().trim(),
+                isActive: true
+            });
+
+            if (codeDoc && (!codeDoc.expiresAt || new Date(codeDoc.expiresAt) > new Date()) && (codeDoc.maxUses === 0 || codeDoc.usedCount < codeDoc.maxUses)) {
+                let discount = 0;
+                if (codeDoc.discountType === "percentage") {
+                    discount = (amountINR * codeDoc.discountValue) / 100;
+                } else if (codeDoc.discountType === "flat") {
+                    discount = codeDoc.discountValue;
+                }
+                amountINR -= discount;
+                if (amountINR <= 0) amountINR = 1; // Minimum charge
+                amountINR = Math.floor(amountINR);
+            }
+        }
+
         const amountPaise = amountINR * 100;
 
         // Mock mode
@@ -70,6 +93,7 @@ export async function POST(req: Request) {
                 module,
                 blocks,
                 amountINR,
+                referralCode,
             });
         }
 
@@ -82,6 +106,7 @@ export async function POST(req: Request) {
                 planType,
                 module,
                 blocks:  blocks?.toString() || "",
+                referralCode: referralCode || "",
             },
         });
 
@@ -94,6 +119,7 @@ export async function POST(req: Request) {
             module,
             blocks,
             amountINR,
+            referralCode,
         });
     } catch (error: any) {
         console.error("[POST /api/subscription/create-order]", error);

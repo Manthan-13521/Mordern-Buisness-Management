@@ -1,6 +1,8 @@
 import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { SubscriptionPaymentLog } from "@/models/SubscriptionPaymentLog";
+import { ReferralCode } from "@/models/ReferralCode";
+import { ReferralUsage } from "@/models/ReferralUsage";
 import { getPriceKey, SUBSCRIPTION_PRICES, SubscriptionPlanType, SubscriptionModule } from "@/lib/subscriptionConfig";
 import crypto from "crypto";
 import { logger } from "@/lib/logger";
@@ -36,8 +38,9 @@ export async function activateSubscription(params: {
     planType:           SubscriptionPlanType;
     module:             SubscriptionModule;
     blocks?:            number;
+    referralCode?:      string;
 }): Promise<{ user: any; amountINR: number; expiryDate: Date }> {
-    const { razorpayOrderId, razorpayPaymentId, razorpaySignature, isMock, userId, planType, module, blocks } = params;
+    const { razorpayOrderId, razorpayPaymentId, razorpaySignature, isMock, userId, planType, module, blocks, referralCode } = params;
 
     // 1. Verify Razorpay signature — skip only in mock mode
     if (!isMock && razorpaySignature) {
@@ -79,7 +82,39 @@ export async function activateSubscription(params: {
     // 3. Validate plan
     const priceKey = getPriceKey(planType, module, blocks);
     if (!priceKey) throw new Error("Invalid plan combination");
-    const amountINR = SUBSCRIPTION_PRICES[priceKey];
+    let amountINR = SUBSCRIPTION_PRICES[priceKey];
+
+    let appliedDiscount = 0;
+    
+    // Apply referral code if present
+    if (referralCode && planType !== "trial") {
+        const codeDoc = await ReferralCode.findOne({
+            code: referralCode.toUpperCase().trim(),
+            isActive: true
+        });
+
+        if (codeDoc && (!codeDoc.expiresAt || new Date(codeDoc.expiresAt) > new Date()) && (codeDoc.maxUses === 0 || codeDoc.usedCount < codeDoc.maxUses)) {
+            if (codeDoc.discountType === "percentage") {
+                appliedDiscount = (amountINR * codeDoc.discountValue) / 100;
+            } else {
+                appliedDiscount = codeDoc.discountValue;
+            }
+            amountINR -= appliedDiscount;
+            if (amountINR <= 0) amountINR = 1;
+            amountINR = Math.floor(amountINR);
+
+            // Commit usage
+            codeDoc.usedCount += 1;
+            await codeDoc.save();
+
+            // Create Usage Record
+            await ReferralUsage.create({
+                code: codeDoc.code,
+                orgId: userId, // Mapping to user's _id as org root for SaaS plans
+                discountApplied: appliedDiscount
+            });
+        }
+    }
 
     // 4. Load user
     const user = await User.findById(userId);

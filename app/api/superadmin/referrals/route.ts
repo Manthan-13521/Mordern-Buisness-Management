@@ -98,3 +98,47 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Server error" }, { status: 500 });
     }
 }
+
+export async function PATCH(req: Request) {
+    try {
+        const session = await getServerSession(authOptions);
+        if (!session?.user || (session.user as any).role !== "superadmin") {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        await dbConnect();
+
+        const body = await req.json();
+        const { id, isActive } = body;
+
+        const updated = await ReferralCode.findByIdAndUpdate(
+            id,
+            { isActive },
+            { new: true }
+        );
+
+        return NextResponse.json({ success: true, data: updated });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+}
+
+export async function DELETE(req: Request) {
+    try {
+        const session = await getServerSession(authOptions);
+        if (!session?.user || (session.user as any).role !== "superadmin") {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        await dbConnect();
+
+        const url = new URL(req.url);
+        const id = url.searchParams.get("id");
+
+        if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
+
+        await ReferralCode.findByIdAndDelete(id);
+
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+}
