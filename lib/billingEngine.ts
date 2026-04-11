@@ -61,14 +61,10 @@ export async function processIndividualBilling(sub: any) {
     // UTC Safety (Fix 3)
     const currentCycleKey = new Date().toISOString().slice(0, 7);
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
     try {
         // Fix 1: Hard Idempotent Billing Check
-        const alreadyBilled = await LedgerCycle.findOne({ memberId: sub.memberId, cycleKey: currentCycleKey }).session(session);
+        const alreadyBilled = await LedgerCycle.findOne({ memberId: sub.memberId, cycleKey: currentCycleKey });
         if (alreadyBilled) {
-            await session.abortTransaction();
             return false;
         }
 
@@ -78,35 +74,31 @@ export async function processIndividualBilling(sub: any) {
             {
                 $inc: { totalDue: price },
                 $set: { lastBilledCycle: currentCycleKey }
-            },
-            { session }
+            }
         );
 
         if (writeResult.modifiedCount === 0) {
-            await session.abortTransaction();
             return false;
         }
 
         // Recompute strict structural bounding
-        let ledger = await Ledger.findOne({ memberId: sub.memberId }).session(session);
+        let ledger = await Ledger.findOne({ memberId: sub.memberId });
         if (ledger) {
             // Fix 4: Math structurally supports passive credits globally
             ledger.balance = Math.max(0, ledger.totalDue - ledger.totalPaid);
             ledger.creditBalance = Math.max(0, ledger.totalPaid - ledger.totalDue);
-            await ledger.save({ session });
+            await ledger.save();
             
             // ── Update Hybrid Cache ──
             let updatedMember = await Member.findOneAndUpdate(
                 { _id: sub.memberId },
-                { $set: { balanceAmount: ledger.balance, cachedBalance: ledger.balance } }, // 1.2 Opt
-                { session }
+                { $set: { balanceAmount: ledger.balance, cachedBalance: ledger.balance } }
             );
 
             if (!updatedMember) {
                 await EntertainmentMember.findOneAndUpdate(
                     { _id: sub.memberId },
-                    { $set: { balanceAmount: ledger.balance, cachedBalance: ledger.balance } }, // 1.2 Opt
-                    { session }
+                    { $set: { balanceAmount: ledger.balance, cachedBalance: ledger.balance } }
                 );
             }
         }
@@ -115,7 +107,7 @@ export async function processIndividualBilling(sub: any) {
         const nextDate = new Date(sub.nextDueDate);
         nextDate.setUTCMonth(nextDate.getUTCMonth() + 1);
         sub.nextDueDate = nextDate;
-        await sub.save({ session });
+        await sub.save();
 
         // Document cycle securely
         await LedgerCycle.create([{
@@ -123,15 +115,11 @@ export async function processIndividualBilling(sub: any) {
             poolId: sub.poolId,
             cycleKey: currentCycleKey,
             amount: price
-        }], { session });
+        }]);
 
-        await session.commitTransaction();
         return true;
     } catch (e) {
-        if (session.inTransaction()) await session.abortTransaction();
         console.error("Dues generation fallback failed for member:", sub.memberId, e);
         return false;
-    } finally {
-        session.endSession();
     }
 }

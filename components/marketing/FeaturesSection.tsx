@@ -11,7 +11,11 @@ import {
   BellRing,
   Cloud,
   LayoutGrid,
-  CalendarClock
+  CalendarClock,
+  Store,
+  LineChart,
+  HardHat,
+  Boxes
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -31,6 +35,15 @@ const hostelFeatures = [
   { name: "WhatsApp Rent Reminders", description: "No need to manually call tenants", icon: MessageCircle },
   { name: "Secure Data + Backup", description: "Never lose records again", icon: Cloud },
   { name: "Staff & Attendance Tracking", description: "Monitor staff with ease", icon: Users },
+];
+
+const businessFeatures = [
+  { name: "Inventory & Stock Tracking", description: "Real-time material management with low-stock alerts", icon: Boxes },
+  { name: "Digital Customer Ledger", description: "Track every sale, payment, and outstanding balance", icon: LineChart },
+  { name: "Staff & Labour Attendance", description: "Log daily presence and optimize payroll", icon: HardHat },
+  { name: "Professional Invoicing", description: "Generate digital bills instantly for clients", icon: WalletCards },
+  { name: "Revenue Analytics", description: "Visualize profit margins and growth trends", icon: LineChart },
+  { name: "Multi-Admin Access", description: "Secure role-based access for your team", icon: Users },
 ];
 
 export function FeaturesSection() {
@@ -54,7 +67,7 @@ export function FeaturesSection() {
             {/* Left Side: Features & Comparison */}
             <div className="lg:col-span-7 flex flex-col gap-10">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {poolFeatures.map((feat) => (
+                {poolFeatures.map((feat: any) => (
                   <div key={feat.name} className="flex gap-4">
                     <div className="flex-shrink-0 mt-1">
                       <feat.icon className="h-6 w-6 text-blue-500" />
@@ -192,7 +205,7 @@ export function FeaturesSection() {
             {/* Left Side: Features & Comparison */}
             <div className="lg:col-span-7 flex flex-col gap-10">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {hostelFeatures.map((feat) => (
+                {hostelFeatures.map((feat: any) => (
                   <div key={feat.name} className="flex gap-4">
                     <div className="flex-shrink-0 mt-1">
                       <feat.icon className="h-6 w-6 text-purple-500" />
@@ -330,6 +343,98 @@ export function FeaturesSection() {
                     className="block w-full text-center rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-4 text-sm font-bold text-white shadow-lg hover:from-purple-500 hover:to-pink-500 transition-all font-sans relative overflow-hidden group"
                   >
                     <span className="relative z-10">Start Managing Hostel</span>
+                    <div className="absolute inset-0 h-full w-full bg-white/20 group-hover:translate-x-full transition-transform duration-500 ease-out -translate-x-full skew-x-12"></div>
+                  </Link>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        </div>
+
+        {/* Business Section */}
+        <div className="flex flex-col gap-12 pt-16 border-t border-gray-200 dark:border-white/10">
+          {/* Header */}
+          <div className="text-center md:text-left">
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-emerald-400 sm:text-4xl mb-4">
+              Enterprise Business Suite — Beyond Just Pools
+            </h2>
+            <p className="text-lg leading-8 text-gray-600 dark:text-gray-300">
+              Control your trading business, manufacturing unit, or service center with precision.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+            {/* Left Side: Features */}
+            <div className="lg:col-span-7 flex flex-col gap-10">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {businessFeatures.map((feat: any) => (
+                  <div key={feat.name} className="flex gap-4">
+                    <div className="flex-shrink-0 mt-1">
+                      <feat.icon className="h-6 w-6 text-emerald-500" />
+                    </div>
+                    <div>
+                      <h4 className="text-base font-semibold text-gray-900 dark:text-white">{feat.name}</h4>
+                      <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{feat.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* USP Strip */}
+              <div className="bg-emerald-50 dark:bg-emerald-500/5 rounded-2xl p-6 ring-1 ring-emerald-200 dark:ring-emerald-500/20">
+                <div className="flex items-start gap-4">
+                  <Store className="h-6 w-6 text-emerald-600 dark:text-emerald-400 mt-1" />
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Scale your business professionally</h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">AquaSync BIZ is designed for small to medium enterprises that need strict data isolation, ledger management, and workforce tracking without the complexity of traditional ERPs.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Side: CTA Card */}
+            <div className="lg:col-span-5 relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-[2.5rem] blur-xl opacity-20"></div>
+              <motion.div 
+                className="relative flex flex-col bg-white dark:bg-[#051510] rounded-[2rem] p-8 sm:p-10 ring-1 ring-gray-200 dark:ring-emerald-500/30 shadow-2xl overflow-hidden"
+                whileHover={{ y: -8 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl"></div>
+                
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white text-center mb-8">Business Launch Offer</h3>
+                
+                <div className="space-y-6 flex-1">
+                  <div className="rounded-2xl border-2 border-emerald-500 bg-emerald-50/50 dark:bg-emerald-500/10 p-6 relative">
+                    <span className="absolute -top-3 left-4 bg-emerald-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-full shadow-lg tracking-widest">
+                      Unlimited Suite
+                    </span>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h4 className="text-xl font-bold text-gray-900 dark:text-emerald-400 uppercase tracking-tight">Full Access</h4>
+                        <p className="text-xs text-emerald-600 dark:text-emerald-500/70 font-medium">All Business Modules Included</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-4xl font-black text-emerald-600 dark:text-emerald-400">₹4999<span className="text-sm font-normal opacity-60">/yr</span></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <ul className="space-y-3">
+                    {["Unlimited Sales Logs", "Labour Management", "Stock Inventory", "24/7 Priority Support"].map((item, idx) => (
+                      <li key={idx} className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-500" /> {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="mt-10">
+                  <Link 
+                    href="/business/register" 
+                    className="block w-full text-center rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-4 text-sm font-bold text-white shadow-lg hover:from-emerald-500 hover:to-teal-500 transition-all font-sans relative overflow-hidden group"
+                  >
+                    <span className="relative z-10">Register My Business</span>
                     <div className="absolute inset-0 h-full w-full bg-white/20 group-hover:translate-x-full transition-transform duration-500 ease-out -translate-x-full skew-x-12"></div>
                   </Link>
                 </div>

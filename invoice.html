@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tax Invoice - SRI GANAPATHI ENTERPRISES</title>
+
+<style>
+/* ═══════════════════════════════════════════════════ */
+/*  RESET & BASE                                      */
+/* ═══════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+  min-height: 100vh;
+  color: #e0e0e0;
+}
+
+/* ═══════════════════════════════════════════════════ */
+/*  FORM SECTION                                      */
+/* ═══════════════════════════════════════════════════ */
+#form {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 30px 20px 60px;
+}
+
+#form h1 {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 700;
+  background: linear-gradient(90deg, #f7971e, #ffd200);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 6px;
+  letter-spacing: 1px;
+}
+
+#form .subtitle {
+  text-align: center;
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 30px;
+  letter-spacing: 0.5px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.form-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 22px;
+  backdrop-filter: blur(12px);
+  transition: border-color 0.3s;
+}
+
+.form-card:hover {
+  border-color: rgba(255,255,255,0.18);
+}
+
+.form-card.full-width {
+  grid-column: 1 / -1;
+}
+
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #ffd200;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-title span { font-size: 18px; }
+
+.field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.field-row:last-child { margin-bottom: 0; }
+
+.field {
+  flex: 1;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field label {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #999;
+}
+
+.field input, .field select, .field textarea {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: #fff;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.field input:focus, .field select:focus, .field textarea:focus {
+  border-color: #ffd200;
+  box-shadow: 0 0 0 3px rgba(255,210,0,0.12);
+}
+
+.field input::placeholder { color: #555; }
+
+/* ═══════════════════════════════════════════════════ */
+/*  PRODUCT TABLE (FORM)                              */
+/* ═══════════════════════════════════════════════════ */
+.product-table-wrap {
+  overflow-x: auto;
+}
+
+.product-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 13px;
+}
+
+.product-table th {
+  background: rgba(255,210,0,0.1);
+  color: #ffd200;
+  padding: 10px 8px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.product-table td {
+  padding: 6px 4px;
+  border: none;
+}
+
+.product-table input {
+  width: 100%;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: #fff;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.product-table input:focus {
+  border-color: #ffd200;
+}
+
+.product-table .row-amount {
+  color: #4ade80;
+  font-weight: 600;
+  text-align: right;
+  padding-right: 10px;
+  min-width: 90px;
+}
+
+.btn-remove-row {
+  background: rgba(239,68,68,0.15);
+  border: 1px solid rgba(239,68,68,0.3);
+  color: #ef4444;
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.btn-remove-row:hover {
+  background: rgba(239,68,68,0.3);
+}
+
+.btn-add-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  background: rgba(255,210,0,0.1);
+  border: 1px dashed rgba(255,210,0,0.3);
+  color: #ffd200;
+  border-radius: 8px;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btn-add-row:hover {
+  background: rgba(255,210,0,0.2);
+  border-color: rgba(255,210,0,0.5);
+}
+
+/* ═══════════════════════════════════════════════════ */
+/*  TAX SUMMARY (FORM)                               */
+/* ═══════════════════════════════════════════════════ */
+.tax-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+.tax-summary {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 20px;
+  font-size: 13px;
+}
+
+.tax-summary .ts-label { color: #999; }
+.tax-summary .ts-value { text-align: right; color: #fff; font-weight: 500; }
+.tax-summary .ts-total .ts-label { color: #ffd200; font-weight: 700; font-size: 15px; }
+.tax-summary .ts-total .ts-value { color: #4ade80; font-weight: 700; font-size: 15px; }
+
+/* ═══════════════════════════════════════════════════ */
+/*  ACTION BUTTONS                                    */
+/* ═══════════════════════════════════════════════════ */
+.action-bar {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 30px;
+}
+
+.btn {
+  padding: 14px 36px;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s;
+  letter-spacing: 0.5px;
+}
+
+.btn-preview {
+  background: linear-gradient(135deg, #f7971e, #ffd200);
+  color: #1a1a2e;
+  box-shadow: 0 4px 20px rgba(255,210,0,0.25);
+}
+
+.btn-preview:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(255,210,0,0.35);
+}
+
+.btn-edit {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #fff;
+}
+
+.btn-edit:hover {
+  background: rgba(255,255,255,0.14);
+}
+
+.btn-print {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(118,75,162,0.3);
+}
+
+.btn-print:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(118,75,162,0.4);
+}
+
+/* ═══════════════════════════════════════════════════ */
+/*  A4 INVOICE OUTPUT — EXACT MATCH                   */
+/* ═══════════════════════════════════════════════════ */
+#a4 {
+  width: 210mm;
+  height: 297mm;
+  margin: 30px auto;
+  padding: 5mm 8mm;
+  background: #fff;
+  color: #000;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 11.5px;
+  display: none;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Master wrapper table that holds the entire invoice */
+#a4 .master-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 2px solid #000;
+}
+
+#a4 .master-table td {
+  border: 1px solid #000;
+  padding: 0;
+  vertical-align: top;
+}
+
+/* Remove inner table borders so they don't conflict */
+#a4 .inner-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+#a4 .inner-table td,
+#a4 .inner-table th {
+  border: 1px solid #000;
+  padding: 3px 5px;
+  font-size: 11.5px;
+  vertical-align: top;
+}
+
+#a4 .inner-table th {
+  background: #f5f5f5;
+  font-weight: bold;
+  text-align: center;
+}
+
+#a4 .no-border td { border: none; }
+#a4 .center { text-align: center; }
+#a4 .right { text-align: right; }
+#a4 .bold { font-weight: bold; }
+#a4 .big { font-size: 17px; }
+#a4 .med { font-size: 13.5px; }
+#a4 .small { font-size: 10.5px; }
+
+/* Product row height for empty rows */
+#a4 .product-row td {
+  height: 22px;
+}
+
+.invoice-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin: 20px auto;
+  max-width: 210mm;
+}
+
+/* ═══════════════════════════════════════════════════ */
+/*  PRINT STYLES                                      */
+/* ═══════════════════════════════════════════════════ */
+@media print {
+  html, body {
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  #form, .invoice-actions, .no-print {
+    display: none !important;
+  }
+
+  #a4 {
+    display: block !important;
+    width: 210mm;
+    height: 297mm;
+    margin: 0 !important;
+    padding: 5mm 8mm;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 0;
+  }
+}
+
+/* ═══════════════════════════════════════════════════ */
+/*  RESPONSIVE                                        */
+/* ═══════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .tax-grid { grid-template-columns: 1fr; }
+  #a4 { width: 100%; height: auto; padding: 5mm; }
+}
+</style>
+
+</head>
+
+<body>
+
+<!-- ════════════════════════════════════════════════════ -->
+<!--  FORM SECTION                                       -->
+<!-- ════════════════════════════════════════════════════ -->
+<div id="form">
+
+  <h1>🧾 TAX INVOICE GENERATOR</h1>
+  <p class="subtitle">Fill in the details below and preview your GST invoice</p>
+
+  <div class="form-grid">
+
+    <!-- BUSINESS DETAILS -->
+    <div class="form-card">
+      <div class="card-title"><span>🏢</span> Business Details</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Business Name</label>
+          <input id="bname" value="SRI GANAPATHI ENTERPRISES" placeholder="Business Name">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Business Description</label>
+          <input id="bdesc" value="Manufacturing & Trading of All Types of Fans, Fan Components & Electrical Goods" placeholder="Manufacturing & Trading of...">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>GST Number</label>
+          <input id="bgst" value="36ACBPJ2699D2ZM" placeholder="e.g. 36ACBPJ2699D2ZM">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Address</label>
+          <input id="baddr" value="H.No. 10-30/1 Vinayaka Nagar, Balanagar, Hyderabad - 500042" placeholder="Full business address">
+        </div>
+      </div>
+    </div>
+
+    <!-- CUSTOMER DETAILS -->
+    <div class="form-card">
+      <div class="card-title"><span>👤</span> Customer Details</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Customer Name</label>
+          <input id="cname" placeholder="Customer / Company Name">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Address Line 1</label>
+          <input id="caddr1" placeholder="Address line 1">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Address Line 2 / City</label>
+          <input id="caddr2" placeholder="City / State">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>GST Number</label>
+          <input id="cgst" placeholder="Customer GST">
+        </div>
+      </div>
+    </div>
+
+    <!-- INVOICE DETAILS -->
+    <div class="form-card full-width">
+      <div class="card-title"><span>📄</span> Invoice Details</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Invoice Number</label>
+          <input id="inv" placeholder="e.g. 54">
+        </div>
+        <div class="field">
+          <label>Date</label>
+          <input id="invdate" type="date">
+        </div>
+        <div class="field">
+          <label>DC Number</label>
+          <input id="dcno" placeholder="DC No.">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Order Number</label>
+          <input id="orderno" placeholder="e.g. Verbal">
+        </div>
+        <div class="field">
+          <label>Vehicle Number</label>
+          <input id="vehicle" placeholder="e.g. TG08V4944">
+        </div>
+        <div class="field">
+          <label>Way Bill Number</label>
+          <input id="waybill" placeholder="Way Bill No.">
+        </div>
+      </div>
+    </div>
+
+    <!-- PRODUCT TABLE -->
+    <div class="form-card full-width">
+      <div class="card-title"><span>📦</span> Products / Items</div>
+      <div class="product-table-wrap">
+        <table class="product-table">
+          <thead>
+            <tr>
+              <th style="width:35px">#</th>
+              <th style="width:45%">Description</th>
+              <th style="width:90px">HSN Code</th>
+              <th style="width:70px">Qty</th>
+              <th style="width:90px">Unit Rate</th>
+              <th style="width:100px">Amount</th>
+              <th style="width:35px"></th>
+            </tr>
+          </thead>
+          <tbody id="productBody">
+          </tbody>
+        </table>
+      </div>
+      <button class="btn-add-row" onclick="addProductRow()">＋ Add Item</button>
+    </div>
+
+    <!-- TAX SECTION -->
+    <div class="form-card">
+      <div class="card-title"><span>💰</span> Tax Rates</div>
+      <div class="tax-grid">
+        <div class="field">
+          <label>CGST %</label>
+          <input id="cgstRate" type="number" step="0.01" value="0" oninput="calcTaxPreview()">
+        </div>
+        <div class="field">
+          <label>SGST %</label>
+          <input id="sgstRate" type="number" step="0.01" value="0" oninput="calcTaxPreview()">
+        </div>
+        <div class="field">
+          <label>IGST %</label>
+          <input id="igstRate" type="number" step="0.01" value="0" oninput="calcTaxPreview()">
+        </div>
+      </div>
+      <div class="tax-summary" id="taxPreview">
+        <div class="ts-label">Subtotal</div><div class="ts-value" id="tp_sub">₹0.00</div>
+        <div class="ts-label">CGST</div><div class="ts-value" id="tp_cgst">₹0.00</div>
+        <div class="ts-label">SGST</div><div class="ts-value" id="tp_sgst">₹0.00</div>
+        <div class="ts-label">IGST</div><div class="ts-value" id="tp_igst">₹0.00</div>
+        <div class="ts-total ts-label">Grand Total</div><div class="ts-total ts-value" id="tp_total">₹0.00</div>
+      </div>
+    </div>
+
+    <!-- BANK DETAILS -->
+    <div class="form-card">
+      <div class="card-title"><span>🏦</span> Bank Details</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Bank Name</label>
+          <input id="bank" placeholder="e.g. ICICI Bank">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Branch</label>
+          <input id="branch" placeholder="e.g. Balanagar Branch">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Account Number</label>
+          <input id="acc" placeholder="Account No.">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>IFSC Code</label>
+          <input id="ifsc" placeholder="IFSC Code">
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ACTION BUTTONS -->
+  <div class="action-bar">
+    <button class="btn btn-preview" onclick="generate()">⚡ Preview Invoice</button>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════════════════════ -->
+<!--  A4 INVOICE OUTPUT — EXACT REPLICA                  -->
+<!-- ════════════════════════════════════════════════════ -->
+<div id="a4">
+
+  <table class="master-table">
+
+    <!-- ROW 1: GST Number top bar -->
+    <tr>
+      <td colspan="6" style="padding:4px 6px; font-size:11.5px;">
+        <b>GST No. : <span id="p_bgst"></span></b>
+      </td>
+    </tr>
+
+    <!-- ROW 2: TAX INVOICE Header -->
+    <tr>
+      <td colspan="6" class="center" style="padding:4px; font-size:13.5px; font-weight:bold; letter-spacing:2px;">
+        TAX INVOICE
+      </td>
+    </tr>
+
+    <!-- ROW 3: Decorative separator -->
+    <tr>
+      <td colspan="6" style="padding:2px; border-bottom:1px solid #000;">
+        <table style="width:100%; border-collapse:collapse;">
+          <tr>
+            <td style="border:none; text-align:center; color:#aaa; padding:1px;">-</td>
+            <td style="border:none; text-align:center; color:#aaa; padding:1px;">-</td>
+            <td style="border:none; text-align:center; color:#aaa; padding:1px;">-</td>
+            <td style="border:none; text-align:center; color:#aaa; padding:1px;">-</td>
+            <td style="border:none; text-align:center; color:#aaa; padding:1px;">-</td>
+            <td style="border:none; text-align:center; color:#aaa; padding:1px;">-</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- ROW 4: Business Name -->
+    <tr>
+      <td colspan="6" class="center" style="padding:6px 4px 2px; font-size:19px; font-weight:bold; letter-spacing:1px; border-bottom:none;">
+        <span id="p_bname"></span>
+      </td>
+    </tr>
+
+    <!-- ROW 5: Business Description -->
+    <tr>
+      <td colspan="6" class="center bold" style="padding:2px 4px; font-size:11.5px; border-top:none; border-bottom:none;">
+        <span id="p_bdesc"></span>
+      </td>
+    </tr>
+
+    <!-- ROW 6: Business Address -->
+    <tr>
+      <td colspan="6" class="center" style="padding:2px 4px 6px; font-size:11.5px; border-top:none;">
+        <span id="p_baddr"></span>
+      </td>
+    </tr>
+
+    <!-- ROW 7: Empty separator row -->
+    <tr>
+      <td colspan="6" style="padding:4px; border-bottom:1px solid #000;">&nbsp;</td>
+    </tr>
+
+    <!-- ROW 8-13: Customer + Invoice Details (6-col layout) -->
+    <tr>
+      <td style="width:8%; padding:3px 5px;"><b>To</b></td>
+      <td style="width:32%; padding:3px 5px;" id="p_cname"></td>
+      <td style="width:12%; padding:3px 5px;"><b>Invoice No.</b></td>
+      <td style="width:16%; padding:3px 5px;" id="p_inv"></td>
+      <td style="width:8%; padding:3px 5px;"><b>Date:</b></td>
+      <td style="width:24%; padding:3px 5px;" id="p_date"></td>
+    </tr>
+    <tr>
+      <td style="padding:3px 5px;"></td>
+      <td style="padding:3px 5px;" id="p_caddr1"></td>
+      <td style="padding:3px 5px;"></td>
+      <td style="padding:3px 5px;"></td>
+      <td style="padding:3px 5px;"></td>
+      <td style="padding:3px 5px;"></td>
+    </tr>
+    <tr>
+      <td style="padding:3px 5px;"></td>
+      <td style="padding:3px 5px;" id="p_caddr2"></td>
+      <td style="padding:3px 5px;"><b>DC No.</b></td>
+      <td style="padding:3px 5px;" id="p_dcno"></td>
+      <td style="padding:3px 5px;"><b>Date:</b></td>
+      <td style="padding:3px 5px;"></td>
+    </tr>
+    <tr>
+      <td style="padding:3px 5px;"></td>
+      <td style="padding:3px 5px;"></td>
+      <td style="padding:3px 5px;"><b>Order No.</b></td>
+      <td style="padding:3px 5px;" id="p_orderno"></td>
+      <td style="padding:3px 5px;"><b>Date:</b></td>
+      <td style="padding:3px 5px;"></td>
+    </tr>
+    <tr>
+      <td style="padding:3px 5px;"><b>GST No.</b></td>
+      <td style="padding:3px 5px;" id="p_cgst"></td>
+      <td style="padding:3px 5px;"><b>Vehicle No.</b></td>
+      <td style="padding:3px 5px;" id="p_vehicle"></td>
+      <td style="padding:3px 5px;"></td>
+      <td style="padding:3px 5px;"></td>
+    </tr>
+    <tr>
+      <td style="padding:3px 5px;"></td>
+      <td style="padding:3px 5px;"></td>
+      <td style="padding:3px 5px;"><b>Way Bill No.</b></td>
+      <td style="padding:3px 5px;" id="p_waybill"></td>
+      <td style="padding:3px 5px;"></td>
+      <td style="padding:3px 5px;"></td>
+    </tr>
+
+    <!-- PRODUCT TABLE HEADER -->
+    <tr>
+      <td colspan="6" style="padding:0; border:none;">
+        <table class="inner-table" style="margin:0;">
+          <thead>
+            <tr>
+              <th style="width:4%;">S No.</th>
+              <th style="width:52%;">Description</th>
+              <th style="width:10%;">HSN Code</th>
+              <th style="width:8%;">Qty</th>
+              <th style="width:12%;">Unit Rate</th>
+              <th style="width:14%;">Amount</th>
+            </tr>
+          </thead>
+          <tbody id="p_products">
+            <!-- filled by JS -->
+          </tbody>
+        </table>
+      </td>
+    </tr>
+
+    <!-- TOTAL ROW -->
+    <tr>
+      <td colspan="4" style="padding:3px 5px;"></td>
+      <td style="padding:3px 5px; text-align:right;"><b>Total</b></td>
+      <td style="padding:3px 5px; text-align:right;" id="p_subtotal"></td>
+    </tr>
+
+    <!-- TAX ROWS  -->
+    <tr>
+      <td style="padding:3px 5px; vertical-align:top;" rowspan="4"><b>Rupees:</b></td>
+      <td style="padding:3px 5px; vertical-align:top;" colspan="3" rowspan="4" id="p_words"></td>
+      <td style="padding:3px 5px;"><b><u>CGST @<span id="p_cgstRate"></span>%</u></b></td>
+      <td style="padding:3px 5px; text-align:right;" id="p_cgstAmt"></td>
+    </tr>
+    <tr>
+      <td style="padding:3px 5px;"><b><u>SGST @<span id="p_sgstRate"></span>%</u></b></td>
+      <td style="padding:3px 5px; text-align:right;" id="p_sgstAmt"></td>
+    </tr>
+    <tr>
+      <td style="padding:3px 5px;"><b><u>IGST@<span id="p_igstRate"></span>%</u></b></td>
+      <td style="padding:3px 5px; text-align:right;" id="p_igstAmt"></td>
+    </tr>
+    <tr>
+      <td style="padding:3px 5px;"><b>Grand Total</b></td>
+      <td style="padding:3px 5px; text-align:right; font-weight:bold;" id="p_total"></td>
+    </tr>
+
+    <!-- BANK + SIGNATURE ROW -->
+    <tr>
+      <td colspan="4" style="padding:6px; vertical-align:top; border-right:1px solid #000;">
+        <b>Bank Details:</b><br>
+        <span id="p_bank"></span><br>
+        <span id="p_branch"></span><br>
+        A/c No. <span id="p_acc"></span><br>
+        <b>IFSC Code: <span id="p_ifsc"></span></b>
+      </td>
+      <td colspan="2" style="padding:6px; vertical-align:top; text-align:right;">
+        <b>For <span id="p_bname2"></span></b><br><br><br><br>
+        Authorised Signature
+      </td>
+    </tr>
+
+  </table>
+
+</div>
+
+<!-- Invoice action buttons (outside #a4 so they don't print) -->
+<div class="invoice-actions no-print" id="invoiceActions" style="display:none;">
+  <button class="btn btn-edit" onclick="editInvoice()">✏️ Edit</button>
+  <button class="btn btn-print" onclick="window.print()">🖨️ Print</button>
+</div>
+
+
+<script>
+/* ═══════════════════════════════════════════════════ */
+/*  PRODUCT ROWS                                      */
+/* ═══════════════════════════════════════════════════ */
+let rowCounter = 0;
+
+function addProductRow() {
+  rowCounter++;
+  const tbody = document.getElementById('productBody');
+  const tr = document.createElement('tr');
+  tr.id = 'prow_' + rowCounter;
+  tr.innerHTML = `
+    <td style="text-align:center; color:#888;">${getVisibleRowCount() + 1}</td>
+    <td><input class="p_desc" placeholder="Item description"></td>
+    <td><input class="p_hsn" placeholder="HSN"></td>
+    <td><input class="p_qty" type="number" step="0.01" placeholder="0" oninput="calcRowAmount(this)"></td>
+    <td><input class="p_rate" type="number" step="0.01" placeholder="0.00" oninput="calcRowAmount(this)"></td>
+    <td class="row-amount" data-amount="0">₹0.00</td>
+    <td><button class="btn-remove-row" onclick="removeRow('prow_${rowCounter}')" title="Remove">✕</button></td>
+  `;
+  tbody.appendChild(tr);
+}
+
+function getVisibleRowCount() {
+  return document.querySelectorAll('#productBody tr').length;
+}
+
+function removeRow(id) {
+  const row = document.getElementById(id);
+  if (row) row.remove();
+  renumberRows();
+  calcTaxPreview();
+}
+
+function renumberRows() {
+  const rows = document.querySelectorAll('#productBody tr');
+  rows.forEach((row, i) => {
+    row.querySelector('td').textContent = i + 1;
+  });
+}
+
+function calcRowAmount(el) {
+  const row = el.closest('tr');
+  const qty = parseFloat(row.querySelector('.p_qty').value) || 0;
+  const rate = parseFloat(row.querySelector('.p_rate').value) || 0;
+  const amount = qty * rate;
+  const amountCell = row.querySelector('.row-amount');
+  amountCell.textContent = '₹' + amount.toFixed(2);
+  amountCell.dataset.amount = amount;
+  calcTaxPreview();
+}
+
+function getSubtotal() {
+  let sub = 0;
+  document.querySelectorAll('#productBody .row-amount').forEach(cell => {
+    sub += parseFloat(cell.dataset.amount) || 0;
+  });
+  return sub;
+}
+
+function calcTaxPreview() {
+  const sub = getSubtotal();
+  const cRate = parseFloat(document.getElementById('cgstRate').value) || 0;
+  const sRate = parseFloat(document.getElementById('sgstRate').value) || 0;
+  const iRate = parseFloat(document.getElementById('igstRate').value) || 0;
+
+  const cAmt = sub * cRate / 100;
+  const sAmt = sub * sRate / 100;
+  const iAmt = sub * iRate / 100;
+  const total = sub + cAmt + sAmt + iAmt;
+
+  document.getElementById('tp_sub').textContent = '₹' + sub.toFixed(2);
+  document.getElementById('tp_cgst').textContent = '₹' + cAmt.toFixed(2);
+  document.getElementById('tp_sgst').textContent = '₹' + sAmt.toFixed(2);
+  document.getElementById('tp_igst').textContent = '₹' + iAmt.toFixed(2);
+  document.getElementById('tp_total').textContent = '₹' + total.toFixed(2);
+}
+
+
+/* ═══════════════════════════════════════════════════ */
+/*  NUMBER TO WORDS (Indian system)                   */
+/* ═══════════════════════════════════════════════════ */
+function numberToWords(n) {
+  if (n === 0) return 'ZERO RUPEES ONLY';
+  const ones = ['','ONE','TWO','THREE','FOUR','FIVE','SIX','SEVEN','EIGHT','NINE',
+    'TEN','ELEVEN','TWELVE','THIRTEEN','FOURTEEN','FIFTEEN','SIXTEEN','SEVENTEEN','EIGHTEEN','NINETEEN'];
+  const tens = ['','','TWENTY','THIRTY','FORTY','FIFTY','SIXTY','SEVENTY','EIGHTY','NINETY'];
+
+  function convert(num) {
+    if (num < 20) return ones[num];
+    if (num < 100) return tens[Math.floor(num/10)] + (num%10 ? ' ' + ones[num%10] : '');
+    if (num < 1000) return ones[Math.floor(num/100)] + ' HUNDRED' + (num%100 ? ' AND ' + convert(num%100) : '');
+    if (num < 100000) return convert(Math.floor(num/1000)) + ' THOUSAND' + (num%1000 ? ' ' + convert(num%1000) : '');
+    if (num < 10000000) return convert(Math.floor(num/100000)) + ' LAKH' + (num%100000 ? ' ' + convert(num%100000) : '');
+    return convert(Math.floor(num/10000000)) + ' CRORE' + (num%10000000 ? ' ' + convert(num%10000000) : '');
+  }
+
+  const rupees = Math.floor(n);
+  const paise = Math.round((n - rupees) * 100);
+  let result = convert(rupees) + ' RUPEES';
+  if (paise > 0) result += ' AND ' + convert(paise) + ' PAISE';
+  return result + ' ONLY';
+}
+
+
+/* ═══════════════════════════════════════════════════ */
+/*  FORMAT DATE as DD/MM/YY                           */
+/* ═══════════════════════════════════════════════════ */
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yy = String(d.getFullYear()).slice(-2);
+  return dd + '/' + mm + '/' + yy;
+}
+
+
+/* ═══════════════════════════════════════════════════ */
+/*  GENERATE INVOICE                                  */
+/* ═══════════════════════════════════════════════════ */
+function generate() {
+  // Business
+  document.getElementById('p_bname').innerText = document.getElementById('bname').value;
+  document.getElementById('p_bname2').innerText = document.getElementById('bname').value;
+  document.getElementById('p_bdesc').innerText = document.getElementById('bdesc').value;
+  document.getElementById('p_bgst').innerText = document.getElementById('bgst').value;
+  document.getElementById('p_baddr').innerText = document.getElementById('baddr').value;
+
+  // Customer
+  document.getElementById('p_cname').innerText = document.getElementById('cname').value;
+  document.getElementById('p_caddr1').innerText = document.getElementById('caddr1').value;
+  document.getElementById('p_caddr2').innerText = document.getElementById('caddr2').value;
+  document.getElementById('p_cgst').innerText = document.getElementById('cgst').value;
+
+  // Invoice meta
+  document.getElementById('p_inv').innerText = document.getElementById('inv').value;
+  document.getElementById('p_date').innerText = formatDate(document.getElementById('invdate').value);
+  document.getElementById('p_dcno').innerText = document.getElementById('dcno').value;
+  document.getElementById('p_orderno').innerText = document.getElementById('orderno').value;
+  document.getElementById('p_vehicle').innerText = document.getElementById('vehicle').value;
+  document.getElementById('p_waybill').innerText = document.getElementById('waybill').value;
+
+  // Products — collect data
+  const formRows = document.querySelectorAll('#productBody tr');
+  let subtotal = 0;
+  const products = [];
+
+  formRows.forEach((row, idx) => {
+    const desc = row.querySelector('.p_desc').value;
+    const hsn = row.querySelector('.p_hsn').value;
+    const qty = parseFloat(row.querySelector('.p_qty').value) || 0;
+    const rate = parseFloat(row.querySelector('.p_rate').value) || 0;
+    const amount = qty * rate;
+    subtotal += amount;
+    products.push({ desc, hsn, qty, rate, amount });
+  });
+
+  // Build product rows in the invoice (fill to ~15 minimum rows for A4 look)
+  const productBody = document.getElementById('p_products');
+  productBody.innerHTML = '';
+
+  const MIN_ROWS = 15;
+  const totalRows = Math.max(products.length, MIN_ROWS);
+
+  for (let i = 0; i < totalRows; i++) {
+    const tr = document.createElement('tr');
+    tr.className = 'product-row';
+    if (i < products.length) {
+      const p = products[i];
+      tr.innerHTML = `
+        <td style="text-align:center;">${i + 1}</td>
+        <td>${p.desc}</td>
+        <td style="text-align:center;">${p.hsn}</td>
+        <td style="text-align:center;">${p.qty}</td>
+        <td style="text-align:center;">${p.rate}</td>
+        <td style="text-align:right;">${p.amount.toFixed(2)}</td>
+      `;
+    } else {
+      tr.innerHTML = `
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+      `;
+    }
+    productBody.appendChild(tr);
+  }
+
+  // Tax
+  const cRate = parseFloat(document.getElementById('cgstRate').value) || 0;
+  const sRate = parseFloat(document.getElementById('sgstRate').value) || 0;
+  const iRate = parseFloat(document.getElementById('igstRate').value) || 0;
+
+  const cAmt = subtotal * cRate / 100;
+  const sAmt = subtotal * sRate / 100;
+  const iAmt = subtotal * iRate / 100;
+  const grandTotal = subtotal + cAmt + sAmt + iAmt;
+
+  document.getElementById('p_subtotal').innerText = subtotal.toFixed(2);
+  document.getElementById('p_cgstRate').innerText = cRate;
+  document.getElementById('p_cgstAmt').innerText = cAmt > 0 ? cAmt.toFixed(2) : '';
+  document.getElementById('p_sgstRate').innerText = sRate;
+  document.getElementById('p_sgstAmt').innerText = sAmt > 0 ? sAmt.toFixed(2) : '';
+  document.getElementById('p_igstRate').innerText = iRate;
+  document.getElementById('p_igstAmt').innerText = iAmt > 0 ? iAmt.toFixed(2) : '';
+  document.getElementById('p_total').innerText = grandTotal.toFixed(2);
+
+  // Amount in words
+  document.getElementById('p_words').innerText = numberToWords(grandTotal);
+
+  // Bank
+  document.getElementById('p_bank').innerText = document.getElementById('bank').value;
+  document.getElementById('p_branch').innerText = document.getElementById('branch').value;
+  document.getElementById('p_acc').innerText = document.getElementById('acc').value;
+  document.getElementById('p_ifsc').innerText = document.getElementById('ifsc').value;
+
+  // Toggle view
+  document.getElementById('form').style.display = 'none';
+  document.getElementById('a4').style.display = 'block';
+  document.getElementById('invoiceActions').style.display = 'flex';
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+
+/* ═══════════════════════════════════════════════════ */
+/*  EDIT (GO BACK TO FORM)                            */
+/* ═══════════════════════════════════════════════════ */
+function editInvoice() {
+  document.getElementById('form').style.display = 'block';
+  document.getElementById('a4').style.display = 'none';
+  document.getElementById('invoiceActions').style.display = 'none';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+
+/* ═══════════════════════════════════════════════════ */
+/*  INIT                                              */
+/* ═══════════════════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', () => {
+  addProductRow();
+
+  // Set today's date
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  document.getElementById('invdate').value = `${yyyy}-${mm}-${dd}`;
+});
+</script>
+
+</body>
+</html>

@@ -67,7 +67,6 @@ export async function GET(req: Request) {
 
 // POST /api/hostel/payments — add a payment (ledger cycle)
 export async function POST(req: Request) {
-    let session = null;
     try {
         const [token, body] = await Promise.all([getToken({ req: req as any }), req.json()]);
         await dbConnect();
@@ -92,13 +91,8 @@ export async function POST(req: Request) {
             }
         }
 
-        // Initialize MongoDB Transaction
-        session = await mongoose.startSession();
-        session.startTransaction();
-
-        const member = await HostelMember.findOne({ _id: memberId, hostelId, isDeleted: false, status: "active" }).session(session);
+        const member = await HostelMember.findOne({ _id: memberId, hostelId, isDeleted: false, status: "active" });
         if (!member) {
-            await session.abortTransaction();
             return NextResponse.json({ error: "Active member not found" }, { status: 404 });
         }
 
@@ -122,7 +116,7 @@ export async function POST(req: Request) {
             ? -paid
             : 0;
 
-        const [payment] = await HostelPayment.create([{
+        const payment = await HostelPayment.create({
             hostelId,
             memberId: new mongoose.Types.ObjectId(memberId),
             planId: member.planId,
@@ -133,22 +127,21 @@ export async function POST(req: Request) {
             status: "success",
             paymentType,
             idempotencyKey,
-        }], { session });
+        });
 
         await HostelMember.updateOne(
             { _id: member._id, hostelId },
-            { $set: { balance: currentBalance, due_date: nextDue } },
-            { session }
+            { $set: { balance: currentBalance, due_date: nextDue } }
         );
 
         await HostelAnalytics.updateOne(
             { hostelId, yearMonth },
             { $inc: { totalIncome: incomeIncrement } },
-            { session, upsert: true }
+            { upsert: true }
         );
 
         const createdByName = (token.name || token.email || "Admin") as string;
-        await HostelPaymentLog.create([{
+        await HostelPaymentLog.create({
             hostelId,
             memberId: member.memberId,
             memberName: member.name,
@@ -156,12 +149,10 @@ export async function POST(req: Request) {
             paymentType: paymentType as any,
             payment_date: paymentDate,
             createdBy: createdByName,
-        }], { session });
+        });
 
-        await session.commitTransaction();
         return NextResponse.json(payment, { status: 201 });
     } catch (error: any) {
-        if (session) await session.abortTransaction();
         // Catch duplicate key collision organically
         if (error?.code === 11000 && error?.keyPattern?.idempotencyKey) {
             const existing = await HostelPayment.findOne({ idempotencyKey: error.keyValue?.idempotencyKey }).lean();
@@ -169,7 +160,5 @@ export async function POST(req: Request) {
         }
         console.error("[POST /api/hostel/payments]", error);
         return NextResponse.json({ error: error?.message || "Server error" }, { status: 500 });
-    } finally {
-        if (session) session.endSession();
     }
 }

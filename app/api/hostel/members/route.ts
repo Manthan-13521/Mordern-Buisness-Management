@@ -134,22 +134,13 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Room not found" }, { status: 404 });
         }
 
-        // ── Transaction Fallback Logic ──
-        const useSession = process.env.USE_DB_TRANSACTIONS === "true";
-        const session = useSession ? await mongoose.startSession() : null;
-        if (useSession && session) {
-            session.startTransaction();
-        }
-
+        // Record member registration without transaction
         let memberObjId;
 
         try {
-            const existingMembersQuery = HostelMember.find({ hostelId, roomId: roomObj._id, isActive: true, isDeleted: false }).select("bedNo").lean();
-            if (useSession && session) existingMembersQuery.session(session);
-            const existingMembers = await existingMembersQuery;
+            const existingMembers = await HostelMember.find({ hostelId, roomId: roomObj._id, isActive: true, isDeleted: false }).select("bedNo").lean();
             
             if (existingMembers.length >= (roomObj.capacity || 1)) {
-                if (useSession && session) await session.abortTransaction();
                 return NextResponse.json(
                     { error: `Room ${roomNo} (Block ${blockNo}) just reached maximum capacity. Please select a different room.` },
                     { status: 409 }
@@ -161,12 +152,10 @@ export async function POST(req: Request) {
             if (explicitBedNo) {
                 finalBedNo = parseInt(explicitBedNo, 10);
                 if (finalBedNo < 1 || finalBedNo > (roomObj.capacity || 1)) {
-                    if (useSession && session) await session.abortTransaction();
                     return NextResponse.json({ error: `Bed ${finalBedNo} is outside room capacity (Max ${roomObj.capacity}).` }, { status: 400 });
                 }
                 const isBedOccupied = existingMembers.some((m: any) => m.bedNo === finalBedNo);
                 if (isBedOccupied) {
-                    if (useSession && session) await session.abortTransaction();
                     return NextResponse.json({ error: `Bed ${finalBedNo} in Room ${roomNo} is already occupied.` }, { status: 409 });
                 }
             } else {
@@ -197,13 +186,10 @@ export async function POST(req: Request) {
             }
 
             // Generate member ID safely
-            const hostelUpdateOpts: any = { returnDocument: 'after' };
-            if (useSession && session) hostelUpdateOpts.session = session;
-            
             const hostel = await Hostel.findOneAndUpdate(
                 { hostelId },
                 { $inc: { memberCounter: 1 } },
-                hostelUpdateOpts
+                { returnDocument: 'after' }
             ).lean() as any;
             
             const memberId = `HM${String(hostel?.memberCounter ?? 1).padStart(3, "0")}`;
@@ -232,12 +218,7 @@ export async function POST(req: Request) {
                 notes, photoUrl, isActive: true, isDeleted: false, status: "active",
             };
 
-            let createdMember;
-            if (useSession && session) {
-                [createdMember] = await HostelMember.create([memberPayload], { session });
-            } else {
-                createdMember = await HostelMember.create(memberPayload);
-            }
+            const createdMember = await HostelMember.create(memberPayload);
 
             memberObjId = createdMember._id;
 
@@ -247,11 +228,7 @@ export async function POST(req: Request) {
                     hostelId, memberId: createdMember._id, planId: createdMember.planId,
                     amount: paid, paymentMethod: paymentMode || "cash", status: "success", paymentType: "initial",
                 };
-                if (useSession && session) {
-                    await HostelPayment.create([paymentPayload], { session });
-                } else {
-                    await HostelPayment.create(paymentPayload);
-                }
+                await HostelPayment.create(paymentPayload);
             }
 
             // Hybrid Analytics: Record member join & initial payment using EVENT DATE (not system date)
@@ -261,19 +238,11 @@ export async function POST(req: Request) {
             // Only count real inbound income types
             if (paid > 0) analyticsInc.totalIncome = paid;
 
-            if (useSession && session) {
-                await HostelAnalytics.updateOne(
-                    { hostelId, yearMonth: joinYearMonth },
-                    { $inc: analyticsInc },
-                    { upsert: true, session }
-                );
-            } else {
-                await HostelAnalytics.updateOne(
-                    { hostelId, yearMonth: joinYearMonth },
-                    { $inc: analyticsInc },
-                    { upsert: true }
-                );
-            }
+            await HostelAnalytics.updateOne(
+                { hostelId, yearMonth: joinYearMonth },
+                { $inc: analyticsInc },
+                { upsert: true }
+            );
 
             // Structured Logs: Registration & Initial Payment
             const createdByName = (token.name || token.email || "Admin") as string;
@@ -287,40 +256,21 @@ export async function POST(req: Request) {
                 createdBy: createdByName,
             };
 
-            if (useSession && session) {
-                await HostelRegistrationLog.create([regLogPayload], { session });
-                if (paid > 0) {
-                    await HostelPaymentLog.create([{
-                        hostelId,
-                        memberId: createdMember.memberId,
-                        memberName: createdMember.name,
-                        amount: paid,
-                        paymentType: "initial",
-                        payment_date: joinDate,
-                        createdBy: createdByName,
-                    }], { session });
-                }
-            } else {
-                await HostelRegistrationLog.create(regLogPayload);
-                if (paid > 0) {
-                    await HostelPaymentLog.create({
-                        hostelId,
-                        memberId: createdMember.memberId,
-                        memberName: createdMember.name,
-                        amount: paid,
-                        paymentType: "initial",
-                        payment_date: joinDate,
-                        createdBy: createdByName,
-                    });
-                }
+            await HostelRegistrationLog.create(regLogPayload);
+            if (paid > 0) {
+                await HostelPaymentLog.create({
+                    hostelId,
+                    memberId: createdMember.memberId,
+                    memberName: createdMember.name,
+                    amount: paid,
+                    paymentType: "initial",
+                    payment_date: joinDate,
+                    createdBy: createdByName,
+                });
             }
 
-            if (useSession && session) await session.commitTransaction();
         } catch (error) {
-            if (useSession && session) await session.abortTransaction();
             throw error; 
-        } finally {
-            if (useSession && session) session.endSession();
         }
 
         const saved = await HostelMember.findById(memberObjId).populate("planId", "name durationDays price").lean();

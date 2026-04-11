@@ -10,8 +10,8 @@ const isBuild =
 const envSchema = z.object({
   // Required everywhere except isolated build steps
   MONGODB_URI: z.string().url("MONGODB_URI must be a valid connection string"),
-  UPSTASH_REDIS_REST_URL: z.string().url("Must be valid Upstash URL"),
-  UPSTASH_REDIS_REST_TOKEN: z.string().min(1, "Missing Upstash token"),
+  UPSTASH_REDIS_REST_URL: z.string().url("Must be valid Upstash URL").optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().min(1, "Missing Upstash token").optional(),
 
   // Security
   JWT_SECRET: z.string().min(16).optional(),

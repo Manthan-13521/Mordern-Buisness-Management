@@ -199,14 +199,12 @@ export async function POST(req: Request) {
             }
         }
 
-        const trxSession = await mongoose.startSession();
-        trxSession.startTransaction();
-
+        // Record payment without transaction
         try {
             // ── Save payment ───────────────────────────────────────────────────
             let payment;
             try {
-                const [createdPayment] = await Payment.create([{
+                payment = await Payment.create({
                     memberId:         new mongoose.Types.ObjectId(memberId as string),
                     planId:           new mongoose.Types.ObjectId(planId  as string),
                     poolId,
@@ -219,8 +217,7 @@ export async function POST(req: Request) {
                     clientId:         clientId       || undefined,
                     recordedBy:       new mongoose.Types.ObjectId(session.user.id),
                     status:           "success",
-                }], { session: trxSession });
-                payment = createdPayment;
+                });
                 
                 logger.audit({
                     type: "PAYMENT_SUCCESS",
@@ -240,8 +237,6 @@ export async function POST(req: Request) {
                         }).lean();
                         
                         if (existing) {
-                            await trxSession.abortTransaction();
-                            trxSession.endSession();
                             console.log("[Payment] Duplicate prevented", { clientId, idempotencyKey });
                             return NextResponse.json(
                                 { message: "Duplicate request — payment already recorded.", payment: existing },
@@ -259,43 +254,43 @@ export async function POST(req: Request) {
             await PoolAnalytics.findOneAndUpdate(
                 { poolId, yearMonth: paymentDateStr },
                 { $inc: { totalIncome: safeAmount } },
-                { upsert: true, session: trxSession }
+                { upsert: true }
             );
 
             // ── STEP 7C: Ledger Source of Truth Engine ──────────────────────────
             const { Ledger } = await import("@/models/Ledger");
             const memberObjId = new mongoose.Types.ObjectId(memberId as string);
-            let ledger = await Ledger.findOne({ memberId: memberObjId }).session(trxSession);
+            let ledger = await Ledger.findOne({ memberId: memberObjId });
             
             if (ledger) {
                 ledger.totalPaid += safeAmount;
                 ledger.balance = Math.max(0, ledger.totalDue - ledger.totalPaid); // Strict absolute recomputation
                 ledger.creditBalance = Math.max(0, ledger.totalPaid - ledger.totalDue); // Store explicit overpayment
-                await ledger.save({ session: trxSession });
+                await ledger.save();
             } else {
                 // Auto-Migrate Legacy Un-ledgered Member seamlessly
-                const fallbackMember = await Member.findById(memberObjId).session(trxSession) 
-                    || await import("@/models/EntertainmentMember").then(m => m.EntertainmentMember.findById(memberObjId).session(trxSession));
+                const fallbackMember = await Member.findById(memberObjId) 
+                    || await import("@/models/EntertainmentMember").then(m => m.EntertainmentMember.findById(memberObjId));
 
                 const legacyPaid = (fallbackMember as any)?.paidAmount || 0;
                 const legacyBalance = (fallbackMember as any)?.balanceAmount || 0;
                 const initialDueTarget = legacyPaid + legacyBalance;
 
-                ledger = (await Ledger.create([{
+                ledger = await Ledger.create({
                     memberId: memberObjId,
                     poolId,
                     totalDue: initialDueTarget,
                     totalPaid: legacyPaid + safeAmount,
                     balance: Math.max(0, initialDueTarget - (legacyPaid + safeAmount)),
                     creditBalance: Math.max(0, (legacyPaid + safeAmount) - initialDueTarget)
-                }], { session: trxSession }))[0];
+                });
             }
 
             // ── Sync Hybrid Cache visually onto Member Object ──────────────────
             let updatedMember = await Member.findOneAndUpdate(
                 { _id: memberObjId },
                 { $set: { balanceAmount: ledger.balance, paidAmount: ledger.totalPaid, cachedBalance: ledger.balance } },
-                { returnDocument: 'after', session: trxSession }
+                { returnDocument: 'after' }
             ) as any;
 
             if (!updatedMember) {
@@ -303,7 +298,7 @@ export async function POST(req: Request) {
                 updatedMember = await EntertainmentMember.findOneAndUpdate(
                     { _id: memberObjId },
                     { $set: { balanceAmount: ledger.balance, paidAmount: ledger.totalPaid, cachedBalance: ledger.balance } },
-                    { returnDocument: 'after', session: trxSession }
+                    { returnDocument: 'after' }
                 ) as any;
             }
 
@@ -322,14 +317,11 @@ export async function POST(req: Request) {
                         reason: "payment",
                         previousStatus: "blocked",
                         newStatus: "active"
-                    }], { session: trxSession });
+                    }]);
                 }
 
-                await updatedMember.save({ session: trxSession, validateModifiedOnly: true });
+                await updatedMember.save({ validateModifiedOnly: true });
             }
-
-            await trxSession.commitTransaction();
-            trxSession.endSession();
 
             // ── Step 10: Fire-and-forget WhatsApp payment confirmation ──────
             if (updatedMember?.phone) {
@@ -350,8 +342,6 @@ export async function POST(req: Request) {
 
             return NextResponse.json(payment, { status: 201 });
         } catch (trxError: any) {
-            await trxSession.abortTransaction();
-            trxSession.endSession();
             throw trxError;
         }
     } catch (error: any) {

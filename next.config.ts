@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 // Fail the build/startup instantly if missing critical env 
 import "./lib/env";
 
@@ -56,4 +57,22 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  // ── Sentry Build Options ────────────────────────────────────────────
+  // Suppress noisy build output
+  silent: true,
+
+  // Upload source maps for readable stack traces in Sentry
+  // Requires SENTRY_AUTH_TOKEN + SENTRY_ORG + SENTRY_PROJECT env vars in CI
+  sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+  },
+
+  // Tree-shake unused Sentry integrations for smaller client bundles
+  disableLogger: true,
+
+  // Automatically instrument Next.js data-fetching & API routes
+  autoInstrumentServerFunctions: true,
+  autoInstrumentMiddleware: true,
+});
+

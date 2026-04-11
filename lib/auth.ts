@@ -48,6 +48,10 @@ declare module "next-auth" {
             hostelId?: string;
             hostelSlug?: string;
             hostelName?: string;
+            // ── Business tenant fields (additive) ──
+            businessId?: string;
+            businessSlug?: string;
+            businessName?: string;
             // ── Subscription fields ──
             subscriptionStatus?: "active" | "expired" | "none";
             subscriptionExpiryDate?: string | null;
@@ -62,6 +66,10 @@ declare module "next-auth" {
         hostelId?: string;
         hostelSlug?: string;
         hostelName?: string;
+        // ── Business tenant fields (additive) ──
+        businessId?: string;
+        businessSlug?: string;
+        businessName?: string;
         // ── Subscription fields ──
         subscriptionStatus?: "active" | "expired" | "none";
         subscriptionExpiryDate?: string | null;
@@ -79,6 +87,10 @@ declare module "next-auth/jwt" {
         hostelId?: string;
         hostelSlug?: string;
         hostelName?: string;
+        // ── Business tenant fields (additive) ──
+        businessId?: string;
+        businessSlug?: string;
+        businessName?: string;
         // ── Subscription fields ──
         subscriptionStatus?: "active" | "expired" | "none";
         subscriptionExpiryDate?: string | null;
@@ -238,6 +250,24 @@ export const authOptions: NextAuthOptions = {
                     };
                 }
 
+                // ── Business admin path (additive) ──
+                if (user.role === "business_admin" && user.businessId) {
+                    const { Business } = await import("@/models/Business");
+                    const business = await Business.findOne({ businessId: user.businessId }).lean() as any;
+                    clearRateLimit(rlKey);
+                    return {
+                        id: user._id.toString(),
+                        name: user.name,
+                        email: user.email,
+                        role: user.role,
+                        businessId: user.businessId,
+                        businessSlug: business?.slug,
+                        businessName: business?.name,
+                        subscriptionStatus,
+                        subscriptionExpiryDate,
+                    };
+                }
+
                 return {
                     id: user._id.toString(),
                     name: user.name,
@@ -264,6 +294,10 @@ export const authOptions: NextAuthOptions = {
                 if (user.hostelId) token.hostelId = user.hostelId;
                 if (user.hostelSlug) token.hostelSlug = user.hostelSlug;
                 if (user.hostelName) token.hostelName = user.hostelName;
+                // ── Business fields (additive) ──
+                if (user.businessId) token.businessId = user.businessId;
+                if (user.businessSlug) token.businessSlug = user.businessSlug;
+                if (user.businessName) token.businessName = user.businessName;
                 // ── Subscription fields ──
                 token.subscriptionStatus = user.subscriptionStatus ?? "none";
                 token.subscriptionExpiryDate = user.subscriptionExpiryDate ?? null;
@@ -284,6 +318,10 @@ export const authOptions: NextAuthOptions = {
                 if (token.hostelId) session.user.hostelId = token.hostelId;
                 if (token.hostelSlug) session.user.hostelSlug = token.hostelSlug;
                 if (token.hostelName) session.user.hostelName = token.hostelName;
+                // ── Business fields (additive) ──
+                if (token.businessId) session.user.businessId = token.businessId;
+                if (token.businessSlug) session.user.businessSlug = token.businessSlug;
+                if (token.businessName) session.user.businessName = token.businessName;
                 // ── Subscription fields ──
                 session.user.subscriptionStatus = token.subscriptionStatus ?? "none";
                 session.user.subscriptionExpiryDate = token.subscriptionExpiryDate ?? null;

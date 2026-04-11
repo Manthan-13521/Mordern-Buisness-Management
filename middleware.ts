@@ -114,8 +114,8 @@ setInterval(() => {
 // ── Abuse Detection (edge-compatible) ───────────────────────────────────
 const abuseMap = new Map<string, { count: number; windowStart: number; blockedUntil: number }>();
 const ABUSE_WINDOW = 5 * 60_000;   // 5 minutes
-const ABUSE_THRESHOLD = 800;         // requests (raised: dashboards fire many parallel calls + polling)
-const ABUSE_BLOCK = 2 * 60_000;     // 2 minutes (reduced: less punishing for false positives)
+const ABUSE_THRESHOLD = 2000;         // requests (raised: dashboards fire many parallel calls + polling)
+const ABUSE_BLOCK = 60_000;     // 1 minute (reduced: less punishing for false positives)
 
 async function detectAbuse(key: string): Promise<boolean> {
     const redisKey = `abuse:${key}`;
@@ -285,6 +285,8 @@ export default withAuth(
                 // ── Subscription exemptions ──
                 "/api/subscription/webhook",
                 "/api/subscription/",
+                // ── Business exemptions ──
+                "/api/business/register",
             ];
 
             // ── Subscription expiry API guard ────────────────────────────────────
@@ -306,6 +308,7 @@ export default withAuth(
                 "/api/settings",
                 "/api/notifications",
                 "/api/backups",
+                "/api/business/",
             ];
 
             const SUBSCRIPTION_ALWAYS_ALLOW = [
@@ -316,6 +319,7 @@ export default withAuth(
                 "/api/cron",
                 "/api/pool/register",
                 "/api/hostel/register",
+                "/api/business/register",
             ];
 
             const isProtectedApi = SUBSCRIPTION_PROTECTED_APIS.some((p) => path.startsWith(p));
@@ -399,7 +403,7 @@ export default withAuth(
 
         // ── Subscription page guard ────────────────────────────────────────────────
         // Redirect expired admins to /renew-plan when they try to access any admin page.
-        const isAdminPage  = /^\/pool\/[^/]+\/admin(\/|$)/.test(path) || path.startsWith("/hostel/");
+        const isAdminPage  = /^\/pool\/[^/]+\/admin(\/|$)/.test(path) || path.startsWith("/hostel/") || path.startsWith("/business/");
         const isPublicPage = ["/select-plan", "/renew-plan", "/login", "/subscribe", "/api"].some(
             (p) => path.startsWith(p)
         );
@@ -446,6 +450,40 @@ export default withAuth(
             }
 
             // Public hostel registration pages (/hostel/register etc.)
+            const res = NextResponse.next();
+            applySecurityHeaders(res);
+            return res;
+        }
+        
+        // ── Business Admin page protection (additive) ──
+        if (path.startsWith("/business/")) {
+            const businessAdminRegex = /^\/business\/([^/]+)\/admin(\/.*)?$/;
+            const businessMatch = path.match(businessAdminRegex);
+
+            if (businessMatch) {
+                const businessSlug = businessMatch[1];
+                const subRoute = businessMatch[2] || "";
+
+                if (subRoute.includes("/login")) {
+                    const res = NextResponse.next();
+                    applySecurityHeaders(res);
+                    return res;
+                }
+
+                if (!token || token.role !== "business_admin") {
+                    return NextResponse.redirect(new URL("/login", req.url));
+                }
+
+                if (token.businessSlug !== businessSlug) {
+                    return NextResponse.redirect(new URL("/login", req.url));
+                }
+
+                const res = NextResponse.next();
+                applySecurityHeaders(res);
+                return res;
+            }
+
+            // Public business pages
             const res = NextResponse.next();
             applySecurityHeaders(res);
             return res;
@@ -497,6 +535,7 @@ export const config = {
         "/superadmin/:path*",
         "/pool/:poolSlug/admin/:path*",
         "/hostel/:hostelSlug/admin/:path*",
+        "/business/:businessSlug/admin/:path*",
         "/api/:path*",
         "/select-plan",
         "/renew-plan",

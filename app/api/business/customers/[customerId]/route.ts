@@ -1,0 +1,57 @@
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { dbConnect } from "@/lib/mongodb";
+import { BusinessCustomer } from "@/models/BusinessCustomer";
+
+export async function GET(req: Request, { params }: { params: Promise<{ customerId: string }> }) {
+    try {
+        const { customerId } = await params;
+        const session = await getServerSession(authOptions);
+        if (!session || session.user.role !== "business_admin") {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        await dbConnect();
+        const businessId = session.user.businessId;
+
+        const customer = await BusinessCustomer.findOne({ _id: customerId, businessId });
+        if (!customer) {
+            return NextResponse.json({ error: "Customer not found" }, { status: 404 });
+        }
+
+        return NextResponse.json(customer);
+    } catch (error) {
+        return NextResponse.json({ error: "Failed to fetch customer" }, { status: 500 });
+    }
+}
+
+export async function PATCH(req: Request, { params }: { params: Promise<{ customerId: string }> }) {
+    try {
+        const { customerId } = await params;
+        const session = await getServerSession(authOptions);
+        if (!session || session.user.role !== "business_admin") {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const body = await req.json();
+        const { name, phone, businessName, gstNumber, address } = body;
+
+        await dbConnect();
+        const businessId = session.user.businessId;
+
+        const customer = await BusinessCustomer.findOneAndUpdate(
+            { _id: customerId, businessId },
+            { $set: { name, phone, businessName, gstNumber, address } },
+            { new: true }
+        );
+
+        if (!customer) {
+            return NextResponse.json({ error: "Customer not found" }, { status: 404 });
+        }
+
+        return NextResponse.json(customer);
+    } catch (error) {
+        return NextResponse.json({ error: "Failed to update customer" }, { status: 500 });
+    }
+}

@@ -20,10 +20,10 @@ export function HeroSection() {
             transition={{ duration: 0.6 }}
           >
             <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-6xl">
-              Run Your Pool & Hostel Business <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-500">Seamlessly</span>
+              The Enterprise Engine for <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-500">Modern Businesses</span>
             </h1>
             <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300">
-              The high-performance, unified SaaS platform serving hundreds of facilities. Automate your payments, members, and daily operations with real-time analytics.
+              High-performance management software for Swimming Pools, Hostels, and Trading Businesses. Automate your workforce, inventory, and revenue with one unified dashboard.
             </p>
             <div className="mt-10 flex items-center justify-center gap-x-6">
               <Link 

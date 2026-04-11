@@ -1,7 +1,7 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
 
 export interface IUserSubscription {
-    module: "pool" | "hostel";
+    module: "pool" | "hostel" | "business";
     planType: "trial" | "quarterly" | "yearly" | "block-based";
     blocks?: 1 | 2 | 3 | 4;   // hostel block-based only
     pricePaid: number;
@@ -14,10 +14,12 @@ export interface IUser extends Document {
     name: string;
     email: string;
     passwordHash: string;
-    role: "superadmin" | "admin" | "operator" | "hostel_admin";
+    role: "superadmin" | "admin" | "operator" | "hostel_admin" | "business_admin";
     phone?: string;
     poolId?: string;
     hostelId?: string;   // hostel tenant scope — coexists with poolId
+    businessId?: string; // business tenant scope
+    businessSlug?: string;
     isActive: boolean;
     lastLogin?: Date;
     // ── SaaS Subscription ────────────────────────────────────────────────
@@ -31,7 +33,7 @@ export interface IUser extends Document {
 
 const subscriptionSubSchema = new Schema<IUserSubscription>(
     {
-        module:    { type: String, enum: ["pool", "hostel"], required: true },
+        module:    { type: String, enum: ["pool", "hostel", "business"], required: true },
         planType:  { type: String, enum: ["trial", "quarterly", "yearly", "block-based"], required: true },
         blocks:    { type: Number, enum: [1, 2, 3, 4] },
         pricePaid: { type: Number, required: true, min: 0 },
@@ -49,9 +51,11 @@ const userSchema = new Schema<IUser>(
         passwordHash: { type: String, required: true },
         poolId: { type: String, index: true, sparse: true },
         hostelId: { type: String, index: true, sparse: true },
+        businessId: { type: String, index: true, sparse: true },
+        businessSlug: { type: String, sparse: true },
         role: {
             type: String,
-            enum: ["superadmin", "admin", "operator", "hostel_admin"],
+            enum: ["superadmin", "admin", "operator", "hostel_admin", "business_admin"],
             default: "operator",
         },
         isActive: { type: Boolean, default: true },

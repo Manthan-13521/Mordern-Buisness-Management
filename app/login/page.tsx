@@ -54,6 +54,14 @@ export default function UnifiedLoginPage() {
                     setError("Pool not found. Please contact support.");
                     setLoading(false);
                 }
+            } else if (role === "business_admin") {
+                const businessSlug = (session?.user as any)?.businessSlug;
+                if (businessSlug) {
+                    router.push(`/business/${businessSlug}/admin/dashboard`);
+                } else {
+                    setError("Business not found. Please contact support.");
+                    setLoading(false);
+                }
             } else {
                 router.push("/");
             }
@@ -151,15 +159,13 @@ export default function UnifiedLoginPage() {
                     </form>
 
                     {/* Register links */}
-                    <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-center gap-4 text-xs text-slate-500">
-                        <span>New here?</span>
-                        <a href="/hostel/register" className="text-indigo-400 hover:text-indigo-300 transition">
-                            Register Hostel
-                        </a>
+                    <div className="mt-5 pt-4 border-t border-white/10 flex flex-wrap items-center justify-center gap-2 sm:gap-4 text-[11px] text-slate-500">
+                        <span>New account:</span>
+                        <a href="/hostel/register" className="text-indigo-400 hover:text-indigo-300 transition">Hostel</a>
                         <span>&middot;</span>
-                        <a href="/subscribe" className="text-sky-400 hover:text-sky-300 transition">
-                            Register Pool
-                        </a>
+                        <a href="/subscribe" className="text-sky-400 hover:text-sky-300 transition">Pool</a>
+                        <span>&middot;</span>
+                        <a href="/business/register" className="text-emerald-400 hover:text-emerald-300 font-bold transition">Business</a>
                     </div>
                 </div>
 

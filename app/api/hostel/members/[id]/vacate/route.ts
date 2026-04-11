@@ -11,7 +11,6 @@ export const dynamic = "force-dynamic";
 
 // POST /api/hostel/members/[id]/vacate
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-    let session = null;
     try {
         const [token, { id }] = await Promise.all([getToken({ req: req as any }), params]);
         await dbConnect();
@@ -30,23 +29,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
         const settleMode = body.settleMode || "cash";
 
-        session = await mongoose.startSession();
-        session.startTransaction();
-
-        const member = await HostelMember.findOne({ _id: id, hostelId, isDeleted: false }).session(session);
+        const member = await HostelMember.findOne({ _id: id, hostelId, isDeleted: false });
         if (!member) {
-            await session.abortTransaction();
             return NextResponse.json({ error: "Member not found" }, { status: 404 });
         }
 
         if (member.status === "vacated") {
-            await session.abortTransaction();
             return NextResponse.json({ error: "Member is already vacated" }, { status: 400 });
         }
 
         const finalCheck = member.balance + settleAmount;
         if (Math.abs(finalCheck) >= 1) { 
-            await session.abortTransaction();
             return NextResponse.json({ 
                 error: `Final balance must perfectly equal 0. Current balance: ${member.balance}, but settle parameter provided: ${settleAmount}` 
             }, { status: 400 });
@@ -60,7 +53,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             const absoluteAmount = Math.abs(settleAmount);
             const paymentType = isRefund ? "refund" : "settlement";
 
-            await HostelPayment.create([{
+            await HostelPayment.create({
                 hostelId,
                 memberId: member._id,
                 planId: member.planId,
@@ -70,18 +63,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
                 paymentType: paymentType,
                 status: "success",
                 idempotencyKey: body.idempotencyKey
-            }], { session });
+            });
 
             await HostelAnalytics.updateOne(
                 { hostelId, yearMonth },
                 { $inc: { totalIncome: settleAmount, checkedOutMembers: 1 } },
-                { session, upsert: true }
+                { upsert: true }
             );
         } else {
              await HostelAnalytics.updateOne(
                 { hostelId, yearMonth },
                 { $inc: { checkedOutMembers: 1 } },
-                { session, upsert: true }
+                { upsert: true }
             );
         }
 
@@ -90,9 +83,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         member.balance = 0;      
         member.vacated_at = now;
         
-        await member.save({ session });
+        await member.save();
         
-        await HostelLog.create([{
+        await HostelLog.create({
             hostelId,
             type: "status_update",
             memberId: member.memberId,
@@ -100,18 +93,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             memberName: member.name,
             description: `Member ${member.name} (${member.memberId}) vacated their room. Rent cycle stopped. Settled amount: ₹${settleAmount}`,
             performedBy: token.email as string,
-        }], { session });
+        });
 
-        await session.commitTransaction();
         return NextResponse.json({ success: true, member });
     } catch (error: any) {
-        if (session) await session.abortTransaction();
         if (error?.code === 11000 && error?.keyPattern?.idempotencyKey) {
             return NextResponse.json({ message: "Duplicate vacate processed safely", success: true }, { status: 200 });
         }
         console.error("[POST /api/hostel/members/[id]/vacate]", error);
         return NextResponse.json({ error: error?.message || "Server error" }, { status: 500 });
-    } finally {
-        if (session) session.endSession();
     }
 }

@@ -18,7 +18,6 @@ export const dynamic = "force-dynamic";
  * Atomically records payment + analytics.
  */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-    let session = null;
     try {
         const [token, { id }, body] = await Promise.all([getToken({ req: req as any }), params, req.json()]);
         await dbConnect();
@@ -41,20 +40,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             }
         }
 
-        session = await mongoose.startSession();
-        session.startTransaction();
-
         // Step 1: Fetch existing member
-        const member = await HostelMember.findOne({ _id: id, hostelId, isDeleted: false }).session(session);
+        const member = await HostelMember.findOne({ _id: id, hostelId, isDeleted: false });
         if (!member) {
-            await session.abortTransaction();
             return NextResponse.json({ error: "Member not found" }, { status: 404 });
         }
 
         // Step 2: Validate new plan
         const plan = await HostelPlan.findOne({ _id: planId, hostelId, isActive: true }).lean() as any;
         if (!plan) {
-            await session.abortTransaction();
             return NextResponse.json({ error: "Invalid or inactive plan" }, { status: 400 });
         }
 
@@ -77,13 +71,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         member.paymentMode = paymentMode || "cash";
         member.isActive = true;
         member.status = "active";
-        await member.save({ session });
+        await member.save();
 
-        // Step 4: Create payment + renewal record + analytics (all atomic)
+        // Step 4: Create payment + renewal record + analytics
         const renewalDate = new Date(); // event date: renewal happens now
         const yearMonth = `${renewalDate.getFullYear()}-${String(renewalDate.getMonth() + 1).padStart(2, "0")}`;
 
-        await HostelPayment.create([{
+        await HostelPayment.create({
             hostelId,
             memberId: member._id,
             planId: new mongoose.Types.ObjectId(planId),
@@ -94,15 +88,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             status: "success",
             paymentType: "renewal",
             idempotencyKey,
-        }], { session });
+        });
 
         await HostelAnalytics.updateOne(
             { hostelId, yearMonth },
             { $inc: { totalIncome: paid } },
-            { session, upsert: true }
+            { upsert: true }
         );
 
-        await HostelRenewal.create([{
+        await HostelRenewal.create({
             hostelId,
             memberId: member._id,
             oldPlanId,
@@ -113,10 +107,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             notes,
             renewedBy: token.email as string,
             idempotencyKey,
-        }], { session });
+        });
 
         const createdByName = (token.name || token.email || "Admin") as string;
-        await HostelPaymentLog.create([{
+        await HostelPaymentLog.create({
             hostelId,
             memberId: member.memberId,
             memberName: member.name,
@@ -124,20 +118,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             paymentType: "renewal",
             payment_date: renewalDate,
             createdBy: createdByName,
-        }], { session });
-
-        await session.commitTransaction();
+        });
 
         const updated = await HostelMember.findById(member._id).populate("planId", "name durationDays price").lean();
         return NextResponse.json({ success: true, member: updated });
     } catch (error: any) {
-        if (session) await session.abortTransaction();
         if (error?.code === 11000 && error?.keyPattern?.idempotencyKey) {
             return NextResponse.json({ message: "Duplicate renewal requested", success: true }, { status: 200 });
         }
         console.error("[POST /api/hostel/members/[id]/renew]", error);
         return NextResponse.json({ error: error?.message || "Renewal failed" }, { status: 500 });
-    } finally {
-        if (session) session.endSession();
     }
 }
