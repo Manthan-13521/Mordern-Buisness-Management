@@ -20,7 +20,7 @@ export async function GET(req: Request) {
             .sort({ name: 1 })
             .lean() as any[];
 
-        return NextResponse.json({ blocks: blocks.map((b) => b.name) });
+        return NextResponse.json({ blocks: blocks.map((b, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }) => b.name) });
     } catch (error) {
         console.error("[GET /api/hostel/blocks]", error);
         return NextResponse.json({ error: "Failed to fetch blocks" }, { status: 500 });

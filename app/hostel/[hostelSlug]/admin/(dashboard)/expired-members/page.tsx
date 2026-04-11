@@ -29,7 +29,7 @@ export default function ExpiredMembersPage() {
     }, [page, search]);
 
     useEffect(() => { fetch_(); }, [fetch_]);
-    useEffect(() => { fetch("/api/hostel/plans").then(r => r.json()).then(d => setPlans(d.data || [])); }, []);
+    useEffect(() => { fetch("/api/hostel/plans", { cache: 'no-store' }).then(r => r.json()).then(d => setPlans(d.data || [])); }, []);
 
     const handleRenew = async (e: React.FormEvent) => {
         e.preventDefault(); if (!renewMember) return; setSubmitting(true); setError("");

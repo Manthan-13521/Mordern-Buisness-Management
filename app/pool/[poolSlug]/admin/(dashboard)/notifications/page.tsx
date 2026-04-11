@@ -23,7 +23,7 @@ export default function NotificationsPage() {
 
     const fetchLogs = () => {
         setLoading(true);
-        fetch("/api/notifications")
+        fetch("/api/notifications", { cache: 'no-store' })
             .then((res) => res.json())
             .then((data) => {
                 setLogs(Array.isArray(data) ? data : []);

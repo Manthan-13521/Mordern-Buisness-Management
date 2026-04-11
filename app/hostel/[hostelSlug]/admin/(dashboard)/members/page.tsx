@@ -80,8 +80,8 @@ export default function MembersPage() {
     useEffect(() => { setPage(1); }, [blockFilter]);
 
     useEffect(() => {
-        fetch("/api/hostel/plans").then(r => r.json()).then(d => setPlans(d.data || []));
-        fetch("/api/hostel/hostel-settings").then(r => r.json()).then(d => setBlocks(d.blocks || []));
+        fetch("/api/hostel/plans", { cache: 'no-store' }).then(r => r.json()).then(d => setPlans(d.data || []));
+        fetch("/api/hostel/hostel-settings", { cache: 'no-store' }).then(r => r.json()).then(d => setBlocks(d.blocks || []));
     }, []);
 
     // Check URL parameters for pre-filling form from Map Overview

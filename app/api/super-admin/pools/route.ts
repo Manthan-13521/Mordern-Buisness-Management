@@ -5,6 +5,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { nanoid } from "nanoid";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 /**
  * GET /api/super-admin/pools
  * Returns paginated list of all pools.
@@ -148,7 +151,7 @@ export async function PATCH(req: NextRequest) {
             return NextResponse.json({ error: "Pool not found" }, { status: 404 });
         }
 
-        return NextResponse.json(pool);
+        return NextResponse.json(pool, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[PATCH /api/super-admin/pools]", error);
         return NextResponse.json({ error: "Failed to update pool" }, { status: 500 });

@@ -294,7 +294,7 @@ export async function POST(req: Request) {
             const errMsg = Object.entries(errs).map(([f, m]) => `${f}: ${m?.join(", ")}`).join(" | ");
             console.error("Zod Validation Failed:", errMsg, mappedBody);
             // Return error string explicitly to prevent [object Object] on UI
-            return NextResponse.json({ error: String(errMsg) }, { status: 400 });
+            return NextResponse.json({ error: String(errMsg, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }) }, { status: 400 });
         }
         const data = result.data;
 

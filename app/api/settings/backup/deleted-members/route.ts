@@ -11,6 +11,9 @@ import { logger } from "@/lib/logger";
 import type ExcelJSType from "exceljs";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(req: Request) {
     let isAuthorized = false;
     let session: Session | null = null;

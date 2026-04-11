@@ -41,10 +41,10 @@ export default function RevenueAnalyticsPage() {
         setLoading(true);
 
         Promise.all([
-            fetch("/api/analytics/summary").then(r => r.json()),
-            fetch("/api/analytics/trends").then(r => r.json()),
-            fetch("/api/analytics/defaulters").then(r => r.json()),
-            fetch("/api/analytics/plan-revenue").then(r => r.json()),
+            fetch("/api/analytics/summary", { cache: 'no-store' }).then(r => r.json()),
+            fetch("/api/analytics/trends", { cache: 'no-store' }).then(r => r.json()),
+            fetch("/api/analytics/defaulters", { cache: 'no-store' }).then(r => r.json()),
+            fetch("/api/analytics/plan-revenue", { cache: 'no-store' }).then(r => r.json()),
         ]).then(([s, t, d, p]) => {
             setSummary(s);
             setTrends(t);

@@ -39,11 +39,11 @@ export async function GET(req: Request) {
     } catch (error: any) {
         if (error.message === "GLACIER_RESTORE_REQUIRED") {
             return NextResponse.json({ 
-                error: "Restore required (may take several hours depending on Glacier tier). This backup is currently in Glacier deep storage.",
+                error: "Restore required (may take several hours depending on Glacier tier, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }). This backup is currently in Glacier deep storage.",
                 isGlacier: true
             }, { status: 409 });
         }
         
-        return NextResponse.json({ error: "Failed to download backup: " + String(error) }, { status: 500 });
+        return NextResponse.json({ error: "Failed to download backup: " + String(error, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }) }, { status: 500 });
     }
 }

@@ -85,7 +85,7 @@ export async function POST(req: Request) {
         // Mock mode
         if (!process.env.RAZORPAY_KEY_ID) {
             return NextResponse.json({
-                orderId:  `order_mock_${Date.now()}`,
+                orderId:  `order_mock_${Date.now(, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } })}`,
                 amount:   amountPaise,
                 currency: "INR",
                 isMock:   true,

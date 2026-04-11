@@ -4,6 +4,9 @@ import { Pool } from "@/models/Pool";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const PLAN_LIMITS: Record<string, { maxMembers: number; maxStaff: number; features: string[] }> = {
     free: {
         maxMembers: 50,
@@ -59,8 +62,7 @@ export async function POST(req: NextRequest) {
         }
 
         if (!PLAN_LIMITS[plan]) {
-            return NextResponse.json(
-                { error: `Invalid plan. Valid plans: ${Object.keys(PLAN_LIMITS).join(", ")}` },
+            return NextResponse.json({ error: `Invalid plan. Valid plans: ${Object.keys(PLAN_LIMITS, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }).join(", ")}` },
                 { status: 400 }
             );
         }
@@ -144,7 +146,7 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: "Pool not found" }, { status: 404 });
         }
 
-        return NextResponse.json(pool);
+        return NextResponse.json(pool, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/pools/subscribe]", error);
         return NextResponse.json({ error: "Failed to fetch subscription details" }, { status: 500 });

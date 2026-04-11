@@ -65,7 +65,7 @@ export async function POST(req: Request) {
             blocks: blocks ? parseInt(blocks) : undefined,
         });
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         logger.error("[Subscription Webhook] Error", { error: error?.message });
         return NextResponse.json({ error: error?.message || "Webhook processing failed" }, { status: 500 });

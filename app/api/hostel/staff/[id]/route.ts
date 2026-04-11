@@ -19,7 +19,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             { returnDocument: 'after' }
         ).lean();
         if (!staff) return NextResponse.json({ error: "Staff not found" }, { status: 404 });
-        return NextResponse.json(staff);
+        return NextResponse.json(staff, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[PUT /api/hostel/staff/[id]]", error);
         return NextResponse.json({ error: "Server error" }, { status: 500 });
@@ -34,7 +34,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
         const hostelId = token.hostelId as string;
 
         await HostelStaff.findOneAndUpdate({ _id: id, hostelId }, { $set: { isActive: false } });
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[DELETE /api/hostel/staff/[id]]", error);
         return NextResponse.json({ error: "Server error" }, { status: 500 });

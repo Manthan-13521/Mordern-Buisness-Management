@@ -23,7 +23,7 @@ export default function HostelSettingsPage() {
     const [activeRoomIndex, setActiveRoomIndex] = useState<number | null>(null);
 
     const loadSettings = () => {
-        fetch("/api/hostel/hostel-settings").then(r => r.json()).then(d => {
+        fetch("/api/hostel/hostel-settings", { cache: 'no-store' }).then(r => r.json()).then(d => {
             setBlocks(d.blocks || []);
             setMaxBlocks(d.maxBlocks ?? 4);
             setWhatsappEnabled(d.whatsappEnabled || false);

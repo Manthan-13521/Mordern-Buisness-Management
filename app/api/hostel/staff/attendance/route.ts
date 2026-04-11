@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
             createdAt: { $gte: pastDate }
         }).sort({ date: 1 }).lean();
 
-        return NextResponse.json({ data: attendance });
+        return NextResponse.json({ data: attendance }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/hostel/staff/attendance]", error);
         return NextResponse.json({ error: "Server error" }, { status: 500 });
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
             { returnDocument: 'after', upsert: true }
         ).lean();
 
-        return NextResponse.json(record);
+        return NextResponse.json(record, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         console.error("[POST /api/hostel/staff/attendance]", error);
         return NextResponse.json({ error: error?.message || "Server error" }, { status: 500 });

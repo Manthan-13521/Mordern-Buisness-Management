@@ -18,7 +18,7 @@ export async function GET(req: Request) {
         }
         
         const backups = await listBackups(poolFolder);
-        return NextResponse.json({ backups });
+        return NextResponse.json({ backups }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         return NextResponse.json({ error: error.message || "Failed to list backups" }, { status: 500 });
     }

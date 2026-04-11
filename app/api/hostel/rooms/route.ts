@@ -23,14 +23,14 @@ export async function GET(req: Request) {
         const floorNo = url.searchParams.get("floor") || "";
 
         if (!blockNo || !floorNo) {
-            return NextResponse.json({ rooms: [] });
+            return NextResponse.json({ rooms: [] }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const block = await HostelBlock.findOne({ hostelId, name: blockNo }).lean() as any;
-        if (!block) return NextResponse.json({ rooms: [] });
+        if (!block) return NextResponse.json({ rooms: [] }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const floor = await HostelFloor.findOne({ hostelId, blockId: block._id, floorNo }).lean() as any;
-        if (!floor) return NextResponse.json({ rooms: [] });
+        if (!floor) return NextResponse.json({ rooms: [] }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const rooms = await HostelRoom.find({ hostelId, floorId: floor._id }).lean();
 

@@ -18,7 +18,7 @@ export async function POST(req: Request) {
                 return NextResponse.json({ error: "Unknown notification type" }, { status: 400 });
         }
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (e: any) {
         console.error("[Worker] Critical Notification Error:", e);
         return NextResponse.json({ error: e.message || "Internal Worker Error" }, { status: 500 });

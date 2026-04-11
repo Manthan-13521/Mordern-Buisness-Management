@@ -14,7 +14,7 @@ export default function WhatsAppPage() {
     const [disconnecting, setDisconnecting] = useState(false);
     const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-    const fetchStatus = async () => { setLoading(true); const r = await fetch("/api/hostel/twilio/status"); const d = await r.json(); setStatus(d); setLoading(false); };
+    const fetchStatus = async () => { setLoading(true); const r = await fetch("/api/hostel/twilio/status", { cache: 'no-store' }); const d = await r.json(); setStatus(d); setLoading(false); };
     useEffect(() => { fetchStatus(); }, []);
 
     const handleConnect = async (e: React.FormEvent) => {

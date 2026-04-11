@@ -11,6 +11,9 @@ import type { Session } from "next-auth";
 import { requireCronAuth } from "@/lib/requireCronAuth";
 import { authOptions } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(req: Request) {
     // Allow Cron Jobs with Secret OR Authenticated Admins
     let isAuthorized = false;

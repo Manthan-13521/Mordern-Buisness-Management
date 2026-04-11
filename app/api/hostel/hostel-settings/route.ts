@@ -91,7 +91,7 @@ export async function PUT(req: Request) {
         const hostel = await Hostel.findOne({ hostelId }).select("numberOfBlocks").lean() as any;
         const maxBlocks = hostel?.numberOfBlocks ?? 4;
         if (incomingBlocks.length > maxBlocks) {
-            return NextResponse.json({ error: `Maximum ${maxBlocks} block(s) allowed.` }, { status: 400 });
+            return NextResponse.json({ error: `Maximum ${maxBlocks} block(s, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }) allowed.` }, { status: 400 });
         }
 
         // Structural Limiter Check

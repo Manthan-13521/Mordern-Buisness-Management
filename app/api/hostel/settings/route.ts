@@ -17,7 +17,7 @@ export async function GET(req: Request) {
             .lean() as any;
         if (!hostel) return NextResponse.json({ error: "Hostel not found" }, { status: 404 });
 
-        return NextResponse.json(hostel);
+        return NextResponse.json(hostel, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/hostel/settings]", error);
         return NextResponse.json({ error: "Server error" }, { status: 500 });
@@ -39,7 +39,7 @@ export async function PUT(req: Request) {
             { returnDocument: 'after' }
         ).select("hostelName slug city adminEmail adminPhone numberOfBlocks isTwilioConnected").lean();
         if (!hostel) return NextResponse.json({ error: "Hostel not found" }, { status: 404 });
-        return NextResponse.json(hostel);
+        return NextResponse.json(hostel, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         console.error("[PUT /api/hostel/settings]", error);
         return NextResponse.json({ error: error?.message || "Server error" }, { status: 500 });

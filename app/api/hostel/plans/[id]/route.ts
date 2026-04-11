@@ -20,7 +20,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             { returnDocument: 'after' }
         ).lean();
         if (!plan) return NextResponse.json({ error: "Plan not found" }, { status: 404 });
-        return NextResponse.json(plan);
+        return NextResponse.json(plan, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[PUT /api/hostel/plans/[id]]", error);
         return NextResponse.json({ error: "Server error" }, { status: 500 });
@@ -37,7 +37,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
         const plan = await HostelPlan.findOneAndDelete({ _id: id, hostelId }).lean();
         if (!plan) return NextResponse.json({ error: "Plan not found" }, { status: 404 });
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[DELETE /api/hostel/plans/[id]]", error);
         return NextResponse.json({ error: "Server error" }, { status: 500 });

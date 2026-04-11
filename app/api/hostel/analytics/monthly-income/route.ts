@@ -10,6 +10,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import mongoose from "mongoose";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(req: Request) {
     try {
         await dbConnect();
@@ -83,7 +86,7 @@ export async function GET(req: Request) {
             }
         });
 
-        return NextResponse.json(finalData);
+        return NextResponse.json(finalData, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
     } catch (error) {
         console.error("[GET /api/hostel/analytics/monthly-income]", error);

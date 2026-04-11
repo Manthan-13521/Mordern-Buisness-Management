@@ -141,8 +141,7 @@ export async function POST(req: Request) {
             const existingMembers = await HostelMember.find({ hostelId, roomId: roomObj._id, isActive: true, isDeleted: false }).select("bedNo").lean();
             
             if (existingMembers.length >= (roomObj.capacity || 1)) {
-                return NextResponse.json(
-                    { error: `Room ${roomNo} (Block ${blockNo}) just reached maximum capacity. Please select a different room.` },
+                return NextResponse.json({ error: `Room ${roomNo} (Block ${blockNo}, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }) just reached maximum capacity. Please select a different room.` },
                     { status: 409 }
                 );
             }
@@ -152,7 +151,7 @@ export async function POST(req: Request) {
             if (explicitBedNo) {
                 finalBedNo = parseInt(explicitBedNo, 10);
                 if (finalBedNo < 1 || finalBedNo > (roomObj.capacity || 1)) {
-                    return NextResponse.json({ error: `Bed ${finalBedNo} is outside room capacity (Max ${roomObj.capacity}).` }, { status: 400 });
+                    return NextResponse.json({ error: `Bed ${finalBedNo} is outside room capacity (Max ${roomObj.capacity}, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }).` }, { status: 400 });
                 }
                 const isBedOccupied = existingMembers.some((m: any) => m.bedNo === finalBedNo);
                 if (isBedOccupied) {

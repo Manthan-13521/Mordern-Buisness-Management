@@ -53,7 +53,7 @@ export async function DELETE(req: Request, props: RouteContext) {
         // Cache Invalidation
         invalidateCache(member.poolId).catch(() => {});
 
-        return NextResponse.json({ message: "Member permanently deleted." });
+        return NextResponse.json({ message: "Member permanently deleted." }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[DELETE /api/members/[id]/permanent]", error);
         return NextResponse.json({ error: "Server error deleting member" }, { status: 500 });

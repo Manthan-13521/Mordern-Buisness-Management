@@ -11,6 +11,9 @@ import { savePhoto } from "@/lib/savePhoto";
 import { signQRToken } from "@/lib/qrSigner";
 import { EntertainmentMemberCreateSchema } from "@/lib/validators";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(req: Request) {
     try {
         const [, session] = await Promise.all([
@@ -75,7 +78,7 @@ export async function POST(req: Request) {
         const body = await req.json();
         const result = EntertainmentMemberCreateSchema.safeParse(body);
         if (!result.success) {
-            return NextResponse.json({ error: result.error.flatten() }, { status: 400 });
+            return NextResponse.json({ error: result.error.flatten(, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }) }, { status: 400 });
         }
         const { name, phone, planId, dob, photoBase64, aadharCard, address, planQuantity = 1, paidAmount = 0, balanceAmount = 0 } = result.data;
 

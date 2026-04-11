@@ -35,7 +35,7 @@ export default function TwilioSetupPage() {
     const fetchStatus = async () => {
         setLoading(true);
         try {
-            const res = await fetch("/api/twilio/status");
+            const res = await fetch("/api/twilio/status", { cache: 'no-store' });
             if (res.ok) setStatus(await res.json());
         } catch {
             // silently ignore

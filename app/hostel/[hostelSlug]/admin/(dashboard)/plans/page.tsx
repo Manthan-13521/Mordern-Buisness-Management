@@ -52,7 +52,7 @@ export default function PlansPage() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
 
-    const fetchPlans = async () => { setLoading(true); const r = await fetch("/api/hostel/plans"); const d = await r.json(); setPlans(d.data || []); setLoading(false); };
+    const fetchPlans = async () => { setLoading(true); const r = await fetch("/api/hostel/plans", { cache: 'no-store' }); const d = await r.json(); setPlans(d.data || []); setLoading(false); };
     useEffect(() => { fetchPlans(); }, []);
 
     const openAdd = () => { 

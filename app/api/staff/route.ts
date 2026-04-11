@@ -6,6 +6,9 @@ import { authOptions } from "@/lib/auth";
 import { StaffCreateSchema } from "@/lib/validators";
 import { apiError } from "@/lib/apiError";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 let _staffCounter = 0;
 
 function generateStaffId(role: string): string {

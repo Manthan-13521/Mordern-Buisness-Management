@@ -88,7 +88,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             { returnDocument: 'after' }
         ).populate("planId", "name durationDays price").lean();
         if (!member) return NextResponse.json({ error: "Member not found" }, { status: 404 });
-        return NextResponse.json(member);
+        return NextResponse.json(member, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[PUT /api/hostel/members/[id]]", error);
         return NextResponse.json({ error: "Server error" }, { status: 500 });
@@ -131,7 +131,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
             description: `Manual hard-delete performed. Member ${member.name} (${member.memberId}) archived to permanent storage.`,
             performedBy: token.email as string,
         });
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[DELETE /api/hostel/members/[id]]", error);
         return NextResponse.json({ error: "Server error" }, { status: 500 });

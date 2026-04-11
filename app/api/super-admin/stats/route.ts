@@ -8,6 +8,9 @@ import { User } from "@/models/User";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 /**
  * GET /api/super-admin/stats
  * Platform-wide aggregated stats for the super-admin dashboard.

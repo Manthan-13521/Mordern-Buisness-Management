@@ -28,7 +28,7 @@ export default function OverviewPage() {
     const fetchStructure = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await fetch("/api/hostel/structure");
+            const res = await fetch("/api/hostel/structure", { cache: 'no-store' });
             const data = await res.json();
             if (data.success) {
                 setBlocks(data.data || []);

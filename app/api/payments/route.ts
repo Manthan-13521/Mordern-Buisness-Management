@@ -108,8 +108,7 @@ export async function POST(req: Request) {
         const body = await req.json();
         const result = PaymentSchema.safeParse(body);
         if (!result.success) {
-            return NextResponse.json(
-                { error: result.error.flatten() },
+            return NextResponse.json({ error: result.error.flatten(, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }) },
                 { status: 400 }
             );
         }

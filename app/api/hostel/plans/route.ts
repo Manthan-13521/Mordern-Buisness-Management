@@ -16,7 +16,7 @@ export async function GET(req: Request) {
         if (!hostelId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
         const plans = await HostelPlan.find({ hostelId }).sort({ price: 1 }).lean();
-        return NextResponse.json({ data: plans });
+        return NextResponse.json({ data: plans }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/hostel/plans]", error);
         return NextResponse.json({ error: "Failed to fetch plans" }, { status: 500 });

@@ -11,6 +11,9 @@ import { logger } from "@/lib/logger";
 import type ExcelJSType from "exceljs";
 import { checkBackupExists, uploadBackup } from "@/lib/s3";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(req: Request) {
     const url = new URL(req.url);
     const force = url.searchParams.get("force") === "true";

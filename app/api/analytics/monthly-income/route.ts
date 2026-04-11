@@ -4,6 +4,9 @@ import { PoolAnalytics } from "@/models/PoolAnalytics";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(req: Request) {
     try {
         await dbConnect();
@@ -78,7 +81,7 @@ export async function GET(req: Request) {
             total_income: incomeMap.get(month) || 0
         }));
 
-        return NextResponse.json(finalData);
+        return NextResponse.json(finalData, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
     } catch (error) {
         console.error("[GET /api/analytics/monthly-income]", error);

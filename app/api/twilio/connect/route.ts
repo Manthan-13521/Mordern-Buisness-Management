@@ -25,7 +25,7 @@ export async function POST(req: Request) {
         const body = await req.json();
         const result = TwilioConnectSchema.safeParse(body);
         if (!result.success) {
-            return NextResponse.json({ error: result.error.flatten() }, { status: 400 });
+            return NextResponse.json({ error: result.error.flatten(, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }) }, { status: 400 });
         }
 
         const { sid, authToken, whatsappNumber, testPhone } = result.data;

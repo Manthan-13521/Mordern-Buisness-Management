@@ -8,6 +8,9 @@ import QRCode from "qrcode";
 import { uploadBuffer } from "@/lib/local-upload";
 import { signQRToken } from "@/lib/qrSigner";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const maxDuration = 60; // Allow more time for jobs
 
 export async function GET(req: Request) {

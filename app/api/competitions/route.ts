@@ -4,6 +4,9 @@ import { Competition } from "@/models/Competition";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 /**
  * GET /api/competitions
  * List competitions for pool — paginated, filterable by status.

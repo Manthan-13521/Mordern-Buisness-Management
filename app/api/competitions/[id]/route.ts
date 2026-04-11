@@ -5,6 +5,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import mongoose from "mongoose";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
@@ -27,7 +30,7 @@ export async function GET(_req: Request, props: RouteContext) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
-        return NextResponse.json(competition);
+        return NextResponse.json(competition, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/competitions/[id]]", error);
         return NextResponse.json({ error: "Server error" }, { status: 500 });
@@ -72,7 +75,7 @@ export async function PATCH(req: Request, props: RouteContext) {
                     },
                 },
             });
-            return NextResponse.json({ message: "Participant added" });
+            return NextResponse.json({ message: "Participant added" }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // Add / update winner
@@ -92,7 +95,7 @@ export async function PATCH(req: Request, props: RouteContext) {
                     },
                 },
             });
-            return NextResponse.json({ message: "Winner recorded" });
+            return NextResponse.json({ message: "Winner recorded" }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // Update participant timing / position
@@ -105,11 +108,11 @@ export async function PATCH(req: Request, props: RouteContext) {
                 { _id: id, "participants._id": new mongoose.Types.ObjectId(participantId) },
                 { $set: setObj }
             );
-            return NextResponse.json({ message: "Participant updated" });
+            return NextResponse.json({ message: "Participant updated" }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const updated = await Competition.findByIdAndUpdate(id, { $set: updates }, { returnDocument: 'after' });
-        return NextResponse.json(updated);
+        return NextResponse.json(updated, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[PATCH /api/competitions/[id]]", error);
         return NextResponse.json({ error: "Server error" }, { status: 500 });

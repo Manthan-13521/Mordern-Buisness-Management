@@ -53,7 +53,7 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
 
     useEffect(() => {
         if (isOpen) {
-            fetch("/api/plans?limit=100")
+            fetch("/api/plans?limit=100", { cache: 'no-store' })
                 .then((res) => res.json())
                 .then((data) => {
                     const planList = Array.isArray(data) ? data : (data.data ?? []);

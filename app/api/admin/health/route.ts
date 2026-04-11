@@ -9,6 +9,9 @@ import os from "os";
 import fs from "fs";
 import path from "path";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 // Simple 30-second in-memory cache for dashboard stats
 let dashboardCache: { data: any; expiresAt: number } | null = null;
 

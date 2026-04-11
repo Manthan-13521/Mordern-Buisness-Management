@@ -5,6 +5,9 @@ import { Pool } from "@/models/Pool";
 import { PlatformAdmin } from "@/models/PlatformAdmin";
 import bcrypt from "bcryptjs";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 /**
  * POST /api/seed
  * Creates a platform super admin + demo pool + admin user for initial setup.
@@ -72,7 +75,7 @@ export async function POST(req: NextRequest) {
     const existingPool = await Pool.findOne({ slug: "demo-pool" }).lean();
     if (existingPool) {
         return NextResponse.json({ 
-            message: "Seed data already exists (Demo Pool). Super Admin checked.",
+            message: "Seed data already exists (Demo Pool, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }). Super Admin checked.",
             superAdmin: superAdminEmail
         }, { status: 200 });
     }

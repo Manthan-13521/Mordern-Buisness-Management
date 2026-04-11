@@ -5,5 +5,5 @@ export const dynamic = "force-dynamic"
 
 export async function GET() {
   await dbConnect()
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } })
 }

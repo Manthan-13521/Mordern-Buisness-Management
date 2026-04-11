@@ -52,7 +52,7 @@ export default function SettingsPage() {
             })
             .catch(() => {});
 
-        fetch("/api/subscription/status")
+        fetch("/api/subscription/status", { cache: 'no-store' })
             .then(r => r.json())
             .then(d => setSubStatus(d))
             .catch(() => {});
@@ -79,7 +79,7 @@ export default function SettingsPage() {
     const handleExcelBackup = async () => {
         setExcelLoading(true);
         try {
-            const res = await fetch("/api/settings/backup/excel");
+            const res = await fetch("/api/settings/backup/excel", { cache: 'no-store' });
             if (!res.ok) { alert("Failed to generate Excel backup"); return; }
             const blob = await res.blob();
             const url = URL.createObjectURL(blob);

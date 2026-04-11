@@ -103,7 +103,7 @@ export async function POST(req: Request) {
                     rawPayload: qrPayload,
                 });
                 return NextResponse.json({ 
-                    error: `Pool cannot accommodate ${numPersons} more people (${currentOccupancy}/${poolCapacity})` 
+                    error: `Pool cannot accommodate ${numPersons} more people (${currentOccupancy}/${poolCapacity}, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } })` 
                 }, { status: 400 });
             }
 
@@ -215,8 +215,7 @@ export async function POST(req: Request) {
             const msSinceLastScan = Date.now() - new Date(member.lastScannedAt).getTime();
             if (msSinceLastScan < SCAN_COOLDOWN_MS) {
                 logger.scan("QR scan denied — cooldown", { memberId, msSinceLastScan });
-                return NextResponse.json(
-                    { error: `Please wait ${Math.ceil((SCAN_COOLDOWN_MS - msSinceLastScan) / 1000)} seconds before scanning again.` },
+                return NextResponse.json({ error: `Please wait ${Math.ceil((SCAN_COOLDOWN_MS - msSinceLastScan, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }) / 1000)} seconds before scanning again.` },
                     { status: 429 }
                 );
             }
@@ -371,9 +370,8 @@ export async function POST(req: Request) {
                 capacity: poolCapacity,
                 requested: numPersons
             });
-            return NextResponse.json(
-                {
-                    error: `Pool cannot accommodate ${numPersons} more people (${currentOccupancy}/${poolCapacity}).`,
+            return NextResponse.json({
+                    error: `Pool cannot accommodate ${numPersons} more people (${currentOccupancy}/${poolCapacity}, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }).`,
                 },
                 { status: 400 }
             );
@@ -399,7 +397,7 @@ export async function POST(req: Request) {
 
             if (!updatedMember) {
                 // Race condition! Another request beat us to the limit.
-                return NextResponse.json({ error: "Entry limit reached (Double Scan Prevented)" }, { status: 400 });
+                return NextResponse.json({ error: "Entry limit reached (Double Scan Prevented, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } })" }, { status: 400 });
             }
             member = updatedMember; // Sync local object for logging
         } else {

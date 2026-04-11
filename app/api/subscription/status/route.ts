@@ -6,6 +6,9 @@ import { User } from "@/models/User";
 import { Hostel } from "@/models/Hostel";
 import { Pool } from "@/models/Pool";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 /**
  * Compute status dynamically: trust the clock if expiry exists, 
  * otherwise fallback to the stored status.

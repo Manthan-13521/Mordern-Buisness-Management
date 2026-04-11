@@ -5,6 +5,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { auditCrossTenantAccess, secureFindById, secureUpdateById } from "@/lib/tenantSecurity";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import { EntertainmentMember } from "@/models/EntertainmentMember";
 import { invalidateCache } from "@/lib/membersCache";
 
@@ -32,7 +35,7 @@ export async function GET(_req: Request, props: RouteContext) {
 
         if (!member) return NextResponse.json({ error: "Not Found" }, { status: 404 });
 
-        return NextResponse.json(member);
+        return NextResponse.json(member, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/members/[id]]", error);
         return NextResponse.json({ error: "Server error" }, { status: 500 });
@@ -67,7 +70,7 @@ export async function PATCH(req: Request, props: RouteContext) {
         // Invalidate members list cache
         invalidateCache(member.poolId).catch(() => {});
 
-        return NextResponse.json(member);
+        return NextResponse.json(member, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[PATCH /api/members/[id]]", error);
         return NextResponse.json({ error: "Server error" }, { status: 500 });
@@ -115,7 +118,7 @@ export async function DELETE(req: Request, props: RouteContext) {
         // 2. Cache Invalidation
         invalidateCache(updated.poolId).catch(() => {});
 
-        return NextResponse.json({ message: "Member moved to recycle bin successfully." });
+        return NextResponse.json({ message: "Member moved to recycle bin successfully." }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[DELETE /api/members/[id]]", error);
         return NextResponse.json({ error: "Server error deleting member" }, { status: 500 });
