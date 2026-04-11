@@ -14,7 +14,7 @@ export async function POST(req: Request) {
         ]);
         
         if (!token) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const sessionUser = token as any;
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
         const { type, message, screenshot, page } = body;
 
         if (!type || !message || !page) {
-            return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+            return NextResponse.json({ error: "Missing required fields" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // Basic Rate Limiting: Max 1 feedback per 5 minutes per user
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
         const recentFeedback = await Feedback.findOne({ userId, createdAt: { $gte: fiveMinutesAgo } });
 
         if (recentFeedback) {
-            return NextResponse.json({ error: "Please wait 5 minutes before submitting another report." }, { status: 429 });
+            return NextResponse.json({ error: "Please wait 5 minutes before submitting another report." }, {  status: 429 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const newFeedback = await Feedback.create({
@@ -46,12 +46,9 @@ export async function POST(req: Request) {
             priority: "low", // default, superadmin can escalate
         });
 
-        return NextResponse.json(newFeedback, { status: 201 });
+        return NextResponse.json(newFeedback, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         console.error("[POST /api/feedback]", error);
-        return NextResponse.json(
-            { error: "Server error submitting feedback" },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: "Server error submitting feedback" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

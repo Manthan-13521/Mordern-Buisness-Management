@@ -8,16 +8,16 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
     try {
         const [token] = await Promise.all([getToken({ req: req as any }), dbConnect()]);
-        if (!token || token.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!token || token.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         const hostelId = token.hostelId as string;
 
         await Hostel.findOneAndUpdate(
             { hostelId },
             { $unset: { twilio: 1 }, $set: { isTwilioConnected: false } }
         );
-        return NextResponse.json({ success: true, message: "Twilio disconnected." });
+        return NextResponse.json({ success: true, message: "Twilio disconnected." }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[POST /api/hostel/twilio/disconnect]", error);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

@@ -10,19 +10,19 @@ export async function GET(req: Request) {
     try {
         const [token] = await Promise.all([getToken({ req: req as any }), dbConnect()]);
         if (!token || token.role !== "hostel_admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         const hostelId = token.hostelId as string;
-        if (!hostelId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        if (!hostelId) return NextResponse.json({ error: "Forbidden" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const blocks = await HostelBlock.find({ hostelId })
             .select("name")
             .sort({ name: 1 })
             .lean() as any[];
 
-        return NextResponse.json({ blocks: blocks.map((b, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }) => b.name) });
+        return NextResponse.json({ blocks: blocks.map((b) => b.name) }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/hostel/blocks]", error);
-        return NextResponse.json({ error: "Failed to fetch blocks" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to fetch blocks" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

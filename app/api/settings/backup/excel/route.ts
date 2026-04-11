@@ -37,7 +37,7 @@ export async function GET(req: Request) {
     }
 
     if (!isAuthorized) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 
     try {
@@ -55,7 +55,7 @@ export async function GET(req: Request) {
                 return NextResponse.json({ 
                     message: "Backup already created today.", 
                     exists: true 
-                }, { status: 200 }); // Returning 200 so cron jobs don't crash
+                }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }); // Returning 200 so cron jobs don't crash
             }
         }
 
@@ -162,6 +162,6 @@ export async function GET(req: Request) {
         });
     } catch (error) {
         logger.error("Excel backup failed", { error: String(error) });
-        return NextResponse.json({ error: "Failed to generate Excel backup" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to generate Excel backup" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

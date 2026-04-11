@@ -22,7 +22,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         const [token, { id }, body] = await Promise.all([getToken({ req: req as any }), params, req.json()]);
         await dbConnect();
         if (!token || token.role !== "hostel_admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         const hostelId = token.hostelId as string;
 
@@ -30,26 +30,26 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         
         const paid = Number(paidAmount);
         if (!planId || !Number.isFinite(paid) || paid < 0 || paid > 9_999_999_999) {
-            return NextResponse.json({ error: "Invalid payment amount or missing planId" }, { status: 400 });
+            return NextResponse.json({ error: "Invalid payment amount or missing planId" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         if (idempotencyKey) {
             const existing = await HostelRenewal.findOne({ idempotencyKey, hostelId }).lean();
             if (existing) {
-                return NextResponse.json({ message: "Duplicate renewal requested", success: true }, { status: 200 });
+                return NextResponse.json({ message: "Duplicate renewal requested", success: true }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
         }
 
         // Step 1: Fetch existing member
         const member = await HostelMember.findOne({ _id: id, hostelId, isDeleted: false });
         if (!member) {
-            return NextResponse.json({ error: "Member not found" }, { status: 404 });
+            return NextResponse.json({ error: "Member not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // Step 2: Validate new plan
         const plan = await HostelPlan.findOne({ _id: planId, hostelId, isActive: true }).lean() as any;
         if (!plan) {
-            return NextResponse.json({ error: "Invalid or inactive plan" }, { status: 400 });
+            return NextResponse.json({ error: "Invalid or inactive plan" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const oldPlanId = member.planId;
@@ -121,12 +121,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         });
 
         const updated = await HostelMember.findById(member._id).populate("planId", "name durationDays price").lean();
-        return NextResponse.json({ success: true, member: updated });
+        return NextResponse.json({ success: true, member: updated }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         if (error?.code === 11000 && error?.keyPattern?.idempotencyKey) {
-            return NextResponse.json({ message: "Duplicate renewal requested", success: true }, { status: 200 });
+            return NextResponse.json({ message: "Duplicate renewal requested", success: true }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         console.error("[POST /api/hostel/members/[id]/renew]", error);
-        return NextResponse.json({ error: error?.message || "Renewal failed" }, { status: 500 });
+        return NextResponse.json({ error: error?.message || "Renewal failed" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

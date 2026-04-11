@@ -28,7 +28,7 @@ export async function POST(req: Request) {
                     type: "SUBSCRIPTION_WEBHOOK_INVALID_SIG",
                     meta: { signature },
                 });
-                return NextResponse.json({ error: "Invalid webhook signature" }, { status: 400 });
+                return NextResponse.json({ error: "Invalid webhook signature" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
         }
 
@@ -36,12 +36,12 @@ export async function POST(req: Request) {
 
         // Only handle payment.captured events
         if (event.event !== "payment.captured") {
-            return NextResponse.json({ status: "ignored", event: event.event });
+            return NextResponse.json({ status: "ignored", event: event.event }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const payment = event.payload?.payment?.entity;
         if (!payment) {
-            return NextResponse.json({ error: "Missing payment entity" }, { status: 400 });
+            return NextResponse.json({ error: "Missing payment entity" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const { id: razorpayPaymentId, order_id: razorpayOrderId, notes } = payment;
@@ -49,7 +49,7 @@ export async function POST(req: Request) {
 
         if (!userId || !planType || !module) {
             logger.error("[Subscription Webhook] Missing notes in payment", { razorpayPaymentId });
-            return NextResponse.json({ error: "Missing payment notes" }, { status: 400 });
+            return NextResponse.json({ error: "Missing payment notes" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         await dbConnect();
@@ -68,6 +68,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ success: true }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         logger.error("[Subscription Webhook] Error", { error: error?.message });
-        return NextResponse.json({ error: error?.message || "Webhook processing failed" }, { status: 500 });
+        return NextResponse.json({ error: error?.message || "Webhook processing failed" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

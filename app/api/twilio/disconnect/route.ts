@@ -15,7 +15,7 @@ export async function DELETE() {
         const [, session] = await Promise.all([dbConnect(), getServerSession(authOptions)]);
 
         if (!session?.user || session.user.role !== "admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const pool = await Pool.findOneAndUpdate(
@@ -28,15 +28,15 @@ export async function DELETE() {
         );
 
         if (!pool) {
-            return NextResponse.json({ error: "Pool not found" }, { status: 404 });
+            return NextResponse.json({ error: "Pool not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         return NextResponse.json({
             success: true,
             message: "Twilio disconnected. Credentials removed.",
-        });
+        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[DELETE /api/twilio/disconnect]", error);
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        return NextResponse.json({ error: "Internal server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

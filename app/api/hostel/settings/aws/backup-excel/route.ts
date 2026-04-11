@@ -13,12 +13,12 @@ export async function POST(req: Request) {
         const session = await getServerSession(authOptions);
 
         if (!session?.user || (session.user.role !== "admin" && session.user.role !== "superadmin" && session.user.role !== "hostel_admin")) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const hostelId = (session.user as any).hostelId || (session.user as any).poolId;
         if (!hostelId) {
-            return NextResponse.json({ error: "No tenant ID found for user" }, { status: 400 });
+            return NextResponse.json({ error: "No tenant ID found for user" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const oneYearAgo = new Date();
@@ -138,9 +138,9 @@ export async function POST(req: Request) {
             { upsert: true }
         );
 
-        return NextResponse.json({ success: true, key: s3Key }, { status: 200 });
+        return NextResponse.json({ success: true, key: s3Key }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         console.error("[POST /api/hostel/settings/aws/backup-excel]", error);
-        return NextResponse.json({ error: error?.message || "Backup failed" }, { status: 500 });
+        return NextResponse.json({ error: error?.message || "Backup failed" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

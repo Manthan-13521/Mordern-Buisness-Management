@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 
         const session = await getServerSession(authOptions) as any;
         if (!session?.user || session.user.role !== "superadmin") {
-            return NextResponse.json({ error: "Superadmin only", code: "FORBIDDEN" }, { status: 403 });
+            return NextResponse.json({ error: "Superadmin only", code: "FORBIDDEN" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const url    = new URL(req.url);
@@ -59,10 +59,10 @@ export async function GET(req: NextRequest) {
             page,
             limit,
             totalPages: Math.ceil(total / limit),
-        });
+        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/super-admin/pools]", error);
-        return NextResponse.json({ error: "Failed to fetch pools" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to fetch pools" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
 
@@ -76,17 +76,14 @@ export async function POST(req: NextRequest) {
 
         const session = await getServerSession(authOptions) as any;
         if (!session?.user || session.user.role !== "superadmin") {
-            return NextResponse.json({ error: "Superadmin only", code: "FORBIDDEN" }, { status: 403 });
+            return NextResponse.json({ error: "Superadmin only", code: "FORBIDDEN" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const body = await req.json();
         const { poolName, slug, adminEmail, capacity, location, plan = "free" } = body;
 
         if (!poolName || !slug || !adminEmail) {
-            return NextResponse.json(
-                { error: "poolName, slug and adminEmail are required" },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: "poolName, slug and adminEmail are required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // Generate unique poolId
@@ -109,16 +106,13 @@ export async function POST(req: NextRequest) {
             trialEndsAt,
         });
 
-        return NextResponse.json(pool, { status: 201 });
+        return NextResponse.json(pool, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         if (error?.code === 11000) {
-            return NextResponse.json(
-                { error: "A pool with this slug or poolId already exists.", code: "DUPLICATE_KEY" },
-                { status: 409 }
-            );
+            return NextResponse.json({ error: "A pool with this slug or poolId already exists.", code: "DUPLICATE_KEY" }, {  status: 409 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         console.error("[POST /api/super-admin/pools]", error);
-        return NextResponse.json({ error: "Failed to create pool" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to create pool" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
 
@@ -133,12 +127,12 @@ export async function PATCH(req: NextRequest) {
 
         const session = await getServerSession(authOptions) as any;
         if (!session?.user || session.user.role !== "superadmin") {
-            return NextResponse.json({ error: "Superadmin only", code: "FORBIDDEN" }, { status: 403 });
+            return NextResponse.json({ error: "Superadmin only", code: "FORBIDDEN" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const { poolId, status } = await req.json();
         if (!poolId || !status) {
-            return NextResponse.json({ error: "poolId and status are required" }, { status: 400 });
+            return NextResponse.json({ error: "poolId and status are required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const pool = await Pool.findOneAndUpdate(
@@ -148,12 +142,12 @@ export async function PATCH(req: NextRequest) {
         );
 
         if (!pool) {
-            return NextResponse.json({ error: "Pool not found" }, { status: 404 });
+            return NextResponse.json({ error: "Pool not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         return NextResponse.json(pool, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[PATCH /api/super-admin/pools]", error);
-        return NextResponse.json({ error: "Failed to update pool" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to update pool" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

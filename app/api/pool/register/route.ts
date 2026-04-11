@@ -21,7 +21,7 @@ export async function POST(req: Request) {
         const { poolName, city, adminName, adminEmail, adminPhone, password, plan } = body;
 
         if (!poolName || !city || !adminEmail || !password) {
-            return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+            return NextResponse.json({ error: "Missing required fields" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         await dbConnect();
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
         // Check if email is already in use
         const existingUser = await User.findOne({ email: normalizedEmail });
         if (existingUser) {
-            return NextResponse.json({ error: "An account with this email already exists. Please login." }, { status: 400 });
+            return NextResponse.json({ error: "An account with this email already exists. Please login." }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const poolId = await getNextPoolId();
@@ -88,16 +88,16 @@ export async function POST(req: Request) {
                     email: newAdmin.email,
                     name: newAdmin.name
                 }
-            }, { status: 201 });
+            }, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         } catch (err: any) {
             if (err.code === 11000) {
-                return NextResponse.json({ error: "An account with this email already exists." }, { status: 400 });
+                return NextResponse.json({ error: "An account with this email already exists." }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
             throw err;
         }
 
     } catch (error) {
         console.error("Pool Registration Error:", error);
-        return NextResponse.json({ error: "Failed to register pool" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to register pool" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

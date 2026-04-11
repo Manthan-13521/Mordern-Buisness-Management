@@ -21,13 +21,10 @@ export async function GET() {
     Sentry.captureException(error);
     await Sentry.flush(2000); // wait up to 2s for event to be sent
 
-    return NextResponse.json(
-      {
+    return NextResponse.json({
         status: "ok",
         message: "Test error sent to Sentry. Check your Sentry dashboard.",
         timestamp: new Date().toISOString(),
-      },
-      { status: 200 }
-    );
+      }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
   }
 }

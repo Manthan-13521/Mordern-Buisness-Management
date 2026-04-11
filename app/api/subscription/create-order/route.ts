@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     try {
         const session = await getServerSession(authOptions) as any;
         if (!session?.user?.id) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const body = await req.json();
@@ -32,30 +32,27 @@ export async function POST(req: Request) {
         };
 
         if (!planType || !module) {
-            return NextResponse.json({ error: "planType and module are required" }, { status: 400 });
+            return NextResponse.json({ error: "planType and module are required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // Validate module matches session user type
         const userModule: SubscriptionModule = session.user.hostelId ? "hostel" : "pool";
         if (module !== userModule) {
-            return NextResponse.json({ error: "Module mismatch with your account type" }, { status: 400 });
+            return NextResponse.json({ error: "Module mismatch with your account type" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         await dbConnect();
         const user = await User.findById(session.user.id).lean() as any;
-        if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+        if (!user) return NextResponse.json({ error: "User not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         // Trial guard
         if (planType === "trial" && user.trial?.isUsed) {
-            return NextResponse.json(
-                { error: "Free trial already used. Please select a paid plan." },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: "Free trial already used. Please select a paid plan." }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const priceKey = getPriceKey(planType, module, blocks);
         if (!priceKey) {
-            return NextResponse.json({ error: "Invalid plan combination" }, { status: 400 });
+            return NextResponse.json({ error: "Invalid plan combination" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         let amountINR   = SUBSCRIPTION_PRICES[priceKey];
@@ -85,7 +82,7 @@ export async function POST(req: Request) {
         // Mock mode
         if (!process.env.RAZORPAY_KEY_ID) {
             return NextResponse.json({
-                orderId:  `order_mock_${Date.now(, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } })}`,
+                orderId:  `order_mock_${Date.now()}`,
                 amount:   amountPaise,
                 currency: "INR",
                 isMock:   true,
@@ -94,7 +91,7 @@ export async function POST(req: Request) {
                 blocks,
                 amountINR,
                 referralCode,
-            });
+            }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const order = await razorpay.orders.create({
@@ -120,9 +117,9 @@ export async function POST(req: Request) {
             blocks,
             amountINR,
             referralCode,
-        });
+        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         console.error("[POST /api/subscription/create-order]", error);
-        return NextResponse.json({ error: "Failed to create subscription order" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to create subscription order" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

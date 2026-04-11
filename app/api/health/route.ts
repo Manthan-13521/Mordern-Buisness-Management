@@ -10,13 +10,11 @@ export const revalidate = 0;
  * For dependency checks → /api/health/ready
  */
 export async function GET() {
-  return NextResponse.json(
-    { status: "ok" },
+  return NextResponse.json({ status: "ok" },
     {
       status: 200,
       headers: {
         "Cache-Control": "no-store, no-cache, must-revalidate",
       },
-    }
-  );
+    });
 }

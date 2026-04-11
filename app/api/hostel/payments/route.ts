@@ -16,10 +16,10 @@ export async function GET(req: Request) {
     try {
         const [token] = await Promise.all([getToken({ req: req as any }), dbConnect()]);
         if (!token || token.role !== "hostel_admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         const hostelId = token.hostelId as string;
-        if (!hostelId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        if (!hostelId) return NextResponse.json({ error: "Forbidden" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const url = new URL(req.url);
         const page     = Math.max(1, parseInt(url.searchParams.get("page") ?? "1"));
@@ -43,7 +43,7 @@ export async function GET(req: Request) {
                 baseMatch.memberId = { $in: memberIds };
             } else {
                 // Unknown block → return empty
-                return NextResponse.json({ data: [], total: 0, page, limit, totalPages: 0 });
+                return NextResponse.json({ data: [], total: 0, page, limit, totalPages: 0 }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
         }
 
@@ -58,10 +58,10 @@ export async function GET(req: Request) {
             HostelPayment.countDocuments(baseMatch),
         ]);
 
-        return NextResponse.json({ data: payments, total, page, limit, totalPages: Math.ceil(total / limit) });
+        return NextResponse.json({ data: payments, total, page, limit, totalPages: Math.ceil(total / limit) }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/hostel/payments]", error);
-        return NextResponse.json({ error: "Failed to fetch payments" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to fetch payments" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
 
@@ -71,29 +71,29 @@ export async function POST(req: Request) {
         const [token, body] = await Promise.all([getToken({ req: req as any }), req.json()]);
         await dbConnect();
         if (!token || token.role !== "hostel_admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         const hostelId = token.hostelId as string;
-        if (!hostelId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        if (!hostelId) return NextResponse.json({ error: "Forbidden" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const { memberId, amount, paymentMethod, transactionId, notes, paymentType: rawPaymentType, idempotencyKey } = body;
         
         const paid = Number(amount);
         if (!memberId || !Number.isFinite(paid) || paid <= 0 || paid > 9_999_999_999) {
-            return NextResponse.json({ error: "Invalid payment amount or member info" }, { status: 400 });
+            return NextResponse.json({ error: "Invalid payment amount or member info" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // ── Idempotency Check (Duplicate Request Guard) ──
         if (idempotencyKey) {
             const existing = await HostelPayment.findOne({ idempotencyKey, hostelId }).lean();
             if (existing) {
-                return NextResponse.json({ message: "Duplicate payment requested", payment: existing }, { status: 200 });
+                return NextResponse.json({ message: "Duplicate payment requested", payment: existing }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
         }
 
         const member = await HostelMember.findOne({ _id: memberId, hostelId, isDeleted: false, status: "active" });
         if (!member) {
-            return NextResponse.json({ error: "Active member not found" }, { status: 404 });
+            return NextResponse.json({ error: "Active member not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const paymentType = (rawPaymentType as string) || "balance";
@@ -151,14 +151,14 @@ export async function POST(req: Request) {
             createdBy: createdByName,
         });
 
-        return NextResponse.json(payment, { status: 201 });
+        return NextResponse.json(payment, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         // Catch duplicate key collision organically
         if (error?.code === 11000 && error?.keyPattern?.idempotencyKey) {
             const existing = await HostelPayment.findOne({ idempotencyKey: error.keyValue?.idempotencyKey }).lean();
-            return NextResponse.json({ message: "Duplicate payment requested", payment: existing }, { status: 200 });
+            return NextResponse.json({ message: "Duplicate payment requested", payment: existing }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         console.error("[POST /api/hostel/payments]", error);
-        return NextResponse.json({ error: error?.message || "Server error" }, { status: 500 });
+        return NextResponse.json({ error: error?.message || "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

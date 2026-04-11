@@ -40,7 +40,7 @@ export async function GET(req: Request) {
             dbConnect(),
             getServerSession(authOptions),
         ]);
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         
         runOccupancyCleanupInBackground();
 
@@ -176,6 +176,6 @@ export async function GET(req: Request) {
 
     } catch (error) {
         console.error("[GET /api/dashboard]", error);
-        return NextResponse.json({ error: "Failed to fetch dashboard" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to fetch dashboard" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

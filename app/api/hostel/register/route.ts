@@ -19,7 +19,7 @@ export async function POST(req: Request) {
         const { hostelName, city, adminEmail, adminName, password, numberOfBlocks } = body;
 
         if (!hostelName || !city || !adminEmail || !adminName || !password) {
-            return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+            return NextResponse.json({ error: "Missing required fields" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const normalizedEmail = adminEmail.toLowerCase().trim();
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
         // 1. Explicit check for cleaner UX
         const existingUser = await User.findOne({ email: normalizedEmail }).lean();
         if (existingUser) {
-            return NextResponse.json({ error: "An account with this email already exists. Please login." }, { status: 400 });
+            return NextResponse.json({ error: "An account with this email already exists. Please login." }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // Generate unique hostelId and slug
@@ -68,16 +68,16 @@ export async function POST(req: Request) {
                 HostelSettings.create({ hostelId, whatsappEnabled: false }),
             ]);
 
-            return NextResponse.json({ success: true, hostelSlug: hostel.slug, hostelName: hostel.hostelName }, { status: 201 });
+            return NextResponse.json({ success: true, hostelSlug: hostel.slug, hostelName: hostel.hostelName }, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         } catch (err: any) {
             // Handle race condition or unexpected Mongo unique constraint failure
             if (err.code === 11000) {
-                return NextResponse.json({ error: "An account with this email already exists." }, { status: 400 });
+                return NextResponse.json({ error: "An account with this email already exists." }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
             throw err; // bubble up to general catch
         }
     } catch (error: any) {
         console.error("[POST /api/hostel/register]", error);
-        return NextResponse.json({ error: error?.message || "Server error" }, { status: 500 });
+        return NextResponse.json({ error: error?.message || "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

@@ -18,7 +18,7 @@ export async function POST(req: Request, props: RouteContext) {
 
         const session = await getServerSession(authOptions);
         if (!session?.user || session.user.role !== "admin") {
-            return NextResponse.json({ error: "Admin only" }, { status: 403 });
+            return NextResponse.json({ error: "Admin only" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const { id } = await props.params;
@@ -45,11 +45,11 @@ export async function POST(req: Request, props: RouteContext) {
 
         const member = await secureUpdateById(Member, id, { $set: updates }, session.user, { populate: { path: "planId", select: "name price hasTokenPrint" } });
 
-        if (!member) return NextResponse.json({ error: "Not Found" }, { status: 404 });
+        if (!member) return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
-        return NextResponse.json({ message: "Member restored successfully.", member });
+        return NextResponse.json({ message: "Member restored successfully.", member }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[POST /api/members/[id]/restore]", error);
-        return NextResponse.json({ error: "Server error restoring member" }, { status: 500 });
+        return NextResponse.json({ error: "Server error restoring member" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

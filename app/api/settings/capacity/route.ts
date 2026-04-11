@@ -51,7 +51,7 @@ export async function GET(req: Request) {
                 subscriptionEndsAt: (pool as any).subscriptionEndsAt,
                 isTwilioConnected: (pool as any).isTwilioConnected,
             } : null
-        });
+        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         return apiError(error);
     }
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
             getServerSession(authOptions),
         ]);
         if (!session?.user || !["admin", "superadmin"].includes(session.user.role)) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const body = await req.json();
@@ -143,7 +143,7 @@ export async function POST(req: Request) {
             currentOccupancy: settings.currentOccupancy,
             occupancyDurationMinutes: settings.occupancyDurationMinutes,
             available: Math.max(0, activeCapacity - settings.currentOccupancy),
-        });
+        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         return apiError(error);
     }

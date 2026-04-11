@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
     try {
         const [token] = await Promise.all([getToken({ req: req as any }), dbConnect()]);
-        if (!token || token.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!token || token.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         const hostelId = token.hostelId as string;
 
         const [settings, hostel, dbBlocks, dbFloors, dbRooms, dbMembers] = await Promise.all([
@@ -70,10 +70,10 @@ export async function GET(req: Request) {
             blocks,
             maxBlocks: hostel?.numberOfBlocks ?? 4,
             hostelName: hostel?.hostelName,
-        });
+        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/hostel/hostel-settings]", error);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
 
@@ -82,7 +82,7 @@ export async function PUT(req: Request) {
     try {
         const [token, body] = await Promise.all([getToken({ req: req as any }), req.json()]);
         await dbConnect();
-        if (!token || token.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!token || token.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         const hostelId = token.hostelId as string;
 
         const { blocks, whatsappEnabled, whatsappMessageTemplate } = body;
@@ -91,16 +91,16 @@ export async function PUT(req: Request) {
         const hostel = await Hostel.findOne({ hostelId }).select("numberOfBlocks").lean() as any;
         const maxBlocks = hostel?.numberOfBlocks ?? 4;
         if (incomingBlocks.length > maxBlocks) {
-            return NextResponse.json({ error: `Maximum ${maxBlocks} block(s, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }) allowed.` }, { status: 400 });
+            return NextResponse.json({ error: `Maximum ${maxBlocks} block(s) allowed.` }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // Structural Limiter Check
         for (const block of incomingBlocks) {
-            if ((block.floors || []).length > 8) return NextResponse.json({ error: `Block ${block.name} exceeds 8 floors.` }, { status: 400 });
+            if ((block.floors || []).length > 8) return NextResponse.json({ error: `Block ${block.name} exceeds 8 floors.` }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             for (const floor of block.floors || []) {
-                if ((floor.rooms || []).length > 15) return NextResponse.json({ error: `Floor ${floor.floorNo} exceeds 15 rooms.` }, { status: 400 });
+                if ((floor.rooms || []).length > 15) return NextResponse.json({ error: `Floor ${floor.floorNo} exceeds 15 rooms.` }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
                 for (const room of floor.rooms || []) {
-                    if (room.capacity > 6) return NextResponse.json({ error: `Room ${room.roomNo} exceeds 6 beds.` }, { status: 400 });
+                    if (room.capacity > 6) return NextResponse.json({ error: `Room ${room.roomNo} exceeds 6 beds.` }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
                 }
             }
         }
@@ -135,7 +135,7 @@ export async function PUT(req: Request) {
         for (const room of roomsToDelete) {
             const hasMembers = await HostelMember.exists({ roomId: room._id, isActive: true, isDeleted: false });
             if (hasMembers) {
-                return NextResponse.json({ error: `Cannot delete: Room ${room.roomNo} has active members` }, { status: 400 });
+                return NextResponse.json({ error: `Cannot delete: Room ${room.roomNo} has active members` }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
         }
 
@@ -143,7 +143,7 @@ export async function PUT(req: Request) {
         for (const floor of floorsToDelete) {
             const hasMembers = await HostelMember.exists({ floorId: floor._id, isActive: true, isDeleted: false });
             if (hasMembers) {
-                return NextResponse.json({ error: `Cannot delete: Floor ${floor.floorNo} contains occupied rooms` }, { status: 400 });
+                return NextResponse.json({ error: `Cannot delete: Floor ${floor.floorNo} contains occupied rooms` }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
         }
 
@@ -151,7 +151,7 @@ export async function PUT(req: Request) {
         for (const block of blocksToDelete) {
             const hasMembers = await HostelMember.exists({ blockId: block._id, isActive: true, isDeleted: false });
             if (hasMembers) {
-                return NextResponse.json({ error: `Cannot delete: Block ${block.name} contains active members` }, { status: 400 });
+                return NextResponse.json({ error: `Cannot delete: Block ${block.name} contains active members` }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
         }
 
@@ -165,7 +165,7 @@ export async function PUT(req: Request) {
                             .select("bedNo")
                             .lean() as any;
                         if (maxOccupiedBed && maxOccupiedBed.bedNo > r.capacity) {
-                            return NextResponse.json({ error: `Cannot diminish capacity of Room ${r.roomNo}. Bed ${maxOccupiedBed.bedNo} is currently occupied.` }, { status: 400 });
+                            return NextResponse.json({ error: `Cannot diminish capacity of Room ${r.roomNo}. Bed ${maxOccupiedBed.bedNo} is currently occupied.` }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
                         }
                     }
                 }
@@ -226,9 +226,9 @@ export async function PUT(req: Request) {
             }
         }
 
-        return NextResponse.json({ success: true, message: "Settings saved safely." });
+        return NextResponse.json({ success: true, message: "Settings saved safely." }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         console.error("[PUT /api/hostel/hostel-settings]", error);
-        return NextResponse.json({ error: error?.message || "Server error" }, { status: 500 });
+        return NextResponse.json({ error: error?.message || "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

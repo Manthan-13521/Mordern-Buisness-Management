@@ -16,7 +16,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     try {
         const [token, { id }] = await Promise.all([getToken({ req: req as any }), params]);
         await dbConnect();
-        if (!token || token.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!token || token.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         const hostelId = token.hostelId as string;
         const member = await HostelMember.findOne({ _id: id, hostelId })
             .populate("planId", "name durationDays price")
@@ -24,7 +24,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             .populate("blockId", "name")
             .lean() as any;
             
-        if (!member) return NextResponse.json({ error: "Member not found" }, { status: 404 });
+        if (!member) return NextResponse.json({ error: "Member not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         
         let brn = member.block_room_no || "";
         let rNo = member.roomNo || "";
@@ -37,10 +37,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
         // Fetch payments too
         const payments = await HostelPayment.find({ hostelId, memberId: new mongoose.Types.ObjectId(id) }).sort({ createdAt: -1 }).lean();
-        return NextResponse.json({ ...member, payments });
+        return NextResponse.json({ ...member, payments }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/hostel/members/[id]]", error);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
 
@@ -49,7 +49,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     try {
         const [token, { id }, body] = await Promise.all([getToken({ req: req as any }), params, req.json()]);
         await dbConnect();
-        if (!token || token.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!token || token.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         const hostelId = token.hostelId as string;
         const { name, phone, collegeName, notes, blockNo, roomNo, floorNo } = body;
         
@@ -58,13 +58,13 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         // If room changed, handle new room assignment logic
         if (roomNo && blockNo && floorNo) {
             const blockObj = await HostelBlock.findOne({ hostelId, name: blockNo }).lean() as any;
-            if (!blockObj) return NextResponse.json({ error: "Block not found" }, { status: 404 });
+            if (!blockObj) return NextResponse.json({ error: "Block not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             
             const floorObj = await HostelFloor.findOne({ hostelId, blockId: blockObj._id, floorNo }).lean() as any;
-            if (!floorObj) return NextResponse.json({ error: "Floor not found" }, { status: 404 });
+            if (!floorObj) return NextResponse.json({ error: "Floor not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             
             const roomObj = await HostelRoom.findOne({ hostelId, floorId: floorObj._id, roomNo }).lean() as any;
-            if (!roomObj) return NextResponse.json({ error: "Room not found" }, { status: 404 });
+            if (!roomObj) return NextResponse.json({ error: "Room not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
             // Check if user is actually moving rooms
             const oldMem = await HostelMember.findOne({ _id: id, hostelId }).lean() as any;
@@ -87,11 +87,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             { $set: updateData },
             { returnDocument: 'after' }
         ).populate("planId", "name durationDays price").lean();
-        if (!member) return NextResponse.json({ error: "Member not found" }, { status: 404 });
+        if (!member) return NextResponse.json({ error: "Member not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         return NextResponse.json(member, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[PUT /api/hostel/members/[id]]", error);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
 
@@ -100,10 +100,10 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     try {
         const [token, { id }] = await Promise.all([getToken({ req: req as any }), params]);
         await dbConnect();
-        if (!token || token.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!token || token.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         const hostelId = token.hostelId as string;
         const member = await HostelMember.findOne({ _id: id, hostelId }).lean() as any;
-        if (!member) return NextResponse.json({ error: "Member not found" }, { status: 404 });
+        if (!member) return NextResponse.json({ error: "Member not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         // 1. Archive before hard deleting
         const { DeletedHostelMember } = await import("@/models/DeletedHostelMember");
@@ -134,6 +134,6 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
         return NextResponse.json({ success: true }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[DELETE /api/hostel/members/[id]]", error);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

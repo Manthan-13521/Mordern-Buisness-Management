@@ -13,7 +13,7 @@ export async function GET() {
         await dbConnect();
 
         const session = await getServerSession(authOptions);
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         // Ensure Plan model is loaded before populate
         await Plan.findOne({}).lean();
@@ -30,7 +30,7 @@ export async function GET() {
         }).populate("planId").lean();
 
         if (expiredMembersRaw.length === 0) {
-            return NextResponse.json({ alerts: [] }, { status: 200 });
+            return NextResponse.json({ alerts: [] }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // Set ALL expired members to "expired" globally so they drop off the "Active" lists
@@ -57,10 +57,10 @@ export async function GET() {
             };
         });
 
-        return NextResponse.json({ alerts }, { status: 200 });
+        return NextResponse.json({ alerts }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
     } catch (error) {
         console.error("Voice Alert Polling Error:", error);
-        return NextResponse.json({ error: "Server Error" }, { status: 500 });
+        return NextResponse.json({ error: "Server Error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

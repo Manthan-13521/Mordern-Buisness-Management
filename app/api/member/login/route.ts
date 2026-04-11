@@ -14,7 +14,7 @@ export async function POST(req: Request) {
         const { phone, memberId } = body;
 
         if (!phone || !memberId) {
-            return NextResponse.json({ error: "Missing required credentials" }, { status: 400 });
+            return NextResponse.json({ error: "Missing required credentials" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         let member = await Member.findOne({ memberId, phone }).lean() as any;
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
                 ip,
                 meta: { method: "member_id_phone", memberId, phone },
             });
-            return NextResponse.json({ error: "Invalid ID or Phone number combination" }, { status: 401 });
+            return NextResponse.json({ error: "Invalid ID or Phone number combination" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         logger.audit({
@@ -43,8 +43,8 @@ export async function POST(req: Request) {
             success: true, 
             token: `mock_jwt_token_${member.memberId}`,
             user: { name: member.name, memberId: member.memberId, poolId: member.poolId } 
-        });
+        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (e: any) {
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        return NextResponse.json({ error: e.message }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

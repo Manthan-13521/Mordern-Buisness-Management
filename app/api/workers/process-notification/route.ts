@@ -15,12 +15,12 @@ export async function POST(req: Request) {
                 await sendPaymentConfirmation(payload);
                 break;
             default:
-                return NextResponse.json({ error: "Unknown notification type" }, { status: 400 });
+                return NextResponse.json({ error: "Unknown notification type" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         return NextResponse.json({ success: true }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (e: any) {
         console.error("[Worker] Critical Notification Error:", e);
-        return NextResponse.json({ error: e.message || "Internal Worker Error" }, { status: 500 });
+        return NextResponse.json({ error: e.message || "Internal Worker Error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

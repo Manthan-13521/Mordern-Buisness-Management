@@ -13,7 +13,7 @@ export async function POST(req: Request) {
         const token = await getToken({ req: req as any });
         if (!token || token.role !== "superadmin") {
             // allowing hostel_admin to trigger it for their own hostel for testing
-            if (token?.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            if (token?.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         
         await dbConnect();
@@ -57,9 +57,9 @@ export async function POST(req: Request) {
             migratedCount++;
         }
 
-        return NextResponse.json({ success: true, migratedCount });
+        return NextResponse.json({ success: true, migratedCount }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         console.error("[POST /api/hostel/migrate]", error);
-        return NextResponse.json({ error: error?.message || "Server error" }, { status: 500 });
+        return NextResponse.json({ error: error?.message || "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

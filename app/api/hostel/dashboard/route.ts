@@ -12,10 +12,10 @@ export async function GET(req: Request) {
     try {
         const [token] = await Promise.all([getToken({ req: req as any }), dbConnect()]);
         if (!token || token.role !== "hostel_admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         const hostelId = token.hostelId as string;
-        if (!hostelId) return NextResponse.json({ error: "Hostel not found" }, { status: 403 });
+        if (!hostelId) return NextResponse.json({ error: "Hostel not found" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const url = new URL(req.url);
         const block = url.searchParams.get("block") || "all";
@@ -46,7 +46,7 @@ export async function GET(req: Request) {
                     totalRevenue: 0, totalRooms: 0,
                     totalCapacity: 0, occupiedBeds: 0,
                     occupancyRate: 0, expiringList: [],
-                });
+                }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
             blockId = blockObj._id;
             // Pre-fetch all member IDs in this block for payment aggregations
@@ -167,9 +167,9 @@ export async function GET(req: Request) {
             totalRevenue, totalRooms,
             totalCapacity, occupiedBeds,
             occupancyRate, expiringList,
-        });
+        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/hostel/dashboard]", error);
-        return NextResponse.json({ error: "Failed to fetch dashboard" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to fetch dashboard" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

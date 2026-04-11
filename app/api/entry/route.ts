@@ -30,13 +30,13 @@ export async function POST(req: Request) {
             req.json(),
         ]);
         if (!session?.user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const { qrPayload } = body; // Format: "memberId:qrToken"  OR legacy plain memberId
 
         if (!qrPayload) {
-            return NextResponse.json({ error: "Missing QR payload" }, { status: 400 });
+            return NextResponse.json({ error: "Missing QR payload" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // Parse payload — support JWT (Section 10), legacy "memberId:token", and legacy plain memberId
@@ -83,7 +83,7 @@ export async function POST(req: Request) {
                     operatorId: session.user.id ? new mongoose.Types.ObjectId(session.user.id) : undefined,
                     rawPayload: qrPayload,
                 });
-                return NextResponse.json({ error: "Plan not found" }, { status: 404 });
+                return NextResponse.json({ error: "Plan not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
 
             const numPersons = plan.maxEntriesPerQR || 1;
@@ -103,8 +103,8 @@ export async function POST(req: Request) {
                     rawPayload: qrPayload,
                 });
                 return NextResponse.json({ 
-                    error: `Pool cannot accommodate ${numPersons} more people (${currentOccupancy}/${poolCapacity}, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } })` 
-                }, { status: 400 });
+                    error: `Pool cannot accommodate ${numPersons} more people (${currentOccupancy}/${poolCapacity})` 
+                }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
 
             if (plan.remainingEntries && plan.remainingEntries > 0) {
@@ -150,7 +150,7 @@ export async function POST(req: Request) {
                         current: currentOccupancy + numPersons,
                         capacity: poolCapacity
                     }
-                }, { status: 200 });
+                }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             } else {
                 logger.scan("QR scan denied — group quota exhausted", { planId });
                 await EntryLog.create({
@@ -158,7 +158,7 @@ export async function POST(req: Request) {
                     reason: "Group QR quota exhausted",
                     rawPayload: qrPayload,
                 });
-                return NextResponse.json({ error: "Group QR token has no remaining entries" }, { status: 403 });
+                return NextResponse.json({ error: "Group QR token has no remaining entries" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
         }
 
@@ -186,7 +186,7 @@ export async function POST(req: Request) {
                 operatorId: session.user.id ? new mongoose.Types.ObjectId(session.user.id) : undefined,
                 rawPayload: qrPayload,
             });
-            return NextResponse.json({ error: "Member not found" }, { status: 404 });
+            return NextResponse.json({ error: "Member not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // ── QR Token Verification ────────────────────────────────────────────
@@ -204,10 +204,7 @@ export async function POST(req: Request) {
                 qrToken: providedToken,
                 rawPayload: qrPayload,
             });
-            return NextResponse.json(
-                { error: "QR code is invalid or already used. Please regenerate your QR." },
-                { status: 403 }
-            );
+            return NextResponse.json({ error: "QR code is invalid or already used. Please regenerate your QR." }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // ── Duplicate Scan Cooldown ──────────────────────────────────────────
@@ -215,9 +212,7 @@ export async function POST(req: Request) {
             const msSinceLastScan = Date.now() - new Date(member.lastScannedAt).getTime();
             if (msSinceLastScan < SCAN_COOLDOWN_MS) {
                 logger.scan("QR scan denied — cooldown", { memberId, msSinceLastScan });
-                return NextResponse.json({ error: `Please wait ${Math.ceil((SCAN_COOLDOWN_MS - msSinceLastScan, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }) / 1000)} seconds before scanning again.` },
-                    { status: 429 }
-                );
+                return NextResponse.json({ error: `Please wait ${Math.ceil((SCAN_COOLDOWN_MS - msSinceLastScan) / 1000)} seconds before scanning again.` }, {  status: 429 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
         }
 
@@ -248,7 +243,7 @@ export async function POST(req: Request) {
                 rawPayload: qrPayload,
             });
             logger.scan("QR scan denied — expired", { memberId });
-            return NextResponse.json({ error: "Membership has expired" }, { status: 403 });
+            return NextResponse.json({ error: "Membership has expired" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // ── STEP 8: Defaulter Gate Enforcement ───────────────────────────────
@@ -288,7 +283,7 @@ export async function POST(req: Request) {
                     return NextResponse.json({ 
                         reason: "suspended_admin",
                         message: "Access suspended by administrator." 
-                    }, { status: 403 });
+                    }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
                 }
 
                 return NextResponse.json({ 
@@ -297,7 +292,7 @@ export async function POST(req: Request) {
                     overdueDays,
                     balance: (member as any).balanceAmount || 0,
                     message: "Access denied due to pending dues" 
-                }, { status: 403 });
+                }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
         }
 
@@ -317,7 +312,7 @@ export async function POST(req: Request) {
                     rawPayload: qrPayload,
                 });
                 logger.scan("QR scan denied — entry limit", { memberId, entriesUsed, totalEntriesAllowed });
-                return NextResponse.json({ error: "Entry limit reached" }, { status: 400 });
+                return NextResponse.json({ error: "Entry limit reached" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
         }
 
@@ -347,10 +342,7 @@ export async function POST(req: Request) {
                 rawPayload: qrPayload,
             });
             logger.scan("QR scan denied — already entered today", { memberId });
-            return NextResponse.json(
-                { error: "Member has already entered once today." },
-                { status: 403 }
-            );
+            return NextResponse.json({ error: "Member has already entered once today." }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const numPersons = (member as any).planQuantity || 1;
@@ -371,10 +363,8 @@ export async function POST(req: Request) {
                 requested: numPersons
             });
             return NextResponse.json({
-                    error: `Pool cannot accommodate ${numPersons} more people (${currentOccupancy}/${poolCapacity}, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }).`,
-                },
-                { status: 400 }
-            );
+                    error: `Pool cannot accommodate ${numPersons} more people (${currentOccupancy}/${poolCapacity}).`,
+                }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // ── Grant Entry (Atomic Update - Section 9) ──────────────────────────
@@ -397,7 +387,7 @@ export async function POST(req: Request) {
 
             if (!updatedMember) {
                 // Race condition! Another request beat us to the limit.
-                return NextResponse.json({ error: "Entry limit reached (Double Scan Prevented, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } })" }, { status: 400 });
+                return NextResponse.json({ error: "Entry limit reached (Double Scan Prevented)" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
             member = updatedMember; // Sync local object for logging
         } else {
@@ -460,8 +450,7 @@ export async function POST(req: Request) {
         const endTime = Date.now();
         console.log(`[PERF] entry: ${endTime - startTime}ms (member: ${memberId || planId})`);
 
-        return NextResponse.json(
-            {
+        return NextResponse.json({
                 message: "Entry Granted",
                 member: {
                     name: member.name,
@@ -478,11 +467,9 @@ export async function POST(req: Request) {
                     capacity: poolCapacity,
                     available: poolCapacity - (currentOccupancy + numPersons),
                 },
-            },
-            { status: 200 }
-        );
+            }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         logger.error("Entry API error", { error: String(error) });
-        return NextResponse.json({ error: "Server error processing entry" }, { status: 500 });
+        return NextResponse.json({ error: "Server error processing entry" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

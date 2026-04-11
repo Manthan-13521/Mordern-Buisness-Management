@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
 
         const session = await getServerSession(authOptions) as any;
         if (!session?.user || session.user.role !== "superadmin") {
-            return NextResponse.json({ error: "Superadmin only", code: "FORBIDDEN" }, { status: 403 });
+            return NextResponse.json({ error: "Superadmin only", code: "FORBIDDEN" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const now = new Date();
@@ -85,9 +85,9 @@ export async function GET(req: NextRequest) {
             plans: { active: totalPlans },
             users: { active: totalUsers },
             generatedAt: now,
-        });
+        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/super-admin/stats]", error);
-        return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to fetch stats" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

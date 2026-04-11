@@ -22,7 +22,7 @@ export async function POST(req: Request) {
         const { memberObjId, memberId, poolId, isEntertainment } = await req.json();
         
         if (!memberObjId || !memberId) {
-            return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+            return NextResponse.json({ error: "Missing required fields" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         await dbConnect();
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
         const member = await Model.findById(memberObjId).populate("planId");
         
         if (!member) {
-            return NextResponse.json({ error: "Member not found" }, { status: 404 });
+            return NextResponse.json({ error: "Member not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // 1. Generate QR Code
@@ -70,10 +70,10 @@ export async function POST(req: Request) {
 
         await Model.updateOne({ _id: member._id }, { $set: updateDoc });
 
-        return NextResponse.json({ success: true, memberId, cardStatus: "ready" });
+        return NextResponse.json({ success: true, memberId, cardStatus: "ready" }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[generate-card job]", error);
-        return NextResponse.json({ error: "Job failed" }, { status: 500 });
+        return NextResponse.json({ error: "Job failed" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
 

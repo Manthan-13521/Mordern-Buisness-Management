@@ -23,10 +23,10 @@ export async function GET(req: Request) {
     try {
         const [token] = await Promise.all([getToken({ req: req as any }), dbConnect()]);
         if (!token || token.role !== "hostel_admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         const hostelId = token.hostelId as string;
-        if (!hostelId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        if (!hostelId) return NextResponse.json({ error: "Forbidden" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const url = new URL(req.url);
         const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1"));
@@ -68,10 +68,10 @@ export async function GET(req: Request) {
             return { ...m, block_room_no: brn, roomNo: rNo };
         });
 
-        return NextResponse.json({ data: formattedMembers, total, page, limit, totalPages: Math.ceil(total / limit) });
+        return NextResponse.json({ data: formattedMembers, total, page, limit, totalPages: Math.ceil(total / limit) }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/hostel/members]", error);
-        return NextResponse.json({ error: "Failed to fetch members" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to fetch members" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
 
@@ -81,11 +81,11 @@ export async function POST(req: Request) {
         const token = await getToken({ req: req as any });
         await dbConnect();
         if (!token || token.role !== "hostel_admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         const hostelId = token.hostelId as string;
         if (!hostelId) {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+            return NextResponse.json({ error: "Forbidden" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // Support both JSON and FormData (photo upload)
@@ -109,29 +109,29 @@ export async function POST(req: Request) {
         const { name, phone, planId, blockNo, floorNo, roomNo, paymentMode, paidAmount, notes, collegeName, bedNo: explicitBedNo } = body;
 
         if (!name || !phone || !planId || !blockNo || !floorNo || !roomNo) {
-            return NextResponse.json({ error: "Missing required fields: name, phone, planId, blockNo, floorNo, roomNo" }, { status: 400 });
+            return NextResponse.json({ error: "Missing required fields: name, phone, planId, blockNo, floorNo, roomNo" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // Validate plan
         const plan = await HostelPlan.findOne({ _id: planId, hostelId, isActive: true }).lean() as any;
         if (!plan) {
-            return NextResponse.json({ error: "Invalid or inactive plan" }, { status: 400 });
+            return NextResponse.json({ error: "Invalid or inactive plan" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // ── Server-side check ──
         const blockObj = await HostelBlock.findOne({ hostelId, name: blockNo }).lean() as any;
         if (!blockObj) {
-            return NextResponse.json({ error: "Block not found" }, { status: 404 });
+            return NextResponse.json({ error: "Block not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         
         const floorObj = await HostelFloor.findOne({ hostelId, blockId: blockObj._id, floorNo }).lean() as any;
         if (!floorObj) {
-            return NextResponse.json({ error: "Floor not found" }, { status: 404 });
+            return NextResponse.json({ error: "Floor not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const roomObj = await HostelRoom.findOne({ hostelId, floorId: floorObj._id, roomNo }).lean() as any;
         if (!roomObj) {
-            return NextResponse.json({ error: "Room not found" }, { status: 404 });
+            return NextResponse.json({ error: "Room not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // Record member registration without transaction
@@ -141,9 +141,7 @@ export async function POST(req: Request) {
             const existingMembers = await HostelMember.find({ hostelId, roomId: roomObj._id, isActive: true, isDeleted: false }).select("bedNo").lean();
             
             if (existingMembers.length >= (roomObj.capacity || 1)) {
-                return NextResponse.json({ error: `Room ${roomNo} (Block ${blockNo}, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }) just reached maximum capacity. Please select a different room.` },
-                    { status: 409 }
-                );
+                return NextResponse.json({ error: `Room ${roomNo} (Block ${blockNo}) just reached maximum capacity. Please select a different room.` }, {  status: 409 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
 
             let finalBedNo: number;
@@ -151,11 +149,11 @@ export async function POST(req: Request) {
             if (explicitBedNo) {
                 finalBedNo = parseInt(explicitBedNo, 10);
                 if (finalBedNo < 1 || finalBedNo > (roomObj.capacity || 1)) {
-                    return NextResponse.json({ error: `Bed ${finalBedNo} is outside room capacity (Max ${roomObj.capacity}, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }).` }, { status: 400 });
+                    return NextResponse.json({ error: `Bed ${finalBedNo} is outside room capacity (Max ${roomObj.capacity}).` }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
                 }
                 const isBedOccupied = existingMembers.some((m: any) => m.bedNo === finalBedNo);
                 if (isBedOccupied) {
-                    return NextResponse.json({ error: `Bed ${finalBedNo} in Room ${roomNo} is already occupied.` }, { status: 409 });
+                    return NextResponse.json({ error: `Bed ${finalBedNo} in Room ${roomNo} is already occupied.` }, {  status: 409 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
                 }
             } else {
                 // Auto-assign: Find the first available explicitly vacant bed slot 1 through capacity.
@@ -274,9 +272,9 @@ export async function POST(req: Request) {
 
         const saved = await HostelMember.findById(memberObjId).populate("planId", "name durationDays price").lean();
 
-        return NextResponse.json(saved, { status: 201 });
+        return NextResponse.json(saved, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         console.error("[POST /api/hostel/members]", error);
-        return NextResponse.json({ error: error?.message || "Server error" }, { status: 500 });
+        return NextResponse.json({ error: error?.message || "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

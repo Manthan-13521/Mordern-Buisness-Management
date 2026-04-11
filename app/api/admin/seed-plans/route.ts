@@ -62,7 +62,7 @@ export async function GET() {
     try {
         const session = await getServerSession(authOptions);
         if (!session?.user || (session.user as any).role !== "superadmin") {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+            return NextResponse.json({ error: "Forbidden" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         await dbConnect();
@@ -84,10 +84,10 @@ export async function GET() {
             success: true,
             message: `${plans.length} SaaS plans seeded (idempotent — safe to re-run).`,
             plans,
-        });
+        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
     } catch (e) {
         console.error("[Seed Plans]", e);
-        return NextResponse.json({ error: "Failed to seed plans" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to seed plans" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

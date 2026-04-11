@@ -30,7 +30,7 @@ export async function GET(req: Request) {
     try {
         const session = await getServerSession(authOptions) as any;
         if (!session?.user?.id) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // Superadmin bypass
@@ -42,7 +42,7 @@ export async function GET(req: Request) {
                 expiryDate: null,
                 daysLeft:   null,
                 trialUsed:  false,
-            });
+            }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         await dbConnect();
@@ -50,7 +50,7 @@ export async function GET(req: Request) {
             .select("subscription trial role hostelId poolId")
             .lean() as any;
 
-        if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+        if (!user) return NextResponse.json({ error: "User not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         let sub = user.subscription;
 
@@ -97,9 +97,9 @@ export async function GET(req: Request) {
             expiryDate: sub?.expiryDate || null,
             daysLeft:   liveStatus === "none" ? null : daysLeft,
             trialUsed:  user.trial?.isUsed || false,
-        });
+        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         console.error("[GET /api/subscription/status]", error);
-        return NextResponse.json({ error: "Failed to fetch subscription status" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to fetch subscription status" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

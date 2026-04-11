@@ -9,7 +9,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     try {
         const [token, { id }, body] = await Promise.all([getToken({ req: req as any }), params, req.json()]);
         await dbConnect();
-        if (!token || token.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!token || token.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         const hostelId = token.hostelId as string;
 
         const { name, phone, role, salary, isActive } = body;
@@ -18,11 +18,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             { $set: { name, phone, role, salary: Number(salary) || 0, isActive } },
             { returnDocument: 'after' }
         ).lean();
-        if (!staff) return NextResponse.json({ error: "Staff not found" }, { status: 404 });
+        if (!staff) return NextResponse.json({ error: "Staff not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         return NextResponse.json(staff, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[PUT /api/hostel/staff/[id]]", error);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
 
@@ -30,13 +30,13 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     try {
         const [token, { id }] = await Promise.all([getToken({ req: req as any }), params]);
         await dbConnect();
-        if (!token || token.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!token || token.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         const hostelId = token.hostelId as string;
 
         await HostelStaff.findOneAndUpdate({ _id: id, hostelId }, { $set: { isActive: false } });
         return NextResponse.json({ success: true }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[DELETE /api/hostel/staff/[id]]", error);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

@@ -59,8 +59,8 @@ export async function GET(req: Request) {
             success: true, 
             fixedCount, 
             errors: errors.length > 0 ? errors : undefined 
-        });
+        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
-        return NextResponse.json({ error: "Migration failed", details: error.message }, { status: 500 });
+        return NextResponse.json({ error: "Migration failed", details: error.message }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

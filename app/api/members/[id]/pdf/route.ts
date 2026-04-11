@@ -22,7 +22,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
 
         const { id } = await props.params;
         const memberId = id;
-        if (!memberId) return NextResponse.json({ error: "Missing member ID" }, { status: 400 });
+        if (!memberId) return NextResponse.json({ error: "Missing member ID" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         await dbConnect();
         // Since id route parameter is the generated human string (e.g. M0002) or DB ID, fallback appropriately
@@ -42,7 +42,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
             member = await EntertainmentMember.findOne(idQuery).populate("planId", "name").lean();
         }
 
-        if (!member) return NextResponse.json({ error: "Member not found" }, { status: 404 });
+        if (!member) return NextResponse.json({ error: "Member not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         // Lazy QR Code Generation if missing
         if (!member.qrCodeUrl) {
@@ -274,6 +274,6 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
         });
     } catch (error: any) {
         console.error("[PDF CRASH ENTRY]:", error?.message, error?.stack);
-        return NextResponse.json({ error: "Failed to generate ID card", details: error?.message }, { status: 500 });
+        return NextResponse.json({ error: "Failed to generate ID card", details: error?.message }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

@@ -28,20 +28,14 @@ export async function POST(req: NextRequest) {
     // ── Auth: Require SEED_SECRET ────────────────────────────────────────
     const seedSecret = process.env.SEED_SECRET;
     if (!seedSecret) {
-        return NextResponse.json(
-            { error: "SEED_SECRET is not configured on the server.", code: "MISCONFIGURED" },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: "SEED_SECRET is not configured on the server.", code: "MISCONFIGURED" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 
     const authHeader = req.headers.get("authorization") ?? "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
 
     if (!token || token !== seedSecret) {
-        return NextResponse.json(
-            { error: "Unauthorized", code: "FORBIDDEN" },
-            { status: 401 }
-        );
+        return NextResponse.json({ error: "Unauthorized", code: "FORBIDDEN" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 
     // ── Validate: Require env-based passwords ────────────────────────────
@@ -49,10 +43,7 @@ export async function POST(req: NextRequest) {
     const operatorPassword = process.env.SEED_OPERATOR_PASSWORD || superAdminPassword;
 
     if (!superAdminPassword || superAdminPassword.length < 12) {
-        return NextResponse.json(
-            { error: "SEED_ADMIN_PASSWORD must be set and at least 12 characters.", code: "MISCONFIGURED" },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: "SEED_ADMIN_PASSWORD must be set and at least 12 characters.", code: "MISCONFIGURED" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 
     await dbConnect();
@@ -75,9 +66,9 @@ export async function POST(req: NextRequest) {
     const existingPool = await Pool.findOne({ slug: "demo-pool" }).lean();
     if (existingPool) {
         return NextResponse.json({ 
-            message: "Seed data already exists (Demo Pool, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }). Super Admin checked.",
+            message: "Seed data already exists (Demo Pool). Super Admin checked.",
             superAdmin: superAdminEmail
-        }, { status: 200 });
+        }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 
     const poolId = "DEMO001";
@@ -101,7 +92,7 @@ export async function POST(req: NextRequest) {
     });
 
     console.warn("⚠️  Seed complete. Passwords sourced from env vars.");
-    return NextResponse.json({ message: "Seed data created successfully." }, { status: 201 });
+    return NextResponse.json({ message: "Seed data created successfully." }, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 }
 
 /**
@@ -111,8 +102,5 @@ export async function GET() {
     if (process.env.NODE_ENV === "production") {
         return new NextResponse(null, { status: 404 });
     }
-    return NextResponse.json(
-        { error: "Unauthorized", code: "FORBIDDEN" },
-        { status: 401 }
-    );
+    return NextResponse.json({ error: "Unauthorized", code: "FORBIDDEN" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 }

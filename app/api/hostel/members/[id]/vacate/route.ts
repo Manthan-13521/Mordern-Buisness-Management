@@ -16,7 +16,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         await dbConnect();
         
         if (!token || token.role !== "hostel_admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         
         const hostelId = token.hostelId as string;
@@ -24,25 +24,25 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         const body = await req.json();
         const settleAmount = Number(body.settleAmount) || 0;
         if (!Number.isFinite(settleAmount) || Math.abs(settleAmount) > 9_999_999_999) {
-             return NextResponse.json({ error: "Invalid settlement amount boundary" }, { status: 400 });
+             return NextResponse.json({ error: "Invalid settlement amount boundary" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const settleMode = body.settleMode || "cash";
 
         const member = await HostelMember.findOne({ _id: id, hostelId, isDeleted: false });
         if (!member) {
-            return NextResponse.json({ error: "Member not found" }, { status: 404 });
+            return NextResponse.json({ error: "Member not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         if (member.status === "vacated") {
-            return NextResponse.json({ error: "Member is already vacated" }, { status: 400 });
+            return NextResponse.json({ error: "Member is already vacated" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const finalCheck = member.balance + settleAmount;
         if (Math.abs(finalCheck) >= 1) { 
             return NextResponse.json({ 
                 error: `Final balance must perfectly equal 0. Current balance: ${member.balance}, but settle parameter provided: ${settleAmount}` 
-            }, { status: 400 });
+            }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const now = new Date();
@@ -95,12 +95,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             performedBy: token.email as string,
         });
 
-        return NextResponse.json({ success: true, member });
+        return NextResponse.json({ success: true, member }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         if (error?.code === 11000 && error?.keyPattern?.idempotencyKey) {
-            return NextResponse.json({ message: "Duplicate vacate processed safely", success: true }, { status: 200 });
+            return NextResponse.json({ message: "Duplicate vacate processed safely", success: true }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         console.error("[POST /api/hostel/members/[id]/vacate]", error);
-        return NextResponse.json({ error: error?.message || "Server error" }, { status: 500 });
+        return NextResponse.json({ error: error?.message || "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

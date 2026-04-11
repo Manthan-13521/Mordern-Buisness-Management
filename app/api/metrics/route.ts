@@ -16,6 +16,6 @@ export async function GET(req: Request) {
             },
         });
     } catch (ex) {
-        return NextResponse.json({ error: "Failed to collect metrics" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to collect metrics" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

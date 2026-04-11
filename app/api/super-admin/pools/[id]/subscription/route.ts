@@ -19,14 +19,14 @@ export async function PATCH(
 
         const session = await getServerSession(authOptions);
         if (!session?.user || session.user.role !== "superadmin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const body = await req.json();
         const { status } = body;
 
         if (status !== "active" && status !== "paused") {
-            return NextResponse.json({ error: "Invalid status value" }, { status: 400 });
+            return NextResponse.json({ error: "Invalid status value" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const pId = await params;
@@ -37,12 +37,12 @@ export async function PATCH(
         );
 
         if (!pool) {
-            return NextResponse.json({ error: "Pool not found" }, { status: 404 });
+            return NextResponse.json({ error: "Pool not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
-        return NextResponse.json({ success: true, pool });
+        return NextResponse.json({ success: true, pool }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[PATCH /api/super-admin/pools/[id]/subscription]", error);
-        return NextResponse.json({ error: "Failed to update pool subscription" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to update pool subscription" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

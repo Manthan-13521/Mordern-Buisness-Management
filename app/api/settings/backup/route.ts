@@ -31,7 +31,7 @@ export async function GET(req: Request) {
     }
 
     if (!isAuthorized) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 
     try {
@@ -77,6 +77,6 @@ export async function GET(req: Request) {
 
     } catch (error) {
         console.error("Backup failed", error);
-        return NextResponse.json({ error: "Failed to generate backup" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to generate backup" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

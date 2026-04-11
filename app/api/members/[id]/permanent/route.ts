@@ -20,11 +20,11 @@ export async function DELETE(req: Request, props: RouteContext) {
 
         const session = await getServerSession(authOptions);
         if (!session?.user || session.user.role !== "admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const { id } = await props.params;
-        if (!id) return NextResponse.json({ error: "Missing member ID" }, { status: 400 });
+        if (!id) return NextResponse.json({ error: "Missing member ID" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         let member: any = await secureFindById(Member, id, session.user);
         let Model: any = Member;
@@ -35,7 +35,7 @@ export async function DELETE(req: Request, props: RouteContext) {
         }
 
         if (!member) {
-            return NextResponse.json({ error: "Not Found or Unauthorized" }, { status: 404 });
+            return NextResponse.json({ error: "Not Found or Unauthorized" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // Cleanup S3 photo if present and not used by anyone else
@@ -56,6 +56,6 @@ export async function DELETE(req: Request, props: RouteContext) {
         return NextResponse.json({ message: "Member permanently deleted." }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[DELETE /api/members/[id]/permanent]", error);
-        return NextResponse.json({ error: "Server error deleting member" }, { status: 500 });
+        return NextResponse.json({ error: "Server error deleting member" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

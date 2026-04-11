@@ -10,16 +10,16 @@ export async function GET(req: Request) {
     try {
         const [token] = await Promise.all([getToken({ req: req as any }), dbConnect()]);
         if (!token || token.role !== "hostel_admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         const hostelId = token.hostelId as string;
-        if (!hostelId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        if (!hostelId) return NextResponse.json({ error: "Forbidden" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const plans = await HostelPlan.find({ hostelId }).sort({ price: 1 }).lean();
         return NextResponse.json({ data: plans }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/hostel/plans]", error);
-        return NextResponse.json({ error: "Failed to fetch plans" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to fetch plans" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
 
@@ -29,14 +29,14 @@ export async function POST(req: Request) {
         const [token, body] = await Promise.all([getToken({ req: req as any }), req.json()]);
         await dbConnect();
         if (!token || token.role !== "hostel_admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         const hostelId = token.hostelId as string;
-        if (!hostelId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        if (!hostelId) return NextResponse.json({ error: "Forbidden" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const { name, durationDays, price, description, enableWhatsApp, messages } = body;
         if (!name || !durationDays || price === undefined) {
-            return NextResponse.json({ error: "name, durationDays, and price are required" }, { status: 400 });
+            return NextResponse.json({ error: "name, durationDays, and price are required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const plan = await HostelPlan.create({
@@ -49,9 +49,9 @@ export async function POST(req: Request) {
             messages,
             isActive: true,
         });
-        return NextResponse.json(plan, { status: 201 });
+        return NextResponse.json(plan, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         console.error("[POST /api/hostel/plans]", error);
-        return NextResponse.json({ error: error?.message || "Server error" }, { status: 500 });
+        return NextResponse.json({ error: error?.message || "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

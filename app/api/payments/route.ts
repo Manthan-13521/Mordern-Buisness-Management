@@ -23,7 +23,7 @@ export async function GET(req: Request) {
             getServerSession(authOptions),
         ]);
         if (!session?.user)
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const url = new URL(req.url);
         const page  = Math.max(1, parseInt(url.searchParams.get("page")  ?? "1"));
@@ -34,7 +34,7 @@ export async function GET(req: Request) {
 
         // ── Tenant isolation: non-superadmin MUST have poolId ─────────────────
         if (session.user.role !== "superadmin" && !session.user.poolId) {
-            return NextResponse.json({ error: "No pool assigned to this account" }, { status: 400 });
+            return NextResponse.json({ error: "No pool assigned to this account" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         const tenantFilter = getTenantFilter(session.user);
         Object.assign(query, tenantFilter);
@@ -87,7 +87,7 @@ export async function GET(req: Request) {
         });
     } catch (error) {
         console.error("[GET /api/payments]", error);
-        return NextResponse.json({ error: "Failed to fetch payments" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to fetch payments" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
 
@@ -103,14 +103,12 @@ export async function POST(req: Request) {
             getServerSession(authOptions),
         ]);
         if (!session?.user)
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const body = await req.json();
         const result = PaymentSchema.safeParse(body);
         if (!result.success) {
-            return NextResponse.json({ error: result.error.flatten(, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }) },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: result.error.flatten() }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         
         const {
@@ -125,10 +123,7 @@ export async function POST(req: Request) {
             memberCollection,
         } = result.data;
         if (paymentMethod === "upi" && !transactionId) {
-            return NextResponse.json(
-                { error: "UPI payments require a transactionId" },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: "UPI payments require a transactionId" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const poolId = resolvePoolId(session.user, body.poolId);
@@ -145,7 +140,7 @@ export async function POST(req: Request) {
                 await enforceWriteAccess(poolId);
             } catch (e: any) {
                 if (e.message === "SaaS_Subscription_Expired") {
-                    return NextResponse.json({ error: "SaaS Subscription expired. Please renew to process payments." }, { status: 403 });
+                    return NextResponse.json({ error: "SaaS Subscription expired. Please renew to process payments." }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
                 }
             }
         }
@@ -174,10 +169,7 @@ export async function POST(req: Request) {
                         meta: { clientId, idempotencyKey, existingPaymentId: (existing as any)._id },
                     });
                     console.log("Duplicate prevented", { clientId, idempotencyKey });
-                    return NextResponse.json(
-                        { message: "Duplicate request — payment already recorded.", payment: existing },
-                        { status: 200 }
-                    );
+                    return NextResponse.json({ message: "Duplicate request — payment already recorded.", payment: existing }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
                 }
             } catch (err) {
                 console.warn("Deduplication pre-check failed:", err);
@@ -187,14 +179,14 @@ export async function POST(req: Request) {
         // Server-Side Hard Verification Rule
         const safeAmount = Math.min(Number(amount), 9999999999);
         if (!Number.isFinite(safeAmount) || safeAmount < 0) {
-            return NextResponse.json({ error: "Invalid structural numeric amount sent by client." }, { status: 400 });
+            return NextResponse.json({ error: "Invalid structural numeric amount sent by client." }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         if (planId) {
             const { Plan } = await import("@/models/Plan");
             const plan = await Plan.findById(planId).lean();
             if (plan && safeAmount > (plan as any).price) {
-                return NextResponse.json({ error: "Amount exceeds expected plan price parameters." }, { status: 400 });
+                return NextResponse.json({ error: "Amount exceeds expected plan price parameters." }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
         }
 
@@ -237,10 +229,7 @@ export async function POST(req: Request) {
                         
                         if (existing) {
                             console.log("[Payment] Duplicate prevented", { clientId, idempotencyKey });
-                            return NextResponse.json(
-                                { message: "Duplicate request — payment already recorded.", payment: existing },
-                                { status: 200 }
-                            );
+                            return NextResponse.json({ message: "Duplicate request — payment already recorded.", payment: existing }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
                         }
                     }
                 }
@@ -339,7 +328,7 @@ export async function POST(req: Request) {
                 mod.dispatchEvent("payment.received", { paymentId: payment._id, amount: safeAmount, memberId: memberObjId });
             }).catch(() => {});
 
-            return NextResponse.json(payment, { status: 201 });
+            return NextResponse.json(payment, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         } catch (trxError: any) {
             throw trxError;
         }
@@ -348,12 +337,9 @@ export async function POST(req: Request) {
             const existing = await Payment.findOne({ 
                 $or: [{ idempotencyKey: error.keyValue?.idempotencyKey }, { clientId: error.keyValue?.clientId }] 
             }).lean();
-            return NextResponse.json(
-                { message: "Duplicate request — payment already recorded.", payment: existing },
-                { status: 200 }
-            );
+            return NextResponse.json({ message: "Duplicate request — payment already recorded.", payment: existing }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         console.error("[POST /api/payments]", error);
-        return NextResponse.json({ error: "Server error recording payment" }, { status: 500 });
+        return NextResponse.json({ error: "Server error recording payment" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

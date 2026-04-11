@@ -8,7 +8,7 @@ export async function POST(req: Request) {
     try {
         const session = await getServerSession(authOptions) as any;
         if (!session?.user?.id) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const body = await req.json();
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
         };
 
         if (!referralCode) {
-            return NextResponse.json({ error: "Missing referral code" }, { status: 400 });
+            return NextResponse.json({ error: "Missing referral code" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         await dbConnect();
@@ -29,15 +29,15 @@ export async function POST(req: Request) {
         });
 
         if (!codeDoc) {
-            return NextResponse.json({ error: "Invalid or inactive referral code." }, { status: 400 });
+            return NextResponse.json({ error: "Invalid or inactive referral code." }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         if (codeDoc.expiresAt && new Date(codeDoc.expiresAt) < new Date()) {
-            return NextResponse.json({ error: "This referral code has expired." }, { status: 400 });
+            return NextResponse.json({ error: "This referral code has expired." }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         if (codeDoc.maxUses > 0 && codeDoc.usedCount >= codeDoc.maxUses) {
-            return NextResponse.json({ error: "This referral code has reached its maximum usage limit." }, { status: 400 });
+            return NextResponse.json({ error: "This referral code has reached its maximum usage limit." }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         return NextResponse.json({
@@ -45,10 +45,10 @@ export async function POST(req: Request) {
             code: codeDoc.code,
             discountType: codeDoc.discountType,
             discountValue: codeDoc.discountValue,
-        });
+        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
     } catch (error: any) {
         console.error("Referral validation error:", error);
-        return NextResponse.json({ error: "Failed to validate referral code" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to validate referral code" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

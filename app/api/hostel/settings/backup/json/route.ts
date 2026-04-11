@@ -20,12 +20,12 @@ export async function GET(req: Request) {
         const session = await getServerSession(authOptions);
 
         if (!session?.user || (session.user.role !== "admin" && session.user.role !== "superadmin" && session.user.role !== "hostel_admin")) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const hostelId = (session.user as any).hostelId || (session.user as any).poolId;
         if (!hostelId && session.user.role !== "superadmin") {
-            return NextResponse.json({ error: "No tenant ID found for user" }, { status: 400 });
+            return NextResponse.json({ error: "No tenant ID found for user" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         
         const baseMatch = hostelId ? { hostelId } : {};
@@ -60,6 +60,6 @@ export async function GET(req: Request) {
         });
     } catch (error) {
         console.error("Backup failed", error);
-        return NextResponse.json({ error: "Failed to generate backup" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to generate backup" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

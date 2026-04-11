@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
             dbConnect(),
             getServerSession(authOptions),
         ]);
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const { searchParams } = new URL(req.url);
         const page  = Math.max(1, Number(searchParams.get("page")  ?? 1));
@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
         });
     } catch (error) {
         console.error("[GET /api/staff]", error);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
 
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
             getServerSession(authOptions),
         ]);
         if (!session?.user || session.user.role !== "admin") {
-            return NextResponse.json({ error: "Admin only" }, { status: 403 });
+            return NextResponse.json({ error: "Admin only" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const body = await req.json();
@@ -92,13 +92,13 @@ export async function POST(req: NextRequest) {
             role,
         });
 
-        return NextResponse.json(staff, { status: 201 });
+        return NextResponse.json(staff, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         console.error("[POST /api/staff]", error);
         if (error.code === 11000) {
-            return NextResponse.json({ error: "Staff ID conflict — please retry" }, { status: 409 });
+            return NextResponse.json({ error: "Staff ID conflict — please retry" }, {  status: 409 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
 
@@ -109,14 +109,14 @@ export async function DELETE(req: NextRequest) {
             getServerSession(authOptions),
         ]);
         if (!session?.user || session.user.role !== "admin") {
-            return NextResponse.json({ error: "Admin only" }, { status: 403 });
+            return NextResponse.json({ error: "Admin only" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const { searchParams } = new URL(req.url);
         const staffId = searchParams.get("staffId");
 
         if (!staffId) {
-            return NextResponse.json({ error: "staffId is required" }, { status: 400 });
+            return NextResponse.json({ error: "staffId is required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const deletedStaff = await Staff.findOneAndDelete({ 
@@ -125,10 +125,10 @@ export async function DELETE(req: NextRequest) {
         });
 
         if (!deletedStaff) {
-            return NextResponse.json({ error: "Staff not found" }, { status: 404 });
+            return NextResponse.json({ error: "Staff not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
-        return NextResponse.json({ success: true }, { status: 200 });
+        return NextResponse.json({ success: true }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         return apiError(error);
     }

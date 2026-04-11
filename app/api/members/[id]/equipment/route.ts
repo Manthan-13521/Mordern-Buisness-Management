@@ -19,13 +19,13 @@ export async function POST(req: Request, props: RouteContext) {
         await dbConnect();
 
         const session = await getServerSession(authOptions);
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const { id } = await props.params;
         const { itemName } = await req.json();
 
         if (!itemName?.trim()) {
-            return NextResponse.json({ error: "itemName is required" }, { status: 400 });
+            return NextResponse.json({ error: "itemName is required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         let member = await secureUpdateById(Member, id, {
@@ -50,12 +50,12 @@ export async function POST(req: Request, props: RouteContext) {
             }, session.user, { select: "memberId name equipmentTaken" });
         }
 
-        if (!member) return NextResponse.json({ error: "Not Found" }, { status: 404 });
+        if (!member) return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
-        return NextResponse.json({ message: "Equipment issued.", equipmentTaken: member.equipmentTaken });
+        return NextResponse.json({ message: "Equipment issued.", equipmentTaken: member.equipmentTaken }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[POST /api/members/[id]/equipment]", error);
-        return NextResponse.json({ error: "Server error issuing equipment" }, { status: 500 });
+        return NextResponse.json({ error: "Server error issuing equipment" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
 
@@ -69,13 +69,13 @@ export async function PATCH(req: Request, props: RouteContext) {
         await dbConnect();
 
         const session = await getServerSession(authOptions);
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const { id } = await props.params;
         const { equipmentItemId } = await req.json();
 
         if (!equipmentItemId) {
-            return NextResponse.json({ error: "equipmentItemId is required" }, { status: 400 });
+            return NextResponse.json({ error: "equipmentItemId is required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const tenantFilter = getTenantFilter(session.user);
@@ -107,15 +107,12 @@ export async function PATCH(req: Request, props: RouteContext) {
         if (!member) {
             await auditCrossTenantAccess(Member, id, session.user);
             await auditCrossTenantAccess(EntertainmentMember, id, session.user);
-            return NextResponse.json(
-                { error: "Not Found" },
-                { status: 404 }
-            );
+            return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
-        return NextResponse.json({ message: "Equipment marked as returned.", equipmentTaken: member.equipmentTaken });
+        return NextResponse.json({ message: "Equipment marked as returned.", equipmentTaken: member.equipmentTaken }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[PATCH /api/members/[id]/equipment]", error);
-        return NextResponse.json({ error: "Server error returning equipment" }, { status: 500 });
+        return NextResponse.json({ error: "Server error returning equipment" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

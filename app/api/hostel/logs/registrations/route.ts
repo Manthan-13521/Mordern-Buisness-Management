@@ -11,11 +11,11 @@ export async function GET(req: Request) {
     try {
         const [token] = await Promise.all([getToken({ req: req as any }), dbConnect()]);
         if (!token || token.role !== "hostel_admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         const hostelId = token.hostelId as string;
         if (!hostelId) {
-            return NextResponse.json({ error: "No hostel specified for this account" }, { status: 400 });
+            return NextResponse.json({ error: "No hostel specified for this account" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const url = new URL(req.url);
@@ -30,7 +30,7 @@ export async function GET(req: Request) {
         if (block && block !== "all") {
             const blockObj = await HostelBlock.findOne({ hostelId, name: block }).lean() as any;
             if (!blockObj) {
-                return NextResponse.json({ data: [], total: 0, page, limit, totalPages: 0 });
+                return NextResponse.json({ data: [], total: 0, page, limit, totalPages: 0 }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
             const memberIds = await HostelMember.distinct("memberId", {
                 hostelId,
@@ -55,9 +55,9 @@ export async function GET(req: Request) {
             page,
             limit,
             totalPages: Math.ceil(total / limit),
-        });
+        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/hostel/logs/registrations]", error);
-        return NextResponse.json({ error: "Failed to fetch registration logs" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to fetch registration logs" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

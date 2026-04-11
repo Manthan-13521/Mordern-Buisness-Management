@@ -35,8 +35,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ poolSlu
             expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
         }) as any;
 
-        return NextResponse.json({ success: true, memberId: newMember.memberId });
+        return NextResponse.json({ success: true, memberId: newMember.memberId }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (e: any) {
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        return NextResponse.json({ error: e.message }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

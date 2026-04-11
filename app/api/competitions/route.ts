@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
             dbConnect(),
             getServerSession(authOptions),
         ]);
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const { searchParams } = new URL(req.url);
         const page     = Math.max(1, Number(searchParams.get("page")  ?? 1));
@@ -42,10 +42,10 @@ export async function GET(req: NextRequest) {
             Competition.countDocuments(filter),
         ]);
 
-        return NextResponse.json({ data, total, page, limit });
+        return NextResponse.json({ data, total, page, limit }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/competitions]", error);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
 
@@ -61,14 +61,14 @@ export async function POST(req: NextRequest) {
             getServerSession(authOptions),
         ]);
         if (!session?.user || !["admin", "superadmin"].includes(session.user.role)) {
-            return NextResponse.json({ error: "Admin only" }, { status: 403 });
+            return NextResponse.json({ error: "Admin only" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const body = await req.json();
         const { name, date, category, notes } = body;
 
         if (!name?.trim() || !date || !category?.trim()) {
-            return NextResponse.json({ error: "name, date, and category are required" }, { status: 400 });
+            return NextResponse.json({ error: "name, date, and category are required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const competition = await Competition.create({
@@ -82,9 +82,9 @@ export async function POST(req: NextRequest) {
             isCompleted:  false,
         });
 
-        return NextResponse.json(competition, { status: 201 });
+        return NextResponse.json(competition, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[POST /api/competitions]", error);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

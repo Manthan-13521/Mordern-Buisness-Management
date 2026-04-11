@@ -35,7 +35,7 @@ export async function GET(req: Request) {
         ]);
         
         if (!token)
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const sessionUser = token as any;
 
@@ -67,7 +67,7 @@ export async function GET(req: Request) {
         // somehow missing a poolId (e.g. misconfigured user), we reject hard — 
         // we never fall back to an "UNASSIGNED_POOL" ghost value.
         if (sessionUser.role !== "superadmin" && !sessionUser.poolId) {
-            return NextResponse.json({ error: "No pool assigned to this account" }, { status: 400 });
+            return NextResponse.json({ error: "No pool assigned to this account" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // ── Build match filter ───────────────────────────────────────────
@@ -245,10 +245,7 @@ export async function GET(req: Request) {
         });
     } catch (error) {
         console.error("[GET /api/members]", error);
-        return NextResponse.json(
-            { error: "Failed to fetch members" },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: "Failed to fetch members" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
 
@@ -263,7 +260,7 @@ export async function POST(req: Request) {
         ]);
         
         if (!token)
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const sessionUser = token as any;
 
@@ -276,7 +273,7 @@ export async function POST(req: Request) {
             await enforceMemberCreationLimit(poolId);
         } catch (e: any) {
             if (e.message === "SaaS_Member_Limit_Reached") {
-                return NextResponse.json({ error: "Organization member limit reached. Please upgrade your SaaS plan." }, { status: 403 });
+                return NextResponse.json({ error: "Organization member limit reached. Please upgrade your SaaS plan." }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
         }
         // ------------------------------------------------
@@ -294,7 +291,7 @@ export async function POST(req: Request) {
             const errMsg = Object.entries(errs).map(([f, m]) => `${f}: ${m?.join(", ")}`).join(" | ");
             console.error("Zod Validation Failed:", errMsg, mappedBody);
             // Return error string explicitly to prevent [object Object] on UI
-            return NextResponse.json({ error: String(errMsg, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }) }, { status: 400 });
+            return NextResponse.json({ error: String(errMsg) }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         const data = result.data;
 
@@ -316,7 +313,7 @@ export async function POST(req: Request) {
         const { Plan } = await import("@/models/Plan");
         const plan = await secureFindById(Plan, planId, sessionUser, { lean: true });
         if (!plan)
-            return NextResponse.json({ error: "Invalid Plan" }, { status: 400 });
+            return NextResponse.json({ error: "Invalid Plan" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const poolId = resolvePoolId(sessionUser, body.poolId);
 
@@ -487,12 +484,9 @@ export async function POST(req: Request) {
         // Invalidate members cache for this pool
         invalidateCache(poolId).catch(() => {});
 
-        return NextResponse.json(savedMember, { status: 201 });
+        return NextResponse.json(savedMember, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         console.error("[POST /api/members]", error);
-        return NextResponse.json(
-            { error: error?.message || "Server error creating member" },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: error?.message || "Server error creating member" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

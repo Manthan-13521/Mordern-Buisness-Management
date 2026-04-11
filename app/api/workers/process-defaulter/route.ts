@@ -14,7 +14,7 @@ export async function POST(req: Request) {
         const { memberId } = body;
 
         if (!memberId) {
-            return NextResponse.json({ error: "Missing memberId" }, { status: 400 });
+            return NextResponse.json({ error: "Missing memberId" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         await dbConnect();
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
         const member = await Member.findById(memberId);
         
         if (!member) {
-            return NextResponse.json({ error: "Member not found" }, { status: 404 });
+            return NextResponse.json({ error: "Member not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // 1. Check overdue status using existing logic
@@ -41,9 +41,9 @@ export async function POST(req: Request) {
             }
         );
 
-        return NextResponse.json({ success: true, memberId, state });
+        return NextResponse.json({ success: true, memberId, state }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (e: any) {
         console.error("[Worker] Critical Defaulter Error:", e);
-        return NextResponse.json({ error: e.message || "Internal Worker Error" }, { status: 500 });
+        return NextResponse.json({ error: e.message || "Internal Worker Error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

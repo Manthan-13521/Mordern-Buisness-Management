@@ -19,13 +19,13 @@ export async function POST(req: Request) {
         const [, session] = await Promise.all([dbConnect(), getServerSession(authOptions)]);
 
         if (!session?.user || session.user.role !== "admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const body = await req.json();
         const result = TwilioConnectSchema.safeParse(body);
         if (!result.success) {
-            return NextResponse.json({ error: result.error.flatten(, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }) }, { status: 400 });
+            return NextResponse.json({ error: result.error.flatten() }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const { sid, authToken, whatsappNumber, testPhone } = result.data;
@@ -46,10 +46,7 @@ export async function POST(req: Request) {
         try {
             testClient = twilio(sid, authToken);
         } catch {
-            return NextResponse.json(
-                { error: "Invalid Twilio credentials format." },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: "Invalid Twilio credentials format." }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         try {
@@ -60,13 +57,10 @@ export async function POST(req: Request) {
             });
         } catch (twilioErr: any) {
             // Do NOT save credentials on failure
-            return NextResponse.json(
-                {
+            return NextResponse.json({
                     error: "Twilio test message failed. Credentials not saved.",
                     detail: twilioErr?.message || "Unknown Twilio error",
-                },
-                { status: 422 }
-            );
+                }, {  status: 422 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // ── Step 2: Encrypt and save ──────────────────────────────────────
@@ -89,16 +83,16 @@ export async function POST(req: Request) {
         );
 
         if (!pool) {
-            return NextResponse.json({ error: "Pool not found" }, { status: 404 });
+            return NextResponse.json({ error: "Pool not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         return NextResponse.json({
             success: true,
             message: "Twilio connected! Test message sent successfully.",
             whatsappNumber: fromNumber,
-        });
+        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         console.error("[POST /api/twilio/connect]", error);
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        return NextResponse.json({ error: "Internal server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

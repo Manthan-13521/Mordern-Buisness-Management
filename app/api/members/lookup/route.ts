@@ -19,11 +19,11 @@ export async function GET(req: NextRequest) {
 
         const session = await getServerSession(authOptions);
         if (!session?.user)
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const uid = req.nextUrl.searchParams.get("uid")?.trim();
         if (!uid)
-            return NextResponse.json({ error: "uid query parameter required" }, { status: 400 });
+            return NextResponse.json({ error: "uid query parameter required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const poolId = session.user.role !== "superadmin" ? (session.user.poolId || "UNASSIGNED_POOL") : undefined;
         const query: Record<string, unknown> = { memberId: { $regex: `^${uid}$`, $options: "i" } };
@@ -42,12 +42,12 @@ export async function GET(req: NextRequest) {
         }
 
         if (!member) {
-            return NextResponse.json({ error: "Member not found" }, { status: 404 });
+            return NextResponse.json({ error: "Member not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
-        return NextResponse.json({ ...member, _source: source });
+        return NextResponse.json({ ...member, _source: source }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/members/lookup]", error);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

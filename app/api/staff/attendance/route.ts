@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
         await dbConnect();
 
         const session = await getServerSession(authOptions);
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const { searchParams } = new URL(req.url);
         const page    = Math.max(1, Number(searchParams.get("page")  ?? 1));
@@ -58,10 +58,10 @@ export async function GET(req: NextRequest) {
             StaffAttendance.countDocuments(filter),
         ]);
 
-        return NextResponse.json({ data, total, page, limit });
+        return NextResponse.json({ data, total, page, limit }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/staff/attendance]", error);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
 
@@ -75,7 +75,7 @@ export async function POST(req: Request) {
         await dbConnect();
 
         const session = await getServerSession(authOptions);
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const body = await req.json();
         const { staffId, method, type } = body;
@@ -83,17 +83,17 @@ export async function POST(req: Request) {
         const poolId = session.user.poolId;
 
         if (!poolId || !staffId || !method || !type) {
-            return NextResponse.json({ error: "Missing fields: staffId, method, type" }, { status: 400 });
+            return NextResponse.json({ error: "Missing fields: staffId, method, type" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const staff = await Staff.findOne({ staffId, poolId });
-        if (!staff) return NextResponse.json({ error: "Staff not found" }, { status: 404 });
+        if (!staff) return NextResponse.json({ error: "Staff not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const log = await StaffAttendance.create({ staffId, poolId, method, type });
 
-        return NextResponse.json({ success: true, log });
+        return NextResponse.json({ success: true, log }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         console.error("[POST /api/staff/attendance]", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: error.message }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

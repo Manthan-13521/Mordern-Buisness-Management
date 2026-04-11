@@ -19,21 +19,21 @@ export async function GET(_req: Request, props: RouteContext) {
         await dbConnect();
 
         const session = await getServerSession(authOptions);
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const { id } = await props.params;
 
         const competition = await Competition.findById(id).lean();
 
-        if (!competition) return NextResponse.json({ error: "Not found" }, { status: 404 });
+        if (!competition) return NextResponse.json({ error: "Not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         if (session.user.role !== "superadmin" && (competition as any).poolId !== session.user.poolId) {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+            return NextResponse.json({ error: "Forbidden" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         return NextResponse.json(competition, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/competitions/[id]]", error);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
 
@@ -48,14 +48,14 @@ export async function PATCH(req: Request, props: RouteContext) {
 
         const session = await getServerSession(authOptions);
         if (!session?.user || !["admin", "superadmin"].includes(session.user.role)) {
-            return NextResponse.json({ error: "Admin only" }, { status: 403 });
+            return NextResponse.json({ error: "Admin only" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const { id } = await props.params;
         const body = await req.json();
 
         const competition = await Competition.findById(id).lean();
-        if (!competition) return NextResponse.json({ error: "Not found" }, { status: 404 });
+        if (!competition) return NextResponse.json({ error: "Not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const updates: Record<string, unknown> = {};
 
@@ -65,7 +65,7 @@ export async function PATCH(req: Request, props: RouteContext) {
         // Add participant
         if (body.participant) {
             const { name, memberId, laneNumber } = body.participant;
-            if (!name) return NextResponse.json({ error: "participant.name required" }, { status: 400 });
+            if (!name) return NextResponse.json({ error: "participant.name required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             await Competition.findByIdAndUpdate(id, {
                 $push: {
                     participants: {
@@ -81,7 +81,7 @@ export async function PATCH(req: Request, props: RouteContext) {
         // Add / update winner
         if (body.winner) {
             const { position, name, memberId, timing, prize } = body.winner;
-            if (!position || !name) return NextResponse.json({ error: "winner.position and winner.name required" }, { status: 400 });
+            if (!position || !name) return NextResponse.json({ error: "winner.position and winner.name required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             // Remove any existing winner at this position, then push new
             await Competition.findByIdAndUpdate(id, { $pull: { winners: { position } } });
             await Competition.findByIdAndUpdate(id, {
@@ -115,6 +115,6 @@ export async function PATCH(req: Request, props: RouteContext) {
         return NextResponse.json(updated, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[PATCH /api/competitions/[id]]", error);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

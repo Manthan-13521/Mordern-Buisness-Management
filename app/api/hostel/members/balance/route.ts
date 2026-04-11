@@ -17,10 +17,10 @@ export async function GET(req: Request) {
     try {
         const [token] = await Promise.all([getToken({ req: req as any }), dbConnect()]);
         if (!token || token.role !== "hostel_admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         const hostelId = token.hostelId as string;
-        if (!hostelId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        if (!hostelId) return NextResponse.json({ error: "Forbidden" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const url = new URL(req.url);
         const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1"));
@@ -33,7 +33,7 @@ export async function GET(req: Request) {
         if (block && block !== "all") {
             const blockObj = await HostelBlock.findOne({ hostelId, name: block }).lean() as any;
             if (!blockObj) {
-                return NextResponse.json({ data: [], total: 0, page, limit, totalPages: 0, totalBalance: 0 });
+                return NextResponse.json({ data: [], total: 0, page, limit, totalPages: 0, totalBalance: 0 }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
             baseMatch.blockId = blockObj._id;
         }
@@ -55,9 +55,9 @@ export async function GET(req: Request) {
         const total = withBalance.length;
         const paginated = withBalance.slice(skip, skip + limit);
 
-        return NextResponse.json({ data: paginated, total, page, limit, totalPages: Math.ceil(total / limit), totalBalance });
+        return NextResponse.json({ data: paginated, total, page, limit, totalPages: Math.ceil(total / limit), totalBalance }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/hostel/members/balance]", error);
-        return NextResponse.json({ error: "Failed to fetch balance members" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to fetch balance members" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

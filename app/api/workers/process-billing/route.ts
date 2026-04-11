@@ -16,7 +16,7 @@ export async function POST(req: Request) {
         const { subscriptionId } = body;
 
         if (!subscriptionId) {
-            return NextResponse.json({ error: "Missing subscriptionId" }, { status: 400 });
+            return NextResponse.json({ error: "Missing subscriptionId" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         await dbConnect();
@@ -25,19 +25,19 @@ export async function POST(req: Request) {
         const sub = await Subscription.findById(subscriptionId);
         
         if (!sub) {
-            return NextResponse.json({ error: "Subscription not found" }, { status: 404 });
+            return NextResponse.json({ error: "Subscription not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const success = await processIndividualBilling(sub);
 
         if (!success) {
             console.error(`[Worker] Billing failed for sub: ${subscriptionId}`);
-            return NextResponse.json({ error: "Billing process failed" }, { status: 500 });
+            return NextResponse.json({ error: "Billing process failed" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
-        return NextResponse.json({ success: true, memberId: sub.memberId });
+        return NextResponse.json({ success: true, memberId: sub.memberId }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (e: any) {
         console.error("[Worker] Critical Billing Error:", e);
-        return NextResponse.json({ error: e.message || "Internal Worker Error" }, { status: 500 });
+        return NextResponse.json({ error: e.message || "Internal Worker Error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

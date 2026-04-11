@@ -13,7 +13,7 @@ export async function GET(req: Request) {
 
         const session = await getServerSession(authOptions);
         if (!session?.user || !["admin", "superadmin"].includes(session.user.role)) {
-            return NextResponse.json({ error: "Unauthorized: Admins only" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized: Admins only" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const { searchParams } = new URL(req.url);
@@ -21,11 +21,11 @@ export async function GET(req: Request) {
 
         // Enforce pool isolation: only superadmin can export other pools
         if (session.user.role !== "superadmin") {
-            if (!session.user.poolId) return NextResponse.json({ error: "No pool assigned" }, { status: 403 });
+            if (!session.user.poolId) return NextResponse.json({ error: "No pool assigned" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             poolId = session.user.poolId; // Override requested pool ID with actual assigned pool ID
         }
 
-        if (!poolId) return NextResponse.json({ error: "Pool ID required for exports" }, { status: 400 });
+        if (!poolId) return NextResponse.json({ error: "Pool ID required for exports" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         
         const logs = await EntryLog.find({ poolId })
             .populate("memberId", "name memberId status")
@@ -64,6 +64,6 @@ export async function GET(req: Request) {
             },
         });
     } catch (e: any) {
-         return NextResponse.json({ error: e.message }, { status: 500 });
+         return NextResponse.json({ error: e.message }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

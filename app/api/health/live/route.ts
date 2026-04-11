@@ -6,8 +6,7 @@ export async function GET() {
   try {
     const memory = process.memoryUsage();
 
-    return NextResponse.json(
-      {
+    return NextResponse.json({
         status: "alive",
         uptime: process.uptime(), // in seconds
         timestamp: new Date().toISOString(),
@@ -26,15 +25,11 @@ export async function GET() {
           Pragma: "no-cache",
           Expires: "0",
         },
-      }
-    );
+      });
   } catch (error) {
-    return NextResponse.json(
-      {
+    return NextResponse.json({
         status: "error",
         message: "Health check failed",
-      },
-      { status: 500 }
-    );
+      }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
   }
 }

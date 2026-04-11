@@ -21,7 +21,7 @@ export async function GET(req: Request) {
             dbConnect(),
             getServerSession(authOptions),
         ]);
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const { searchParams } = new URL(req.url);
         const filterType = searchParams.get("type") || "all";
@@ -32,7 +32,7 @@ export async function GET(req: Request) {
 
         // ── Tenant isolation guard ───────────────────────────────────────────
         if (session.user.role !== "superadmin" && !session.user.poolId) {
-            return NextResponse.json({ error: "No pool assigned to this account" }, { status: 400 });
+            return NextResponse.json({ error: "No pool assigned to this account" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         const baseMatch: Record<string, unknown> = getTenantFilter(session.user);
         
@@ -151,6 +151,6 @@ export async function GET(req: Request) {
 }, { headers: { 'Cache-Control': 'no-store' } });
     } catch (error) {
         console.error("[GET /api/logs]", error);
-        return NextResponse.json({ error: "Failed to fetch logs" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to fetch logs" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

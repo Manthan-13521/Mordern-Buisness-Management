@@ -48,28 +48,23 @@ export async function POST(req: NextRequest) {
 
         // Allow superadmin OR authenticated admins upgrading their own pool
         if (!session?.user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const body = await req.json();
         const { poolId, plan, durationMonths = 1 } = body;
 
         if (!poolId || !plan) {
-            return NextResponse.json(
-                { error: "poolId and plan are required" },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: "poolId and plan are required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         if (!PLAN_LIMITS[plan]) {
-            return NextResponse.json({ error: `Invalid plan. Valid plans: ${Object.keys(PLAN_LIMITS, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }).join(", ")}` },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: `Invalid plan. Valid plans: ${Object.keys(PLAN_LIMITS).join(", ")}` }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // Admins can only upgrade their own pool
         if (session.user.role !== "superadmin" && session.user.poolId !== poolId) {
-            return NextResponse.json({ error: "Forbidden — you can only manage your own pool" }, { status: 403 });
+            return NextResponse.json({ error: "Forbidden — you can only manage your own pool" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // Calculate subscription end date
@@ -96,7 +91,7 @@ export async function POST(req: NextRequest) {
         );
 
         if (!pool) {
-            return NextResponse.json({ error: "Pool not found" }, { status: 404 });
+            return NextResponse.json({ error: "Pool not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         return NextResponse.json({
@@ -109,10 +104,10 @@ export async function POST(req: NextRequest) {
                 maxMembers:         pool.maxMembers,
                 featuresEnabled:    pool.featuresEnabled,
             },
-        });
+        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[POST /api/pools/subscribe]", error);
-        return NextResponse.json({ error: "Failed to update subscription" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to update subscription" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
 
@@ -126,7 +121,7 @@ export async function GET(req: NextRequest) {
 
         const session = await getServerSession(authOptions) as any;
         if (!session?.user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const url    = new URL(req.url);
@@ -135,7 +130,7 @@ export async function GET(req: NextRequest) {
             : session.user.poolId;
 
         if (!poolId) {
-            return NextResponse.json({ error: "No poolId available" }, { status: 400 });
+            return NextResponse.json({ error: "No poolId available" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const pool = await Pool.findOne({ poolId })
@@ -143,12 +138,12 @@ export async function GET(req: NextRequest) {
             .lean();
 
         if (!pool) {
-            return NextResponse.json({ error: "Pool not found" }, { status: 404 });
+            return NextResponse.json({ error: "Pool not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         return NextResponse.json(pool, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/pools/subscribe]", error);
-        return NextResponse.json({ error: "Failed to fetch subscription details" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to fetch subscription details" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

@@ -16,7 +16,7 @@ export async function POST(req: Request) {
         const body = await req.json();
         const result = ScanSchema.safeParse(body);
         if (!result.success) {
-            return NextResponse.json({ error: "Invalid scan parameters", details: result.error.flatten() }, { status: 400 });
+            return NextResponse.json({ error: "Invalid scan parameters", details: result.error.flatten() }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         const { poolId, scanToken, type, method } = result.data;
 
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
                     success: false, 
                     reason: "POOL_FULL", 
                     message: "Pool is currently full. Please wait for the next slot." 
-                }, { status: 403 });
+                }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
         }
 
@@ -68,18 +68,18 @@ export async function POST(req: Request) {
             }
 
             if (!member) {
-                return NextResponse.json({ success: false, reason: "INVALID_TOKEN" }, { status: 404 });
+                return NextResponse.json({ success: false, reason: "INVALID_TOKEN" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
 
             // Blacklist Validation
             const isBlacklisted = await BlacklistedMember.exists({ memberId: member.memberId, poolId });
             if (isBlacklisted) {
-                return NextResponse.json({ success: false, reason: "BLACKLISTED" }, { status: 403 });
+                return NextResponse.json({ success: false, reason: "BLACKLISTED" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
 
             // Expiry Validation
             if (new Date() > new Date(member.expiryDate ?? 0) || member.status !== "active") {
-                return NextResponse.json({ success: false, reason: "MEMBERSHIP_EXPIRED" }, { status: 403 });
+                return NextResponse.json({ success: false, reason: "MEMBERSHIP_EXPIRED" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
 
             memberData = { memberId: member._id, idString: member.memberId, name: member.name };
@@ -106,9 +106,9 @@ export async function POST(req: Request) {
             message: `${type === "entry" ? "Access Granted" : "Exit Recorded"}`,
             member: memberData.name,
             processingTimeMs: processingTime
-        });
+        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
     } catch (e: any) {
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        return NextResponse.json({ error: e.message }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

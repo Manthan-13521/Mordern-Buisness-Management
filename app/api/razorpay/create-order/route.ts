@@ -15,7 +15,7 @@ export async function POST(req: Request) {
         const body = await req.json();
         const result = RazorpayOrderSchema.safeParse(body);
         if (!result.success) {
-            return NextResponse.json({ error: result.error.flatten(, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }) }, { status: 400 });
+            return NextResponse.json({ error: result.error.flatten() }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         const { planId, cartQuantity } = result.data;
 
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
         const plan = await Plan.findById(planId);
 
         if (!plan) {
-            return NextResponse.json({ error: "Invalid plan selected" }, { status: 404 });
+            return NextResponse.json({ error: "Invalid plan selected" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // Amount should be in smaller units (paise)
@@ -33,11 +33,11 @@ export async function POST(req: Request) {
         if (!process.env.RAZORPAY_KEY_ID) {
             // Simulate Order Creation for Dev/Test mode without actual keys
             return NextResponse.json({
-                id: `order_mock_${Date.now(, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } })}`,
+                id: `order_mock_${Date.now()}`,
                 amount,
                 currency: "INR",
                 isMock: true,
-            });
+            }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const orderOptions = {
@@ -51,6 +51,6 @@ export async function POST(req: Request) {
         return NextResponse.json(order, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("Razorpay Order Creation Error:", error);
-        return NextResponse.json({ error: "Failed to create payment order" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to create payment order" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

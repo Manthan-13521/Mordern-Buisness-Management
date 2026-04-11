@@ -15,12 +15,12 @@ export async function PUT(
 
         const session = await getServerSession(authOptions);
         if (!session?.user || session.user.role !== "admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const { id } = await params;
         if (!id) {
-            return NextResponse.json({ error: "Plan ID is required" }, { status: 400 });
+            return NextResponse.json({ error: "Plan ID is required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const body = await req.json();
@@ -28,7 +28,7 @@ export async function PUT(
         // Use Zod to validate the update body
         const result = PlanSchema.partial().safeParse(body);
         if (!result.success) {
-            return NextResponse.json({ error: result.error.flatten(, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }) }, { status: 400 });
+            return NextResponse.json({ error: result.error.flatten() }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const data = result.data;
@@ -51,13 +51,13 @@ export async function PUT(
         const updatedPlan = await secureUpdateById(Plan, id, { $set: updateFields }, session.user);
 
         if (!updatedPlan) {
-            return NextResponse.json({ error: "Not Found" }, { status: 404 });
+            return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
-        return NextResponse.json(updatedPlan, { status: 200 });
+        return NextResponse.json(updatedPlan, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("Failed to update plan:", error);
-        return NextResponse.json({ error: "Failed to update plan" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to update plan" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
 
@@ -70,12 +70,12 @@ export async function DELETE(
 
         const session = await getServerSession(authOptions);
         if (!session?.user || session.user.role !== "admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const { id } = await params;
         if (!id) {
-            return NextResponse.json({ error: "Plan ID is required" }, { status: 400 });
+            return NextResponse.json({ error: "Plan ID is required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // Soft-delete: set deletedAt timestamp so it disappears from charts
@@ -83,12 +83,12 @@ export async function DELETE(
         const softDeleted = await secureUpdateById(Plan, id, { $set: { deletedAt: new Date() } }, session.user);
 
         if (!softDeleted) {
-            return NextResponse.json({ error: "Not Found" }, { status: 404 });
+            return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
-        return NextResponse.json({ message: "Plan deleted successfully" }, { status: 200 });
+        return NextResponse.json({ message: "Plan deleted successfully" }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("Failed to delete plan:", error);
-        return NextResponse.json({ error: "Failed to delete plan" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to delete plan" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

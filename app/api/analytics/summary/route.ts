@@ -8,10 +8,10 @@ export const dynamic = "force-dynamic";
 export async function GET() {
     try {
         const [session] = await Promise.all([getServerSession(authOptions), dbConnect()]);
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const poolId = (session.user as any).poolId;
-        if (!poolId) return NextResponse.json({ error: "No pool assigned" }, { status: 400 });
+        if (!poolId) return NextResponse.json({ error: "No pool assigned" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         // --- STEP 12 SaaS Analytics Gating ---
         try {
@@ -19,7 +19,7 @@ export async function GET() {
             await enforceAnalyticsAccess(poolId);
         } catch (e: any) {
             if (e.message === "SaaS_Feature_Gated_Analytics") {
-                return NextResponse.json({ error: "Upgrade your SaaS plan to access Advanced Analytics.", isGated: true }, { status: 403 });
+                return NextResponse.json({ error: "Upgrade your SaaS plan to access Advanced Analytics.", isGated: true }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
         }
         // -------------------------------------
@@ -102,6 +102,6 @@ export async function GET() {
 
     } catch (error) {
         console.error("[GET /api/analytics/summary]", error);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

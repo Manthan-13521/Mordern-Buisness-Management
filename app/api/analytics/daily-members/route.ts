@@ -12,12 +12,12 @@ export async function GET(req: Request) {
         const session = await getServerSession(authOptions);
 
         if (!session?.user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const poolId = session.user.poolId;
         if (!poolId) {
-            return NextResponse.json({ error: "No pool assigned" }, { status: 400 });
+            return NextResponse.json({ error: "No pool assigned" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const url = new URL(req.url);
@@ -80,6 +80,6 @@ export async function GET(req: Request) {
 
     } catch (error) {
         console.error("[GET /api/analytics/daily-members]", error);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

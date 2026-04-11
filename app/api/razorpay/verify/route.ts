@@ -16,14 +16,14 @@ export async function POST(req: Request) {
             await req.json();
 
         if (!memberData || !memberData.planId) {
-            return NextResponse.json({ error: "Missing member registration data" }, { status: 400 });
+            return NextResponse.json({ error: "Missing member registration data" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // Verify Razorpay signature (skip in mock/test mode)
         if (!isMock) {
             const secret = process.env.RAZORPAY_KEY_SECRET;
             if (!secret)
-                return NextResponse.json({ error: "Server misconfiguration: missing secret" }, { status: 500 });
+                return NextResponse.json({ error: "Server misconfiguration: missing secret" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
             const generated_signature = crypto
                 .createHmac("sha256", secret)
@@ -36,10 +36,7 @@ export async function POST(req: Request) {
                     ip: req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown",
                     meta: { reason: "signature_mismatch", razorpay_order_id },
                 });
-                return NextResponse.json(
-                    { error: "Payment verification failed: Invalid signature" },
-                    { status: 400 }
-                );
+                return NextResponse.json({ error: "Payment verification failed: Invalid signature" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
         }
 
@@ -61,7 +58,7 @@ export async function POST(req: Request) {
                         message: "Registration already processed",
                         dbId: (existingMember._id as any).toString(),
                         memberId: existingMember.memberId,
-                    });
+                    }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
                 }
             }
         }
@@ -74,15 +71,12 @@ export async function POST(req: Request) {
                     type: "PAYMENT_DUPLICATE",
                     meta: { reason: "duplicate_payment_id", razorpay_payment_id },
                 });
-                return NextResponse.json(
-                    { error: "Duplicate payment — this transaction has already been processed." },
-                    { status: 400 }
-                );
+                return NextResponse.json({ error: "Duplicate payment — this transaction has already been processed." }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
         }
 
         const plan = await Plan.findById(memberData.planId).lean();
-        if (!plan) return NextResponse.json({ error: "Plan not found" }, { status: 404 });
+        if (!plan) return NextResponse.json({ error: "Plan not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         // ── CRITICAL: Validate payment amount matches plan price from DB ──
         const quantity = memberData.cartQuantity || 1;
@@ -97,10 +91,7 @@ export async function POST(req: Request) {
                     planId: memberData.planId,
                 },
             });
-            return NextResponse.json(
-                { error: "Payment amount does not match plan price. Possible tampering detected." },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: "Payment amount does not match plan price. Possible tampering detected." }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // Generate Member ID locally scoped to the tenant pool (atomic)
@@ -209,12 +200,9 @@ export async function POST(req: Request) {
             message: "Registration successful",
             dbId: newMember._id.toString(),
             memberId: generatedMemberId,
-        });
+        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         logger.error("Razorpay verify error", { error: error?.message });
-        return NextResponse.json(
-            { error: error?.message || "Failed to verify and save registration" },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: error?.message || "Failed to verify and save registration" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

@@ -12,7 +12,7 @@ export async function POST(req: Request) {
         const token = await getToken({ req: req as any });
         
         if (!token || token.role !== "hostel_admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         
         const hostelId = token.hostelId as string;
@@ -57,9 +57,9 @@ export async function POST(req: Request) {
             });
         }
 
-        return NextResponse.json({ success: true, processed });
+        return NextResponse.json({ success: true, processed }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         console.error("[POST /api/hostel/members/run-rent-cycle]", error);
-        return NextResponse.json({ error: error?.message || "Server error" }, { status: 500 });
+        return NextResponse.json({ error: error?.message || "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

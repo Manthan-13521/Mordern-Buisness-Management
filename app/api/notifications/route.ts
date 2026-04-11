@@ -15,7 +15,7 @@ export async function GET(req: Request) {
             getServerSession(authOptions),
         ]);
         if (!session?.user)
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const url = new URL(req.url);
         const page  = Math.max(1, parseInt(url.searchParams.get("page") ?? "1"));
@@ -24,7 +24,7 @@ export async function GET(req: Request) {
 
         // ── Tenant isolation guard ───────────────────────────────────────────
         if (session.user.role !== "superadmin" && !session.user.poolId) {
-            return NextResponse.json({ error: "No pool assigned to this account" }, { status: 400 });
+            return NextResponse.json({ error: "No pool assigned to this account" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         const baseMatch = getTenantFilter(session.user);
 
@@ -50,9 +50,6 @@ export async function GET(req: Request) {
         });
     } catch (error) {
         console.error("[GET /api/notifications]", error);
-        return NextResponse.json(
-            { error: "Failed to fetch notification logs" },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: "Failed to fetch notification logs" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

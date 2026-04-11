@@ -16,7 +16,7 @@ export async function GET(req: Request) {
             getServerSession(authOptions),
         ]);
         if (!session?.user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const { searchParams } = new URL(req.url);
@@ -29,7 +29,7 @@ export async function GET(req: Request) {
 
         // ── Tenant isolation guard ───────────────────────────────────────────
         if (session.user.role !== "superadmin" && !session.user.poolId) {
-            return NextResponse.json({ error: "No pool assigned to this account" }, { status: 400 });
+            return NextResponse.json({ error: "No pool assigned to this account" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         const tenantFilter = getTenantFilter(session.user);
 
@@ -130,9 +130,9 @@ export async function GET(req: Request) {
                 limit,
                 totalPages: Math.ceil(total / limit),
             },
-        });
+        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error(error);
-        return NextResponse.json({ error: "Failed to fetch expired members" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to fetch expired members" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     }
 
     if (!isAuthorized) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 
     try {
@@ -34,9 +34,9 @@ export async function POST(req: Request) {
         return NextResponse.json({
             message: "Reminders processed",
             ...result as any,
-        });
+        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error(error);
-        return NextResponse.json({ error: "Failed to process reminders" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to process reminders" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

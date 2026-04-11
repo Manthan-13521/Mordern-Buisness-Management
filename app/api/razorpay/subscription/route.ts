@@ -15,7 +15,7 @@ export async function POST(req: Request) {
 
         // ── C-1 FIX: Hard auth guard — always required ─────────────────────
         if (!session?.user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         const isSuperAdmin = (session.user as any).role === "superadmin";
 
@@ -28,22 +28,22 @@ export async function POST(req: Request) {
         const { orgId, planId, paymentMethod } = body;
 
         if (!orgId || !planId || !paymentMethod) {
-            return NextResponse.json({ error: "orgId, planId and paymentMethod are required" }, { status: 400 });
+            return NextResponse.json({ error: "orgId, planId and paymentMethod are required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const [plan, org] = await Promise.all([
             SaaSPlan.findById(planId),
             Organization.findById(orgId),
         ]);
-        if (!plan) return NextResponse.json({ error: "Plan not found" }, { status: 404 });
-        if (!org) return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+        if (!plan) return NextResponse.json({ error: "Plan not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        if (!org) return NextResponse.json({ error: "Organization not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         // ── C-1 FIX: Non-superadmins can only activate their own org ────────
         if (!isSuperAdmin) {
             const ownerId = org.ownerId?.toString();
             const userId = (session.user as any).id || (session.user as any)._id;
             if (!ownerId || ownerId !== userId?.toString()) {
-                return NextResponse.json({ error: "Forbidden: you can only manage your own organization" }, { status: 403 });
+                return NextResponse.json({ error: "Forbidden: you can only manage your own organization" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
         }
 
@@ -77,22 +77,22 @@ export async function POST(req: Request) {
                 // Distinguish between "doesn't exist" and "exhausted" for better UX
                 const codeExists = await ReferralCode.findOne({ code: sanitizedCode }).lean();
                 if (!codeExists) {
-                    return NextResponse.json({ error: "Invalid referral code" }, { status: 404 });
+                    return NextResponse.json({ error: "Invalid referral code" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
                 }
                 if (!(codeExists as any).isActive) {
-                    return NextResponse.json({ error: "Referral code is inactive" }, { status: 400 });
+                    return NextResponse.json({ error: "Referral code is inactive" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
                 }
                 if ((codeExists as any).expiresAt && new Date() > (codeExists as any).expiresAt) {
-                    return NextResponse.json({ error: "Referral code has expired" }, { status: 400 });
+                    return NextResponse.json({ error: "Referral code has expired" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
                 }
-                return NextResponse.json({ error: "Referral code usage limit reached" }, { status: 400 });
+                return NextResponse.json({ error: "Referral code usage limit reached" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
 
             // Check expiry after atomic increment (undo if expired)
             if (atomicCode.expiresAt && new Date() > atomicCode.expiresAt) {
                 // Undo the increment since code is expired
                 await (ReferralCode as any).updateOne({ _id: atomicCode._id }, { $inc: { usedCount: -1 } });
-                return NextResponse.json({ error: "Referral code has expired" }, { status: 400 });
+                return NextResponse.json({ error: "Referral code has expired" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
 
             // Calculate discount
@@ -170,7 +170,7 @@ export async function POST(req: Request) {
                 );
             }
 
-            return NextResponse.json({ success: true, message: "Manual UPI Activated", subscription, finalPrice, discountApplied });
+            return NextResponse.json({ success: true, message: "Manual UPI Activated", subscription, finalPrice, discountApplied }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         } else if (paymentMethod === "razorpay") {
             // Phase 2 placeholder — wire in Razorpay SDK here
@@ -180,13 +180,13 @@ export async function POST(req: Request) {
                 amount: finalPrice,
                 discountApplied,
                 currency: "INR",
-            });
+            }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
-        return NextResponse.json({ error: "Invalid payment method" }, { status: 400 });
+        return NextResponse.json({ error: "Invalid payment method" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
     } catch (e: any) {
         console.error("[Checkout] Error:", e);
-        return NextResponse.json({ error: "Server error handling checkout" }, { status: 500 });
+        return NextResponse.json({ error: "Server error handling checkout" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

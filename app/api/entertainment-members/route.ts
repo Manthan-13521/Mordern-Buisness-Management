@@ -21,7 +21,7 @@ export async function GET(req: Request) {
             getServerSession(authOptions),
         ]);
         if (!session?.user)
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const url = new URL(req.url);
         const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1"));
@@ -59,10 +59,10 @@ export async function GET(req: Request) {
             page,
             limit,
             totalPages: Math.ceil(total / limit),
-        });
+        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/entertainment-members]", error);
-        return NextResponse.json({ error: "Failed to fetch entertainment members" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to fetch entertainment members" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
 
@@ -73,22 +73,22 @@ export async function POST(req: Request) {
             getServerSession(authOptions),
         ]);
         if (!session?.user)
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const body = await req.json();
         const result = EntertainmentMemberCreateSchema.safeParse(body);
         if (!result.success) {
-            return NextResponse.json({ error: result.error.flatten(, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }) }, { status: 400 });
+            return NextResponse.json({ error: result.error.flatten() }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         const { name, phone, planId, dob, photoBase64, aadharCard, address, planQuantity = 1, paidAmount = 0, balanceAmount = 0 } = result.data;
 
         const plan = await Plan.findById(planId).lean();
         if (!plan)
-            return NextResponse.json({ error: "Invalid Plan" }, { status: 400 });
+            return NextResponse.json({ error: "Invalid Plan" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const poolId = session.user.role !== "superadmin" ? session.user.poolId : body.poolId;
         if (!poolId)
-            return NextResponse.json({ error: "Pool ID required" }, { status: 400 });
+            return NextResponse.json({ error: "Pool ID required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         // Atomic counter from Pool (not Plan) to avoid duplicates
         const { Pool } = await import("@/models/Pool");
@@ -150,9 +150,9 @@ export async function POST(req: Request) {
             .populate("planId", "name hasTokenPrint price")
             .select("memberId name phone planId planQuantity planStartDate planEndDate paidAmount balanceAmount paymentStatus photoUrl qrCodeUrl")
             .lean();
-        return NextResponse.json(saved, { status: 201 });
+        return NextResponse.json(saved, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[POST /api/entertainment-members]", error);
-        return NextResponse.json({ error: "Server error creating entertainment member" }, { status: 500 });
+        return NextResponse.json({ error: "Server error creating entertainment member" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

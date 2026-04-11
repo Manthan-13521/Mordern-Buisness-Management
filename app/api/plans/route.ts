@@ -23,16 +23,16 @@ export async function GET(req: Request) {
             const PoolModel = mongoose.models.Pool ||
                 mongoose.model("Pool", new mongoose.Schema({ slug: String, poolName: String, poolId: String, adminPhone: String }));
             const pool = await PoolModel.findOne({ slug }).lean() as any;
-            if (!pool) return NextResponse.json({ error: "Pool not found" }, { status: 404 });
+            if (!pool) return NextResponse.json({ error: "Pool not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
             const plans = await Plan.find({ deletedAt: null, poolId: pool.poolId, isActive: true }).sort({ price: 1 }).lean();
-            return NextResponse.json({ poolName: pool.poolName, adminPhone: pool.adminPhone, plans });
+            return NextResponse.json({ poolName: pool.poolName, adminPhone: pool.adminPhone, plans }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // ── Admin: paginated plan list ─────────────────────────────────────
         const session = await getServerSession(authOptions);
         if (!session?.user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const page  = Math.max(1, parseInt(searchParams.get("page")  ?? "1"));
@@ -58,7 +58,7 @@ export async function GET(req: Request) {
         });
     } catch (error) {
         console.error("[GET /api/plans]", error);
-        return NextResponse.json({ error: "Failed to fetch plans" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to fetch plans" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
 
@@ -73,13 +73,13 @@ export async function POST(req: Request) {
             getServerSession(authOptions),
         ]);
         if (!session?.user || !["admin", "superadmin"].includes(session.user.role)) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const body = await req.json();
         const result = PlanSchema.safeParse(body);
         if (!result.success) {
-            return NextResponse.json({ error: result.error.flatten(, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }) }, { status: 400 });
+            return NextResponse.json({ error: result.error.flatten() }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         const data = result.data;
         const {
@@ -92,7 +92,7 @@ export async function POST(req: Request) {
         } = { ...body, ...data }; // Merge specific body items that are not in schema
 
         const poolId = session.user.role === "superadmin" ? bodyPoolId : session.user.poolId;
-        if (!poolId) return NextResponse.json({ error: "Pool ID required" }, { status: 400 });
+        if (!poolId) return NextResponse.json({ error: "Pool ID required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         // Use enableWhatsAppAlerts as canonical; fall back to whatsAppAlert for legacy
         const alertEnabled = enableWhatsAppAlerts ?? whatsAppAlert ?? false;
@@ -115,9 +115,9 @@ export async function POST(req: Request) {
         });
 
         await plan.save();
-        return NextResponse.json(plan, { status: 201 });
+        return NextResponse.json(plan, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[POST /api/plans]", error);
-        return NextResponse.json({ error: "Failed to create plan" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to create plan" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

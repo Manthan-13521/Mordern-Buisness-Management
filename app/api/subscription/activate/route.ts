@@ -13,18 +13,18 @@ export async function POST(req: Request) {
     try {
         const session = await getServerSession(authOptions) as any;
         if (!session?.user?.id) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const body = await req.json();
         const { razorpayOrderId, razorpayPaymentId, razorpaySignature, isMock, planType, module, blocks } = body;
 
         if (!planType || !module) {
-            return NextResponse.json({ error: "planType and module are required" }, { status: 400 });
+            return NextResponse.json({ error: "planType and module are required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         if (!isMock && (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature)) {
-            return NextResponse.json({ error: "Payment verification data missing" }, { status: 400 });
+            return NextResponse.json({ error: "Payment verification data missing" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         await dbConnect();
@@ -45,9 +45,9 @@ export async function POST(req: Request) {
             expiryDate,
             amountINR,
             message:    "Subscription activated successfully",
-        });
+        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         console.error("[POST /api/subscription/activate]", error);
-        return NextResponse.json({ error: error?.message || "Activation failed" }, { status: 400 });
+        return NextResponse.json({ error: error?.message || "Activation failed" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

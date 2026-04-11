@@ -17,7 +17,7 @@ export async function GET() {
 
         const session = await getServerSession(authOptions);
         if (!session?.user || !["admin", "superadmin"].includes(session.user.role)) {
-            return NextResponse.json({ error: "Unauthorized: Admins only" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized: Admins only" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const query: Record<string, unknown> = {};
@@ -108,6 +108,6 @@ export async function GET() {
         });
     } catch (error) {
         console.error("[GET /api/export/members]", error);
-        return NextResponse.json({ error: "Export failed" }, { status: 500 });
+        return NextResponse.json({ error: "Export failed" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

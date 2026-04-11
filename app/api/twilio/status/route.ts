@@ -16,7 +16,7 @@ export async function GET() {
         const [, session] = await Promise.all([dbConnect(), getServerSession(authOptions)]);
 
         if (!session?.user || session.user.role !== "admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const pool = await Pool.findOne({ poolId: session.user.poolId })
@@ -24,16 +24,16 @@ export async function GET() {
             .lean() as any;
 
         if (!pool) {
-            return NextResponse.json({ error: "Pool not found" }, { status: 404 });
+            return NextResponse.json({ error: "Pool not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         return NextResponse.json({
             isTwilioConnected: pool.isTwilioConnected ?? false,
             sid: pool.twilio?.sid ?? null,
             whatsappNumber: pool.twilio?.whatsappNumber ?? null,
-        });
+        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/twilio/status]", error);
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        return NextResponse.json({ error: "Internal server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

@@ -21,7 +21,7 @@ export async function GET() {
 
         const session = await getServerSession(authOptions);
         if (!session?.user || session.user.role !== "admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const settings = await getSettings();
@@ -86,9 +86,9 @@ export async function GET() {
                 totalExpired,
             },
             recentErrors,
-        });
+        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error(error);
-        return NextResponse.json({ error: "Failed to fetch health data" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to fetch health data" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

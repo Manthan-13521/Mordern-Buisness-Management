@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
             dbConnect(),
             getServerSession(authOptions),
         ]);
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         let poolId = session.user.poolId;
         const searchParams = new URL(req.url).searchParams;
@@ -88,6 +88,6 @@ export async function GET(req: NextRequest) {
         });
     } catch (error) {
         console.error("[GET /api/occupancy]", error);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

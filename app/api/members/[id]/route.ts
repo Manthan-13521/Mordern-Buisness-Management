@@ -22,7 +22,7 @@ export async function GET(_req: Request, props: RouteContext) {
         await dbConnect();
 
         const session = await getServerSession(authOptions);
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const { id } = await props.params;
 
@@ -33,12 +33,12 @@ export async function GET(_req: Request, props: RouteContext) {
             member = await secureFindById(EntertainmentMember, id, session.user, { select: "+photoUrl", populate: { path: "planId", select: populateFields } });
         }
 
-        if (!member) return NextResponse.json({ error: "Not Found" }, { status: 404 });
+        if (!member) return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         return NextResponse.json(member, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/members/[id]]", error);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
 
@@ -51,7 +51,7 @@ export async function PATCH(req: Request, props: RouteContext) {
         await dbConnect();
 
         const session = await getServerSession(authOptions);
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const { id } = await props.params;
 
@@ -65,7 +65,7 @@ export async function PATCH(req: Request, props: RouteContext) {
             member = await secureUpdateById(EntertainmentMember, id, { $set: safeUpdates }, session.user, { populate: { path: "planId", select: "name price hasTokenPrint" } });
         }
 
-        if (!member) return NextResponse.json({ error: "Not Found" }, { status: 404 });
+        if (!member) return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         // Invalidate members list cache
         invalidateCache(member.poolId).catch(() => {});
@@ -73,7 +73,7 @@ export async function PATCH(req: Request, props: RouteContext) {
         return NextResponse.json(member, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[PATCH /api/members/[id]]", error);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
 
@@ -87,11 +87,11 @@ export async function DELETE(req: Request, props: RouteContext) {
 
         const session = await getServerSession(authOptions);
         if (!session?.user || session.user.role !== "admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const { id } = await props.params;
-        if (!id) return NextResponse.json({ error: "Missing member ID" }, { status: 400 });
+        if (!id) return NextResponse.json({ error: "Missing member ID" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const updates = {
             isDeleted:    true,
@@ -112,7 +112,7 @@ export async function DELETE(req: Request, props: RouteContext) {
             // Log intrusion if existed in another pool
             await auditCrossTenantAccess(Member, id, session.user);
             await auditCrossTenantAccess(EntertainmentMember, id, session.user);
-            return NextResponse.json({ error: "Not Found" }, { status: 404 });
+            return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // 2. Cache Invalidation
@@ -121,6 +121,6 @@ export async function DELETE(req: Request, props: RouteContext) {
         return NextResponse.json({ message: "Member moved to recycle bin successfully." }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[DELETE /api/members/[id]]", error);
-        return NextResponse.json({ error: "Server error deleting member" }, { status: 500 });
+        return NextResponse.json({ error: "Server error deleting member" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
