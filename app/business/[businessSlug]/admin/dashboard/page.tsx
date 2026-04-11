@@ -20,7 +20,7 @@ export default function BusinessDashboard() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        const res = await fetch("/api/business/analytics");
+        const res = await fetch("/api/business/analytics", { cache: "no-store" });
         const data = await res.json();
         if (res.ok) {
           setStats(data.stats || {});

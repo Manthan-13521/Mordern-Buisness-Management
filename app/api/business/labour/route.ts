@@ -5,6 +5,8 @@ import { dbConnect } from "@/lib/mongodb";
 import { BusinessLabour } from "@/models/BusinessLabour";
 import { BusinessAttendance } from "@/models/BusinessAttendance";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request) {
     try {
         const session = await getServerSession(authOptions);
@@ -42,7 +44,9 @@ export async function GET(req: Request) {
             { $sort: { name: 1 } }
         ]);
 
-        return NextResponse.json(labours);
+        return NextResponse.json(labours, {
+            headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
+        });
     } catch (error) {
         return NextResponse.json({ error: "Failed to fetch labour" }, { status: 500 });
     }
@@ -75,7 +79,10 @@ export async function POST(req: Request) {
         });
 
         await labour.save();
-        return NextResponse.json(labour, { status: 201 });
+        return NextResponse.json(labour, {
+            status: 201,
+            headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
+        });
     } catch (error) {
         return NextResponse.json({ error: "Failed to create labour" }, { status: 500 });
     }

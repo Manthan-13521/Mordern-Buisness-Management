@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessLabourPayment } from "@/models/BusinessLabourPayment";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request, { params }: { params: Promise<{ labourId: string }> }) {
     try {
         const session = await getServerSession(authOptions);
@@ -33,7 +35,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ labourI
 
         await payment.save();
 
-        return NextResponse.json({ success: true, payment });
+        return NextResponse.json({ success: true, payment }, {
+            headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
+        });
     } catch (error) {
         console.error("Labour Payment Error:", error);
         return NextResponse.json({ error: "Failed to record payment" }, { status: 500 });

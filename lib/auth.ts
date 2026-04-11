@@ -170,6 +170,7 @@ export const authOptions: NextAuthOptions = {
                 }
 
                 // Run Pool + User lookups in parallel for speed
+                // SECURITY: Prefer email match (unique). Name match is scoped by poolId when available.
                 const userQuery: any = {
                     $or: [
                         { email: credentials.username },
@@ -177,18 +178,59 @@ export const authOptions: NextAuthOptions = {
                     ]
                 };
 
-                const [pool, user] = await Promise.all([
-                    credentials.poolSlug
-                        ? Pool.findOne({ slug: credentials.poolSlug }).lean()
-                        : Promise.resolve(null),
-                    UserModel.findOne(userQuery).lean() as Promise<IUser | null>,
-                ]);
+                // Scope by pool if poolSlug is provided (prevents cross-tenant name collision)
+                if (credentials.poolSlug) {
+                    const pool = await Pool.findOne({ slug: credentials.poolSlug }).lean();
+                    if (!pool) throw new Error("Pool not found");
 
-                if (credentials.poolSlug && !pool) throw new Error("Pool not found");
+                    // Scope user query to this pool
+                    userQuery.poolId = pool.poolId;
+                    const user = await UserModel.findOne(userQuery).lean() as IUser | null;
 
-                // Tenant isolation: if pool was specified, verify user belongs to it
-                if (pool && user && user.poolId !== pool.poolId) {
-                    throw new Error("Invalid credentials");
+                    if (!user) throw new Error("Invalid credentials");
+                    const isMatch = await bcrypt.compare(credentials.password, user.passwordHash);
+                    if (!isMatch) {
+                        logger.audit({
+                            type: "LOGIN_FAILED",
+                            ip: clientIp,
+                            meta: { role: user.role, poolId: user.poolId, username: credentials.username, reason: "invalid_password" }
+                        });
+                        throw new Error("Invalid password");
+                    }
+
+                    logger.audit({
+                        type: "LOGIN_SUCCESS",
+                        userId: user._id.toString(),
+                        poolId: user.poolId,
+                        ip: clientIp,
+                        meta: { role: user.role }
+                    });
+                    clearRateLimit(rlKey);
+
+                    return {
+                        id: user._id.toString(),
+                        name: user.name,
+                        email: user.email,
+                        role: user.role,
+                        poolId: user.poolId,
+                        poolSlug: pool.slug,
+                        poolName: (pool as any).poolName,
+                        subscriptionStatus: user.subscription?.expiryDate
+                            ? (new Date() > new Date(user.subscription.expiryDate) ? "expired" : "active")
+                            : "none",
+                        subscriptionExpiryDate: user.subscription?.expiryDate
+                            ? new Date(user.subscription.expiryDate).toISOString()
+                            : null,
+                    };
+                }
+
+                // Generic login (business, hostel, or unscoped pool admin)
+                // Try email first (unique index guarantees correct match)
+                let user = await UserModel.findOne({ email: credentials.username }).lean() as IUser | null;
+
+                // Fallback: try name match, but ONLY if email didn't match
+                if (!user) {
+                    user = await UserModel.findOne({ name: credentials.username }).lean() as IUser | null;
                 }
 
                 if (!user) {

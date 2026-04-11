@@ -34,8 +34,8 @@ export default function SalesPage() {
   async function fetchData() {
     try {
       const [salesRes, custRes] = await Promise.all([
-        fetch("/api/business/sales"),
-        fetch("/api/business/customers")
+        fetch("/api/business/sales", { cache: "no-store" }),
+        fetch("/api/business/customers", { cache: "no-store" })
       ]);
       
       if (!salesRes.ok) {

@@ -68,8 +68,8 @@ export default function CustomerDetailPage() {
   async function fetchData() {
     try {
       const [custRes, transRes] = await Promise.all([
-        fetch(`/api/business/customers/${customerId}`),
-        fetch(`/api/business/transactions?customerId=${customerId}`)
+        fetch(`/api/business/customers/${customerId}`, { cache: "no-store" }),
+        fetch(`/api/business/transactions?customerId=${customerId}`, { cache: "no-store" })
       ]);
       
       if (custRes.ok) setCustomer(await custRes.json());

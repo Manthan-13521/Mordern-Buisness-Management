@@ -107,7 +107,7 @@ export default function InvoicePage() {
     setInvdate(`${yyyy}-${mm}-${dd}`);
 
     // Fetch all customers for dropdown
-    fetch("/api/business/customers")
+    fetch("/api/business/customers", { cache: "no-store" })
       .then(res => res.ok ? res.json() : [])
       .then(data => setAllCustomers(Array.isArray(data) ? data : []))
       .catch(() => setAllCustomers([]));

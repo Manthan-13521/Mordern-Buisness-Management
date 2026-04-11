@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessCustomer } from "@/models/BusinessCustomer";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request, { params }: { params: Promise<{ customerId: string }> }) {
     try {
         const { customerId } = await params;
@@ -20,7 +22,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ customer
             return NextResponse.json({ error: "Customer not found" }, { status: 404 });
         }
 
-        return NextResponse.json(customer);
+        return NextResponse.json(customer, {
+            headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
+        });
     } catch (error) {
         return NextResponse.json({ error: "Failed to fetch customer" }, { status: 500 });
     }
@@ -50,7 +54,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ custom
             return NextResponse.json({ error: "Customer not found" }, { status: 404 });
         }
 
-        return NextResponse.json(customer);
+        return NextResponse.json(customer, {
+            headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
+        });
     } catch (error) {
         return NextResponse.json({ error: "Failed to update customer" }, { status: 500 });
     }

@@ -32,7 +32,7 @@ export default function AnalyticsPage() {
   useEffect(() => {
     async function fetchAnalytics() {
       try {
-        const res = await fetch("/api/business/analytics");
+        const res = await fetch("/api/business/analytics", { cache: "no-store" });
         const data = await res.json();
         setStats(data);
       } catch (err) {

@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessStock } from "@/models/BusinessStock";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request) {
     try {
         const session = await getServerSession(authOptions);
@@ -15,7 +17,9 @@ export async function GET(req: Request) {
         const businessId = session.user.businessId;
 
         const stocks = await BusinessStock.find({ businessId }).sort({ name: 1 });
-        return NextResponse.json(stocks);
+        return NextResponse.json(stocks, {
+            headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
+        });
     } catch (error) {
         return NextResponse.json({ error: "Failed to fetch stock" }, { status: 500 });
     }
@@ -46,7 +50,10 @@ export async function POST(req: Request) {
         });
 
         await stock.save();
-        return NextResponse.json(stock, { status: 201 });
+        return NextResponse.json(stock, {
+            status: 201,
+            headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
+        });
     } catch (error) {
         if ((error as any).code === 11000) {
             return NextResponse.json({ error: "Stock item with this name already exists" }, { status: 400 });
@@ -82,7 +89,9 @@ export async function PUT(req: Request) {
             return NextResponse.json({ error: "Stock item not found" }, { status: 404 });
         }
 
-        return NextResponse.json(stock);
+        return NextResponse.json(stock, {
+            headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
+        });
     } catch (error) {
         return NextResponse.json({ error: "Failed to update stock" }, { status: 500 });
     }

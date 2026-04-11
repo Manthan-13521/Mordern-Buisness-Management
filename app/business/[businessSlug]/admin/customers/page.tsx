@@ -53,7 +53,7 @@ export default function CustomersPage() {
   async function fetchCustomers() {
     try {
       const url = `/api/business/customers${tab === "due" ? "?hasDue=true" : ""}`;
-      const res = await fetch(url);
+      const res = await fetch(url, { cache: "no-store" });
       const data = await res.json();
       setCustomers(data);
     } catch (err) {

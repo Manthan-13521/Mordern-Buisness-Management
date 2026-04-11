@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessTransaction } from "@/models/BusinessTransaction";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request) {
     try {
         const session = await getServerSession(authOptions);
@@ -38,7 +40,9 @@ export async function GET(req: Request) {
         if (enhancedTransactions.length > 0) {
         }
             
-        return NextResponse.json(enhancedTransactions);
+        return NextResponse.json(enhancedTransactions, {
+            headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
+        });
     } catch (error) {
         console.error("Transactions Fetch Error:", error);
         return NextResponse.json({ error: "Failed to fetch transactions" }, { status: 500 });

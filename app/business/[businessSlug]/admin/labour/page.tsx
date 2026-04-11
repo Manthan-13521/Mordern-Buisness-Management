@@ -190,7 +190,7 @@ export default function LabourPage() {
   /* ── DATA FETCH ── */
   const fetchData = useCallback(async () => {
     try {
-      const res = await fetch("/api/business/labour");
+      const res = await fetch("/api/business/labour", { cache: "no-store" });
       const data = await res.json();
       setLabours(Array.isArray(data) ? data : []);
     } catch {

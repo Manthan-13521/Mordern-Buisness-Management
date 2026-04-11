@@ -29,7 +29,7 @@ export default function StockPage() {
 
   async function fetchData() {
     try {
-      const res = await fetch("/api/business/stock");
+      const res = await fetch("/api/business/stock", { cache: "no-store" });
       const data = await res.json();
       setStocks(data);
     } catch (err) {

@@ -36,8 +36,8 @@ export default function PaymentsPage() {
   async function fetchData() {
     try {
       const [payRes, custRes] = await Promise.all([
-        fetch("/api/business/payments"),
-        fetch("/api/business/customers")
+        fetch("/api/business/payments", { cache: "no-store" }),
+        fetch("/api/business/customers", { cache: "no-store" })
       ]);
       
       if (!payRes.ok) {

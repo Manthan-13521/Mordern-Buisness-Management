@@ -5,6 +5,8 @@ import { dbConnect } from "@/lib/mongodb";
 import { BusinessTransaction } from "@/models/BusinessTransaction";
 import { BusinessCustomer } from "@/models/BusinessCustomer";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request) {
     try {
         const session = await getServerSession(authOptions);
@@ -63,6 +65,8 @@ export async function GET(req: Request) {
             },
             recentSales,
             recentPayments
+        }, {
+            headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
         });
     } catch (error) {
         console.error("Analytics Error:", error);

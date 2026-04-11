@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessAttendance } from "@/models/BusinessAttendance";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request) {
     try {
         const session = await getServerSession(authOptions);
@@ -39,7 +41,9 @@ export async function POST(req: Request) {
             );
         }
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true }, {
+            headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
+        });
     } catch (error) {
         console.error("Attendance Sync Error:", error);
         return NextResponse.json({ error: "Failed to sync attendance" }, { status: 500 });
@@ -76,7 +80,9 @@ export async function GET(req: Request) {
         }
 
         const attendance = await BusinessAttendance.find(query).sort({ date: -1 }).populate("labourId", "name");
-        return NextResponse.json(attendance);
+        return NextResponse.json(attendance, {
+            headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
+        });
     } catch (error) {
         return NextResponse.json({ error: "Failed to fetch attendance" }, { status: 500 });
     }

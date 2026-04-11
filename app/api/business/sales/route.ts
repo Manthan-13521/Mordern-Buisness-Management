@@ -8,6 +8,8 @@ import { logger } from "@/lib/logger";
 import { SaleSchema } from "@/lib/shared/types";
 import mongoose from "mongoose";
 
+export const dynamic = "force-dynamic";
+
 // SaleSchema is imported from @/lib/shared/types
 
 export async function GET(req: Request) {
@@ -32,7 +34,9 @@ export async function GET(req: Request) {
                 .populate("customerId", "name")
                 .sort({ date: -1 });
                 
-            return NextResponse.json({ success: true, data: sales });
+            return NextResponse.json({ success: true, data: sales }, {
+                headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
+            });
         } catch (error: any) {
             logger.error("Failed to fetch sales", { error: error.message });
             return NextResponse.json({ success: false, error: "Failed to fetch sales" }, { status: 500 });
@@ -94,7 +98,10 @@ export async function POST(req: Request) {
             }
         );
 
-        return NextResponse.json({ success: true, data: sale }, { status: 201 });
+        return NextResponse.json({ success: true, data: sale }, {
+            status: 201,
+            headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
+        });
     } catch (error: any) {
         logger.error("Sale Recording Error Details", {
             error: error.message,
