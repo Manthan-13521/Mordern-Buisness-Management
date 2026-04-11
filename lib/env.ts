@@ -35,7 +35,7 @@ const envSchema = z.object({
 
   // Background queues
   QSTASH_TOKEN: z.string().min(1).optional(),
-  CRON_SECRET: z.string().min(1, "Missing CRON_SECRET"),
+  CRON_SECRET: z.string().min(1, "Missing CRON_SECRET").optional(),
 });
 
 let parsedEnv = process.env;
