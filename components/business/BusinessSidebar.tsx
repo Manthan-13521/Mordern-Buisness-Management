@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import clsx from "clsx";
+import { useSidebar } from "@/components/providers/SidebarProvider";
 import {
  LayoutDashboard,
  Users,
@@ -21,6 +22,7 @@ import {
 export function BusinessSidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const { setOpen } = useSidebar();
 
   const match = pathname.match(/^\/business\/([^/]+)\/admin/);
   const businessSlug = match?.[1] ?? "";
@@ -60,6 +62,7 @@ export function BusinessSidebar() {
             <Link
               key={item.name}
               href={item.href}
+              onClick={() => setOpen(false)}
               className={clsx(
                 "group flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 border-l-[3px]",
                 isActive
