@@ -37,6 +37,7 @@ export async function POST(req: Request) {
         
         // Generate a unique slug
         let baseSlug = businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+        if (!baseSlug) baseSlug = `biz-${Date.now()}`;
         let slug = baseSlug;
         let counter = 1;
         while (await Business.findOne({ slug })) {
@@ -85,13 +86,13 @@ export async function POST(req: Request) {
             }, { status: 201 });
         } catch (err: any) {
             if (err.code === 11000) {
-                return NextResponse.json({ error: "Duplicate registration detected." }, { status: 400 });
+                return NextResponse.json({ error: "An account with this email already exists." }, { status: 400 });
             }
             throw err;
         }
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Business Registration Error:", error);
-        return NextResponse.json({ error: "Failed to register business" }, { status: 500 });
+        return NextResponse.json({ error: error.message || "Failed to register business" }, { status: 500 });
     }
 }

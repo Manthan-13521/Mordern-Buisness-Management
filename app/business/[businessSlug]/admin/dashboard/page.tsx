@@ -22,8 +22,12 @@ export default function BusinessDashboard() {
       try {
         const res = await fetch("/api/business/analytics");
         const data = await res.json();
-        setStats(data.stats);
-        setRecentSales(data.recentSales);
+        if (res.ok) {
+          setStats(data.stats || {});
+          setRecentSales(data.recentSales || []);
+        } else {
+          console.error("Analytics Error:", data.error);
+        }
       } catch (err) {
         console.error(err);
       } finally {

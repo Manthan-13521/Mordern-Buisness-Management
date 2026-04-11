@@ -52,3 +52,4 @@ test-*.js
 fix-*.js
 .gitignore-additions.txt
 .keep
+scratch/
