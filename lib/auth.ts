@@ -4,6 +4,8 @@ import { dbConnect } from "./mongodb";
 import { User as UserModel, IUser } from "@/models/User";
 import { PlatformAdmin } from "@/models/PlatformAdmin";
 import { Pool } from "@/models/Pool";
+import { Hostel } from "@/models/Hostel";
+import { Business } from "@/models/Business";
 import bcrypt from "bcryptjs";
 import { DefaultSession } from "next-auth";
 import { logger } from "./logger";
@@ -108,7 +110,8 @@ export const authOptions: NextAuthOptions = {
         return secret;
     })(),
     pages: {
-        signIn: "/auth/signin" // general fallback, middleware dictates exact path
+        signIn: "/login", // general fallback, middleware dictates exact path
+        error: "/login"
     },
     providers: [
         CredentialsProvider({
@@ -234,7 +237,6 @@ export const authOptions: NextAuthOptions = {
 
                 // ── Hostel admin path (additive — pool flow untouched above) ──
                 if (user.role === "hostel_admin" && user.hostelId) {
-                    const { Hostel } = await import("@/models/Hostel");
                     const hostel = await Hostel.findOne({ hostelId: user.hostelId }).lean();
                     clearRateLimit(rlKey);
                     return {
@@ -252,7 +254,6 @@ export const authOptions: NextAuthOptions = {
 
                 // ── Business admin path (additive) ──
                 if (user.role === "business_admin" && user.businessId) {
-                    const { Business } = await import("@/models/Business");
                     const business = await Business.findOne({ businessId: user.businessId }).lean();
                     clearRateLimit(rlKey);
                     return {
