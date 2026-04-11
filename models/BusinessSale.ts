@@ -12,6 +12,7 @@ export interface IBusinessSale extends Document {
   transportationCost: number;
   totalAmount: number;
   businessId: string;
+  saleType?: string;
   date: Date;
   createdAt: Date;
   updatedAt: Date;
