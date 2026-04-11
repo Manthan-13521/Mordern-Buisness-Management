@@ -37,8 +37,10 @@ export default function SalesPage() {
         fetch("/api/business/sales"),
         fetch("/api/business/customers")
       ]);
-      setSales(await salesRes.json());
-      setCustomers(await custRes.json());
+      const salesData = await salesRes.json();
+      const custData = await custRes.json();
+      setSales(Array.isArray(salesData) ? salesData : salesData.data || []);
+      setCustomers(Array.isArray(custData) ? custData : custData.data || custData);
     } catch (err) {
       toast.error("Failed to load records");
     } finally {

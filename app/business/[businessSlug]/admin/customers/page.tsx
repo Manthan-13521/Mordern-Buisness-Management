@@ -132,7 +132,7 @@ export default function CustomersPage() {
           method: "POST",
           body: JSON.stringify({ 
             ...transactionData, 
-            amount: totalSaleAmount,
+            totalAmount: totalSaleAmount,
             saleType: "sent",
             customerId: selectedCustomer._id 
           }),
@@ -156,7 +156,7 @@ export default function CustomersPage() {
           body: JSON.stringify({ 
             amount: transactionData.amount,
             type: transactionData.type,
-            transactionType: "received",
+            paymentType: "received",
             date: transactionData.date,
             notes: transactionData.notes,
             customerId: selectedCustomer._id 

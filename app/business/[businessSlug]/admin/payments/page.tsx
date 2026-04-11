@@ -39,8 +39,10 @@ export default function PaymentsPage() {
         fetch("/api/business/payments"),
         fetch("/api/business/customers")
       ]);
-      setPayments(await payRes.json());
-      setCustomers(await custRes.json());
+      const payData = await payRes.json();
+      const custData = await custRes.json();
+      setPayments(Array.isArray(payData) ? payData : payData.data || []);
+      setCustomers(Array.isArray(custData) ? custData : custData.data || custData);
     } catch (err) {
       toast.error("Failed to load records");
     } finally {
