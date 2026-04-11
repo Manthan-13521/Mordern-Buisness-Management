@@ -58,7 +58,7 @@ export async function POST(req: Request) {
 
         // 2. High-Speed Cache Verification Layer
         const cacheKey = `member_${poolId}_${scanToken}`;
-        let memberData = memberCache.get(cacheKey);
+        let memberData = await memberCache.get(cacheKey);
 
         if (!memberData) {
             // Priority Fallback to DB if cache misses
@@ -85,7 +85,7 @@ export async function POST(req: Request) {
             memberData = { memberId: member._id, idString: member.memberId, name: member.name };
             
             // Cache verified profile for 5 minutes mapping
-            memberCache.set(cacheKey, memberData, 300);
+            await memberCache.set(cacheKey, memberData, 300);
         }
 
         // 3. Persist the Activity Log

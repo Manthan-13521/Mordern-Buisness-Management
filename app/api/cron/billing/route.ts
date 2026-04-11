@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
 import { processDueGenerations } from "@/lib/billingEngine";
+import { requireCronAuth } from "@/lib/requireCronAuth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
     try {
-        // Optional Vercel Cron verification layer protection
-        const authHeader = req.headers.get("authorization");
-        if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-             return NextResponse.json({ error: "Unauthorized Cron Secret" }, { status: 401 });
-        }
+        const authError = requireCronAuth(req);
+        if (authError) return authError;
 
         const { Subscription } = await import("@/models/Subscription");
         const { dbConnect } = await import("@/lib/mongodb");

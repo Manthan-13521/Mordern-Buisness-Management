@@ -4,7 +4,20 @@ import { authOptions } from "@/lib/auth";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessTransaction } from "@/models/BusinessTransaction";
 import { BusinessCustomer } from "@/models/BusinessCustomer";
+import { logger } from "@/lib/logger";
+import { z } from "zod";
 import mongoose from "mongoose";
+
+const SaleSchema = z.object({
+    customerId: z.string().min(1, "Customer ID required"),
+    items: z.array(z.any()),
+    totalAmount: z.number().min(0),
+    transportationCost: z.number().min(0).default(0),
+    paidAmount: z.number().min(0).default(0),
+    date: z.string().optional(),
+    saleType: z.enum(['sent', 'received']).default('sent'),
+    receiptUrl: z.string().optional()
+});
 
 export async function GET(req: Request) {
     try {
@@ -24,14 +37,16 @@ export async function GET(req: Request) {
             query.customerId = customerId;
         }
 
-        const sales = await BusinessTransaction.find({ ...query, category: 'SALE' })
-            .populate("customerId", "name")
-            .sort({ date: -1 });
-        return NextResponse.json(sales);
-    } catch (error) {
-        return NextResponse.json({ error: "Failed to fetch sales" }, { status: 500 });
+            const sales = await BusinessTransaction.find({ ...query, category: 'SALE' })
+                .populate("customerId", "name")
+                .sort({ date: -1 });
+                
+            return NextResponse.json({ success: true, data: sales });
+        } catch (error: any) {
+            logger.error("Failed to fetch sales", { error: error.message });
+            return NextResponse.json({ success: false, error: "Failed to fetch sales" }, { status: 500 });
+        }
     }
-}
 
 export async function POST(req: Request) {
     let body: any;
@@ -40,18 +55,22 @@ export async function POST(req: Request) {
         if (!session || session.user.role !== "business_admin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-
         try {
             body = await req.json();
         } catch (e) {
-            return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+            return NextResponse.json({ success: false, error: "Invalid JSON payload" }, { status: 400 });
         }
 
-        const { customerId, items, transportationCost, totalAmount, date, saleType = 'sent', receiptUrl, paidAmount = 0 } = body;
-
-        if (!customerId || !items || !totalAmount) {
-            return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+        const parseResult = SaleSchema.safeParse(body);
+        if (!parseResult.success) {
+            return NextResponse.json({ 
+                success: false, 
+                error: "Validation failed", 
+                details: parseResult.error.flatten().fieldErrors 
+            }, { status: 400 });
         }
+
+        const { customerId, items, transportationCost, totalAmount, date, saleType, receiptUrl, paidAmount } = parseResult.data;
 
         await dbConnect();
         const businessId = session.user.businessId;
@@ -59,9 +78,9 @@ export async function POST(req: Request) {
         const sale = new BusinessTransaction({
             customerId,
             items,
-            transportationCost: transportationCost || 0,
+            transportationCost,
             amount: totalAmount,
-            paidAmount: Number(paidAmount) || 0,
+            paidAmount,
             category: 'SALE',
             businessId,
             date: date ? new Date(date) : new Date(),
@@ -84,14 +103,14 @@ export async function POST(req: Request) {
             }
         );
 
-        return NextResponse.json(sale, { status: 201 });
+        return NextResponse.json({ success: true, data: sale }, { status: 201 });
     } catch (error: any) {
-        console.error("Sale Recording Error Details:", {
+        logger.error("Sale Recording Error Details", {
             error: error.message,
-            stack: error.stack,
-            body: body
+            stack: error.stack
         });
         return NextResponse.json({ 
+            success: false,
             error: "Failed to create sale", 
             details: error.message 
         }, { status: 500 });

@@ -7,7 +7,9 @@ const twilioNumber = process.env.TWILIO_WHATSAPP_NUMBER;
 let client: twilio.Twilio | null = null;
 try {
     if (accountSid && authToken && accountSid.startsWith("AC")) {
-        client = twilio(accountSid, authToken);
+        client = twilio(accountSid, authToken, {
+            httpClient: new twilio.RequestClient({ timeout: 10000 })
+        });
     }
 } catch (e) {
     console.warn("Invalid Twilio credentials in environment, running in mock mode.");

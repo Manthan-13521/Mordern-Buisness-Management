@@ -15,7 +15,9 @@ export function requireCronAuth(req: Request): NextResponse | null {
     }
 
     const authHeader = req.headers.get("authorization");
-    if (authHeader === `Bearer ${secret}`) {
+    const headerSecret = req.headers.get("x-cron-secret");
+    
+    if (authHeader === `Bearer ${secret}` || headerSecret === secret) {
         return null; // Authorized
     }
 

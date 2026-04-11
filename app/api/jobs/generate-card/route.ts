@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireCronAuth } from "@/lib/requireCronAuth";
 import mongoose from "mongoose";
 import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
@@ -15,10 +16,8 @@ export const maxDuration = 60; // Allow more time for jobs
 
 export async function POST(req: Request) {
     try {
-        const authHeader = req.headers.get("Authorization");
-        if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+        const authError = requireCronAuth(req);
+        if (authError) return authError;
 
         const { memberObjId, memberId, poolId, isEntertainment } = await req.json();
         

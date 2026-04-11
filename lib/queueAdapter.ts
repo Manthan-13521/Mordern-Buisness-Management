@@ -3,6 +3,7 @@ import { sendReminders, sendWelcome } from "@/lib/services/notificationService";
 import { handleMemberExpiry } from "@/lib/services/memberService";
 import { handlePaymentRetry } from "@/lib/services/paymentService";
 import { logger } from "@/lib/logger";
+import { redis } from "@/lib/redis";
 
 /**
  * Queue Adapter — Central dispatcher for all background jobs.
@@ -63,8 +64,19 @@ export async function dispatchJob(type: JobType, data: unknown): Promise<unknown
     const validated = schema.parse(data);
 
     // ── 2. Generate idempotency key ──────────────────────────────────────
-    // FUTURE: Check Redis/DB → if key exists, skip execution (dedup)
     const jobKey = generateJobKey(type, validated);
+    if (redis) {
+        try {
+            const isDuplicate = await redis.setnx(`idempotency:${jobKey}`, "1");
+            if (isDuplicate === 0) {
+                logger.info("[QueueAdapter] JOB_SKIPPED_DUPLICATE", { jobType: type, jobKey });
+                return { success: true, message: "Duplicate skipped by idempotency check" };
+            }
+            await redis.expire(`idempotency:${jobKey}`, 86400); // 24hr lockout
+        } catch (e) {
+            console.warn("Idempotency backend failure:", e);
+        }
+    }
 
     // ── 3. Log dispatch ──────────────────────────────────────────────────
     logger.info("[QueueAdapter] JOB_DISPATCHED", {

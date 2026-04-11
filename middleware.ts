@@ -1,526 +1,57 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 import type { NextRequestWithAuth } from "next-auth/middleware";
-import { Redis } from "@upstash/redis";
+import { applySecurityHeaders, applyCORS, withSecurity } from "./middlewares/security";
+import { withRateLimit, getIp } from "./middlewares/rateLimit";
+import { withAbuse } from "./middlewares/abuse";
+import { withAuthRouting } from "./middlewares/auth";
 
-// Initialize Upstash Redis for distributed rate limit / abuse protection
-const redis = (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN)
-    ? new Redis({
-        url: process.env.UPSTASH_REDIS_REST_URL,
-        token: process.env.UPSTASH_REDIS_REST_TOKEN,
-      })
-    : null;
-
-// ── Edge-compatible rate limiter (in-memory, per-instance) ──────────────
-// Works immediately without Redis. When Upstash Redis is configured,
-// the middleware will upgrade to distributed rate limiting automatically.
-const rateMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMITS: Record<string, number> = {
-    'POST:/api/member/login': 5,
-    'POST:/api/members': 20,
-    'POST:/api/entertainment-members': 20,
-    'POST:/api/payments': 15,
-    'POST:/api/razorpay/create-order': 10,
-    'POST:/api/razorpay/verify': 10,
-    'POST:/api/entry': 60,
-    'POST:/api/pool/scan': 60,
-    'POST:/api/settings/backup': 3,
-    'GET:/api/settings/backup/excel': 3,
-    'GET:/api/backups/list': 10,
-    'GET:/api/backups/download': 5,
-    'GET:/api/export/members': 5,
-    'GET:/api/payments/export': 5,
-    'POST:/api/plans': 10,
-    'POST:/api/notifications': 10,
-    'POST:/api/pool/register': 10,
-    'POST:/api/pools/subscribe': 5,
-    'GET:/api/cron/cleanup': 2,
-    'POST:/api/jobs/generate-card': 10,
-    'POST:/api/seed': 2,
-    // ── Hostel rate limits (additive) ──────────────────────────────────
-    'POST:/api/hostel/register': 10,
-    'POST:/api/hostel/members': 20,
-    'POST:/api/hostel/payments': 15,
-    'POST:/api/hostel/plans': 10,
-    'GET:/api/cron/hostel-expiry-alerts': 2,
-    // ── Subscription rate limits ──────────────────────────────
-    'POST:/api/subscription/create-order': 10,
-    'POST:/api/subscription/activate':     10,
-    'POST:/api/subscription/webhook':       20,
-    'GET:/api/subscription/status':         30,
-    'GET:/api/cron/subscription-expiry':     2,
-    'POST:/api/cron/subscription-expiry':    2,
-};
-const DEFAULT_LIMIT = 50;
-const WINDOW_MS = 60_000;
-
-function getIp(req: NextRequestWithAuth): string {
-    return (
-        req.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
-        req.headers.get("x-real-ip") ||
-        req.headers.get("cf-connecting-ip") ||
-        "unknown"
-    );
-}
-
-async function rateLimit(ip: string, userId: string, method: string, path: string) {
-    const normalized = path.replace(/\/[a-f0-9]{24}/g, "").replace(/\/[^/]+\/admin/, "");
-    const endpointKey = `${method}:${normalized}`;
-    const limit = RATE_LIMITS[endpointKey] || DEFAULT_LIMIT;
-    // Use BOTH user ID + IP as the rate limit key
-    const cacheKey = `rl:${endpointKey}:${userId}:${ip}`;
-    
-    if (redis) {
-        try {
-            const current = await redis.incr(cacheKey);
-            if (current === 1) {
-                await redis.expire(cacheKey, 60); // 60 seconds
-            }
-            if (current > limit) {
-                return { allowed: false, limit, remaining: 0 };
-            }
-            return { allowed: true, limit, remaining: limit - current };
-        } catch (e) {
-            console.warn("[RateLimit] Redis failed, falling back to memory:", e);
-        }
-    }
-
-    const now = Date.now();
-    const record = rateMap.get(cacheKey);
-    if (record) {
-        if (now > record.resetAt) {
-            rateMap.set(cacheKey, { count: 1, resetAt: now + WINDOW_MS });
-            return { allowed: true, limit, remaining: limit - 1 };
-        }
-        if (record.count >= limit) {
-            return { allowed: false, limit, remaining: 0 };
-        }
-        record.count++;
-        return { allowed: true, limit, remaining: limit - record.count };
-    }
-
-    rateMap.set(cacheKey, { count: 1, resetAt: now + WINDOW_MS });
-    return { allowed: true, limit, remaining: limit - 1 };
-}
-
-// Cleanup stale rate limit entries every 5 minutes
-setInterval(() => {
-    const now = Date.now();
-    for (const [key, val] of rateMap.entries()) {
-        if (now > val.resetAt) rateMap.delete(key);
-    }
-}, 5 * 60_000);
-
-// ── Abuse Detection (edge-compatible) ───────────────────────────────────
-const abuseMap = new Map<string, { count: number; windowStart: number; blockedUntil: number }>();
-const ABUSE_WINDOW = 5 * 60_000;   // 5 minutes
-const ABUSE_THRESHOLD = 2000;         // requests (raised: dashboards fire many parallel calls + polling)
-const ABUSE_BLOCK = 60_000;     // 1 minute (reduced: less punishing for false positives)
-
-async function detectAbuse(key: string): Promise<boolean> {
-    const redisKey = `abuse:${key}`;
-    const blockKey = `abuse:block:${key}`;
-    const now = Date.now();
-
-    if (redis) {
-        try {
-            // Check if actively blocked
-            const isBlocked = await redis.get(blockKey);
-            if (isBlocked) return true;
-
-            const count = await redis.incr(redisKey);
-            if (count === 1) {
-                await redis.expire(redisKey, 300); // Wait next 5 min window
-            }
-            if (count > ABUSE_THRESHOLD) {
-                await redis.setex(blockKey, 900, "1"); // Block for 15 min
-                return true;
-            }
-            return false;
-        } catch (e) {
-            console.warn("[AbuseLimit] Redis failed, falling back to memory:", e);
-        }
-    }
-
-    const record = abuseMap.get(key);
-
-    if (record?.blockedUntil && now < record.blockedUntil) return true;
-    if (record?.blockedUntil && now >= record.blockedUntil) {
-        abuseMap.delete(key);
-        return false;
-    }
-
-    if (!record || now > record.windowStart + ABUSE_WINDOW) {
-        abuseMap.set(key, { count: 1, windowStart: now, blockedUntil: 0 });
-        return false;
-    }
-
-    record.count++;
-    if (record.count > ABUSE_THRESHOLD) {
-        record.blockedUntil = now + ABUSE_BLOCK;
-        return true;
-    }
-    return false;
-}
-
-import { verifyCSRFToken } from "@/lib/csrf";
-
-// ── Security headers ────────────────────────────────────────────────────
-const SECURITY_HEADERS: Record<string, string> = {
-    "X-Content-Type-Options": "nosniff",
-    "X-Frame-Options": "DENY",
-    "X-XSS-Protection": "1; mode=block",
-    "Referrer-Policy": "strict-origin-when-cross-origin",
-    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
-};
-
-// ── CORS ────────────────────────────────────────────────────────────────
-const ALLOWED_ORIGINS = new Set(
-    [
-        "http://localhost:3000",
-        "https://localhost:3000",
-        process.env.NEXTAUTH_URL || "",
-        process.env.NEXT_PUBLIC_BASE_URL || "",
-    ].filter(Boolean)
-);
-
-function applyCORS(req: NextRequestWithAuth, res: NextResponse) {
-    const origin = req.headers.get("origin") || "";
-    if (ALLOWED_ORIGINS.has(origin) || !origin) {
-        res.headers.set("Access-Control-Allow-Origin", origin || "*");
-    }
-    res.headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-    res.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, x-csrf-token");
-    res.headers.set("Access-Control-Max-Age", "86400");
-}
-
-function applySecurityHeaders(res: NextResponse) {
-    for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
-        res.headers.set(key, value);
-    }
-}
-
-// ── Main Middleware ─────────────────────────────────────────────────────
 export default withAuth(
     async function middleware(req: NextRequestWithAuth) {
-        const token = req.nextauth.token;
+        // 1. SECURITY (CORS, Payload Size, CSRF)
+        const secRes = await withSecurity(req);
+        if (secRes) return secRes;
+
         const path = req.nextUrl.pathname;
-        const method = req.method;
-
-        // ── Tracing 4.1: Request ID Injection ──
         const requestId = req.headers.get("x-request-id") || crypto.randomUUID();
-        const requestHeaders = new Headers(req.headers);
-        requestHeaders.set("x-request-id", requestId);
 
-        // ── Handle CORS preflight ──
-        if (method === "OPTIONS") {
-            const res = new NextResponse(null, { status: 204, headers: requestHeaders });
-            applyCORS(req, res);
-            applySecurityHeaders(res);
-            res.headers.set("x-request-id", requestId);
-            return res;
-        }
-
-        // ── API Route Protection ──
+        // 2. ABUSE & RATELIMIT (API Only)
+        let rlHeaders = { limit: '50', remaining: '50' };
+        
         if (path.startsWith("/api/")) {
             const ip = getIp(req);
+            const token = req.nextauth.token;
+            const role = token?.role as string | undefined;
             const userId = (token?.id as string) || (token?.email as string) || "guest";
             const abuseKey = `${userId}:${ip}`;
 
-            // 1. Abuse detection (blocks 15 min if > 200 req / 5 min)
-            if (token?.role !== "superadmin" && (await detectAbuse(abuseKey))) {
-                const res = NextResponse.json(
-                    { error: "Suspicious activity detected. Temporarily blocked." },
-                    { status: 403 }
-                );
-                applySecurityHeaders(res);
-                return res;
+            const abuseRes = await withAbuse(abuseKey, role);
+            if (abuseRes) return abuseRes;
+
+            const { res: rlRes, rl } = await withRateLimit(req, role);
+            if (rl) {
+                rlHeaders.limit = String(rl.limit);
+                rlHeaders.remaining = String(rl.remaining);
             }
-
-            // 1.5 Payload Size Limit (100KB Edge Guard)
-            const contentLength = parseInt(req.headers.get("content-length") || "0", 10);
-            if (contentLength > 100_000) {
-                const res = NextResponse.json(
-                    { error: "Payload too large. Maximum allowed size is 100KB." },
-                    { status: 413 }
-                );
-                applySecurityHeaders(res);
-                return res;
-            }
-
-            // 2. Rate limiting (per-endpoint, user+IP keyed)
-            let rl = { allowed: true, limit: DEFAULT_LIMIT, remaining: DEFAULT_LIMIT };
-            if (token?.role !== "superadmin") {
-                rl = await rateLimit(ip, userId, method, path);
-                if (!rl.allowed) {
-                    const res = NextResponse.json(
-                        { error: "Too many requests. Please slow down.", retryAfterSeconds: 60 },
-                        { status: 429 }
-                    );
-                    res.headers.set("Retry-After", "60");
-                    res.headers.set("X-RateLimit-Limit", String(rl.limit));
-                    res.headers.set("X-RateLimit-Remaining", "0");
-                    applySecurityHeaders(res);
-                    return res;
-                }
-            }
-
-            // 3. CSRF check for mutating methods (POST/PUT/DELETE)
-            //    Defence: same-origin check via Origin/Referer header (primary),
-            //    or x-csrf-token header (fallback for programmatic clients).
-            //    Skip for: NextAuth endpoints, public registration, webhooks, cron jobs
-            const CSRF_EXEMPT = [
-                "/api/auth",
-                "/api/pool/register",
-                "/api/pool/scan",
-                "/api/razorpay/verify",
-                "/api/cron/",
-                "/api/jobs/",
-                "/api/seed",
-                "/api/member/login",
-                "/api/warmup",
-                "/api/health",
-                // ── Hostel exemptions (additive) ──
-                "/api/hostel/register",
-                // ── Subscription exemptions ──
-                "/api/subscription/webhook",
-                "/api/subscription/",
-                // ── Business exemptions ──
-                "/api/business/register",
-            ];
-
-            // ── Subscription expiry API guard ────────────────────────────────────
-            // Block protected API calls when subscription is expired.
-            // Only applies to logged-in non-superadmin users.
-            const SUBSCRIPTION_PROTECTED_APIS = [
-                "/api/members",
-                "/api/member/",
-                "/api/payments",
-                "/api/plans",
-                "/api/pool/",
-                "/api/hostel/",
-                "/api/entry",
-                "/api/analytics",
-                "/api/staff",
-                "/api/dashboard",
-                "/api/export",
-                "/api/logs",
-                "/api/settings",
-                "/api/notifications",
-                "/api/backups",
-                "/api/business/",
-            ];
-
-            const SUBSCRIPTION_ALWAYS_ALLOW = [
-                "/api/auth",
-                "/api/subscription",
-                "/api/warmup",
-                "/api/health",
-                "/api/cron",
-                "/api/pool/register",
-                "/api/hostel/register",
-                "/api/business/register",
-            ];
-
-            const isProtectedApi = SUBSCRIPTION_PROTECTED_APIS.some((p) => path.startsWith(p));
-            const isAlwaysAllowed = SUBSCRIPTION_ALWAYS_ALLOW.some((p) => path.startsWith(p));
-
-            if (
-                isProtectedApi &&
-                !isAlwaysAllowed &&
-                token?.role !== "superadmin" &&
-                (token as any)?.subscriptionStatus === "expired"
-            ) {
-                const res = NextResponse.json(
-                    {
-                        error: "Subscription expired. Please renew to continue.",
-                        code:  "SUBSCRIPTION_EXPIRED",
-                    },
-                    { status: 403 }
-                );
-                applySecurityHeaders(res);
-                return res;
-            }
-
-            const isMutating = ["POST", "PUT", "DELETE"].includes(method);
-            const isExempt = CSRF_EXEMPT.some((p) => path.startsWith(p));
-
-            if (isMutating && !isExempt) {
-                // Primary: same-origin validation via Origin or Referer header
-                const origin = req.headers.get("origin");
-                const referer = req.headers.get("referer");
-                const requestUrl = req.nextUrl.origin;
-
-                let sameOrigin = false;
-                if (origin) {
-                    sameOrigin = origin === requestUrl;
-                } else if (referer) {
-                    try {
-                        sameOrigin = new URL(referer).origin === requestUrl;
-                    } catch { /* invalid referer */ }
-                }
-
-                // Fallback: x-csrf-token header
-                const csrfToken = req.headers.get("x-csrf-token");
-
-                if (!sameOrigin && !(await verifyCSRFToken(csrfToken || ""))) {
-                    const res = NextResponse.json(
-                        { error: "Invalid or missing CSRF token" },
-                        { status: 403 }
-                    );
-                    applySecurityHeaders(res);
-                    return res;
-                }
-            }
-
-            // Pass through with security headers + rate limit info + tracing
-            const res = NextResponse.next({
-                request: { headers: requestHeaders }
-            });
-            res.headers.set("X-RateLimit-Limit", String(rl.limit));
-            res.headers.set("X-RateLimit-Remaining", String(rl.remaining));
-            res.headers.set("x-request-id", requestId);
-            applySecurityHeaders(res);
-            applyCORS(req, res);
-            return res;
+            if (rlRes) return rlRes;
         }
 
-        // ── Super Admin page protection ──
-        if (path.startsWith("/superadmin")) {
-            if (path === "/superadmin/login") {
-                const res = NextResponse.next();
-                applySecurityHeaders(res);
-                return res;
-            }
-            if (!token || token.role !== "superadmin") {
-                // Redirect to unified login page
-                return NextResponse.redirect(new URL("/login", req.url));
-            }
-            const res = NextResponse.next();
-            applySecurityHeaders(res);
-            return res;
-        }
+        // 3. AUTH & ROUTING
+        // For API calls, if auth passes, we must return NextResponse.next() and attach headers
+        const authRes = withAuthRouting(req);
+        if (authRes) return authRes;
 
-        // ── Subscription page guard ────────────────────────────────────────────────
-        // Redirect expired admins to /renew-plan when they try to access any admin page.
-        const isAdminPage  = /^\/pool\/[^/]+\/admin(\/|$)/.test(path) || path.startsWith("/hostel/") || path.startsWith("/business/");
-        const isPublicPage = ["/select-plan", "/renew-plan", "/login", "/subscribe", "/api"].some(
-            (p) => path.startsWith(p)
-        );
-        if (
-            isAdminPage &&
-            !isPublicPage &&
-            token?.role !== "superadmin" &&
-            (token as any)?.subscriptionStatus === "expired"
-        ) {
-            const res = NextResponse.redirect(new URL("/renew-plan", req.url));
-            applySecurityHeaders(res);
-            return res;
-        }
-
-        // ── Hostel Admin page protection (additive — runs BEFORE pool check) ──
-        if (path.startsWith("/hostel/")) {
-            const hostelAdminRegex = /^\/hostel\/([^/]+)\/admin(\/.*)?$/;
-            const hostelMatch = path.match(hostelAdminRegex);
-
-            if (hostelMatch) {
-                const hostelSlug = hostelMatch[1];
-                const subRoute = hostelMatch[2] || "";
-
-                // Allow slug-specific and general login pages
-                if (subRoute.includes("/login")) {
-                    const res = NextResponse.next();
-                    applySecurityHeaders(res);
-                    return res;
-                }
-
-                // Not logged in → unified login
-                if (!token || token.role !== "hostel_admin") {
-                    return NextResponse.redirect(new URL("/login", req.url));
-                }
-
-                // Logged-in as wrong hostel → redirect to unified login (not wrong hostel's login)
-                if (token.hostelSlug !== hostelSlug) {
-                    return NextResponse.redirect(new URL("/login", req.url));
-                }
-
-                const res = NextResponse.next();
-                applySecurityHeaders(res);
-                return res;
-            }
-
-            // Public hostel registration pages (/hostel/register etc.)
-            const res = NextResponse.next();
-            applySecurityHeaders(res);
-            return res;
-        }
+        // 4. HANDLER (Pass through)
+        const requestHeaders = new Headers(req.headers);
+        requestHeaders.set("x-request-id", requestId);
         
-        // ── Business Admin page protection (additive) ──
-        if (path.startsWith("/business/")) {
-            const businessAdminRegex = /^\/business\/([^/]+)\/admin(\/.*)?$/;
-            const businessMatch = path.match(businessAdminRegex);
-
-            if (businessMatch) {
-                const businessSlug = businessMatch[1];
-                const subRoute = businessMatch[2] || "";
-
-                if (subRoute.includes("/login")) {
-                    const res = NextResponse.next();
-                    applySecurityHeaders(res);
-                    return res;
-                }
-
-                if (!token || token.role !== "business_admin") {
-                    return NextResponse.redirect(new URL("/login", req.url));
-                }
-
-                if (token.businessSlug !== businessSlug) {
-                    return NextResponse.redirect(new URL("/login", req.url));
-                }
-
-                const res = NextResponse.next();
-                applySecurityHeaders(res);
-                return res;
-            }
-
-            // Public business pages
-            const res = NextResponse.next();
-            applySecurityHeaders(res);
-            return res;
-        }
-
-        // ── Pool Admin page protection ──
-        const poolAdminRegex = /^\/pool\/([^/]+)\/admin(\/.*)?$/;
-        const match = path.match(poolAdminRegex);
-
-        if (match) {
-            const poolSlug = match[1];
-            const adminSubRoute = match[2] || "";
-
-            // Allow slug-specific login pages (backward compat)
-            if (adminSubRoute.includes("/login")) {
-                const res = NextResponse.next();
-                applySecurityHeaders(res);
-                return res;
-            }
-
-            // Not logged in → unified login
-            if (!token || (token.role !== "admin" && token.role !== "operator")) {
-                return NextResponse.redirect(new URL("/login", req.url));
-            }
-
-            // Logged in as wrong pool → unified login
-            if (token.poolSlug !== poolSlug) {
-                return NextResponse.redirect(new URL("/login", req.url));
-            }
-
-            const res = NextResponse.next();
-            applySecurityHeaders(res);
-            return res;
-        }
-
-        const res = NextResponse.next();
+        const res = NextResponse.next({ request: { headers: requestHeaders } });
+        res.headers.set("X-RateLimit-Limit", rlHeaders.limit);
+        res.headers.set("X-RateLimit-Remaining", rlHeaders.remaining);
+        res.headers.set("x-request-id", requestId);
         applySecurityHeaders(res);
+        applyCORS(req, res);
+        
         return res;
     },
     {

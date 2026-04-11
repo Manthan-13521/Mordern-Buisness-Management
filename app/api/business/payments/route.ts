@@ -4,7 +4,20 @@ import { authOptions } from "@/lib/auth";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessTransaction } from "@/models/BusinessTransaction";
 import { BusinessCustomer } from "@/models/BusinessCustomer";
+import { logger } from "@/lib/logger";
+import { z } from "zod";
 import mongoose from "mongoose";
+
+const PaymentReqSchema = z.object({
+    customerId: z.string().min(1, "Customer ID required"),
+    amount: z.number().min(0, "Amount must be positive"),
+    type: z.string().min(1),
+    paymentType: z.enum(['sent', 'received']),
+    fileUrl: z.string().optional(),
+    receiptUrl: z.string().optional(),
+    date: z.string().optional(),
+    notes: z.string().optional()
+});
 
 export async function GET(req: Request) {
     try {
@@ -24,14 +37,16 @@ export async function GET(req: Request) {
             query.customerId = customerId;
         }
 
-        const payments = await BusinessTransaction.find({ ...query, category: 'PAYMENT' })
-            .populate("customerId", "name")
-            .sort({ date: -1 });
-        return NextResponse.json(payments);
-    } catch (error) {
-        return NextResponse.json({ error: "Failed to fetch payments" }, { status: 500 });
+            const payments = await BusinessTransaction.find({ ...query, category: 'PAYMENT' })
+                .populate("customerId", "name")
+                .sort({ date: -1 });
+
+            return NextResponse.json({ success: true, data: payments });
+        } catch (error: any) {
+            logger.error("Failed to fetch payments", { error: error.message });
+            return NextResponse.json({ success: false, error: "Failed to fetch payments" }, { status: 500 });
+        }
     }
-}
 
 export async function POST(req: Request) {
     let body: any;
@@ -40,18 +55,22 @@ export async function POST(req: Request) {
         if (!session || session.user.role !== "business_admin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-
         try {
             body = await req.json();
         } catch (e) {
-            return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+            return NextResponse.json({ success: false, error: "Invalid JSON payload" }, { status: 400 });
         }
 
-        const { customerId, amount, type, fileUrl, receiptUrl, paymentType, date, notes } = body;
-
-        if (!customerId || !amount || !type || !paymentType) {
-            return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+        const parseResult = PaymentReqSchema.safeParse(body);
+        if (!parseResult.success) {
+            return NextResponse.json({ 
+                success: false, 
+                error: "Validation failed", 
+                details: parseResult.error.flatten().fieldErrors 
+            }, { status: 400 });
         }
+
+        const { customerId, amount, type, fileUrl, receiptUrl, paymentType, date, notes } = parseResult.data;
 
         await dbConnect();
         const businessId = session.user.businessId;
@@ -86,14 +105,14 @@ export async function POST(req: Request) {
             { $inc: incObject }
         );
 
-        return NextResponse.json(payment, { status: 201 });
+        return NextResponse.json({ success: true, data: payment }, { status: 201 });
     } catch (error: any) {
-        console.error("Payment Recording Error Details:", {
+        logger.error("Payment Recording Error Details", {
             error: error.message,
-            stack: error.stack,
-            body: body
+            stack: error.stack
         });
         return NextResponse.json({ 
+            success: false,
             error: "Failed to create payment", 
             details: error.message 
         }, { status: 500 });

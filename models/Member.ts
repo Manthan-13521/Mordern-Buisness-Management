@@ -191,7 +191,7 @@ memberSchema.methods.rotateQrToken = async function () {
 };
 
 // ── Dual Write Hook for UnifiedUser (Prompt 3.1) ──────────────
-async function syncToUnifiedUser(doc: any) {
+async function syncToUnifiedUser(doc: any, retries = 3) {
     if (!doc) return;
     try {
         const { UnifiedUser } = await import("./UnifiedUser");
@@ -210,8 +210,20 @@ async function syncToUnifiedUser(doc: any) {
             { upsert: true, new: true }
         );
         console.log(`UnifiedUser synced (Pool: ${doc._id})`);
-    } catch (e) {
-        console.error("Failed to sync UnifiedUser for Member:", e);
+    } catch (e: any) {
+        console.error("Failed to sync UnifiedUser for Member:", e?.message || e);
+        if (retries > 0) {
+            console.log(`Retrying UnifiedUser sync for ${doc._id}... (${retries} left)`);
+            setTimeout(() => syncToUnifiedUser(doc, retries - 1), 2000); // 2sec backoff
+        } else {
+            console.error(`[DLQ] UnifiedUser dual-write exhausted retries for ${doc._id}`);
+            try {
+                const { recordFailedJob } = await import("@/lib/queue");
+                await recordFailedJob("sync" as any, { memberId: doc._id, type: "pool" }, e?.message || "Sync failed", 3);
+            } catch (dlqErr) {
+                console.error("Failed to write to DLQ:", dlqErr);
+            }
+        }
     }
 }
 

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireCronAuth } from "@/lib/requireCronAuth";
 import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
@@ -10,6 +11,9 @@ import { signQRToken } from "@/lib/qrSigner";
 export const maxDuration = 60; // Allow more time for jobs
 
 export async function GET(req: Request) {
+    const authError = requireCronAuth(req);
+    if (authError) return authError;
+
     try {
         await dbConnect();
         

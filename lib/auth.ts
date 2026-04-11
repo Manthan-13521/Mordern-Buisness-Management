@@ -184,7 +184,7 @@ export const authOptions: NextAuthOptions = {
                 if (credentials.poolSlug && !pool) throw new Error("Pool not found");
 
                 // Tenant isolation: if pool was specified, verify user belongs to it
-                if (pool && user && user.poolId !== (pool as any).poolId) {
+                if (pool && user && user.poolId !== pool.poolId) {
                     throw new Error("Invalid credentials");
                 }
 
@@ -220,8 +220,8 @@ export const authOptions: NextAuthOptions = {
                 if (!effectiveSlug && user.poolId) {
                     const userPool = pool || await Pool.findOne({ poolId: user.poolId }).lean();
                     if (userPool) {
-                        effectiveSlug = (userPool as any).slug;
-                        poolNameStr = (userPool as any).poolName;
+                        effectiveSlug = userPool.slug;
+                        poolNameStr = userPool.poolName;
                     }
                 }
 
@@ -235,7 +235,7 @@ export const authOptions: NextAuthOptions = {
                 // ── Hostel admin path (additive — pool flow untouched above) ──
                 if (user.role === "hostel_admin" && user.hostelId) {
                     const { Hostel } = await import("@/models/Hostel");
-                    const hostel = await Hostel.findOne({ hostelId: user.hostelId }).lean() as any;
+                    const hostel = await Hostel.findOne({ hostelId: user.hostelId }).lean();
                     clearRateLimit(rlKey);
                     return {
                         id: user._id.toString(),
@@ -253,7 +253,7 @@ export const authOptions: NextAuthOptions = {
                 // ── Business admin path (additive) ──
                 if (user.role === "business_admin" && user.businessId) {
                     const { Business } = await import("@/models/Business");
-                    const business = await Business.findOne({ businessId: user.businessId }).lean() as any;
+                    const business = await Business.findOne({ businessId: user.businessId }).lean();
                     clearRateLimit(rlKey);
                     return {
                         id: user._id.toString(),
