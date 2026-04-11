@@ -33,6 +33,10 @@ export default function SuperAdminLayout({
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
                         Manage Hostels
                     </a>
+                    <a href="/superadmin/businesses" className="px-4 py-2.5 rounded-xl text-neutral-400 hover:bg-white/5 hover:text-white transition-colors flex items-center gap-3 font-medium">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745V6a2 2 0 012-2h14a2 2 0 012 2v7.255zM12 8a1 1 0 100-2 1 1 0 000 2z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 16c0 1.105 2.686 2 6 2s6-.895 6-2M6 16c0-1.105 2.686-2 6-2s6 .895 6 2m-6 2v4m-6-16h12" /></svg>
+                        Manage Businesses
+                    </a>
                     <a href="/superadmin/feedback" className="px-4 py-2.5 rounded-xl text-neutral-400 hover:bg-white/5 hover:text-white transition-colors flex items-center gap-3 font-medium">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-4l-4 4z" /></svg>
                         Reports & Feedback
