@@ -1,6 +1,7 @@
 import { BusinessSidebar } from "@/components/business/BusinessSidebar";
 import { BusinessTopbar } from "@/components/business/BusinessTopbar";
 import { SidebarProvider } from "@/components/providers/SidebarProvider";
+import { MobileDrawer } from "@/components/business/MobileDrawer";
 
 export default function BusinessLayout({
  children,
@@ -31,6 +32,3 @@ export default function BusinessLayout({
   </SidebarProvider>
  );
 }
-
-// ── Mobile Sidebar Drawer (extracted here for co-location) ──────────────
-import { MobileDrawer } from "@/components/business/MobileDrawer";
