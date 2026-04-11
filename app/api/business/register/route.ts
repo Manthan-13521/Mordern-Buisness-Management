@@ -37,7 +37,7 @@ export async function POST(req: Request) {
         
         // Generate a unique slug
         let baseSlug = businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-        if (!baseSlug) baseSlug = `biz-${Date.now()}`;
+        if (!baseSlug) baseSlug = `biz-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
         let slug = baseSlug;
         let counter = 1;
         while (await Business.findOne({ slug })) {

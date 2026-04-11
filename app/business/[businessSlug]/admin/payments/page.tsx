@@ -39,12 +39,26 @@ export default function PaymentsPage() {
         fetch("/api/business/payments"),
         fetch("/api/business/customers")
       ]);
-      const payData = await payRes.json();
-      const custData = await custRes.json();
-      setPayments(Array.isArray(payData) ? payData : payData.data || []);
-      setCustomers(Array.isArray(custData) ? custData : custData.data || custData);
+      
+      if (!payRes.ok) {
+        toast.error("Failed to load payments");
+      } else {
+        const payData = await payRes.json();
+        if (payData.success === false) {
+          toast.error(payData.error || "Failed to load payments");
+        } else {
+          setPayments(Array.isArray(payData) ? payData : payData.data || []);
+        }
+      }
+      
+      if (!custRes.ok) {
+        toast.error("Failed to load customers");
+      } else {
+        const custData = await custRes.json();
+        setCustomers(Array.isArray(custData) ? custData : custData.data || custData);
+      }
     } catch (err) {
-      toast.error("Failed to load records");
+      toast.error("Network error — please check your connection");
     } finally {
       setLoading(false);
     }

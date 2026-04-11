@@ -5,19 +5,10 @@ import { dbConnect } from "@/lib/mongodb";
 import { BusinessTransaction } from "@/models/BusinessTransaction";
 import { BusinessCustomer } from "@/models/BusinessCustomer";
 import { logger } from "@/lib/logger";
-import { z } from "zod";
+import { PaymentSchema } from "@/lib/shared/types";
 import mongoose from "mongoose";
 
-const PaymentReqSchema = z.object({
-    customerId: z.string().min(1, "Customer ID required"),
-    amount: z.number().min(0, "Amount must be positive"),
-    type: z.string().min(1),
-    paymentType: z.enum(['sent', 'received']),
-    fileUrl: z.string().optional(),
-    receiptUrl: z.string().optional(),
-    date: z.string().optional(),
-    notes: z.string().optional()
-});
+// PaymentSchema is imported from @/lib/shared/types
 
 export async function GET(req: Request) {
     try {
@@ -61,7 +52,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ success: false, error: "Invalid JSON payload" }, { status: 400 });
         }
 
-        const parseResult = PaymentReqSchema.safeParse(body);
+        const parseResult = PaymentSchema.safeParse(body);
         if (!parseResult.success) {
             return NextResponse.json({ 
                 success: false, 

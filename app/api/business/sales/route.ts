@@ -5,19 +5,10 @@ import { dbConnect } from "@/lib/mongodb";
 import { BusinessTransaction } from "@/models/BusinessTransaction";
 import { BusinessCustomer } from "@/models/BusinessCustomer";
 import { logger } from "@/lib/logger";
-import { z } from "zod";
+import { SaleSchema } from "@/lib/shared/types";
 import mongoose from "mongoose";
 
-const SaleSchema = z.object({
-    customerId: z.string().min(1, "Customer ID required"),
-    items: z.array(z.any()),
-    totalAmount: z.number().min(0),
-    transportationCost: z.number().min(0).default(0),
-    paidAmount: z.number().min(0).default(0),
-    date: z.string().optional(),
-    saleType: z.enum(['sent', 'received']).default('sent'),
-    receiptUrl: z.string().optional()
-});
+// SaleSchema is imported from @/lib/shared/types
 
 export async function GET(req: Request) {
     try {

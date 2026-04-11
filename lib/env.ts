@@ -36,6 +36,15 @@ const envSchema = z.object({
   // Background queues
   QSTASH_TOKEN: z.string().min(1).optional(),
   CRON_SECRET: z.string().min(1, "Missing CRON_SECRET").optional(),
+}).superRefine((data, ctx) => {
+  // CRON_SECRET must exist in production to prevent unauthenticated cron execution
+  if (process.env.NODE_ENV === "production" && !data.CRON_SECRET) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "CRON_SECRET is required in production",
+      path: ["CRON_SECRET"],
+    });
+  }
 });
 
 let parsedEnv = process.env;

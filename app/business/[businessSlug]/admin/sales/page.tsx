@@ -37,12 +37,26 @@ export default function SalesPage() {
         fetch("/api/business/sales"),
         fetch("/api/business/customers")
       ]);
-      const salesData = await salesRes.json();
-      const custData = await custRes.json();
-      setSales(Array.isArray(salesData) ? salesData : salesData.data || []);
-      setCustomers(Array.isArray(custData) ? custData : custData.data || custData);
+      
+      if (!salesRes.ok) {
+        toast.error("Failed to load sales");
+      } else {
+        const salesData = await salesRes.json();
+        if (salesData.success === false) {
+          toast.error(salesData.error || "Failed to load sales");
+        } else {
+          setSales(Array.isArray(salesData) ? salesData : salesData.data || []);
+        }
+      }
+      
+      if (!custRes.ok) {
+        toast.error("Failed to load customers");
+      } else {
+        const custData = await custRes.json();
+        setCustomers(Array.isArray(custData) ? custData : custData.data || custData);
+      }
     } catch (err) {
-      toast.error("Failed to load records");
+      toast.error("Network error — please check your connection");
     } finally {
       setLoading(false);
     }
