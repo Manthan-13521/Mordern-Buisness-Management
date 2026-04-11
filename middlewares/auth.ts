@@ -9,7 +9,7 @@ const SUBSCRIPTION_PROTECTED_APIS = [
     "/api/payments",
     "/api/plans",
     "/api/pool/",
-    "/api/hostel/"
+    "/api/hostel/",
     "/api/entry",
     "/api/analytics",
     "/api/staff",
