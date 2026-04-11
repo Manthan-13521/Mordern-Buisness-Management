@@ -44,7 +44,7 @@ export function Navbar() {
 
           <Link 
             href="/login" 
-            className="hidden sm:inline-flex text-sm font-semibold leading-6 text-white border border-transparent rounded-full px-5 py-2 transition-all shadow-md hover:shadow-xl hover:-translate-y-0.5"
+            className="inline-flex text-xs sm:text-sm font-semibold leading-6 text-white border border-transparent rounded-full px-3 py-1.5 sm:px-5 sm:py-2 transition-all shadow-md hover:shadow-xl hover:-translate-y-0.5"
             style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-purple))' }}
           >
             Admin Login
