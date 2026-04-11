@@ -13,7 +13,8 @@ import {
     Loader2,
     CheckCircle2,
     XCircle,
-    UserCircle
+    UserCircle,
+    KeyRound
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -38,6 +39,7 @@ export default function ManageBusinessesPage() {
     const [search, setSearch] = useState("");
     const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
     const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
+    const [resetCreds, setResetCreds] = useState<{ email: string; pass: string } | null>(null);
     const [isActionLoading, setIsActionLoading] = useState(false);
 
     useEffect(() => {
@@ -113,6 +115,27 @@ export default function ManageBusinessesPage() {
             }
         } catch (error) {
             toast.error("Failed to load details");
+        }
+    };
+
+    const handleResetPassword = async (businessId: string) => {
+        if (!confirm("Are you sure you want to forcibly reset the password for this business admin?")) return;
+        setIsActionLoading(true);
+        try {
+            const res = await fetch(`/api/superadmin/businesses/${businessId}/reset-password`, {
+                method: "POST"
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setResetCreds({ email: data.adminEmail, pass: data.newPassword });
+                toast.success("Password reset securely");
+            } else {
+                toast.error(data.error || "Failed to reset password");
+            }
+        } catch (error) {
+            toast.error("Network error resetting password");
+        } finally {
+            setIsActionLoading(false);
         }
     };
 
@@ -223,6 +246,14 @@ export default function ManageBusinessesPage() {
                                                 title="View Details"
                                             >
                                                 <Info className="h-4 w-4" />
+                                            </button>
+                                            <button 
+                                                onClick={() => handleResetPassword(business.businessId)}
+                                                className="p-2 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-all shadow-sm"
+                                                title="Reset Admin Password"
+                                                disabled={isActionLoading}
+                                            >
+                                                <KeyRound className="h-4 w-4" />
                                             </button>
                                             <button 
                                                 onClick={() => toggleStatus(business.businessId, business.isActive)}
@@ -353,6 +384,44 @@ export default function ManageBusinessesPage() {
                                 disabled={isActionLoading}
                             >
                                 {isActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete System"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Reset Password Result Modal */}
+            {resetCreds && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-neutral-900 border border-green-500/20 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl overflow-y-auto">
+                        <div className="bg-gradient-to-br from-green-600/20 to-emerald-600/20 p-8 border-b border-neutral-800 relative">
+                            <div className="h-16 w-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-4">
+                                <KeyRound className="h-10 w-10 text-green-400" />
+                            </div>
+                            <h2 className="text-2xl font-black text-white">Password Reset Successful</h2>
+                            <p className="text-neutral-400 text-sm mt-2">Please copy these credentials immediately. They will not be shown again.</p>
+                        </div>
+                        
+                        <div className="p-8 space-y-6">
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Admin Email</label>
+                                    <div className="mt-1 p-3 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-sm break-all">
+                                        {resetCreds.email}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest">New Password</label>
+                                    <div className="mt-1 p-3 bg-neutral-950 border border-neutral-800 rounded-lg text-green-400 font-mono text-xl tracking-wider text-center font-bold">
+                                        {resetCreds.pass}
+                                    </div>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setResetCreds(null)}
+                                className="w-full py-4 text-sm font-bold bg-green-600 hover:bg-green-500 text-white rounded-2xl transition-all shadow-lg"
+                            >
+                                I Have Copied It
                             </button>
                         </div>
                     </div>
