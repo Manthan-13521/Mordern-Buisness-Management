@@ -54,10 +54,12 @@ if (!isBuild) {
         parsedEnv = envSchema.parse(process.env) as any;
     } catch (e: any) {
         if (e instanceof z.ZodError) {
-            console.error("❌ Invalid environment variables:", e.flatten().fieldErrors);
-            process.exit(1);
+            console.error("❌ Environment validation failed:", e.flatten().fieldErrors);
+            // We don't exit(1) anymore to prevent total downtime on Vercel
+            // when new vars are introduced.
+        } else {
+            throw e;
         }
-        throw e;
     }
 }
 
