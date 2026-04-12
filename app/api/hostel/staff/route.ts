@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
             ];
         }
 
-        const [data, total] = await Promise.all([
+        const [rawData, total] = await Promise.all([
             HostelStaff.find(filter)
                 .sort({ createdAt: -1 })
                 .skip((page - 1) * limit)
@@ -57,6 +57,48 @@ export async function GET(req: NextRequest) {
                 .lean(),
             HostelStaff.countDocuments(filter),
         ]);
+
+        // 3-Month Attendance Calculation
+        const now = new Date();
+        const monthDetails = [];
+        for (let i = 0; i < 3; i++) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const mIdx = d.getMonth();
+            const y = d.getFullYear();
+            const daysCount = new Date(y, mIdx + 1, 0).getDate();
+            const label = d.toLocaleDateString("en-IN", { month: "short" });
+            monthDetails.push({ mIdx, y, daysCount, label });
+        }
+
+        // Determine the full range for the query
+        // monthDetails is ordered [Current, Prev1, Prev2]
+        const earliest = monthDetails[2];
+        const latest = monthDetails[0];
+        const startStr = `${earliest.y}-${String(earliest.mIdx + 1).padStart(2, "0")}-01`;
+        const endStr   = `${latest.y}-${String(latest.mIdx + 1).padStart(2, "0")}-${String(latest.daysCount).padStart(2, "0")}`;
+
+        const staffIds = rawData.map((s: any) => s.staffId);
+        const attendances = await HostelStaffAttendance.find({
+            hostelId,
+            staffId: { $in: staffIds },
+            date: { $gte: startStr, $lte: endStr },
+            status: "Present"
+        }).lean();
+
+        const data = rawData.map((s: any) => {
+            const history = monthDetails.map(m => {
+                const count = attendances.filter((a: any) => {
+                    const aDate = new Date(a.date);
+                    return a.staffId === s.staffId && aDate.getMonth() === m.mIdx && aDate.getFullYear() === m.y;
+                }).length;
+                return {
+                    label: m.label,
+                    presentCount: count,
+                    totalDays: m.daysCount
+                };
+            });
+            return { ...s, attendanceHistory: history };
+        });
 
         return NextResponse.json({ data, total, page, limit }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {

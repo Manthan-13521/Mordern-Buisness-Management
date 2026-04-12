@@ -13,6 +13,7 @@ interface StaffMember {
     role: "Trainer" | "Manager" | "Staff";
     blockName?: string;
     createdAt: string;
+    attendanceHistory?: { label: string; presentCount: number; totalDays: number }[];
 }
 
 interface AttendanceLog {
@@ -221,7 +222,7 @@ export default function StaffPage() {
                     <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-800">
                         <thead className="bg-gray-50 dark:bg-white/5">
                             <tr>
-                                {["Staff Member", "Block", "Role", "Phone", ""].map(h => (
+                                {["Staff Member", "Block", "Role", "Attendance (3m)", "Phone", ""].map(h => (
                                     <th key={h} className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 first:pl-6">{h}</th>
                                 ))}
                             </tr>
@@ -261,6 +262,22 @@ export default function StaffPage() {
                                     </td>
                                     <td className="px-4 py-4 text-sm">
                                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${ROLE_COLORS[s.role]}`}>{s.role}</span>
+                                    </td>
+                                    <td className="px-4 py-4 text-sm">
+                                        <div className="flex items-center gap-1.5 overflow-x-auto min-w-[120px]">
+                                            {(s.attendanceHistory || []).map((month, idx) => (
+                                                <div key={idx} className="flex flex-col items-center">
+                                                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                                        month.presentCount > 20 ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200" : 
+                                                        month.presentCount > 10 ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200" :
+                                                        "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-200"
+                                                    }`}>
+                                                        {month.presentCount}
+                                                    </span>
+                                                    <span className="text-[9px] text-gray-400 uppercase font-black mt-0.5">{month.label}</span>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </td>
                                     <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">{s.phone}</td>
                                     <td className="px-4 py-4 text-sm text-right space-x-3">
