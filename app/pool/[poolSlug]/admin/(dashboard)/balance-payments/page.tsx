@@ -34,21 +34,33 @@ export default function BalancePaymentsPage() {
 
     const LIMIT = 11;
 
-    const fetch_ = useCallback(() => {
+    const fetch_ = useCallback(async (signal?: AbortSignal) => {
         setLoading(true);
-        setMembers([]); // Phase 2: Reset state before fetching
-        fetch(`/api/members/balance?page=${page}&limit=${LIMIT}&type=${selectedType}`, { cache: "no-store" })
-            .then(r => r.json())
-            .then(data => { 
-                setMembers(data.data ?? []); 
-                setTotal(data.total ?? 0); 
-                setTotalBalance(data.totalBalance ?? 0);
-                setLoading(false); 
-            })
-            .catch(() => setLoading(false));
-    }, [page]);
+        try {
+            const r = await fetch(`/api/members/balance?page=${page}&limit=${LIMIT}&type=${selectedType}&t=${Date.now()}`, { 
+                cache: "no-store",
+                signal 
+            });
+            if (!r.ok) throw new Error("Fetch failed");
+            const data = await r.json();
+            setMembers(data.data ?? []); 
+            setTotal(data.total ?? 0); 
+            setTotalBalance(data.totalBalance ?? 0);
+        } catch (err: any) {
+            if (err.name !== 'AbortError') {
+                console.error("Balance fetch error:", err);
+                setMembers([]);
+            }
+        } finally {
+            setLoading(false);
+        }
+    }, [page, selectedType]);
 
-    useEffect(() => { fetch_(); }, [fetch_, selectedType]);
+    useEffect(() => {
+        const controller = new AbortController();
+        fetch_(controller.signal);
+        return () => controller.abort();
+    }, [fetch_]);
 
     const handlePay = async (e: React.FormEvent) => {
         e.preventDefault();

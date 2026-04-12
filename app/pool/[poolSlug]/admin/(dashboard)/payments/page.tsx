@@ -41,21 +41,31 @@ export default function PaymentsPage() {
     const [members, setMembers] = useState<{ _id: string; name: string; memberId: string }[]>([]);
     const [plans, setPlans] = useState<{ _id: string; name: string; price: number }[]>([]);
 
-    const fetchPayments = useCallback(() => {
+    const fetchPayments = useCallback(async (signal?: AbortSignal) => {
         setLoading(true);
-        setPayments([]); // Phase 2: Reset state before fetching
-        fetch(`/api/payments?page=${page}&limit=${LIMIT}&type=${selectedType}&t=${Date.now()}`, { cache: "no-store" })
-            .then((res) => res.json())
-            .then((data) => {
-                const list = Array.isArray(data) ? data : (data.data ?? []);
-                setPayments(list);
-                setTotal(data.total ?? 0);
-                setLoading(false);
+        try {
+            const r = await fetch(`/api/payments?page=${page}&limit=${LIMIT}&type=${selectedType}&t=${Date.now()}`, { 
+                cache: "no-store",
+                signal
             });
-    }, [page]);
+            if (!r.ok) throw new Error("Fetch failed");
+            const data = await r.json();
+            const list = Array.isArray(data) ? data : (data.data ?? []);
+            setPayments(list);
+            setTotal(data.total ?? 0);
+        } catch (err: any) {
+            if (err.name !== 'AbortError') {
+                console.error("Payment fetch error:", err);
+                setPayments([]);
+            }
+        } finally {
+            setLoading(false);
+        }
+    }, [page, selectedType]);
 
     useEffect(() => {
-        fetchPayments();
+        const controller = new AbortController();
+        fetchPayments(controller.signal);
 
         // Fetch members and plans for the new payment form
         fetch(`/api/members?limit=500&t=${Date.now()}`, { cache: "no-store" }).then(r => r.json()).then(data => {
@@ -74,8 +84,12 @@ export default function PaymentsPage() {
                 syncUnsyncedPayments().finally(fetchPayments);
             };
             window.addEventListener("online", handleSyncOnline);
-            return () => window.removeEventListener("online", handleSyncOnline);
+            return () => {
+                controller.abort();
+                window.removeEventListener("online", handleSyncOnline);
+            };
         }
+        return () => controller.abort();
     }, [fetchPayments, session?.user?.poolId]);
 
     const totalPages = Math.max(1, Math.ceil(total / LIMIT));

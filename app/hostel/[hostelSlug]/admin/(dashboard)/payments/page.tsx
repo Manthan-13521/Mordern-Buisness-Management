@@ -16,19 +16,35 @@ export default function PaymentsPage() {
     const limit = 11;
 
     // Removed Actions state
-    const fetchPayments = useCallback(async () => {
+    const fetchPayments = useCallback(async (signal?: AbortSignal) => {
         setLoading(true);
-        const blockParam = selectedBlock && selectedBlock !== "all"
-            ? `&block=${encodeURIComponent(selectedBlock)}`
-            : "";
-        const r = await fetch(`/api/hostel/payments?page=${page}&limit=${limit}${blockParam}`);
-        const d = await r.json();
-        setPayments(d.data || []);
-        setTotal(d.total || 0);
-        setLoading(false);
+        try {
+            const blockParam = selectedBlock && selectedBlock !== "all"
+                ? `&block=${encodeURIComponent(selectedBlock)}`
+                : "";
+            const r = await fetch(`/api/hostel/payments?page=${page}&limit=${limit}${blockParam}&t=${Date.now()}`, { 
+                cache: "no-store",
+                signal 
+            });
+            if (!r.ok) throw new Error("Fetch failed");
+            const d = await r.json();
+            setPayments(d.data || []);
+            setTotal(d.total || 0);
+        } catch (err: any) {
+            if (err.name !== 'AbortError') {
+                console.error("Payment fetch error:", err);
+                setPayments([]);
+            }
+        } finally {
+            setLoading(false);
+        }
     }, [page, selectedBlock]);
 
-    useEffect(() => { fetchPayments(); }, [fetchPayments]);
+    useEffect(() => {
+        const controller = new AbortController();
+        fetchPayments(controller.signal);
+        return () => controller.abort();
+    }, [fetchPayments]);
     // Reset page when block filter changes
     useEffect(() => { setPage(1); }, [selectedBlock]);
 
