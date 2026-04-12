@@ -4,10 +4,10 @@ import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
 import { Payment } from "@/models/Payment";
 import { CronLog } from "@/models/CronLog";
-import { S3Client } from "@aws-sdk/client-s3";
-import { Upload } from "@aws-sdk/lib-storage";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { Readable } from "stream";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 async function* generateBackupStream() {
@@ -65,19 +65,14 @@ export async function GET(req: Request) {
         // Create elegant Node stream from our asynchronous Mongo Generator
         const stream = Readable.from(generateBackupStream());
 
-        const parallelUpload = new Upload({
-            client: s3Client,
-            params: {
+        await s3Client.send(
+            new PutObjectCommand({
                 Bucket: BUCKET,
                 Key: key,
                 Body: stream,
                 ContentType: "application/json",
-            },
-            queueSize: 4, 
-            partSize: 1024 * 1024 * 5 // 5 MB chunks strictly bound memory
-        });
-
-        await parallelUpload.done();
+            })
+        );
 
         log.status = "success";
         log.completedAt = new Date();
