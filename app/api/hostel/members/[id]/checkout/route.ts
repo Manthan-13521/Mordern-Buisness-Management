@@ -1,19 +1,19 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { getToken } from "next-auth/jwt";
 import { HostelMember } from "@/models/HostelMember";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
     try {
+        const { id: memberId } = await context.params;
         const [token] = await Promise.all([getToken({ req: req as any }), dbConnect()]);
         if (!token || token.role !== "hostel_admin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
         const hostelId = token.hostelId as string;
-        const memberId = params.id;
 
         if (!hostelId || !memberId) {
             return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
