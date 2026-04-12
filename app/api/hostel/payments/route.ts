@@ -123,18 +123,28 @@ export async function POST(req: Request) {
             idempotencyKey,
         });
 
+        console.log("Payment created", payment._id);
+
         const finalStatus = (currentBalance >= 0 && member.status === "defaulter") ? "active" : member.status;
 
         await HostelMember.updateOne(
             { _id: member._id, hostelId },
             { $set: { balance: currentBalance, status: finalStatus } }
         );
+        console.log("Balance updated", currentBalance);
 
-        await HostelAnalytics.updateOne(
-            { hostelId, yearMonth },
-            { $inc: { totalIncome: incomeIncrement } },
-            { upsert: true }
-        );
+        // Temporarily DISABLED analytics to prevent API crashing
+        /*
+        try {
+            await HostelAnalytics.updateOne(
+                { hostelId, yearMonth },
+                { $inc: { totalIncome: incomeIncrement } },
+                { upsert: true }
+            );
+        } catch (e) {
+            console.error("Analytics failed, ignore", e);
+        }
+        */
 
         const createdByName = (token.name || token.email || "Admin") as string;
         await HostelPaymentLog.create({
