@@ -58,7 +58,8 @@ export async function GET(req: Request) {
             HostelPayment.countDocuments(baseMatch),
         ]);
 
-        return NextResponse.json({ data: payments, total, page, limit, totalPages: Math.ceil(total / limit) }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        console.log("Payments fetched:", payments.length);
+        return NextResponse.json({ data: payments, total }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/hostel/payments]", error);
         return NextResponse.json({ error: "Failed to fetch payments" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
@@ -129,22 +130,19 @@ export async function POST(req: Request) {
 
         await HostelMember.updateOne(
             { _id: member._id, hostelId },
-            { $set: { balance: currentBalance, status: finalStatus } }
+            { $inc: { balance: paid }, $set: { status: finalStatus } }
         );
-        console.log("Balance updated", currentBalance);
+        console.log("Balance updated by amount:", paid);
 
-        // Temporarily DISABLED analytics to prevent API crashing
-        /*
         try {
             await HostelAnalytics.updateOne(
                 { hostelId, yearMonth },
                 { $inc: { totalIncome: incomeIncrement } },
                 { upsert: true }
             );
-        } catch (e) {
-            console.error("Analytics failed, ignore", e);
+        } catch (err) {
+            console.error("Analytics failed:", err);
         }
-        */
 
         const createdByName = (token.name || token.email || "Admin") as string;
         await HostelPaymentLog.create({

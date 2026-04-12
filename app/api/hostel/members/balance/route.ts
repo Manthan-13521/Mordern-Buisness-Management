@@ -55,7 +55,8 @@ export async function GET(req: Request) {
         const total = withBalance.length;
         const paginated = withBalance.slice(skip, skip + limit);
 
-        return NextResponse.json({ data: paginated, total, page, limit, totalPages: Math.ceil(total / limit), totalBalance }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        console.log("Members fetched:", members.length);
+        return NextResponse.json({ data: paginated, total, totalBalance }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/hostel/members/balance]", error);
         return NextResponse.json({ error: "Failed to fetch balance members" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
