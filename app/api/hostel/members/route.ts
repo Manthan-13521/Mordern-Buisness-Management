@@ -252,9 +252,9 @@ export async function POST(req: Request) {
                 });
             }
 
+            const joinDate = new Date();
             // Hybrid Analytics: Record member join & initial payment
             try {
-                const joinDate = new Date();
                 const yearMonth = `${joinDate.getUTCFullYear()}-${String(joinDate.getUTCMonth() + 1).padStart(2, "0")}`;
                 const analyticsInc: any = { totalOccupancy: 1 };
                 if (paid > 0) analyticsInc.totalIncome = paid;
