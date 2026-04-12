@@ -8,14 +8,12 @@ import { CronLog } from "@/models/CronLog";
 
 export const dynamic = "force-dynamic";
 
-async function generateSnapshotForDate(targetDate: Date, hostelId: string) {
-    const formattedDate = `${targetDate.getUTCFullYear()}-${String(targetDate.getUTCMonth() + 1).padStart(2, "0")}-${String(targetDate.getUTCDate()).padStart(2, "0")}`;
+async function generateSnapshotForMonth(targetDate: Date, hostelId: string) {
+    const yearMonth = `${targetDate.getUTCFullYear()}-${String(targetDate.getUTCMonth() + 1).padStart(2, "0")}`;
 
-    // Calculate boundary times exactly for targetDate
-    const startOfDay = new Date(targetDate);
-    startOfDay.setUTCHours(0, 0, 0, 0);
-    const endOfDay = new Date(targetDate);
-    endOfDay.setUTCHours(23, 59, 59, 999);
+    // Calculate boundary times exactly for targetDate month
+    const startOfMonth = new Date(Date.UTC(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), 1, 0, 0, 0, 0));
+    const endOfMonth = new Date(Date.UTC(targetDate.getUTCFullYear(), targetDate.getUTCMonth() + 1, 0, 23, 59, 59, 999));
 
     const [incomeResult, occupantResult] = await Promise.all([
         HostelPayment.aggregate([
@@ -23,7 +21,7 @@ async function generateSnapshotForDate(targetDate: Date, hostelId: string) {
                 $match: { 
                     hostelId, 
                     status: "success", 
-                    createdAt: { $gte: startOfDay, $lte: endOfDay } 
+                    createdAt: { $gte: startOfMonth, $lte: endOfMonth } 
                 } 
             },
             { $group: { _id: null, total: { $sum: "$amount" } } }
@@ -32,27 +30,26 @@ async function generateSnapshotForDate(targetDate: Date, hostelId: string) {
             hostelId,
             status: { $in: ["active", "defaulter"] },
             isDeleted: false,
-            // Approximating occupancy for the past is tough without history tables, 
-            // but we evaluate active documents created before end of that day.
-            createdAt: { $lte: endOfDay }
+            // Approximating occupancy bounds
+            createdAt: { $lte: endOfMonth }
         })
     ]);
 
-    const dailyIncome = incomeResult.length > 0 ? incomeResult[0].total : 0;
-    const dailyOccupancy = occupantResult;
+    const monthlyIncome = incomeResult.length > 0 ? incomeResult[0].total : 0;
+    const monthlyOccupancy = occupantResult;
 
     await HostelAnalytics.findOneAndUpdate(
-        { hostelId, date: formattedDate },
+        { hostelId, yearMonth },
         {
             $set: {
-                totalIncome: dailyIncome,
-                totalOccupancy: dailyOccupancy
+                totalIncome: monthlyIncome,
+                totalOccupancy: monthlyOccupancy
             }
         },
         { upsert: true }
     );
 
-    return formattedDate;
+    return yearMonth;
 }
 
 export async function GET(req: Request) {
@@ -73,26 +70,29 @@ export async function GET(req: Request) {
         let snapshotsCreated = 0;
 
         for (const hostelId of hostels) {
-            // Gap Recovery: Find the last snapshot date, evaluate if we missed any dates natively
-            const lastSnapshot = await HostelAnalytics.findOne({ hostelId }).sort({ date: -1 }).lean();
+            // Gap Recovery: Find the last snapshot yearMonth, evaluate missed months natively
+            const lastSnapshot = await HostelAnalytics.findOne({ hostelId }).sort({ yearMonth: -1 }).lean();
             
             let pointerDate = new Date(today);
-            if (lastSnapshot && lastSnapshot.date) {
-                const parsedLast = new Date(lastSnapshot.date);
-                if (!isNaN(parsedLast.getTime())) {
-                    // Start filling the gap from day after last snapshot
-                    pointerDate = new Date(parsedLast.getTime() + 86400000); 
+            pointerDate.setUTCDate(1); // default to this month boundary
+
+            if (lastSnapshot && lastSnapshot.yearMonth) {
+                const parts = lastSnapshot.yearMonth.split("-");
+                if (parts.length === 2 && !isNaN(Number(parts[0])) && !isNaN(Number(parts[1]))) {
+                    // Date.UTC with Number(parts[1]) correctly evaluates natively to the NEXT month
+                    // (since parts[1] is 1-indexed string e.g. "04" -> Date.UTC(y, 4, 1) -> May 1st)
+                    pointerDate = new Date(Date.UTC(Number(parts[0]), Number(parts[1]), 1));
                 }
             }
 
             while (pointerDate.getTime() <= today.getTime()) {
-                await generateSnapshotForDate(pointerDate, hostelId);
+                await generateSnapshotForMonth(pointerDate, hostelId);
                 snapshotsCreated++;
-                pointerDate = new Date(pointerDate.getTime() + 86400000); // +1 day
+                pointerDate = new Date(Date.UTC(pointerDate.getUTCFullYear(), pointerDate.getUTCMonth() + 1, 1)); // +1 month increment
             }
             
-            // Redundancy: explicitly always ensure today is covered
-            await generateSnapshotForDate(today, hostelId);
+            // Redundancy: explicitly always ensure this month is up to date
+            await generateSnapshotForMonth(today, hostelId);
             snapshotsCreated++;
         }
 
