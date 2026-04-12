@@ -131,7 +131,7 @@ export async function POST(req: Request) {
         );
 
         await HostelAnalytics.updateOne(
-            { hostelId, date: yearMonth },
+            { hostelId, yearMonth },
             { $inc: { totalIncome: incomeIncrement } },
             { upsert: true }
         );
