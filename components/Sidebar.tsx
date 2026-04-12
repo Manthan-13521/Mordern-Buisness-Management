@@ -42,7 +42,6 @@ export function Sidebar() {
         { name: "Balance Payments", href: `${basePath}/balance-payments`,  icon: IndianRupee,      roles: ["admin"] },
         { name: "Staff",            href: `${basePath}/staff`,             icon: UserCog,          roles: ["admin"] },
         { name: "Competitions",     href: `${basePath}/competitions`,      icon: Trophy,           roles: ["admin"] },
-        { name: "Logs",             href: `${basePath}/logs`,              icon: History,          roles: ["admin", "operator"] },
         { name: "Notifications",    href: `${basePath}/notifications`,     icon: Bell,             roles: ["admin", "operator"] },
         { name: "Graph Analysis",   href: `${basePath}/graph-analysis`,    icon: PieChart,         roles: ["admin"] },
         { name: "Revenue Analytics", href: `${basePath}/revenue-analytics`,  icon: BadgeDollarSign,  roles: ["admin"] },

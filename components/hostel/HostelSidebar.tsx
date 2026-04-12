@@ -38,7 +38,6 @@ export function HostelSidebar() {
         { name: "Plans",             href: `${base}/plans`,             icon: ClipboardList },
         { name: "Payments",          href: `${base}/payments`,          icon: CreditCard },
         { name: "Staff",             href: `${base}/staff`,             icon: UserCog },
-        { name: "Logs",              href: `${base}/logs`,              icon: History },
         { name: "Graph Analysis",    href: `${base}/graph-analysis`,    icon: PieChart },
         { name: "WhatsApp",          href: `${base}/whatsapp`,          icon: MessageSquare },
         { name: "Hostel Settings",   href: `${base}/hostel-settings`,   icon: BedDouble },
