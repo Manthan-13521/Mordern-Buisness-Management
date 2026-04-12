@@ -81,7 +81,7 @@ export default function PaymentsPage() {
         if (session?.user?.poolId) {
             syncUnsyncedPayments();
             const handleSyncOnline = () => {
-                syncUnsyncedPayments().finally(fetchPayments);
+                syncUnsyncedPayments().finally(() => fetchPayments());
             };
             window.addEventListener("online", handleSyncOnline);
             return () => {

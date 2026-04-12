@@ -78,7 +78,7 @@ export default function PaymentsPage() {
                 </div>
                 <div className="flex items-center gap-3">
                     <HostelBlockFilter />
-                    <button onClick={fetchPayments} className="p-2 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 bg-white dark:bg-slate-800 shadow-sm">
+                    <button onClick={() => fetchPayments()} className="p-2 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 bg-white dark:bg-slate-800 shadow-sm">
                         <RefreshCw className="h-4 w-4 text-slate-500"/>
                     </button>
                 </div>
