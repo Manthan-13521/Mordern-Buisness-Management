@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
 
         // 3-Month Attendance Calculation
         const now = new Date();
-        const monthDetails = [];
+        const monthDetails: { mIdx: number; y: number; daysCount: number; label: string }[] = [];
         for (let i = 0; i < 3; i++) {
             const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
             const mIdx = d.getMonth();
