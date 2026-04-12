@@ -38,7 +38,7 @@ export async function GET(req: Request) {
 
         // Phase 2: Members are still flat for ultra fast ID matching
         const members = await HostelMember.find({ hostelId, isDeleted: false, status: { $in: ["active", "defaulter"] } })
-            .select("roomId bedNo name phone photoUrl checkInDate due_date")
+            .select("roomId bedNo name phone photoUrl checkInDate due_date balance")
             .lean();
 
         // Phase 3: Final state restructuring directly mimicking the prior UI output but utilizing the pre-indexed aggregate output

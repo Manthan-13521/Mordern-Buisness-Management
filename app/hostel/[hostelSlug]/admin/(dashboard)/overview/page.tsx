@@ -296,31 +296,34 @@ export default function OverviewPage() {
                             <h3 className="font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest text-sm">Bed Profile</h3>
                             <button onClick={() => setShowMemberDetails(null)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
                         </div>
-                        <div className="p-6">
-                            <div className="flex gap-4 items-center">
-                                <div className="h-20 w-20 rounded-full border-4 border-emerald-500 flex items-center justify-center bg-slate-50 overflow-hidden">
-                                     {showMemberDetails.member.photoUrl ? (
-                                        <img src={showMemberDetails.member.photoUrl} alt="Photo" className="h-full w-full object-cover" />
-                                    ) : (
-                                        <Users className="h-10 w-10 text-slate-400" />
-                                    )}
-                                </div>
-                                <div>
-                                    <p className="font-black text-xl text-slate-800 dark:text-white uppercase leading-tight">{showMemberDetails.member.name}</p>
-                                    <p className="text-sm font-bold text-slate-500 mt-1">{showMemberDetails.member.phone}</p>
-                                </div>
+                        <div className="p-6 flex flex-col items-center">
+                            {/* Enlarged Photo Container */}
+                            <div className="h-32 w-32 sm:h-40 sm:w-40 rounded-2xl border-4 border-indigo-500/20 shadow-xl flex items-center justify-center bg-slate-50 dark:bg-slate-900 overflow-hidden mb-4 relative">
+                                {showMemberDetails.member.photoUrl ? (
+                                    <img src={showMemberDetails.member.photoUrl} alt="Photo" className="h-full w-full object-cover" />
+                                ) : (
+                                    <Users className="h-16 w-16 text-slate-300 dark:text-slate-700" />
+                                )}
                             </div>
                             
-                            <hr className="my-6 border-slate-200 dark:border-slate-700 border-dashed" />
+                            <p className="font-black text-2xl text-slate-800 dark:text-white uppercase leading-tight text-center">{showMemberDetails.member.name}</p>
+                            <p className="text-sm font-bold text-slate-500 mt-1 mb-6 text-center">{showMemberDetails.member.phone}</p>
                             
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
+                            {/* Balance Indicator Bubble */}
+                            <div className={`mb-6 px-6 py-2 rounded-full border-2 text-sm font-black tracking-widest uppercase shadow-sm ${showMemberDetails.member.balance < 0 ? 'bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-900/30 dark:border-rose-900' : 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:border-emerald-900'}`}>
+                                {showMemberDetails.member.balance < 0 ? `Dues: ₹${Math.abs(showMemberDetails.member.balance)}` : `Advance: ₹${Math.max(0, showMemberDetails.member.balance)}`}
+                            </div>
+                            
+                            <hr className="w-full border-slate-200 dark:border-slate-700 border-dashed mb-6" />
+                            
+                            <div className="grid grid-cols-2 gap-4 w-full">
+                                <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-center">
                                     <p className="text-[10px] uppercase font-bold text-slate-400">Join Date</p>
                                     <p className="font-black text-sm text-slate-700 dark:text-slate-300">
                                         {showMemberDetails.member.checkInDate ? new Date(showMemberDetails.member.checkInDate).toLocaleDateString("en-IN") : "—"}
                                     </p>
                                 </div>
-                                <div className="bg-rose-50 dark:bg-rose-900/30 p-3 rounded-lg border border-rose-200 dark:border-rose-900/50">
+                                <div className="bg-rose-50 dark:bg-rose-900/30 p-3 rounded-xl border border-rose-200 dark:border-rose-900/50 text-center">
                                     <p className="text-[10px] uppercase font-bold text-rose-400">Next Rent Due</p>
                                     <p className="font-black text-sm text-rose-600 dark:text-rose-400">
                                         {showMemberDetails.member.due_date ? new Date(showMemberDetails.member.due_date).toLocaleDateString("en-IN") : "—"}
