@@ -44,6 +44,8 @@ export async function GET(req: Request) {
         else if (statusFilter === "defaulter") { baseMatch.status = "defaulter"; }
         else if (statusFilter === "checkout") { baseMatch.status = "checkout"; }
         else if (statusFilter === "vacated") { baseMatch.status = "vacated"; }
+        else { baseMatch.status = { $ne: "checkout" }; }
+        
         if (blockFilter) {
             const b = await HostelBlock.findOne({ hostelId, name: blockFilter }).lean() as any;
             if (b) baseMatch.blockId = b._id;

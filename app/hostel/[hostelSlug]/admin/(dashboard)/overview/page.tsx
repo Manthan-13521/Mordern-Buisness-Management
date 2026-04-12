@@ -317,13 +317,13 @@ export default function OverviewPage() {
                                 <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
                                     <p className="text-[10px] uppercase font-bold text-slate-400">Join Date</p>
                                     <p className="font-black text-sm text-slate-700 dark:text-slate-300">
-                                        {new Date(showMemberDetails.member.planStartDate).toLocaleDateString("en-IN")}
+                                        {showMemberDetails.member.checkInDate ? new Date(showMemberDetails.member.checkInDate).toLocaleDateString("en-IN") : "—"}
                                     </p>
                                 </div>
                                 <div className="bg-rose-50 dark:bg-rose-900/30 p-3 rounded-lg border border-rose-200 dark:border-rose-900/50">
-                                    <p className="text-[10px] uppercase font-bold text-rose-400">Expiry Date</p>
+                                    <p className="text-[10px] uppercase font-bold text-rose-400">Next Rent Due</p>
                                     <p className="font-black text-sm text-rose-600 dark:text-rose-400">
-                                        {new Date(showMemberDetails.member.planEndDate).toLocaleDateString("en-IN")}
+                                        {showMemberDetails.member.due_date ? new Date(showMemberDetails.member.due_date).toLocaleDateString("en-IN") : "—"}
                                     </p>
                                 </div>
                             </div>
