@@ -27,9 +27,14 @@ export async function GET(req: Request) {
             checkoutDate: { $lt: cutoffDate } 
         }).lean() as any[];
 
+        // Extract explicitly required payment history before destruction
+        const { HostelPayment } = await import("@/models/HostelPayment");
+
         // Safety Archival
         const archives = [];
         for (const r of expiredCheckouts) {
+            const financialHistory = await HostelPayment.find({ memberId: r._id }).lean();
+            
             archives.push({
                 originalId: r._id,
                 memberId: r.memberId,
@@ -38,7 +43,10 @@ export async function GET(req: Request) {
                 hostelId: r.hostelId,
                 deletionType: "auto",
                 collectionSource: "hostel_members",
-                fullData: r
+                fullData: { 
+                    ...r, 
+                    transactions: financialHistory 
+                }
             });
         }
 

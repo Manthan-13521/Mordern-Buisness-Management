@@ -8,7 +8,7 @@ type Plan = { _id: string; name: string; durationDays: number; price: number };
 const INPUT = "w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500";
 const LABEL = "block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1";
 
-export default function ExpiredMembersPage() {
+export default function CheckoutPage() {
     const [members, setMembers] = useState<Member[]>([]);
     const [plans, setPlans] = useState<Plan[]>([]);
     const [total, setTotal] = useState(0);
@@ -23,7 +23,7 @@ export default function ExpiredMembersPage() {
 
     const fetch_ = useCallback(async () => {
         setLoading(true);
-        const r = await fetch(`/api/hostel/members/expired?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
+        const r = await fetch(`/api/hostel/members?status=checkout&page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
         const d = await r.json();
         setMembers(d.data || []); setTotal(d.total || 0); setLoading(false);
     }, [page, search]);
@@ -44,8 +44,8 @@ export default function ExpiredMembersPage() {
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div><h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2"><UserX className="h-6 w-6 text-red-500" />Expired Members</h1>
-                <p className="text-sm text-slate-500">{total} expired members</p></div>
+                <div><h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2"><UserX className="h-6 w-6 text-slate-500" />Checkout Audit</h1>
+                <p className="text-sm text-slate-500">{total} checked out occupants</p></div>
                 <div className="flex items-center gap-2">
                     <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                         <input className="pl-9 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Search…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} /></div>
@@ -57,11 +57,11 @@ export default function ExpiredMembersPage() {
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
                         <thead className="bg-slate-50 dark:bg-slate-700/50 text-xs text-slate-500 uppercase tracking-wider">
-                            <tr>{["ID","Name","Phone","Room","Plan","Expired On","Actions"].map(h => <th key={h} className="text-left px-4 py-3">{h}</th>)}</tr>
+                            <tr>{["ID","Name","Phone","Room","Plan","Check-in","Checkout","Final Balance"].map(h => <th key={h} className="text-left px-4 py-3">{h}</th>)}</tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                            {loading ? Array.from({length:5}).map((_,i)=><tr key={i}>{Array.from({length:7}).map((_,j)=><td key={j} className="px-4 py-3"><div className="h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"/></td>)}</tr>)
-                            : members.length === 0 ? <tr><td colSpan={7} className="px-4 py-12 text-center text-slate-400">No expired members</td></tr>
+                            {loading ? Array.from({length:5}).map((_,i)=><tr key={i}>{Array.from({length:8}).map((_,j)=><td key={j} className="px-4 py-3"><div className="h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"/></td>)}</tr>)
+                            : members.length === 0 ? <tr><td colSpan={8} className="px-4 py-12 text-center text-slate-400">No checkout history available</td></tr>
                             : members.map(m => (
                                 <tr key={m._id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
                                     <td className="px-4 py-3 font-mono text-xs text-slate-500">{m.memberId}</td>
@@ -69,12 +69,9 @@ export default function ExpiredMembersPage() {
                                     <td className="px-4 py-3 text-slate-500">{m.phone}</td>
                                     <td className="px-4 py-3">{m.blockNo}-{m.floorNo}-{m.roomNo}</td>
                                     <td className="px-4 py-3">{m.planId?.name || "—"}</td>
-                                    <td className="px-4 py-3 text-red-500">{m.planEndDate ? new Date(m.planEndDate).toLocaleDateString("en-IN") : "—"}</td>
-                                    <td className="px-4 py-3">
-                                        <button onClick={() => { setRenewMember(m); setRenewForm({ planId: m.planId?._id || "", paidAmount: "", paymentMode: "cash", notes: "" }); setError(""); }} className="flex items-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg transition">
-                                            <RotateCcw className="h-3 w-3" />Renew
-                                        </button>
-                                    </td>
+                                    <td className="px-4 py-3 text-slate-500">{(m as any).checkInDate ? new Date((m as any).checkInDate).toLocaleDateString("en-IN") : new Date((m as any).createdAt).toLocaleDateString("en-IN")}</td>
+                                    <td className="px-4 py-3 text-slate-700 font-semibold">{(m as any).checkoutDate ? new Date((m as any).checkoutDate).toLocaleDateString("en-IN") : "—"}</td>
+                                    <td className="px-4 py-3 font-mono text-emerald-500 font-bold">₹0</td>
                                 </tr>
                             ))}
                         </tbody>

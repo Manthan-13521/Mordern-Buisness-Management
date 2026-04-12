@@ -20,6 +20,7 @@ export interface IHostelMember extends Document {
     due_date: Date;             // Next date when the rent should be charged
     last_rent_processed_date?: Date; // Failsafe to prevent double charging on identical days
     balance: number;            // (+) Advance, (-) Dues
+    lastReminderSentAt?: Date;
     
     paymentMode: string;
     notes?: string;
@@ -58,6 +59,7 @@ const hostelMemberSchema = new Schema<IHostelMember>(
         due_date:    { type: Date, required: true, index: true },
         last_rent_processed_date: { type: Date },
         balance:     { type: Number, default: 0 },
+        lastReminderSentAt: { type: Date },
         
         paymentMode: { type: String, default: "cash" },
         notes:       { type: String },

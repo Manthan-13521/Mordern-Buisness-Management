@@ -38,8 +38,12 @@ export async function GET(req: Request) {
 
         const baseMatch: Record<string, unknown> = { hostelId, isDeleted: false };
         if (search) baseMatch.$text = { $search: search };
-        if (statusFilter === "active") { baseMatch.status = "active"; baseMatch.balance = { $gte: 0 }; }
-        if (statusFilter === "expired") { baseMatch.status = "active"; baseMatch.balance = { $lt: 0 }; }
+        
+        // Exact state matrix definitions mapping natively to UI
+        if (statusFilter === "active") { baseMatch.status = "active"; }
+        else if (statusFilter === "defaulter") { baseMatch.status = "defaulter"; }
+        else if (statusFilter === "checkout") { baseMatch.status = "checkout"; }
+        else if (statusFilter === "vacated") { baseMatch.status = "vacated"; }
         if (blockFilter) {
             const b = await HostelBlock.findOne({ hostelId, name: blockFilter }).lean() as any;
             if (b) baseMatch.blockId = b._id;
@@ -191,20 +195,19 @@ export async function POST(req: Request) {
             
             const memberId = `HM${String(hostel?.memberCounter ?? 1).padStart(3, "0")}`;
 
-            // --- Ledger Billing Setup ---
-            const rent_amount = plan.price; // Use plan price as the active rent base
+            // --- Ledger Billing Setup (End of Cycle) ---
+            const rent_amount = plan.price; 
             const paid = Number(paidAmount) || 0;
             
-            // Immediately charge the first month's rent
-            let currentBalance = paid - rent_amount;
+            // Advance/Wallet Model: Do NOT deduct rent today. It sits natively as +balance.
+            let currentBalance = paid;
+            
+            // Due date is strictly shifted precisely by the plan duration
             let nextDue = new Date();
-            nextDue.setMonth(nextDue.getMonth() + (plan.durationDays >= 30 ? (plan.durationDays / 30) : 1)); // usually +1 month
-
-            // Auto-consume any extra advance payments
-            while (currentBalance >= rent_amount) {
-                currentBalance -= rent_amount;
-                nextDue.setMonth(nextDue.getMonth() + 1);
-            }
+            const additionalMonths = Math.floor(plan.durationDays / 30);
+            const additionalDays = plan.durationDays % 30;
+            nextDue.setMonth(nextDue.getMonth() + (additionalMonths > 0 ? additionalMonths : 1));
+            if (additionalDays > 0) nextDue.setDate(nextDue.getDate() + additionalDays);
 
             const memberPayload = {
                 memberId, hostelId, name, phone, collegeName,
@@ -213,6 +216,7 @@ export async function POST(req: Request) {
                 rent_amount, due_date: nextDue, balance: currentBalance, last_rent_processed_date: new Date(),
                 paymentMode: paymentMode || "cash",
                 notes, photoUrl, isActive: true, isDeleted: false, status: "active",
+                checkInDate: new Date()
             };
 
             const createdMember = await HostelMember.create(memberPayload);

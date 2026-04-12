@@ -30,8 +30,15 @@ async function executeRentCycle() {
 
         // Safe loop: while today is >= due_date
         while (today.getTime() >= nextDue.getTime()) {
+            // Absolute Duplicate Protection
+            if (member.last_rent_processed_date && member.last_rent_processed_date.getTime() >= nextDue.getTime()) {
+                console.warn(`[CRON SAFETY] Skipped duplicate rent generation for ${member._id} at ${nextDue}`);
+                break;
+            }
+
             currentBalance -= member.rent_amount;
             deductionsMade += 1;
+            member.last_rent_processed_date = new Date();
             
             transactions.push({
                 hostelId: member.hostelId,
