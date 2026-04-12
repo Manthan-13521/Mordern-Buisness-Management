@@ -164,7 +164,7 @@ export default function MembersPage() {
             // --- STEP 5: INCREMENTAL SYNC WITH CONFLICT RESOLUTION ---
             if (session?.user?.poolId) {
                 try {
-                    const { syncMemberConflictSafe, getMembersByPoolLocal } = await import("@/lib/local-db/members.repo");
+                    const { syncMemberConflictSafe } = await import("@/lib/local-db/members.repo");
                     await Promise.all(
                         rows.map(async (m: any) => {
                             await syncMemberConflictSafe(m, session.user.poolId as string);
@@ -174,10 +174,6 @@ export default function MembersPage() {
                     if (rows.length > 0) {
                         await setLastSyncedAtLocal(session.user.poolId, Date.now().toString());
                     }
-
-                    // SWAP partial API chunk with full offline truth so UX table doesn't break
-                    const fullLocalList = await getMembersByPoolLocal(session.user.poolId as string);
-                    return { members: fullLocalList as unknown as Member[], total: json.total ?? fullLocalList.length };
                 } catch (err) {
                     console.error("Local sync loop error:", err);
                 }
@@ -188,15 +184,28 @@ export default function MembersPage() {
         },
     });
 
-    const members = useMemo(() => {
-        if (!data?.members && !localMembers) return [];
-        if (data?.members) return data.members;
+    const { members, offlineTotal } = useMemo(() => {
+        if (data?.members) return { members: data.members, offlineTotal: 0 };
+        if (!localMembers) return { members: [], offlineTotal: 0 };
         
-        // Let UI handle pagination/display for local fallback (Step 3 Fix)
-        return localMembers || [];
-    }, [data, localMembers]);
+        let filtered = localMembers as any[];
+        if (searchDebounced) {
+            const s = searchDebounced.toLowerCase();
+            filtered = filtered.filter((m: any) => 
+                (m.name || "").toLowerCase().includes(s) || 
+                (m.phone || "").toLowerCase().includes(s) || 
+                (m.memberId || "").toLowerCase().includes(s)
+            );
+        }
+        
+        const start = (page - 1) * LIMIT;
+        return { 
+            members: filtered.slice(start, start + LIMIT) as unknown as Member[],
+            offlineTotal: filtered.length
+        };
+    }, [data, localMembers, searchDebounced, page]);
 
-    const total = data?.total ?? (localMembers ? localMembers.length : 0);
+    const total = data?.total ?? offlineTotal;
     const loading = (isFetching && !localMembers) || loadingFromLocal;
     const isUsingLocal = (!data?.members || data.members.length === 0) && localMembers !== null && localMembers.length > 0;
     const pendingSyncCount = localMembers ? localMembers.filter(m => (m as any).synced === false).length : 0;
@@ -236,13 +245,10 @@ export default function MembersPage() {
                     // --- STEP 5: PREFETCH CONFLICT-SAFE CACHING ---
                     if (session?.user?.poolId) {
                         try {
-                            const { syncMemberConflictSafe, getMembersByPoolLocal } = await import("@/lib/local-db/members.repo");
+                            const { syncMemberConflictSafe } = await import("@/lib/local-db/members.repo");
                             await Promise.all(
                                 rows.map((m: any) => syncMemberConflictSafe(m, session.user.poolId as string))
                             );
-                            
-                            const fullLocalList = await getMembersByPoolLocal(session.user.poolId as string);
-                            return { members: fullLocalList as unknown as Member[], total: json.total ?? fullLocalList.length };
                         } catch (e) {}
                     }
                     // ----------------------------------------------
