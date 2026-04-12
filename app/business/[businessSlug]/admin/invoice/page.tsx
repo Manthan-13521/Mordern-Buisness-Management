@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
+import { useSession } from "next-auth/react";
 import { Search, ChevronDown, Users, X } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════ */
@@ -49,11 +50,15 @@ interface ProductRow {
 }
 
 export default function InvoicePage() {
+  const { data: session } = useSession();
+  // businessId used as a per-business key in localStorage
+  const bizKey = (session?.user as any)?.businessId || "default";
+
   /* ── Form State ── */
-  const [bname, setBname] = useState("SRI GANAPATHI ENTERPRISES");
-  const [bdesc, setBdesc] = useState("Manufacturing & Trading of All Types of Fans, Fan Components & Electrical Goods");
-  const [bgst, setBgst] = useState("36ACBPJ2699D2ZM");
-  const [baddr, setBaddr] = useState("H.No. 10-30/1 Vinayaka Nagar, Balanagar, Hyderabad - 500042");
+  const [bname, setBname] = useState("");
+  const [bdesc, setBdesc] = useState("");
+  const [bgst, setBgst] = useState("");
+  const [baddr, setBaddr] = useState("");
 
   const [cname, setCname] = useState("");
   const [cbizname, setCbizname] = useState("");
@@ -75,10 +80,10 @@ export default function InvoicePage() {
   const [sgstRate, setSgstRate] = useState(0);
   const [igstRate, setIgstRate] = useState(0);
 
-  const [bank, setBank] = useState("ICICI Bank");
-  const [branch, setBranch] = useState("Balanagar Branch");
-  const [acc, setAcc] = useState("111505001111");
-  const [ifsc, setIfsc] = useState("ICIC0001115");
+  const [bank, setBank] = useState("");
+  const [branch, setBranch] = useState("");
+  const [acc, setAcc] = useState("");
+  const [ifsc, setIfsc] = useState("");
 
   const [showInvoice, setShowInvoice] = useState(false);
 
@@ -99,6 +104,7 @@ export default function InvoicePage() {
     );
   }, [allCustomers, customerSearch]);
 
+  // 0. Init: today's date + fetch customers for dropdown
   useEffect(() => {
     const today = new Date();
     const yyyy = today.getFullYear();
@@ -106,63 +112,81 @@ export default function InvoicePage() {
     const dd = String(today.getDate()).padStart(2, "0");
     setInvdate(`${yyyy}-${mm}-${dd}`);
 
-    // Fetch all customers for dropdown
     fetch("/api/business/customers", { cache: "no-store" })
       .then(res => res.ok ? res.json() : [])
       .then(data => setAllCustomers(Array.isArray(data) ? data : []))
       .catch(() => setAllCustomers([]));
   }, []);
 
+  // 1. Fetch real business details from DB on login
   useEffect(() => {
-    // Load persisted data
-    const savedBname = localStorage.getItem("inv_bname");
-    if (savedBname) setBname(savedBname);
-    
-    const savedBdesc = localStorage.getItem("inv_bdesc");
-    if (savedBdesc) setBdesc(savedBdesc);
-    
-    const savedBgst = localStorage.getItem("inv_bgst");
-    if (savedBgst) setBgst(savedBgst);
-    
-    const savedBaddr = localStorage.getItem("inv_baddr");
-    if (savedBaddr) setBaddr(savedBaddr);
-
-    const savedCgst = localStorage.getItem("inv_cgstRate");
-    if (savedCgst) setCgstRate(Number(savedCgst));
-
-    const savedSgst = localStorage.getItem("inv_sgstRate");
-    if (savedSgst) setSgstRate(Number(savedSgst));
-
-    const savedIgst = localStorage.getItem("inv_igstRate");
-    if (savedIgst) setIgstRate(Number(savedIgst));
-
-    const savedBank = localStorage.getItem("inv_bank");
-    if (savedBank !== null) setBank(savedBank);
-
-    const savedBranch = localStorage.getItem("inv_branch");
-    if (savedBranch !== null) setBranch(savedBranch);
-
-    const savedAcc = localStorage.getItem("inv_acc");
-    if (savedAcc !== null) setAcc(savedAcc);
-
-    const savedIfsc = localStorage.getItem("inv_ifsc");
-    if (savedIfsc !== null) setIfsc(savedIfsc);
+    fetch("/api/business/info", { cache: "no-store" })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return;
+        // Name and address always come from DB — user may override below
+        setBname(prev => prev || data.name || "");
+        setBaddr(prev => prev || data.address || "");
+      })
+      .catch(() => {});
   }, []);
 
-  // Save to persistence
+  // 2. Load per-business persisted invoice settings from localStorage
   useEffect(() => {
-    localStorage.setItem("inv_bname", bname);
-    localStorage.setItem("inv_bdesc", bdesc);
-    localStorage.setItem("inv_bgst", bgst);
-    localStorage.setItem("inv_baddr", baddr);
-    localStorage.setItem("inv_cgstRate", cgstRate.toString());
-    localStorage.setItem("inv_sgstRate", sgstRate.toString());
-    localStorage.setItem("inv_igstRate", igstRate.toString());
-    localStorage.setItem("inv_bank", bank);
-    localStorage.setItem("inv_branch", branch);
-    localStorage.setItem("inv_acc", acc);
-    localStorage.setItem("inv_ifsc", ifsc);
-  }, [bname, bdesc, bgst, baddr, cgstRate, sgstRate, igstRate, bank, branch, acc, ifsc]);
+    if (!bizKey) return;
+    const k = bizKey;
+
+    const savedBname = localStorage.getItem(`inv_${k}_bname`);
+    if (savedBname !== null) setBname(savedBname);
+
+    const savedBdesc = localStorage.getItem(`inv_${k}_bdesc`);
+    if (savedBdesc !== null) setBdesc(savedBdesc);
+
+    const savedBgst = localStorage.getItem(`inv_${k}_bgst`);
+    if (savedBgst !== null) setBgst(savedBgst);
+
+    const savedBaddr = localStorage.getItem(`inv_${k}_baddr`);
+    if (savedBaddr !== null) setBaddr(savedBaddr);
+
+    const savedCgst = localStorage.getItem(`inv_${k}_cgstRate`);
+    if (savedCgst) setCgstRate(Number(savedCgst));
+
+    const savedSgst = localStorage.getItem(`inv_${k}_sgstRate`);
+    if (savedSgst) setSgstRate(Number(savedSgst));
+
+    const savedIgst = localStorage.getItem(`inv_${k}_igstRate`);
+    if (savedIgst) setIgstRate(Number(savedIgst));
+
+    // Bank details — empty until user fills them for this business
+    const savedBank = localStorage.getItem(`inv_${k}_bank`);
+    if (savedBank !== null) setBank(savedBank);
+
+    const savedBranch = localStorage.getItem(`inv_${k}_branch`);
+    if (savedBranch !== null) setBranch(savedBranch);
+
+    const savedAcc = localStorage.getItem(`inv_${k}_acc`);
+    if (savedAcc !== null) setAcc(savedAcc);
+
+    const savedIfsc = localStorage.getItem(`inv_${k}_ifsc`);
+    if (savedIfsc !== null) setIfsc(savedIfsc);
+  }, [bizKey]);
+
+  // 3. Save to per-business localStorage on every change
+  useEffect(() => {
+    if (!bizKey) return;
+    const k = bizKey;
+    localStorage.setItem(`inv_${k}_bname`, bname);
+    localStorage.setItem(`inv_${k}_bdesc`, bdesc);
+    localStorage.setItem(`inv_${k}_bgst`, bgst);
+    localStorage.setItem(`inv_${k}_baddr`, baddr);
+    localStorage.setItem(`inv_${k}_cgstRate`, cgstRate.toString());
+    localStorage.setItem(`inv_${k}_sgstRate`, sgstRate.toString());
+    localStorage.setItem(`inv_${k}_igstRate`, igstRate.toString());
+    localStorage.setItem(`inv_${k}_bank`, bank);
+    localStorage.setItem(`inv_${k}_branch`, branch);
+    localStorage.setItem(`inv_${k}_acc`, acc);
+    localStorage.setItem(`inv_${k}_ifsc`, ifsc);
+  }, [bizKey, bname, bdesc, bgst, baddr, cgstRate, sgstRate, igstRate, bank, branch, acc, ifsc]);
 
   // Close dropdown on outside click
   useEffect(() => {
