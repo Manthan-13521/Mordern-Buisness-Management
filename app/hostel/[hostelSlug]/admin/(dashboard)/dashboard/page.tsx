@@ -15,7 +15,8 @@ type DashData = {
     yearlyIncome: number;
     totalMembers: number;
     activeMembers: number;
-    expiredMembers: number;
+    defaulterMembers: number;
+    checkoutMembers: number;
     expiringMembers: number;
     occupiedBeds: number;
     totalRooms: number;
@@ -140,11 +141,12 @@ export default function HostelDashboardPage() {
             {/* ── SUPPLEMENTAL STATS ── */}
             <div>
                 <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">At a Glance</p>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                     <StatCard icon={Users}         label="Total Members"   value={data.totalMembers}   accent="bg-slate-500" />
                     <StatCard icon={Activity}      label="Active Members"  value={data.activeMembers}  accent="bg-emerald-500" />
-                    <StatCard icon={UserX}         label="Expired Members" value={data.expiredMembers} accent="bg-red-500" />
-                    <StatCard icon={AlertTriangle} label="Expiring (3d)"   value={data.expiringMembers} accent="bg-orange-500" />
+                    <StatCard icon={AlertTriangle} label="Defaulters"      value={data.defaulterMembers} accent="bg-orange-600" />
+                    <StatCard icon={UserX}         label="Checkout Members" value={data.checkoutMembers} accent="bg-red-500" />
+                    <StatCard icon={AlertTriangle} label="Expiring (3d)"   value={data.expiringMembers} accent="bg-orange-400" />
                 </div>
             </div>
 
@@ -172,7 +174,7 @@ export default function HostelDashboardPage() {
                                         <td className="py-2.5 pr-4 text-slate-500 text-xs font-mono">{m.blockNo}-{m.floorNo}-{m.roomNo}</td>
                                         <td className="py-2.5 pr-4 text-slate-500">{m.phone}</td>
                                         <td className="py-2.5 text-orange-600 dark:text-orange-400 font-semibold">
-                                            {new Date(m.planEndDate).toLocaleDateString("en-IN")}
+                                            {new Date(m.due_date).toLocaleDateString("en-IN")}
                                         </td>
                                     </tr>
                                 ))}

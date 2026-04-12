@@ -33,7 +33,7 @@ export function HostelSidebar() {
         { name: "Dashboard",         href: `${base}/dashboard`,        icon: LayoutDashboard },
         { name: "Hostel Overview",   href: `${base}/overview`,          icon: Building2 },
         { name: "Members",           href: `${base}/members`,           icon: Users },
-        { name: "Defaulters",        href: `${base}/expired-members`,   icon: UserX },
+        { name: "Checkout",          href: `${base}/checkout`,          icon: UserX },
         { name: "Balance Payments",  href: `${base}/balance-payments`,  icon: IndianRupee },
         { name: "Plans",             href: `${base}/plans`,             icon: ClipboardList },
         { name: "Payments",          href: `${base}/payments`,          icon: CreditCard },
