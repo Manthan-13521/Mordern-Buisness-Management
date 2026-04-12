@@ -60,10 +60,6 @@ const businessTransactionSchema = new Schema<IBusinessTransaction>(
 );
 
 businessTransactionSchema.index({ businessId: 1, customerId: 1, date: -1 });
-businessTransactionSchema.index(
-  { createdAt: -1 },
-  { expireAfterSeconds: 15552000, partialFilterExpression: { category: "PAYMENT" } }
-); // 6 months TTL only for PAYMENT category
 
 export const BusinessTransaction: Model<IBusinessTransaction> =
   mongoose.models.BusinessTransaction || mongoose.model<IBusinessTransaction>("BusinessTransaction", businessTransactionSchema);

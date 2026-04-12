@@ -28,7 +28,6 @@ const businessPaymentSchema = new Schema<IBusinessPayment>(
 );
 
 businessPaymentSchema.index({ businessId: 1, date: -1 });
-businessPaymentSchema.index({ createdAt: -1 }, { expireAfterSeconds: 15552000 }); // 6 months TTL
 
 export const BusinessPayment: Model<IBusinessPayment> =
   mongoose.models.BusinessPayment || mongoose.model<IBusinessPayment>("BusinessPayment", businessPaymentSchema);

@@ -17,6 +17,7 @@ export default function PaymentsPage() {
 
     // Removed Actions state
     const fetchPayments = useCallback(async () => {
+        setLoading(true);
         const blockParam = selectedBlock && selectedBlock !== "all"
             ? `&block=${encodeURIComponent(selectedBlock)}`
             : "";
