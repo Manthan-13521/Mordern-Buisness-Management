@@ -74,7 +74,7 @@ paymentSchema.index({ poolId: 1, memberId: 1 });
 
 // Section 2C — additional performance indexes
 paymentSchema.index({ memberId: 1, createdAt: -1 });
-paymentSchema.index({ createdAt: -1 });
+paymentSchema.index({ createdAt: -1 }, { expireAfterSeconds: 15552000 }); // 6 months TTL
 paymentSchema.index({ paymentMethod: 1 });
 paymentSchema.index({ poolId: 1, status: 1, date: -1 });
 paymentSchema.index({ poolId: 1, isArchived: 1, date: -1 });

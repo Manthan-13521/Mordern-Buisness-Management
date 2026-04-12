@@ -53,6 +53,7 @@ const hostelPaymentSchema = new Schema<IHostelPayment>(
 hostelPaymentSchema.index({ hostelId: 1, createdAt: -1 });
 hostelPaymentSchema.index({ hostelId: 1, memberId: 1 });
 hostelPaymentSchema.index({ hostelId: 1, status: 1, createdAt: -1 });
+hostelPaymentSchema.index({ createdAt: -1 }, { expireAfterSeconds: 15552000 }); // 6 months TTL
 
 export const HostelPayment: Model<IHostelPayment> =
     mongoose.models.HostelPayment ||
