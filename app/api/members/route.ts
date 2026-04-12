@@ -400,7 +400,29 @@ export async function POST(req: Request) {
             cardStatus: "ready",
         });
 
-        await newMember.save();
+        const mongoose = (await import("mongoose")).default;
+        const dbSession = await mongoose.startSession();
+        dbSession.startTransaction();
+
+        try {
+            await newMember.save({ session: dbSession });
+
+            // ── Enterprise Rule: Increment immutable counter explicitly within transaction
+            const { PoolStats } = await import("@/models/PoolStats");
+            await PoolStats.findOneAndUpdate(
+                { poolId },
+                { $inc: isEntertainment ? { totalEntertainmentMembers: 1 } : { totalMembers: 1 } },
+                { upsert: true, session: dbSession }
+            );
+
+            await dbSession.commitTransaction();
+        } catch (txnError) {
+            await dbSession.abortTransaction();
+            console.error("Atomic transaction failed during member creation:", txnError);
+            return NextResponse.json({ error: "Failed to securely save member records" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        } finally {
+            dbSession.endSession();
+        }
 
         // ── STEP 7B: Automated Subscription & Revenue Ledger Generation ──────────────
         try {

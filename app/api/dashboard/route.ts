@@ -55,37 +55,61 @@ export async function GET(req: Request) {
             baseMatch.poolId = session.user.poolId || "UNASSIGNED_POOL";
         }
             
+        // ── 1. Safe Initialization Logic for Immutable Counters (Self-Healing) ──
+        const { PoolStats } = await import("@/models/PoolStats");
+        let poolStats = await PoolStats.findOne({ poolId: baseMatch.poolId });
+        
+        if (!poolStats || !poolStats.isInitialized) {
+            // Seize the initialization lock atomically
+            const initOp = await PoolStats.findOneAndUpdate(
+                { poolId: baseMatch.poolId, isInitialized: { $ne: true } },
+                { $setOnInsert: { poolId: baseMatch.poolId } },
+                { upsert: true, new: true }
+            );
+
+            if (!initOp.isInitialized) {
+                // Compute historical data once
+                const regCount = await Member.countDocuments(baseMatch);
+                const entCount = await EntertainmentMember.countDocuments(baseMatch);
+                
+                poolStats = await PoolStats.findOneAndUpdate(
+                    { poolId: baseMatch.poolId },
+                    { $set: { totalMembers: regCount, totalEntertainmentMembers: entCount, isInitialized: true } },
+                    { new: true }
+                );
+            } else {
+                poolStats = initOp;
+            }
+        }
+
+        const immutableTotalMembers = (poolStats?.totalMembers || 0) + (poolStats?.totalEntertainmentMembers || 0);
+
         // Execute all independent queries in parallel — NO CACHE, always fresh
         const [
-            regTotalMembers,
-            entTotalMembers,
             regActiveMembers,
             entActiveMembers,
             entriesToday,
             todaysRevenueAgg,
             monthlyRevenueAgg,
+            yearlyRevenueAgg,
             regExpiringMembers,
             entExpiringMembers,
             todaysMemberEntries,
             todaysEntertainmentEntries
         ] = await Promise.all([
-            // Total non-deleted members
-            Member.countDocuments(baseMatch),
-            EntertainmentMember.countDocuments(baseMatch),
-
-            // Active = not deleted AND expiry is in the future (real-time check)
+            // Active = expiry is today or in the future (Trust expiryDate purely)
             Member.countDocuments({
                 ...baseMatch,
                 $or: [
-                    { planEndDate: { $gte: now } },
-                    { expiryDate: { $gte: now } },
+                    { planEndDate: { $gte: startOfDayIST } },
+                    { expiryDate: { $gte: startOfDayIST } },
                 ]
             }),
             EntertainmentMember.countDocuments({
                 ...baseMatch,
                 $or: [
-                    { planEndDate: { $gte: now } },
-                    { expiryDate: { $gte: now } },
+                    { planEndDate: { $gte: startOfDayIST } },
+                    { expiryDate: { $gte: startOfDayIST } },
                 ]
             }),
 
@@ -95,7 +119,7 @@ export async function GET(req: Request) {
                 { $group: { _id: null, total: { $sum: { $ifNull: ["$numPersons", 1] } } } }
             ]),
 
-            // Today's revenue — IST bounded, using createdAt
+            // Today's revenue — IST bounded, using Transactions (Payment) Model
             Payment.aggregate([
                 { $match: { ...baseMatch, status: "success", createdAt: { $gte: startOfDayIST, $lte: endOfDayIST } } },
                 { $group: { _id: null, total: { $sum: "$amount" } } }
@@ -104,6 +128,12 @@ export async function GET(req: Request) {
             // Monthly revenue — IST bounded
             Payment.aggregate([
                 { $match: { ...baseMatch, status: "success", createdAt: { $gte: startOfMonthIST } } },
+                { $group: { _id: null, total: { $sum: "$amount" } } }
+            ]),
+            
+            // Yearly revenue
+            Payment.aggregate([
+                { $match: { ...baseMatch, status: "success", createdAt: { $gte: new Date(new Date().getFullYear(), 0, 1) } } },
                 { $group: { _id: null, total: { $sum: "$amount" } } }
             ]),
 
@@ -140,19 +170,35 @@ export async function GET(req: Request) {
             })
         ]);
 
-        const totalMembers = regTotalMembers + entTotalMembers;
         const activeMembers = regActiveMembers + entActiveMembers;
-        const expiredMembers = totalMembers - activeMembers;
+        // Expired members safely measured backward matching user requirement
+        const expiredMembersCountResult = await Member.countDocuments({
+            ...baseMatch,
+            $and: [
+                { planEndDate: { $lt: startOfDayIST } },
+                { expiryDate: { $lt: startOfDayIST } }
+            ]
+        });
+        const entExpiredMembersCountResult = await EntertainmentMember.countDocuments({
+            ...baseMatch,
+            $and: [
+                { planEndDate: { $lt: startOfDayIST } },
+                { expiryDate: { $lt: startOfDayIST } }
+            ]
+        });
+        const expiredMembers = expiredMembersCountResult + entExpiredMembersCountResult;
+        
         const expiringMembers = [...regExpiringMembers, ...entExpiringMembers];
 
         const response = {
             stats: {
-                totalMembers,
+                totalMembers: immutableTotalMembers,
                 activeMembers,
                 expiredMembers,
                 todaysEntries: entriesToday[0]?.total || 0,
                 todaysRevenue: todaysRevenueAgg[0]?.total || 0,
                 monthlyRevenue: monthlyRevenueAgg[0]?.total || 0,
+                yearlyRevenue: yearlyRevenueAgg[0]?.total || 0,
                 todaysMemberEntries,
                 todaysEntertainmentEntries,
             },

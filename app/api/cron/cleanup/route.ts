@@ -1,42 +1,84 @@
 import { NextResponse } from "next/server";
-import { dispatchJob } from "@/lib/queueAdapter";
+import { dbConnect } from "@/lib/mongodb";
+import { Member } from "@/models/Member";
+import { EntertainmentMember } from "@/models/EntertainmentMember";
+import { CronLog } from "@/models/CronLog";
+import { DeletedMember } from "@/models/DeletedMember";
 
-/**
- * GET /api/cron/cleanup
- * Protected by CRON_SECRET.
- *
- * Member lifecycle deletion state machine (runs daily at 2 AM via vercel.json):
- *   1. Mark expired members (planEndDate passed)
- *   2a. Soft-delete Quick Delete plan members 3 days after expiry
- *   2b. Soft-delete Standard plan members 10 days after expiry
- *   3. Purge all entry logs older than 5 days, and attendance logs 3 days after soft-delete
- *   4. Hard-delete members 6 days after soft-delete
- *   NOTE: Payments are NEVER deleted (compliance requirement).
- *
- * Now dispatched via queueAdapter for future BullMQ readiness.
- */
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request) {
-    const cronSecret = process.env.CRON_SECRET;
-    const authHeader = req.headers.get("authorization");
-    const querySecret = new URL(req.url).searchParams.get("secret");
-    const providedSecret = authHeader?.startsWith("Bearer ")
-        ? authHeader.slice(7)
-        : querySecret;
-
-    if (!cronSecret || providedSecret !== cronSecret) {
-        return NextResponse.json({ error: "Unauthorized", code: "FORBIDDEN" }, { status: 401 });
+    if (req.headers.get("Authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    try {
-        const results = await dispatchJob("EXPIRE_MEMBERS", {});
+    const jobName = "cleanup-expired";
+    const log = await CronLog.create({ jobName, status: "running" });
 
-        console.log("[Cron Cleanup]", new Date().toISOString(), results);
-        return NextResponse.json({ success: true, timestamp: new Date(), ...results as any });
-    } catch (error: any) {
-        console.error("[Cron Cleanup] Failed:", error);
-        return NextResponse.json(
-            { error: error?.message || "Cleanup failed" },
-            { status: 500 }
-        );
+    try {
+        await dbConnect();
+
+        // 7 days ago strictly
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - 7);
+
+        // Fetch targets where status="expired" and expiryDate is prior to 7 days ago
+        const expiredRegs = await Member.find({ status: "expired", expiryDate: { $lt: cutoffDate } }).lean();
+        const expiredEnts = await EntertainmentMember.find({ status: "expired", expiryDate: { $lt: cutoffDate } }).lean();
+
+        // Safety Archival
+        const archives = [];
+        for (const r of expiredRegs) {
+            archives.push({
+                originalId: r._id,
+                memberId: r.memberId,
+                name: r.name,
+                phone: r.phone,
+                poolId: r.poolId,
+                deletionType: "auto",
+                collectionSource: "members",
+                fullData: r
+            });
+        }
+        for (const e of expiredEnts) {
+            archives.push({
+                originalId: e._id,
+                memberId: e.memberId,
+                name: e.name,
+                phone: e.phone,
+                poolId: e.poolId,
+                deletionType: "auto",
+                collectionSource: "entertainment_members",
+                fullData: e
+            });
+        }
+
+        if (archives.length > 0) {
+            await DeletedMember.insertMany(archives);
+            
+            // Hard delete
+            await Member.deleteMany({ _id: { $in: expiredRegs.map(r => r._id) } });
+            await EntertainmentMember.deleteMany({ _id: { $in: expiredEnts.map(e => e._id) } });
+        }
+
+        log.status = "success";
+        log.completedAt = new Date();
+        log.metadata = { archivedAndDeleted: archives.length };
+        await log.save();
+
+        return NextResponse.json({ 
+            success: true, 
+            message: `Cleanup job completed, archived and deleted ${archives.length} member schemas.`,
+            details: log.metadata 
+        });
+
+    } catch (e: any) {
+        log.status = "failed";
+        log.error = e.message || String(e);
+        log.completedAt = new Date();
+        await log.save();
+
+        console.error(`[CRON ERROR] ${jobName}:`, e);
+        return NextResponse.json({ error: "Failed to run automated cleanup script" }, { status: 500 });
     }
 }
