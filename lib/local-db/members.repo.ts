@@ -154,3 +154,7 @@ export async function syncMemberConflictSafe(serverMember: any, poolId: string) 
   }
 }
 
+export async function deleteMemberLocal(id: string) {
+    await db.members.delete(id);
+}
+

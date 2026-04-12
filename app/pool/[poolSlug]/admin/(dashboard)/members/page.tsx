@@ -10,7 +10,7 @@ import { useThermalPrint } from "@/components/printing/useThermalPrint";
 import { PRIVATE_API_STALE_MS, membersListQueryKeyPrefix } from "@/lib/apiCache";
 import { usePoolType } from "@/components/pool/PoolTypeContext";
 import { PoolTypeFilter } from "@/components/pool/PoolTypeFilter";
-import { addMemberLocal, getMembersByPoolLocal, syncUnsyncedMembers, getLastSyncedAtLocal, setLastSyncedAtLocal, cleanupLocalDB } from "@/lib/local-db/members.repo";
+import { addMemberLocal, getMembersByPoolLocal, syncUnsyncedMembers, getLastSyncedAtLocal, setLastSyncedAtLocal, cleanupLocalDB, deleteMemberLocal } from "@/lib/local-db/members.repo";
 
 interface Plan {
     _id: string;
@@ -279,11 +279,16 @@ export default function MembersPage() {
     }, [members]);
 
     const handleDelete = async (id: string, name: string) => {
-        if (!confirm(`Soft-delete ${name}? They can be restored later.`)) return;
+        if (!confirm(`Delete ${name}? This action cannot be undone.`)) return;
         try {
             const res = await fetch(`/api/members/${id}`, { method: "DELETE" });
-            if (res.ok) invalidateMembersList();
-            else alert((await res.json()).error || "Failed to delete member");
+            if (res.ok) {
+                await deleteMemberLocal(id);
+                setLocalMembers((prev) => prev ? prev.filter((m) => m._id !== id) : null);
+                invalidateMembersList();
+            } else {
+                alert((await res.json()).error || "Failed to delete member");
+            }
         } catch { alert("Server error"); }
     };
 

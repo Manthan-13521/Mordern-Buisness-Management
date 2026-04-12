@@ -3,7 +3,7 @@ import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { auditCrossTenantAccess, secureFindById, secureUpdateById } from "@/lib/tenantSecurity";
+import { auditCrossTenantAccess, secureFindById, secureUpdateById, secureDeleteById } from "@/lib/tenantSecurity";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -93,22 +93,15 @@ export async function DELETE(req: Request, props: RouteContext) {
         const { id } = await props.params;
         if (!id) return NextResponse.json({ error: "Missing member ID" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
-        const updates = {
-            isDeleted:    true,
-            deletedAt:    new Date(),
-            deletedBy:    session.user.id,
-            deleteReason: "manual",
-            isActive:     false,
-            status:       "deleted"
-        };
+
         
-        // 1. Soft Delete
-        let updated = await secureUpdateById(Member, id, { $set: updates }, session.user);
-        if (!updated) {
-            updated = await secureUpdateById(EntertainmentMember, id, { $set: updates }, session.user);
+        // 1. Hard Delete
+        let deleted = await secureDeleteById(Member, id, session.user);
+        if (!deleted) {
+            deleted = await secureDeleteById(EntertainmentMember, id, session.user);
         }
 
-        if (!updated) {
+        if (!deleted) {
             // Log intrusion if existed in another pool
             await auditCrossTenantAccess(Member, id, session.user);
             await auditCrossTenantAccess(EntertainmentMember, id, session.user);
