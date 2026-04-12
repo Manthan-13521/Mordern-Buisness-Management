@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
     Users, Plus, Search, X, RefreshCw, ChevronLeft, ChevronRight,
-    Pencil, Trash2, RotateCcw, Camera, Upload, UserCircle2, IndianRupee,
+    Pencil, Trash2, RotateCcw, Camera, Upload, UserCircle2, IndianRupee, LogOut,
 } from "lucide-react";
 import { useHostelBlock } from "@/components/hostel/HostelBlockContext";
 import { HostelBlockFilter } from "@/components/hostel/HostelBlockFilter";
@@ -83,6 +83,23 @@ export default function MembersPage() {
         fetch("/api/hostel/plans", { cache: 'no-store' }).then(r => r.json()).then(d => setPlans(d.data || []));
         fetch("/api/hostel/hostel-settings", { cache: 'no-store' }).then(r => r.json()).then(d => setBlocks(d.blocks || []));
     }, []);
+
+    const handleCheckout = async (member: any) => {
+        if (member.balance < 0) {
+            alert(`Pay full amount! Cannot checkout ${member.name} with a negative balance (due: ₹${Math.abs(member.balance)}).`);
+            return;
+        }
+        if (!confirm(`Are you sure you want to checkout ${member.name}? They will be formally checked out and archived.`)) return;
+
+        try {
+            const res = await fetch(`/api/hostel/members/${member._id}/checkout`, { method: "POST" });
+            if (res.ok) fetchMembers();
+            else {
+                const data = await res.json();
+                alert(data.error || "Failed to checkout");
+            }
+        } catch(e) { console.error(e); }
+    };
 
     // Check URL parameters for pre-filling form from Map Overview
     useEffect(() => {
@@ -325,6 +342,7 @@ export default function MembersPage() {
                                             <div className="flex items-center gap-1">
                                                 <button onClick={() => openEdit(m)} title="Edit" className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/10 dark:hover:bg-indigo-900/20 text-blue-500 transition"><Pencil className="h-3.5 w-3.5" /></button>
                                                 <button onClick={() => { setRenewMember(m); setRenewForm({ planId: m.planId?._id || "", paidAmount: "", paymentMode: "cash", notes: "" }); setError(""); }} title="Renew" className="p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-500 transition"><RotateCcw className="h-3.5 w-3.5" /></button>
+                                                <button onClick={() => handleCheckout(m)} title="Checkout" className="p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 text-amber-500 transition"><LogOut className="h-3.5 w-3.5" /></button>
                                                 <button onClick={() => handleDelete(m._id)} title="Delete" className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition"><Trash2 className="h-3.5 w-3.5" /></button>
                                             </div>
                                         </td>

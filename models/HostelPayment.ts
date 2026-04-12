@@ -12,7 +12,7 @@ export interface IHostelPayment extends Document {
     status: "success" | "pending" | "failed" | "refunded";
     recordedBy?: mongoose.Types.ObjectId;
     // Type: initial payment or renewal or balance payment
-    paymentType: "initial" | "renewal" | "balance" | "refund" | "settlement";
+    paymentType: "initial" | "renewal" | "balance" | "refund" | "settlement" | "rent" | "payment";
     isDeleted: boolean;
     deletedAt?: Date;
     createdAt: Date;
@@ -41,7 +41,7 @@ const hostelPaymentSchema = new Schema<IHostelPayment>(
         recordedBy: { type: Schema.Types.ObjectId, ref: "User" },
         paymentType: {
             type: String,
-            enum: ["initial", "renewal", "balance", "refund", "settlement"],
+            enum: ["initial", "renewal", "balance", "refund", "settlement", "rent", "payment"],
             default: "initial",
         },
         isDeleted: { type: Boolean, default: false, index: true },

@@ -195,14 +195,14 @@ export async function POST(req: Request) {
             
             const memberId = `HM${String(hostel?.memberCounter ?? 1).padStart(3, "0")}`;
 
-            // --- Ledger Billing Setup (End of Cycle) ---
+            // --- Ledger Billing Setup (Day-1 Billing) ---
             const rent_amount = plan.price; 
             const paid = Number(paidAmount) || 0;
             
-            // Advance/Wallet Model: Do NOT deduct rent today. It sits natively as +balance.
-            let currentBalance = paid;
+            // Rent natively hits on Day 1, so the initial balance mathematically offsets
+            let currentBalance = paid - rent_amount;
             
-            // Due date is strictly shifted precisely by the plan duration
+            // Due date purely represents the NEXT scheduled rent application
             let nextDue = new Date();
             const additionalMonths = Math.floor(plan.durationDays / 30);
             const additionalDays = plan.durationDays % 30;
@@ -231,13 +231,19 @@ export async function POST(req: Request) {
                 { upsert: true }
             );
 
-            // Create payment record
+            // Create formal ledger trace logs for Day 1
+            // 1. Log the Day 1 Rent Deduction
+            await HostelPayment.create({
+                hostelId, memberId: createdMember._id, planId: createdMember.planId,
+                amount: rent_amount, paymentMethod: paymentMode || "cash", status: "success", paymentType: "rent"
+            });
+
+            // 2. Log the Initial Payment (if they paid)
             if (paid > 0) {
-                const paymentPayload = {
+                await HostelPayment.create({
                     hostelId, memberId: createdMember._id, planId: createdMember.planId,
-                    amount: paid, paymentMethod: paymentMode || "cash", status: "success", paymentType: "initial",
-                };
-                await HostelPayment.create(paymentPayload);
+                    amount: paid, paymentMethod: paymentMode || "cash", status: "success", paymentType: "initial"
+                });
             }
 
             // Hybrid Analytics: Record member join & initial payment using EVENT DATE (not system date)

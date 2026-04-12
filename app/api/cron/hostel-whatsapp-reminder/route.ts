@@ -20,25 +20,45 @@ export async function GET(req: Request) {
         const today = new Date();
         today.setUTCHours(0, 0, 0, 0);
 
-        // Map Target to Exactly 2 Days From Now
-        const targetDate = new Date(today.getTime() + 2 * 86400000);
-        const endOfTargetDate = new Date(targetDate.getTime() + 86400000 - 1);
+        // 1. Upcoming Reminders (exactly 2 days before due date)
+        const upcomingTargetDate = new Date(today.getTime() + 2 * 86400000);
+        const endOfUpcomingTargetDate = new Date(upcomingTargetDate.getTime() + 86400000 - 1);
 
-        // Fetch targets due in exactly 2 days where lastReminderSentAt != today
-        const targets = await HostelMember.find({
+        const upcomingTargets = await HostelMember.find({
             status: "active",
             isDeleted: false,
-            due_date: { $gte: targetDate, $lte: endOfTargetDate },
+            due_date: { $gte: upcomingTargetDate, $lte: endOfUpcomingTargetDate },
             $or: [
                 { lastReminderSentAt: { $lt: today } },
                 { lastReminderSentAt: { $exists: false } }
             ]
         }).lean() as any[];
 
+        // 2. Overdue Reminders (exactly 1 day AFTER due date, meaning their due date is exactly 1 day ago)
+        // today - due_date == 1 -> due_date is yesterday. AND balance < 0
+        const overdueTargetDate = new Date(today.getTime() - 1 * 86400000);
+        const endOfOverdueTargetDate = new Date(overdueTargetDate.getTime() + 86400000 - 1);
+
+        const overdueTargets = await HostelMember.find({
+            status: { $in: ["active", "defaulter"] },
+            isDeleted: false,
+            balance: { $lt: 0 },
+            due_date: { $gte: overdueTargetDate, $lte: endOfOverdueTargetDate },
+            $or: [
+                { lastOverdueReminderSentAt: { $lt: today } },
+                { lastOverdueReminderSentAt: { $exists: false } }
+            ]
+        }).lean() as any[];
+
+        const allTasks = [
+            ...upcomingTargets.map(t => ({ ...t, _reminderType: 'upcoming' })),
+            ...overdueTargets.map(t => ({ ...t, _reminderType: 'overdue' }))
+        ];
+
         let sentCount = 0;
         let failedCount = 0;
 
-        for (const member of targets) {
+        for (const member of allTasks) {
             try {
                 // Determine messaging channels if active on plan or globally
                 const plan = await HostelPlan.findById(member.planId).lean() as any;
@@ -51,8 +71,11 @@ export async function GET(req: Request) {
                     continue; 
                 }
 
-                // Explicit Message Dispatch
-                const message = `Your hostel rent is due in 2 days. Please pay your balance to avoid defaulter status.`;
+                // Explicit Message Dispatch Based on Type
+                const isOverdue = member._reminderType === 'overdue';
+                const message = isOverdue 
+                    ? `Your hostel rent is overdue. Please pay your outstanding balance immediately to avoid further action.`
+                    : `Your hostel rent is due in 2 days. Please pay your balance to avoid defaulter status.`;
                 
                 // Generic twilio invocation structure mapping to the repository pattern
                 const { Twilio } = await import("twilio");
@@ -64,10 +87,17 @@ export async function GET(req: Request) {
                 // Send and mark as sent natively immediately
                 await client.messages.create({ body: message, from: fromPhone, to: toPhone });
                 
-                await HostelMember.updateOne(
-                    { _id: member._id },
-                    { $set: { lastReminderSentAt: new Date() } }
-                );
+                if (isOverdue) {
+                    await HostelMember.updateOne(
+                        { _id: member._id },
+                        { $set: { lastOverdueReminderSentAt: new Date() } }
+                    );
+                } else {
+                    await HostelMember.updateOne(
+                        { _id: member._id },
+                        { $set: { lastReminderSentAt: new Date() } }
+                    );
+                }
 
                 sentCount++;
             } catch (e) {
@@ -78,7 +108,7 @@ export async function GET(req: Request) {
 
         log.status = "success";
         log.completedAt = new Date();
-        log.metadata = { sentCount, failedCount, targetsEvaluated: targets.length };
+        log.metadata = { sentCount, failedCount, targetsEvaluated: allTasks.length };
         await log.save();
 
         return NextResponse.json({ success: true, sentCount, failedCount });

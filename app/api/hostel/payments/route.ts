@@ -99,13 +99,7 @@ export async function POST(req: Request) {
         const paymentType = (rawPaymentType as string) || "balance";
         
         let currentBalance = member.balance + paid;
-        let nextDue = new Date(member.due_date);
         
-        while (currentBalance >= member.rent_amount) {
-            currentBalance -= member.rent_amount;
-            nextDue.setMonth(nextDue.getMonth() + 1);
-        }
-
         const paymentDate = new Date();
         const yearMonth = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, "0")}`;
         
@@ -133,7 +127,7 @@ export async function POST(req: Request) {
 
         await HostelMember.updateOne(
             { _id: member._id, hostelId },
-            { $set: { balance: currentBalance, due_date: nextDue, status: finalStatus } }
+            { $set: { balance: currentBalance, status: finalStatus } }
         );
 
         await HostelAnalytics.updateOne(
