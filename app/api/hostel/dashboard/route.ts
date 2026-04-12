@@ -21,12 +21,17 @@ export async function GET(req: Request) {
         const block = url.searchParams.get("block") || "all";
 
         const now = new Date();
+        const currentDate = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
+        const currentYearMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+        const currentYear  = String(now.getUTCFullYear());
+
         const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
         const startOfYear  = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
         const in3Days      = new Date(now.getTime() + 3 * 86400000);
 
-        const [{ HostelRoom }, settings] = await Promise.all([
+        const [{ HostelRoom }, { HostelStats }, settings] = await Promise.all([
             import("@/models/HostelRoom"),
+            import("@/models/HostelStats"),
             getHostelSettings(hostelId),
         ]);
 
@@ -79,23 +84,42 @@ export async function GET(req: Request) {
         const totalRooms    = roomCount;
         const totalCapacity = roomCapacityAgg[0]?.total || 0;
 
-        // ── Member stats (always live — counts are cheap) ──────────────────────
+        // ── Enterprise Atomic Initialization (Run Once per Hostel) ────────────────
+        let statsObj = await HostelStats.findOne({ hostelId }).lean();
+        if (!statsObj || !statsObj.isInitialized) {
+            const rawMembers = await HostelMember.countDocuments({ hostelId });
+            statsObj = await HostelStats.findOneAndUpdate(
+                { hostelId },
+                {
+                    $set: {
+                        totalMembers: rawMembers,
+                        totalJoinedThisYear: rawMembers,
+                        isInitialized: true
+                    }
+                },
+                { upsert: true, new: true, returnDocument: 'after' }
+            ) as any;
+        }
+
+        const totalMembers = statsObj?.totalMembers || 0;
+
+        // ── Member stats (Targeted Native Filters) ──────────────────────
         const [
-            totalMembers,
             activeMembers,
-            expiredMembers,
+            defaulterMembers,
+            checkoutMembers,
             expiringMembers,
             monthlyJoined,
             yearlyJoined,
             occupiedBeds,
         ] = await Promise.all([
-            HostelMember.countDocuments(memberBase),
-            HostelMember.countDocuments({ ...memberBase, status: "active", balance: { $gte: 0 } }),
-            HostelMember.countDocuments({ ...memberBase, status: "active", balance: { $lt: 0 } }),
-            HostelMember.countDocuments({ ...memberBase, status: "active", due_date: { $gte: now, $lte: in3Days } }),
+            HostelMember.countDocuments({ ...memberBase, status: "active" }),
+            HostelMember.countDocuments({ ...memberBase, status: "defaulter" }),
+            HostelMember.countDocuments({ ...memberBase, status: "checkout" }),
+            HostelMember.countDocuments({ ...memberBase, status: { $in: ["active", "defaulter"] }, due_date: { $gte: now, $lte: in3Days } }),
             HostelMember.countDocuments({ ...memberBase, createdAt: { $gte: startOfMonth } }),
             HostelMember.countDocuments({ ...memberBase, createdAt: { $gte: startOfYear } }),
-            HostelMember.countDocuments({ ...memberBase, status: "active" }),
+            HostelMember.countDocuments({ ...memberBase, status: { $in: ["active", "defaulter"] } }),
         ]);
 
         // ── Income stats ───────────────────────────────────────────────────────
@@ -108,13 +132,14 @@ export async function GET(req: Request) {
         if (block === "all") {
             // Snapshot path — use pre-aggregated HostelAnalytics
             const { HostelAnalytics } = await import("@/models/HostelAnalytics");
-            const currentYearMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
-            const currentYear      = String(now.getUTCFullYear());
 
             const [monthlySnap, yearlySnap, totalSnap] = await Promise.all([
-                HostelAnalytics.findOne({ hostelId, yearMonth: currentYearMonth }).lean() as any,
                 HostelAnalytics.aggregate([
-                    { $match: { hostelId, yearMonth: { $regex: `^${currentYear}` } } },
+                    { $match: { hostelId, date: { $regex: `^${currentYearMonth}` } } },
+                    { $group: { _id: null, total: { $sum: "$totalIncome" } } },
+                ]),
+                HostelAnalytics.aggregate([
+                    { $match: { hostelId, date: { $regex: `^${currentYear}` } } },
                     { $group: { _id: null, total: { $sum: "$totalIncome" } } },
                 ]),
                 HostelAnalytics.aggregate([
@@ -122,7 +147,7 @@ export async function GET(req: Request) {
                     { $group: { _id: null, total: { $sum: "$totalIncome" } } },
                 ]),
             ]);
-            monthlyIncome = monthlySnap?.totalIncome ?? 0;
+            monthlyIncome = monthlySnap[0]?.total ?? 0;
             yearlyIncome  = yearlySnap[0]?.total ?? 0;
             totalRevenue  = totalSnap[0]?.total ?? 0;
         } else {
@@ -163,7 +188,8 @@ export async function GET(req: Request) {
             monthlyJoined, yearlyJoined,
             monthlyIncome, yearlyIncome,
             totalMembers, activeMembers,
-            expiredMembers, expiringMembers,
+            defaulterMembers, checkoutMembers,
+            expiringMembers,
             totalRevenue, totalRooms,
             totalCapacity, occupiedBeds,
             occupancyRate, expiringList,

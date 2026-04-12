@@ -1,106 +1,72 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { HostelMember } from "@/models/HostelMember";
-import { HostelPayment } from "@/models/HostelPayment";
-import { HostelLog } from "@/models/HostelLog";
+import { DeletedHostelMember } from "@/models/DeletedHostelMember";
+import { CronLog } from "@/models/CronLog";
 
 export const dynamic = "force-dynamic";
 
-/**
- * GET /api/cron/hostel-cleanup
- * 
- * Hostel member lifecycle deletion cron — runs daily via vercel.json.
- * 
- * Deletion conditions (ALL must be true):
- *   1. status === "vacated"         — member has formally vacated
- *   2. vacated_at < 30 days ago     — 30-day cooling period elapsed
- *   3. Math.abs(balance) < 1        — floating-point safe zero balance check
- * 
- * NOTE: HostelPayment records are NEVER deleted (compliance / audit trail).
- * NOTE: HostelAnalytics records are NEVER deleted (permanent snapshot layer).
- */
 export async function GET(req: Request) {
-    // Auth: Verify CRON_SECRET header
-    const cronSecret = process.env.CRON_SECRET;
-    const authHeader = req.headers.get("authorization");
-    const querySecret = new URL(req.url).searchParams.get("secret");
-    const providedSecret = authHeader?.startsWith("Bearer ")
-        ? authHeader.slice(7)
-        : querySecret;
-
-    if (!cronSecret || providedSecret !== cronSecret) {
-        return NextResponse.json({ error: "Unauthorized", code: "FORBIDDEN" }, { status: 401 });
+    if (req.headers.get("Authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const jobName = "hostel-cleanup-expired";
+    const log = await CronLog.create({ jobName, status: "running" });
 
     try {
         await dbConnect();
 
-        const now = new Date();
-        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        // 7 days ago strictly
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - 7);
 
-        // Find all members eligible for permanent deletion
-        const eligibleMembers = await HostelMember.find({
-            status: "vacated",
-            vacated_at: { $lt: thirtyDaysAgo },
-            // Floating-point safe zero balance: accept anything within ±₹1
-            balance: { $gt: -1, $lt: 1 },
-        }).select("_id memberId name hostelId balance vacated_at").lean() as any[];
+        // Fetch targets where status="checkout" and checkoutDate is prior to 7 days ago
+        const expiredCheckouts = await HostelMember.find({ 
+            status: "checkout", 
+            checkoutDate: { $lt: cutoffDate } 
+        }).lean() as any[];
 
-        if (eligibleMembers.length === 0) {
-            return NextResponse.json({
-                success: true,
-                deleted: 0,
-                message: "No vacated members eligible for deletion",
-                timestamp: now,
+        // Safety Archival
+        const archives = [];
+        for (const r of expiredCheckouts) {
+            archives.push({
+                originalId: r._id,
+                memberId: r.memberId,
+                name: r.name,
+                phone: r.phone,
+                hostelId: r.hostelId,
+                deletionType: "auto",
+                collectionSource: "hostel_members",
+                fullData: r
             });
         }
 
-        const memberIds = eligibleMembers.map((m: any) => m._id);
-
-        // Archive before hard deleting
-        const { DeletedHostelMember } = await import("@/models/DeletedHostelMember");
-        const archiveDocs = eligibleMembers.map((m: any) => ({
-            memberId: m.memberId,
-            hostelId: m.hostelId,
-            name: m.name,
-            phone: m.phone || "",
-            join_date: m.createdAt,
-            vacated_at: m.vacated_at,
-            deletedAt: now,
-            originalDoc: m,
-        }));
-        await DeletedHostelMember.insertMany(archiveDocs, { ordered: false });
-
-        // Hard-delete members (analytics data preserved in HostelAnalytics permanently)
-        const deleteResult = await HostelMember.deleteMany({
-            _id: { $in: memberIds },
-        });
-
-        // Log each deletion for audit trail
-        const logEntries = eligibleMembers.map((m: any) => ({
-            hostelId: m.hostelId,
-            type: "auto_delete",
-            memberId: m.memberId,
-            memberObjectId: m._id,
-            memberName: m.name,
-            description: `Auto-deleted vacated member ${m.name} (${m.memberId}). Vacated: ${m.vacated_at?.toISOString()?.split("T")[0]}. Final balance: ₹${m.balance.toFixed(2)}`,
-            performedBy: "cron/hostel-cleanup",
-        }));
-
-        if (logEntries.length > 0) {
-            await HostelLog.insertMany(logEntries, { ordered: false });
+        if (archives.length > 0) {
+            await DeletedHostelMember.insertMany(archives);
+            
+            // Hard delete cleanly from live ledger
+            await HostelMember.deleteMany({ _id: { $in: expiredCheckouts.map((r: any) => r._id) } });
         }
 
-        console.log(`[Cron hostel-cleanup] ${now.toISOString()} — Deleted ${deleteResult.deletedCount} vacated members`);
+        log.status = "success";
+        log.completedAt = new Date();
+        log.metadata = { archivedAndDeleted: archives.length };
+        await log.save();
 
-        return NextResponse.json({
-            success: true,
-            deleted: deleteResult.deletedCount,
-            memberIds: eligibleMembers.map((m: any) => m.memberId),
-            timestamp: now,
+        return NextResponse.json({ 
+            success: true, 
+            message: `Cleanup job completed, archived and deleted ${archives.length} checked out hostel members.`,
+            details: log.metadata 
         });
-    } catch (error: any) {
-        console.error("[GET /api/cron/hostel-cleanup]", error);
-        return NextResponse.json({ error: error?.message || "Cleanup failed" }, { status: 500 });
+
+    } catch (e: any) {
+        log.status = "failed";
+        log.error = e.message || String(e);
+        log.completedAt = new Date();
+        await log.save();
+
+        console.error(`[CRON ERROR] ${jobName}:`, e);
+        return NextResponse.json({ error: "Failed to run automated cleanup script" }, { status: 500 });
     }
 }

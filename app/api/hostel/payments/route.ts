@@ -91,7 +91,7 @@ export async function POST(req: Request) {
             }
         }
 
-        const member = await HostelMember.findOne({ _id: memberId, hostelId, isDeleted: false, status: "active" });
+        const member = await HostelMember.findOne({ _id: memberId, hostelId, isDeleted: false, status: { $in: ["active", "defaulter"] } });
         if (!member) {
             return NextResponse.json({ error: "Active member not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
@@ -129,9 +129,11 @@ export async function POST(req: Request) {
             idempotencyKey,
         });
 
+        const finalStatus = (currentBalance >= 0 && member.status === "defaulter") ? "active" : member.status;
+
         await HostelMember.updateOne(
             { _id: member._id, hostelId },
-            { $set: { balance: currentBalance, due_date: nextDue } }
+            { $set: { balance: currentBalance, due_date: nextDue, status: finalStatus } }
         );
 
         await HostelAnalytics.updateOne(

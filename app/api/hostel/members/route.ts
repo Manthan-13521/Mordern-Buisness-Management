@@ -219,6 +219,14 @@ export async function POST(req: Request) {
 
             memberObjId = createdMember._id;
 
+            // Enterprise Scale Atomic Counter Sync
+            const { HostelStats } = await import("@/models/HostelStats");
+            await HostelStats.findOneAndUpdate(
+                { hostelId },
+                { $inc: { totalMembers: 1, totalJoinedThisYear: 1 } },
+                { upsert: true }
+            );
+
             // Create payment record
             if (paid > 0) {
                 const paymentPayload = {
@@ -230,13 +238,13 @@ export async function POST(req: Request) {
 
             // Hybrid Analytics: Record member join & initial payment using EVENT DATE (not system date)
             const joinDate = new Date(); // join_date IS now for new registrations
-            const joinYearMonth = `${joinDate.getFullYear()}-${String(joinDate.getMonth() + 1).padStart(2, "0")}`;
-            const analyticsInc: any = { newMembers: 1 };
+            const formattedJoinDate = `${joinDate.getUTCFullYear()}-${String(joinDate.getUTCMonth() + 1).padStart(2, "0")}-${String(joinDate.getUTCDate()).padStart(2, "0")}`;
+            const analyticsInc: any = { totalOccupancy: 1 };
             // Only count real inbound income types
             if (paid > 0) analyticsInc.totalIncome = paid;
 
             await HostelAnalytics.updateOne(
-                { hostelId, yearMonth: joinYearMonth },
+                { hostelId, date: formattedJoinDate },
                 { $inc: analyticsInc },
                 { upsert: true }
             );

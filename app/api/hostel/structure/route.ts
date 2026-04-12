@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { getToken } from "next-auth/jwt";
 import { HostelBlock } from "@/models/HostelBlock";
-import { HostelFloor } from "@/models/HostelFloor";
-import { HostelRoom } from "@/models/HostelRoom";
 import { HostelMember } from "@/models/HostelMember";
 
 export const dynamic = "force-dynamic";
@@ -12,29 +10,46 @@ export async function GET(req: Request) {
     try {
         const [token] = await Promise.all([getToken({ req: req as any }), dbConnect()]);
         if (!token || token.role !== "hostel_admin") {
-            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
         const hostelId = token.hostelId as string;
-        if (!hostelId) return NextResponse.json({ error: "Forbidden" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        if (!hostelId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-        // Fetch structure perfectly linearly, then map
-        const [blocks, floors, rooms, members] = await Promise.all([
-            HostelBlock.find({ hostelId }).sort({ name: 1 }).lean(),
-            HostelFloor.find({ hostelId }).sort({ floorNo: 1 }).lean(),
-            HostelRoom.find({ hostelId }).sort({ roomNo: 1 }).lean(),
-            HostelMember.find({ hostelId, isDeleted: false, isActive: true })
-                .populate("planId", "name durationDays price")
-                .lean()
+        // Phase 1: Native DB Aggregation matching user's hyper-optimized lookup pipeline
+        const structuredBlocks = await HostelBlock.aggregate([
+            { $match: { hostelId } },
+            {
+                $lookup: {
+                    from: "hostelfloors",
+                    localField: "_id",
+                    foreignField: "blockId",
+                    as: "floors"
+                }
+            },
+            {
+                $lookup: {
+                    from: "hostelrooms",
+                    localField: "floors._id",
+                    foreignField: "floorId",
+                    as: "rooms"
+                }
+            }
         ]);
 
-        const mappedBlocks = blocks.map((b: any) => {
-            const blockFloors = floors.filter((f: any) => f.blockId.toString() === b._id.toString());
+        // Phase 2: Members are still flat for ultra fast ID matching
+        const members = await HostelMember.find({ hostelId, isDeleted: false, status: { $in: ["active", "defaulter"] } })
+            .select("roomId bedNo")
+            .lean();
+
+        // Phase 3: Final state restructuring directly mimicking the prior UI output but utilizing the pre-indexed aggregate output
+        const mappedBlocks = structuredBlocks.map((b: any) => {
             let blockTotalRooms = 0;
             let blockTotalBeds = 0;
             let blockOccupiedBeds = 0;
 
-            const mappedFloors = blockFloors.map((f: any) => {
-                const floorRooms = rooms.filter((r: any) => r.floorId.toString() === f._id.toString());
+            const mappedFloors = b.floors.map((f: any) => {
+                // Room linking native to this floor
+                const floorRooms = b.rooms.filter((r: any) => r.floorId && r.floorId.toString() === f._id.toString());
                 let floorTotalRooms = floorRooms.length;
                 let floorTotalBeds = 0;
                 let floorOccupiedBeds = 0;
@@ -50,23 +65,14 @@ export async function GET(req: Request) {
                     floorOccupiedBeds += roomOccupied;
                     blockOccupiedBeds += roomOccupied;
 
-                    // Extrapolate beds array implicitly
                     const beds = [];
                     for (let i = 1; i <= roomCapacity; i++) {
                         const occupant = roomMembers.find((m: any) => m.bedNo === i);
-                        if (occupant) {
-                            beds.push({
-                                bedNo: i,
-                                isOccupied: true,
-                                member: occupant,
-                            });
-                        } else {
-                            beds.push({
-                                bedNo: i,
-                                isOccupied: false,
-                                member: null,
-                            });
-                        }
+                        beds.push({
+                            bedNo: i,
+                            isOccupied: !!occupant,
+                            member: occupant || null,
+                        });
                     }
 
                     return {
@@ -92,13 +98,7 @@ export async function GET(req: Request) {
                 };
             });
 
-            // Sort floors numerically usually but we will send them as is (already sorted by floorNo)
-            // Wait, we should sort mappedFloors by floorNo
-            mappedFloors.sort((a, b) => {
-                const aNum = parseInt(a.floorNo);
-                const bNum = parseInt(b.floorNo);
-                return (isNaN(aNum) ? 0 : aNum) - (isNaN(bNum) ? 0 : bNum);
-            });
+            mappedFloors.sort((a: any, b: any) => parseInt(a.floorNo) - parseInt(b.floorNo));
 
             return {
                 _id: b._id,
@@ -111,10 +111,13 @@ export async function GET(req: Request) {
             };
         });
 
+        // Ensure blocks are naturally sorted
+        mappedBlocks.sort((a, b) => a.name.localeCompare(b.name));
+
         return NextResponse.json({ success: true, data: mappedBlocks }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
     } catch (error) {
         console.error("[GET /api/hostel/structure]", error);
-        return NextResponse.json({ error: "Failed to fetch structure" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        return NextResponse.json({ error: "Failed to build optimized structure" }, { status: 500 });
     }
 }

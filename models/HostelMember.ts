@@ -30,7 +30,9 @@ export interface IHostelMember extends Document {
     expiryAlertNextDaySent?: boolean;
     deletedAt?: Date;
     vacated_at?: Date;
-    status: "active" | "vacated" | "deleted";
+    checkInDate?: Date;
+    checkoutDate?: Date;
+    status: "active" | "vacated" | "deleted" | "checkout" | "defaulter";
     createdAt: Date;
     updatedAt: Date;
 }
@@ -66,9 +68,11 @@ const hostelMemberSchema = new Schema<IHostelMember>(
         expiryAlertNextDaySent: { type: Boolean, default: false, index: true },
         deletedAt:  { type: Date },
         vacated_at: { type: Date },
+        checkInDate: { type: Date, default: Date.now },
+        checkoutDate: { type: Date },
         status: {
             type: String,
-            enum: ["active", "vacated", "deleted"],
+            enum: ["active", "vacated", "deleted", "checkout", "defaulter"],
             default: "active",
             index: true,
         },

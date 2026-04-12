@@ -1,6 +1,6 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
 
-export type HostelPaymentType = "initial" | "renewal" | "balance" | "refund" | "settlement";
+export type HostelPaymentType = "initial" | "renewal" | "balance" | "refund" | "settlement" | "rent";
 
 export interface IHostelPaymentLog extends Document {
   hostelId: string;
@@ -21,7 +21,7 @@ const hostelPaymentLogSchema = new Schema<IHostelPaymentLog>(
     amount: { type: Number, required: true },
     paymentType: {
       type: String,
-      enum: ["initial", "renewal", "balance", "refund", "settlement"],
+      enum: ["initial", "renewal", "balance", "refund", "settlement", "rent"],
       required: true,
     },
     payment_date: { type: Date, required: true },
