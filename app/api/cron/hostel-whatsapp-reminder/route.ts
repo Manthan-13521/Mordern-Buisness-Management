@@ -4,8 +4,6 @@ import { HostelMember } from "@/models/HostelMember";
 import { Hostel } from "@/models/Hostel";
 import { HostelPlan } from "@/models/HostelPlan";
 import { CronLog } from "@/models/CronLog";
-import { sendWithRetry } from "@/lib/services/nextDayAlertService"; // Assuming existence of unified twilio/send API
-
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
