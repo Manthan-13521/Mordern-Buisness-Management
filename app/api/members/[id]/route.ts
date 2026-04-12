@@ -109,9 +109,9 @@ export async function DELETE(req: Request, props: RouteContext) {
         }
 
         // 2. Cache Invalidation
-        invalidateCache(updated.poolId).catch(() => {});
+        invalidateCache(deleted.poolId).catch(() => {});
 
-        return NextResponse.json({ message: "Member moved to recycle bin successfully." }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        return NextResponse.json({ message: "Member deleted successfully." }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[DELETE /api/members/[id]]", error);
         return NextResponse.json({ error: "Server error deleting member" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
