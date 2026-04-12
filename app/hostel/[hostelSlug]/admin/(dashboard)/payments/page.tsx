@@ -16,34 +16,30 @@ export default function PaymentsPage() {
     const limit = 11;
 
     // Removed Actions state
-    const fetchPayments = useCallback(async (signal?: AbortSignal) => {
+    const fetchPayments = useCallback(async () => {
+        if (loading && payments.length > 0) return; // Prevent overlapping if already have data
         setLoading(true);
         try {
             const blockParam = selectedBlock && selectedBlock !== "all"
                 ? `&block=${encodeURIComponent(selectedBlock)}`
                 : "";
             const r = await fetch(`/api/hostel/payments?page=${page}&limit=${limit}${blockParam}&t=${Date.now()}`, { 
-                cache: "no-store",
-                signal 
+                cache: "no-store"
             });
             if (!r.ok) throw new Error("Fetch failed");
             const d = await r.json();
             setPayments(d.data || []);
             setTotal(d.total || 0);
         } catch (err: any) {
-            if (err.name !== 'AbortError') {
-                console.error("Payment fetch error:", err);
-                setPayments([]);
-            }
+            console.error("Payment fetch error:", err);
+            setPayments([]);
         } finally {
             setLoading(false);
         }
     }, [page, selectedBlock]);
 
     useEffect(() => {
-        const controller = new AbortController();
-        fetchPayments(controller.signal);
-        return () => controller.abort();
+        fetchPayments();
     }, [fetchPayments]);
     // Reset page when block filter changes
     useEffect(() => { setPage(1); }, [selectedBlock]);

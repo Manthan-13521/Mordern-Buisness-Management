@@ -59,11 +59,12 @@ export async function GET(req: Request) {
             HostelPayment.countDocuments(baseMatch),
         ]);
 
+        console.log("API HIT: /api/hostel/payments", Date.now());
         console.log("Payments fetched:", payments.length);
         return NextResponse.json({ data: payments, total }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/hostel/payments]", error);
-        return NextResponse.json({ error: "Failed to fetch payments" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        return NextResponse.json({ data: [], total: 0, error: "Failed to fetch payments" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
 

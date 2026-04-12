@@ -55,10 +55,11 @@ export async function GET(req: Request) {
         const total = withBalance.length;
         const paginated = withBalance.slice(skip, skip + limit);
 
+        console.log("API HIT: /api/hostel/members/balance", Date.now());
         console.log("Members fetched:", members.length);
         return NextResponse.json({ data: paginated, total, totalBalance }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[GET /api/hostel/members/balance]", error);
-        return NextResponse.json({ error: "Failed to fetch balance members" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        return NextResponse.json({ data: [], total: 0, totalBalance: 0, error: "Failed to fetch balance members" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

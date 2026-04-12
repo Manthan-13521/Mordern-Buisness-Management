@@ -22,15 +22,15 @@ export default function BalancePaymentsPage() {
     const [error, setError] = useState("");
     const limit = 11;
 
-    const fetch_ = useCallback(async (signal?: AbortSignal) => {
+    const fetch_ = useCallback(async () => {
+        if (loading && members.length > 0) return; // Prevent overlapping
         setLoading(true);
         try {
             const blockParam = selectedBlock && selectedBlock !== "all" 
                 ? `&block=${encodeURIComponent(selectedBlock)}` 
                 : "";
             const r = await fetch(`/api/hostel/members/balance?page=${page}&limit=${limit}${blockParam}&t=${Date.now()}`, {
-                cache: "no-store",
-                signal
+                cache: "no-store"
             });
             if (!r.ok) throw new Error("Fetch failed");
             const d = await r.json();
@@ -38,19 +38,15 @@ export default function BalancePaymentsPage() {
             setTotal(d.total || 0); 
             setTotalBalance(d.totalBalance || 0);
         } catch (err: any) {
-            if (err.name !== 'AbortError') {
-                console.error("Hostel balance fetch error:", err);
-                setMembers([]);
-            }
+            console.error("Hostel balance fetch error:", err);
+            setMembers([]);
         } finally {
             setLoading(false);
         }
     }, [page, selectedBlock]);
 
     useEffect(() => {
-        const controller = new AbortController();
-        fetch_(controller.signal);
-        return () => controller.abort();
+        fetch_();
     }, [fetch_]);
     // Reset page when block changes
     useEffect(() => { setPage(1); }, [selectedBlock]);
