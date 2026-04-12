@@ -184,6 +184,8 @@ export async function GET(req: Request) {
             .limit(20)
             .lean();
 
+        console.log(`Dashboard data fetched: Income=${monthlyIncome}/${yearlyIncome}, ActiveMembers=${activeMembers}`);
+
         return NextResponse.json({
             monthlyJoined, yearlyJoined,
             monthlyIncome, yearlyIncome,

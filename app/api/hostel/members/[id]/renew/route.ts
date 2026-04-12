@@ -90,11 +90,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             idempotencyKey,
         });
 
-        await HostelAnalytics.updateOne(
-            { hostelId, yearMonth },
-            { $inc: { totalIncome: paid } },
-            { upsert: true }
-        );
+        try {
+            await HostelAnalytics.updateOne(
+                { hostelId, yearMonth },
+                { $inc: { totalIncome: paid } },
+                { upsert: true }
+            );
+        } catch (analyticsErr) {
+            console.error("HostelAnalytics renewal update failed (non-fatal):", analyticsErr);
+        }
 
         await HostelRenewal.create({
             hostelId,

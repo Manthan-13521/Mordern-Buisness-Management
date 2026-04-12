@@ -226,12 +226,16 @@ export async function POST(req: Request) {
             memberObjId = createdMember._id;
 
             // Enterprise Scale Atomic Counter Sync
-            const { HostelStats } = await import("@/models/HostelStats");
-            await HostelStats.findOneAndUpdate(
-                { hostelId },
-                { $inc: { totalMembers: 1, totalJoinedThisYear: 1 } },
-                { upsert: true }
-            );
+            try {
+                const { HostelStats } = await import("@/models/HostelStats");
+                await HostelStats.findOneAndUpdate(
+                    { hostelId },
+                    { $inc: { totalMembers: 1, totalJoinedThisYear: 1 } },
+                    { upsert: true }
+                );
+            } catch (statsErr) {
+                console.error("HostelStats upgrade failed (non-fatal):", statsErr);
+            }
 
             // Create formal ledger trace logs for Day 1
             // 1. Log the Day 1 Rent Deduction
@@ -248,18 +252,21 @@ export async function POST(req: Request) {
                 });
             }
 
-            // Hybrid Analytics: Record member join & initial payment using EVENT DATE (not system date)
-            const joinDate = new Date(); // join_date IS now for new registrations
-            const yearMonth = `${joinDate.getUTCFullYear()}-${String(joinDate.getUTCMonth() + 1).padStart(2, "0")}`;
-            const analyticsInc: any = { totalOccupancy: 1 };
-            // Only count real inbound income types
-            if (paid > 0) analyticsInc.totalIncome = paid;
+            // Hybrid Analytics: Record member join & initial payment
+            try {
+                const joinDate = new Date();
+                const yearMonth = `${joinDate.getUTCFullYear()}-${String(joinDate.getUTCMonth() + 1).padStart(2, "0")}`;
+                const analyticsInc: any = { totalOccupancy: 1 };
+                if (paid > 0) analyticsInc.totalIncome = paid;
 
-            await HostelAnalytics.updateOne(
-                { hostelId, yearMonth },
-                { $inc: analyticsInc },
-                { upsert: true }
-            );
+                await HostelAnalytics.updateOne(
+                    { hostelId, yearMonth },
+                    { $inc: analyticsInc },
+                    { upsert: true }
+                );
+            } catch (analyticsErr) {
+                console.error("HostelAnalytics upgrade failed (non-fatal):", analyticsErr);
+            }
 
             // Structured Logs: Registration & Initial Payment
             const createdByName = (token.name || token.email || "Admin") as string;

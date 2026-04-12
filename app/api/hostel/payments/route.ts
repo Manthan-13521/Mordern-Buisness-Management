@@ -8,6 +8,7 @@ import { HostelLog } from "@/models/HostelLog";
 import { HostelAnalytics } from "@/models/HostelAnalytics";
 import mongoose from "mongoose";
 import { HostelPaymentLog } from "@/models/HostelPaymentLog";
+import { HostelPlan } from "@/models/HostelPlan"; // CRITICAL: Fixes populate("planId") crashing due to MissingSchemaError
 
 export const dynamic = "force-dynamic";
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { getToken } from "next-auth/jwt";
 import { HostelMember } from "@/models/HostelMember";
+import { HostelPlan } from "@/models/HostelPlan";
 
 export const dynamic = "force-dynamic";
 

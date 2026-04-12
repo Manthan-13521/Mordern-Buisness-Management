@@ -5,6 +5,10 @@ import { HostelPayment } from "@/models/HostelPayment";
 import { getServerSession } from "next-auth";
 import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { HostelPlan } from "@/models/HostelPlan";
+import { HostelBlock } from "@/models/HostelBlock";
+import { HostelFloor } from "@/models/HostelFloor";
+import { HostelRoom } from "@/models/HostelRoom";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;

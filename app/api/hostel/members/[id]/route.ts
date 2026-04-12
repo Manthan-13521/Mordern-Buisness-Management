@@ -7,6 +7,7 @@ import { HostelLog } from "@/models/HostelLog";
 import { HostelBlock } from "@/models/HostelBlock";
 import { HostelFloor } from "@/models/HostelFloor";
 import { HostelRoom } from "@/models/HostelRoom";
+import { HostelPlan } from "@/models/HostelPlan";
 import mongoose from "mongoose";
 
 export const dynamic = "force-dynamic";
