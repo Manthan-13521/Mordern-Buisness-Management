@@ -135,11 +135,11 @@ export async function GET(req: Request) {
 
             const [monthlySnap, yearlySnap, totalSnap] = await Promise.all([
                 HostelAnalytics.aggregate([
-                    { $match: { hostelId, date: { $regex: `^${currentYearMonth}` } } },
+                    { $match: { hostelId, yearMonth: { $regex: `^${currentYearMonth}` } } },
                     { $group: { _id: null, total: { $sum: "$totalIncome" } } },
                 ]),
                 HostelAnalytics.aggregate([
-                    { $match: { hostelId, date: { $regex: `^${currentYear}` } } },
+                    { $match: { hostelId, yearMonth: { $regex: `^${currentYear}` } } },
                     { $group: { _id: null, total: { $sum: "$totalIncome" } } },
                 ]),
                 HostelAnalytics.aggregate([

@@ -250,13 +250,13 @@ export async function POST(req: Request) {
 
             // Hybrid Analytics: Record member join & initial payment using EVENT DATE (not system date)
             const joinDate = new Date(); // join_date IS now for new registrations
-            const formattedJoinDate = `${joinDate.getUTCFullYear()}-${String(joinDate.getUTCMonth() + 1).padStart(2, "0")}-${String(joinDate.getUTCDate()).padStart(2, "0")}`;
+            const yearMonth = `${joinDate.getUTCFullYear()}-${String(joinDate.getUTCMonth() + 1).padStart(2, "0")}`;
             const analyticsInc: any = { totalOccupancy: 1 };
             // Only count real inbound income types
             if (paid > 0) analyticsInc.totalIncome = paid;
 
             await HostelAnalytics.updateOne(
-                { hostelId, date: formattedJoinDate },
+                { hostelId, yearMonth },
                 { $inc: analyticsInc },
                 { upsert: true }
             );
