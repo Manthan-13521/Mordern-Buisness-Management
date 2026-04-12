@@ -47,10 +47,9 @@ export default function BalancePaymentsPage() {
             setTotal(data.total ?? 0); 
             setTotalBalance(data.totalBalance ?? 0);
         } catch (err: any) {
-            if (err.name !== 'AbortError') {
-                console.error("Balance fetch error:", err);
-                setMembers([]);
-            }
+            if (err?.name === "AbortError") return; // ← don't clear data on cancel
+            console.error("Balance fetch error:", err);
+            setMembers([]);
         } finally {
             setLoading(false);
         }

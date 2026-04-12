@@ -54,10 +54,9 @@ export default function PaymentsPage() {
             setPayments(list);
             setTotal(data.total ?? 0);
         } catch (err: any) {
-            if (err.name !== 'AbortError') {
-                console.error("Payment fetch error:", err);
-                setPayments([]);
-            }
+            if (err?.name === "AbortError") return; // ← don't clear data on cancel
+            console.error("Payment fetch error:", err);
+            setPayments([]);
         } finally {
             setLoading(false);
         }

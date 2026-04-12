@@ -22,22 +22,23 @@ export default function BalancePaymentsPage() {
     const [error, setError] = useState("");
     const limit = 11;
 
-    const fetch_ = useCallback(async () => {
-        if (loading && members.length > 0) return; // Prevent overlapping
+    const fetch_ = useCallback(async (signal?: AbortSignal) => {
         setLoading(true);
         try {
             const blockParam = selectedBlock && selectedBlock !== "all" 
                 ? `&block=${encodeURIComponent(selectedBlock)}` 
                 : "";
-            const r = await fetch(`/api/hostel/members/balance?page=${page}&limit=${limit}${blockParam}&t=${Date.now()}`, {
-                cache: "no-store"
-            });
+            const r = await fetch(
+                `/api/hostel/members/balance?page=${page}&limit=${limit}${blockParam}`,
+                { cache: "no-store", signal }
+            );
             if (!r.ok) throw new Error("Fetch failed");
             const d = await r.json();
             setMembers(d.data || []); 
             setTotal(d.total || 0); 
             setTotalBalance(d.totalBalance || 0);
         } catch (err: any) {
+            if (err?.name === "AbortError") return; // ← don't clear data on cancel
             console.error("Hostel balance fetch error:", err);
             setMembers([]);
         } finally {
@@ -46,10 +47,14 @@ export default function BalancePaymentsPage() {
     }, [page, selectedBlock]);
 
     useEffect(() => {
-        fetch_();
+        const controller = new AbortController();
+        fetch_(controller.signal);
+        return () => controller.abort();
     }, [fetch_]);
-    // Reset page when block changes
-    useEffect(() => { setPage(1); }, [selectedBlock]);
+
+    useEffect(() => {
+        setPage(1);
+    }, [selectedBlock]);
 
     const handlePay = async (e: React.FormEvent) => {
         e.preventDefault(); if (!payMember) return; setSubmitting(true); setError("");

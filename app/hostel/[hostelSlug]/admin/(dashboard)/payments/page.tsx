@@ -16,21 +16,22 @@ export default function PaymentsPage() {
     const limit = 11;
 
     // Removed Actions state
-    const fetchPayments = useCallback(async () => {
-        if (loading && payments.length > 0) return; // Prevent overlapping if already have data
+    const fetchPayments = useCallback(async (signal?: AbortSignal) => {
         setLoading(true);
         try {
             const blockParam = selectedBlock && selectedBlock !== "all"
                 ? `&block=${encodeURIComponent(selectedBlock)}`
                 : "";
-            const r = await fetch(`/api/hostel/payments?page=${page}&limit=${limit}${blockParam}&t=${Date.now()}`, { 
-                cache: "no-store"
-            });
+            const r = await fetch(
+                `/api/hostel/payments?page=${page}&limit=${limit}${blockParam}`,
+                { cache: "no-store", signal }
+            );
             if (!r.ok) throw new Error("Fetch failed");
             const d = await r.json();
             setPayments(d.data || []);
             setTotal(d.total || 0);
         } catch (err: any) {
+            if (err?.name === "AbortError") return; // ← ignore cancelled, don't clear data
             console.error("Payment fetch error:", err);
             setPayments([]);
         } finally {
@@ -38,11 +39,17 @@ export default function PaymentsPage() {
         }
     }, [page, selectedBlock]);
 
+    // Single effect — cancels previous fetch automatically when deps change
     useEffect(() => {
-        fetchPayments();
+        const controller = new AbortController();
+        fetchPayments(controller.signal);
+        return () => controller.abort();
     }, [fetchPayments]);
-    // Reset page when block filter changes
-    useEffect(() => { setPage(1); }, [selectedBlock]);
+
+    // Reset page on block change
+    useEffect(() => {
+        setPage(prev => prev === 1 ? 1 : 1);
+    }, [selectedBlock]);
 
     const totalPages = Math.ceil(total / limit);
 
