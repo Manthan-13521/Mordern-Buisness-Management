@@ -238,13 +238,7 @@ export async function POST(req: Request) {
             }
 
             // Create formal ledger trace logs for Day 1
-            // 1. Log the Day 1 Rent Deduction
-            await HostelPayment.create({
-                hostelId, memberId: createdMember._id, planId: createdMember.planId,
-                amount: rent_amount, paymentMethod: paymentMode || "cash", status: "success", paymentType: "rent"
-            });
-
-            // 2. Log the Initial Payment (if they paid)
+            // Log the Initial Payment (only real money received)
             if (paid > 0) {
                 await HostelPayment.create({
                     hostelId, memberId: createdMember._id, planId: createdMember.planId,

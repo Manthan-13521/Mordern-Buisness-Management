@@ -42,7 +42,7 @@ export async function GET(req: Request) {
         const allBlocks = await HostelBlock.find({ hostelId }).lean() as any[];
         const blockIdToName = new Map(allBlocks.map(b => [b._id.toString(), b.name]));
 
-        const matchStage: any = { hostelId, status: "success", createdAt: { $gte: startDate } };
+        const matchStage: any = { hostelId, status: "success", isDeleted: false, paymentType: { $ne: "rent" }, createdAt: { $gte: startDate } };
 
         const agg = await HostelPayment.aggregate([
             { $match: matchStage },

@@ -70,6 +70,8 @@ export async function GET(req: Request) {
         const paymentBase: Record<string, any> = {
             hostelId,
             status: "success",
+            isDeleted: false,
+            paymentType: { $ne: "rent" },
         };
         if (scopedMemberIds !== null) paymentBase.memberId = { $in: scopedMemberIds };
 

@@ -16,24 +16,31 @@ export default function PaymentsPage() {
     const limit = 11;
 
     // Removed Actions state
-    const fetchPayments = useCallback(async (signal?: AbortSignal) => {
+    const fetchPayments = useCallback(async (signal?: AbortSignal, retryCount = 0) => {
         setLoading(true);
         try {
             const blockParam = selectedBlock && selectedBlock !== "all"
                 ? `&block=${encodeURIComponent(selectedBlock)}`
                 : "";
             const r = await fetch(
-                `/api/hostel/payments?page=${page}&limit=${limit}${blockParam}`,
+                `/api/hostel/payments?page=${page}&limit=${limit}${blockParam}&t=${Date.now()}`,
                 { cache: "no-store", signal }
             );
-            if (!r.ok) throw new Error("Fetch failed");
+            if (!r.ok) {
+                // Retry once on transient auth or server errors
+                if (retryCount < 1 && (r.status === 401 || r.status >= 500)) {
+                    await new Promise(res => setTimeout(res, 800));
+                    return fetchPayments(signal, retryCount + 1);
+                }
+                throw new Error(`Fetch failed: ${r.status}`);
+            }
             const d = await r.json();
             setPayments(d.data || []);
             setTotal(d.total || 0);
         } catch (err: any) {
             if (err?.name === "AbortError") return; // ← ignore cancelled, don't clear data
             console.error("Payment fetch error:", err);
-            setPayments([]);
+            // ── CRITICAL: Preserve last valid state on transient errors ──
         } finally {
             setLoading(false);
         }

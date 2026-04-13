@@ -22,17 +22,23 @@ export default function BalancePaymentsPage() {
     const [error, setError] = useState("");
     const limit = 11;
 
-    const fetch_ = useCallback(async (signal?: AbortSignal) => {
+    const fetch_ = useCallback(async (signal?: AbortSignal, retryCount = 0) => {
         setLoading(true);
         try {
             const blockParam = selectedBlock && selectedBlock !== "all" 
                 ? `&block=${encodeURIComponent(selectedBlock)}` 
                 : "";
             const r = await fetch(
-                `/api/hostel/members/balance?page=${page}&limit=${limit}${blockParam}`,
+                `/api/hostel/members/balance?page=${page}&limit=${limit}${blockParam}&t=${Date.now()}`,
                 { cache: "no-store", signal }
             );
-            if (!r.ok) throw new Error("Fetch failed");
+            if (!r.ok) {
+                if (retryCount < 1 && (r.status === 401 || r.status >= 500)) {
+                    await new Promise(res => setTimeout(res, 800));
+                    return fetch_(signal, retryCount + 1);
+                }
+                throw new Error(`Fetch failed: ${r.status}`);
+            }
             const d = await r.json();
             setMembers(d.data || []); 
             setTotal(d.total || 0); 
@@ -40,7 +46,7 @@ export default function BalancePaymentsPage() {
         } catch (err: any) {
             if (err?.name === "AbortError") return; // ← don't clear data on cancel
             console.error("Hostel balance fetch error:", err);
-            setMembers([]);
+            // ── Preserve last valid state on transient errors ──
         } finally {
             setLoading(false);
         }
