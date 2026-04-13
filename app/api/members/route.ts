@@ -52,6 +52,14 @@ export async function GET(req: Request) {
         const balanceOnly = url.searchParams.get("balanceOnly") || "";
         const memberType = url.searchParams.get("type") || "all";
 
+        // ── Tenant isolation guard ────────────────────────────────────────
+        // For non-superadmin sessions, poolId MUST be present. If the session is
+        // somehow missing a poolId (e.g. misconfigured user), we reject hard — 
+        // we never fall back to an "UNASSIGNED_POOL" ghost value.
+        if (sessionUser.role !== "superadmin" && !sessionUser.poolId) {
+            return NextResponse.json({ error: "No pool assigned to this account" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        }
+
         // ── Cache check (Redis → in-memory fallback) ─────────────────────
         const poolKey = sessionUser.poolId || "superadmin";
         const cacheKey = `members-${poolKey}-${page}-${limit}-${search}-${planFilter}-${statusFilter}-${balanceOnly}-${memberType}`;
@@ -60,14 +68,6 @@ export async function GET(req: Request) {
             return NextResponse.json(cached, {
                 headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" },
             });
-        }
-
-        // ── Tenant isolation guard ────────────────────────────────────────
-        // For non-superadmin sessions, poolId MUST be present. If the session is
-        // somehow missing a poolId (e.g. misconfigured user), we reject hard — 
-        // we never fall back to an "UNASSIGNED_POOL" ghost value.
-        if (sessionUser.role !== "superadmin" && !sessionUser.poolId) {
-            return NextResponse.json({ error: "No pool assigned to this account" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // ── Build match filter ───────────────────────────────────────────
