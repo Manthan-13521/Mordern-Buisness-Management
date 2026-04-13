@@ -75,8 +75,9 @@ export function requireTenant(user?: SessionUser | null): string {
     // Superadmins don't strictly require a poolId in session to fetch all,
     // but if a specific route needs one, they should use resolvePoolId instead.
     // If a non-superadmin lacks a poolId, it's a critical security violation.
-    if (user.role !== "superadmin" && (!user.poolId || typeof user.poolId !== "string" || !mongoose.Types.ObjectId.isValid(user.poolId))) {
-        console.error("SECURITY: Missing or invalid poolId access attempt", {
+    // NOTE: poolId can be an ObjectId (standard) or a Slug (Pool/Hostel fallback).
+    if (user.role !== "superadmin" && (!user.poolId || typeof user.poolId !== "string" || user.poolId.trim() === "")) {
+        console.error("SECURITY: Missing or empty poolId access attempt", {
             userId: user.id || "unknown",
             providedId: user.poolId
         });
