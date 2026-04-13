@@ -18,9 +18,24 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
         }
 
+        // 🟢 STRUCTURED AUDIT LOGGING
+        console.info(JSON.stringify({
+            type: "BUSINESS_LABOUR_LIST",
+            businessId,
+            userId: session?.user?.id,
+            route: "/api/business/labour",
+            method: "GET",
+            timestamp: new Date().toISOString()
+        }));
+
         await dbConnect();
 
-        const labours = await BusinessLabour.aggregate([
+        // 🔴 TERMINAL DEFENSE
+        if (!businessId) {
+            throw new Error("Tenant context lost before query execution");
+        }
+
+        const laboursRaw = await BusinessLabour.aggregate([
             { $match: { businessId, isActive: true } },
             {
                 $lookup: {
@@ -61,11 +76,27 @@ export async function GET(req: Request) {
             { $sort: { name: 1 } }
         ]);
 
-        return NextResponse.json(labours, {
+        const labours = Array.isArray(laboursRaw) ? laboursRaw : [];
+
+        return NextResponse.json({
+            data: labours,
+            meta: {
+                count: labours.length,
+                businessId,
+                timestamp: new Date().toISOString()
+            }
+        }, {
             headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
         });
-    } catch (error) {
-        return NextResponse.json({ error: "Failed to fetch labour" }, { status: 500 });
+    } catch (error: any) {
+        return NextResponse.json({ 
+            data: [],
+            meta: {
+                error: "Failed to fetch labour",
+                details: error.message,
+                timestamp: new Date().toISOString()
+            }
+        }, { status: 500 });
     }
 }
 
@@ -90,7 +121,22 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
+        // 🟢 STRUCTURED AUDIT LOGGING
+        console.info(JSON.stringify({
+            type: "BUSINESS_LABOUR_CREATE",
+            businessId,
+            userId: session?.user?.id,
+            route: "/api/business/labour",
+            method: "POST",
+            timestamp: new Date().toISOString()
+        }));
+
         await dbConnect();
+
+        // 🔴 TERMINAL DEFENSE
+        if (!businessId) {
+            throw new Error("Tenant context lost before database operation");
+        }
 
         const labour = new BusinessLabour({
             name,
@@ -102,11 +148,26 @@ export async function POST(req: Request) {
         });
 
         await labour.save();
-        return NextResponse.json(labour, {
+
+        return NextResponse.json({
+            data: labour,
+            meta: {
+                message: "Labour record created successfully",
+                businessId,
+                timestamp: new Date().toISOString()
+            }
+        }, {
             status: 201,
             headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
         });
-    } catch (error) {
-        return NextResponse.json({ error: "Failed to create labour" }, { status: 500 });
+    } catch (error: any) {
+        return NextResponse.json({ 
+            data: null,
+            meta: {
+                error: "Failed to create labour",
+                details: error.message,
+                timestamp: new Date().toISOString()
+            }
+        }, { status: 500 });
     }
 }

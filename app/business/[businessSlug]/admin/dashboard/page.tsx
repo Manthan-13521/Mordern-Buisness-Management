@@ -21,12 +21,13 @@ export default function BusinessDashboard() {
     async function fetchStats() {
       try {
         const res = await fetch("/api/business/analytics", { cache: "no-store" });
-        const data = await res.json();
+        const json = await res.json();
         if (res.ok) {
-          setStats(data.stats || {});
-          setRecentSales(data.recentSales || []);
+          // Destructure from the new standardized { data, meta } shape
+          setStats(json.data?.stats || {});
+          setRecentSales(json.data?.recentSales || []);
         } else {
-          console.error("Analytics Error:", data.error);
+          console.error("Analytics Error:", json.error);
         }
       } catch (err) {
         console.error(err);

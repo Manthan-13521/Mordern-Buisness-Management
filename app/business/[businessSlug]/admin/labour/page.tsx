@@ -191,8 +191,9 @@ export default function LabourPage() {
   const fetchData = useCallback(async () => {
     try {
       const res = await fetch("/api/business/labour", { cache: "no-store" });
-      const data = await res.json();
-      setLabours(Array.isArray(data) ? data : []);
+      const json = await res.json();
+      // Destructure from standardized response { data, meta }
+      setLabours(Array.isArray(json.data) ? json.data : []);
     } catch {
       toast.error("Failed to load staff");
     } finally {

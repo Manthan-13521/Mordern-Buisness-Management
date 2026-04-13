@@ -17,7 +17,22 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
         }
 
+        // 🟢 STRUCTURED AUDIT LOGGING
+        console.info(JSON.stringify({
+            type: "BUSINESS_CUSTOMERS_LIST",
+            businessId,
+            userId: session?.user?.id,
+            route: "/api/business/customers",
+            method: "GET",
+            timestamp: new Date().toISOString()
+        }));
+
         await dbConnect();
+
+        // 🔴 TERMINAL DEFENSE
+        if (!businessId) {
+            throw new Error("Tenant context lost before query execution");
+        }
 
         const { searchParams } = new URL(req.url);
         const hasDue = searchParams.get("hasDue") === "true";
@@ -25,7 +40,7 @@ export async function GET(req: Request) {
         let matchQuery: any = { businessId };
         if (hasDue) matchQuery.currentDue = { $gt: 0 };
 
-        const customers = await BusinessCustomer.aggregate([
+        const customersRaw = await BusinessCustomer.aggregate([
             { $match: matchQuery },
             {
                 $lookup: {
@@ -77,11 +92,27 @@ export async function GET(req: Request) {
             { $sort: { name: 1 } }
         ]);
 
-        return NextResponse.json(customers, {
+        const customers = Array.isArray(customersRaw) ? customersRaw : [];
+
+        return NextResponse.json({
+            data: customers,
+            meta: {
+                count: customers.length,
+                businessId,
+                timestamp: new Date().toISOString()
+            }
+        }, {
             headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
         });
-    } catch (error) {
-        return NextResponse.json({ error: "Failed to fetch customers" }, { status: 500 });
+    } catch (error: any) {
+        return NextResponse.json({ 
+            data: [],
+            meta: {
+                error: "Failed to fetch customers",
+                details: error.message,
+                timestamp: new Date().toISOString()
+            }
+        }, { status: 500 });
     }
 }
 
@@ -106,7 +137,22 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Name is required" }, { status: 400 });
         }
 
+        // 🟢 STRUCTURED AUDIT LOGGING
+        console.info(JSON.stringify({
+            type: "BUSINESS_CUSTOMER_CREATE",
+            businessId,
+            userId: session?.user?.id,
+            route: "/api/business/customers",
+            method: "POST",
+            timestamp: new Date().toISOString()
+        }));
+
         await dbConnect();
+
+        // 🔴 TERMINAL DEFENSE
+        if (!businessId) {
+            throw new Error("Tenant context lost before database operation");
+        }
 
         const customer = new BusinessCustomer({
             name,
@@ -121,11 +167,26 @@ export async function POST(req: Request) {
         });
 
         await customer.save();
-        return NextResponse.json(customer, {
+
+        return NextResponse.json({
+            data: customer,
+            meta: {
+                message: "Customer created successfully",
+                businessId,
+                timestamp: new Date().toISOString()
+            }
+        }, {
             status: 201,
             headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
         });
-    } catch (error) {
-        return NextResponse.json({ error: "Failed to create customer" }, { status: 500 });
+    } catch (error: any) {
+        return NextResponse.json({ 
+            data: null,
+            meta: {
+                error: "Failed to create customer",
+                details: error.message,
+                timestamp: new Date().toISOString()
+            }
+        }, { status: 500 });
     }
 }

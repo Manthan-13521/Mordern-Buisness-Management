@@ -54,8 +54,9 @@ export default function CustomersPage() {
     try {
       const url = `/api/business/customers${tab === "due" ? "?hasDue=true" : ""}`;
       const res = await fetch(url, { cache: "no-store" });
-      const data = await res.json();
-      setCustomers(data);
+      const json = await res.json();
+      // Destructure from standardized response { data, meta }
+      setCustomers(json.data || []);
     } catch (err) {
       toast.error("Failed to load customers");
     } finally {

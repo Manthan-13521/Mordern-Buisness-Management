@@ -4,10 +4,9 @@ import { authOptions } from "@/lib/auth";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessAttendance } from "@/models/BusinessAttendance";
 import { requireBusinessId } from "@/lib/tenant";
+import { SystemLock } from "@/models/SystemLock";
 
 export const dynamic = "force-dynamic";
-
-let isCleaning = false;
 
 export async function POST(req: Request) {
     try {
@@ -26,10 +25,24 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Invalid data" }, { status: 400 });
         }
 
+        // 🟢 STRUCTURED AUDIT LOGGING
+        console.info(JSON.stringify({
+            type: "BUSINESS_ATTENDANCE_SYNC",
+            businessId,
+            userId: session?.user?.id,
+            route: "/api/business/attendance",
+            method: "POST",
+            timestamp: new Date().toISOString()
+        }));
+
         await dbConnect();
 
+        // 🔴 TERMINAL DEFENSE
+        if (!businessId) {
+            throw new Error("Tenant context lost before database operation");
+        }
+
         // Upsert approach: remove existing for this date and business, then insert new
-        // For production, a more careful update would be better, but this is clean for MVP
         const attendances = records.map((rec: any) => ({
             labourId: rec.labourId,
             businessId,
@@ -46,11 +59,23 @@ export async function POST(req: Request) {
             );
         }
 
-        // ── 90-Day Rolling Window Cleanup (Optimized Locked Sweep) ──
-        if (!isCleaning && Math.random() < 0.05) {
-            isCleaning = true;
+        // ── 90-Day Rolling Window Cleanup (Distributed Locked Sweep) ──
+        if (Math.random() < 0.05) {
             (async () => {
                 try {
+                    const now = new Date();
+                    // Attempt to acquire distributed lock (1 min TTL)
+                    const lock = await SystemLock.findOneAndUpdate(
+                        { 
+                            key: "labour_cleanup", 
+                            $or: [{ expiresAt: { $lt: now } }, { expiresAt: { $exists: false } }] 
+                        },
+                        { $set: { key: "labour_cleanup", expiresAt: new Date(now.getTime() + 60000) } },
+                        { upsert: true, new: true }
+                    ).catch(err => (err.code === 11000 ? null : Promise.reject(err)));
+
+                    if (!lock) return; // Lock held by another instance
+
                     const ninetyDaysAgo = new Date();
                     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
                     
@@ -63,22 +88,36 @@ export async function POST(req: Request) {
                         type: "ATTENDANCE_CLEANUP_SUCCESS",
                         businessId,
                         deletedCount: result.deletedCount,
+                        route: "/api/business/attendance",
+                        method: "POST",
                         timestamp: new Date().toISOString()
                     }));
                 } catch (err: any) {
                     console.error("Cleanup Error:", err.message);
-                } finally {
-                    isCleaning = false;
                 }
             })();
         }
 
-        return NextResponse.json({ success: true }, {
+        return NextResponse.json({ 
+            data: { success: true },
+            meta: {
+                message: "Attendance synced successfully",
+                businessId,
+                timestamp: new Date().toISOString()
+            }
+        }, {
             headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error("Attendance Sync Error:", error);
-        return NextResponse.json({ error: "Failed to sync attendance" }, { status: 500 });
+        return NextResponse.json({ 
+            data: null,
+            meta: {
+                error: "Failed to sync attendance",
+                details: error.message,
+                timestamp: new Date().toISOString()
+            }
+        }, { status: 500 });
     }
 }
 
@@ -92,6 +131,16 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
         }
 
+        // 🟢 STRUCTURED AUDIT LOGGING
+        console.info(JSON.stringify({
+            type: "BUSINESS_ATTENDANCE_LIST",
+            businessId,
+            userId: session?.user?.id,
+            route: "/api/business/attendance",
+            method: "GET",
+            timestamp: new Date().toISOString()
+        }));
+
         const { searchParams } = new URL(req.url);
         const date = searchParams.get("date");
         const labourId = searchParams.get("labourId");
@@ -99,6 +148,11 @@ export async function GET(req: Request) {
         const to = searchParams.get("to");
 
         await dbConnect();
+
+        // 🔴 TERMINAL DEFENSE
+        if (!businessId) {
+            throw new Error("Tenant context lost before query execution");
+        }
 
         const query: any = { businessId };
         if (date) {
@@ -113,11 +167,27 @@ export async function GET(req: Request) {
             if (to) query.date.$lte = new Date(to);
         }
 
-        const attendance = await BusinessAttendance.find(query).sort({ date: -1 }).populate("labourId", "name");
-        return NextResponse.json(attendance, {
+        const attendanceRaw = await BusinessAttendance.find(query).sort({ date: -1 }).populate("labourId", "name");
+        const attendance = Array.isArray(attendanceRaw) ? attendanceRaw : [];
+
+        return NextResponse.json({
+            data: attendance,
+            meta: {
+                count: attendance.length,
+                businessId,
+                timestamp: new Date().toISOString()
+            }
+        }, {
             headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
         });
-    } catch (error) {
-        return NextResponse.json({ error: "Failed to fetch attendance" }, { status: 500 });
+    } catch (error: any) {
+        return NextResponse.json({ 
+            data: [],
+            meta: {
+                error: "Failed to fetch attendance",
+                details: error.message,
+                timestamp: new Date().toISOString()
+            }
+        }, { status: 500 });
     }
 }

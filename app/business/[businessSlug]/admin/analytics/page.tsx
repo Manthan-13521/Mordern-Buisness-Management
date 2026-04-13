@@ -33,8 +33,9 @@ export default function AnalyticsPage() {
     async function fetchAnalytics() {
       try {
         const res = await fetch("/api/business/analytics", { cache: "no-store" });
-        const data = await res.json();
-        setStats(data);
+        const json = await res.json();
+        // Standardized response shape { data, meta }
+        setStats(json.data);
       } catch (err) {
         console.error(err);
       } finally {

@@ -28,15 +28,22 @@ export async function GET(req: Request) {
             throw new Error("Invalid businessId format");
         }
 
-        // 🟢 STRUCTURED AUDIT LOGGING
+        // 🟢 STRUCTURED AUDIT LOGGING (ENHANCED)
         console.info(JSON.stringify({
             type: "BUSINESS_ANALYTICS_QUERY",
             businessId,
             userId: session?.user?.id,
+            route: "/api/business/analytics",
+            method: "GET",
             timestamp: new Date().toISOString()
         }));
 
         await dbConnect();
+
+        // 🔴 TERMINAL DEFENSE: Failsafe check before query execution
+        if (!businessId) {
+            throw new Error("Tenant context lost before query execution");
+        }
 
         const now = new Date();
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -88,14 +95,16 @@ export async function GET(req: Request) {
         const hasNoData = recentSales.length === 0 && recentPayments.length === 0;
 
         return NextResponse.json({
-            stats: {
-                dailySales: dailySales[0]?.total || 0,
-                monthlySales: monthlySales[0]?.total || 0,
-                yearlySales: yearlySales[0]?.total || 0,
-                totalDue: totalDue[0]?.total || 0
+            data: {
+                stats: {
+                    dailySales: dailySales[0]?.total || 0,
+                    monthlySales: monthlySales[0]?.total || 0,
+                    yearlySales: yearlySales[0]?.total || 0,
+                    totalDue: totalDue[0]?.total || 0
+                },
+                recentSales,
+                recentPayments
             },
-            recentSales,
-            recentPayments,
             meta: {
                 message: hasNoData ? "No data for this tenant" : "Analytics fetched successfully",
                 businessId,
@@ -107,8 +116,12 @@ export async function GET(req: Request) {
     } catch (error: any) {
         console.error("Analytics Error:", error);
         return NextResponse.json({ 
-            error: "Failed to fetch analytics",
-            details: error.message 
+            data: null,
+            meta: {
+                error: "Failed to fetch analytics",
+                details: error.message,
+                timestamp: new Date().toISOString()
+            }
         }, { status: 500 });
     }
 }
