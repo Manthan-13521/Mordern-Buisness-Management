@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
-import { getServerSession } from "@/lib/universalAuth";
+import { getServerSession } from "next-auth";
+import { jwtVerify } from "jose";
 import { authOptions } from "@/lib/auth";
 import { secureUpdateById } from "@/lib/tenantSecurity";
 
@@ -16,7 +17,26 @@ export async function POST(req: Request, props: RouteContext) {
     try {
         await dbConnect();
 
-        const session = await getServerSession(authOptions);
+                const authHeader = req.headers.get("authorization");
+        let token = null;
+
+        if (authHeader?.startsWith("Bearer ")) {
+            try {
+                const bearerToken = authHeader.split(" ")[1];
+                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+                const { payload } = await jwtVerify(bearerToken, secret);
+                token = payload;
+            } catch (e) {}
+        }
+
+        if (!token) {
+            const session = await getServerSession(authOptions);
+        token = session?.user || null;
+        }
+
+        await dbConnect();
+
+        const session = { user: token }; // Mock session for compatibility
         if (!session?.user || session.user.role !== "admin") {
             return NextResponse.json({ error: "Admin only" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }

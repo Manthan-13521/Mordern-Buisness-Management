@@ -5,7 +5,8 @@ import { HostelBlock } from "@/models/HostelBlock";
 import { HostelPlan } from "@/models/HostelPlan";
 import { HostelRoom } from "@/models/HostelRoom";
 import { HostelFloor } from "@/models/HostelFloor";
-import { getServerSession } from "@/lib/universalAuth";
+import { getServerSession } from "next-auth";
+import { jwtVerify } from "jose";
 import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,26 @@ export const revalidate = 0;
 export async function GET(req: Request) {
     try {
         await dbConnect();
-        const session = await getServerSession(authOptions);
+                const authHeader = req.headers.get("authorization");
+        let token = null;
+
+        if (authHeader?.startsWith("Bearer ")) {
+            try {
+                const bearerToken = authHeader.split(" ")[1];
+                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+                const { payload } = await jwtVerify(bearerToken, secret);
+                token = payload;
+            } catch (e) {}
+        }
+
+        if (!token) {
+            const session = await getServerSession(authOptions);
+        token = session?.user || null;
+        }
+
+        await dbConnect();
+
+        const session = { user: token }; // Mock session for compatibility
 
         if (!session?.user) {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });

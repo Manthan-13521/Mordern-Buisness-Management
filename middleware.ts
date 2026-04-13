@@ -5,6 +5,8 @@ import { applySecurityHeaders, applyCORS, withSecurity } from "./middlewares/sec
 import { withRateLimit, getIp } from "./middlewares/rateLimit";
 import { withAbuse } from "./middlewares/abuse";
 import { withAuthRouting } from "./middlewares/auth";
+import { jwtVerify } from "jose";
+import { encode } from "next-auth/jwt";
 
 export default withAuth(
     async function middleware(req: NextRequestWithAuth) {
@@ -17,7 +19,7 @@ export default withAuth(
 
         // 2. ABUSE & RATELIMIT (API Only)
         let rlHeaders = { limit: '50', remaining: '50' };
-        
+
         if (path.startsWith("/api/")) {
             const ip = getIp(req);
             const token = req.nextauth.token;
@@ -44,14 +46,14 @@ export default withAuth(
         // 4. HANDLER (Pass through)
         const requestHeaders = new Headers(req.headers);
         requestHeaders.set("x-request-id", requestId);
-        
+
         const res = NextResponse.next({ request: { headers: requestHeaders } });
         res.headers.set("X-RateLimit-Limit", rlHeaders.limit);
         res.headers.set("X-RateLimit-Remaining", rlHeaders.remaining);
         res.headers.set("x-request-id", requestId);
         applySecurityHeaders(res);
         applyCORS(req, res);
-        
+
         return res;
     },
     {

@@ -4,9 +4,10 @@ import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
 import { Payment } from "@/models/Payment";
-import { getServerSession } from "@/lib/universalAuth";
-import { getToken } from "@/lib/universalAuth";
+import { getServerSession } from "next-auth";
+import { getToken } from "next-auth/jwt";
 import { authOptions } from "@/lib/auth";
+import { jwtVerify } from "jose";
 import QRCode from "qrcode";
 import crypto from "crypto";
 import { uploadBuffer } from "@/lib/local-upload";
@@ -27,11 +28,26 @@ import { MemberCreateSchema } from "@/lib/validators";
 
 export async function GET(req: Request) {
     try {
-        const [token] = await Promise.all([
-            getToken({ req: req as any }),
-            dbConnect(),
-        ]);
-        
+        const authHeader = req.headers.get("authorization");
+        let token = null;
+
+        if (authHeader?.startsWith("Bearer ")) {
+            try {
+                const bearerToken = authHeader.split(" ")[1];
+                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+                const { payload } = await jwtVerify(bearerToken, secret);
+                token = payload;
+            } catch (e) {
+                console.error("[Auth] Bearer verify failed:", e);
+            }
+        }
+
+        if (!token) {
+            token = await getToken({ req: req as any });
+        }
+
+        await dbConnect();
+
         if (!token)
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
@@ -196,16 +212,29 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
     try {
-        const [token, body] = await Promise.all([
-            getToken({ req: req as any }),
-            req.json(),
-            dbConnect(),
-        ]);
-        
+        const authHeader = req.headers.get("authorization");
+        let token = null;
+
+        if (authHeader?.startsWith("Bearer ")) {
+            try {
+                const bearerToken = authHeader.split(" ")[1];
+                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+                const { payload } = await jwtVerify(bearerToken, secret);
+                token = payload;
+            } catch (e) {}
+        }
+
+        if (!token) {
+            token = await getToken({ req: req as any });
+        }
+
+        await dbConnect();
+
         if (!token)
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const sessionUser = token as any;
+        const body = await req.json();
 
         // Rate limiting is now handled globally by middleware
         

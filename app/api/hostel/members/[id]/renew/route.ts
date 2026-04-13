@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
-import { getToken } from "@/lib/universalAuth";
+import { getToken } from "next-auth/jwt";
+import { jwtVerify } from "jose";
 import { HostelMember } from "@/models/HostelMember";
 import { HostelPayment } from "@/models/HostelPayment";
 import { HostelPlan } from "@/models/HostelPlan";
@@ -19,7 +20,24 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const [token, { id }, body] = await Promise.all([getToken({ req: req as any }), params, req.json()]);
+                const authHeader = req.headers.get("authorization");
+        let token = null;
+
+        if (authHeader?.startsWith("Bearer ")) {
+            try {
+                const bearerToken = authHeader.split(" ")[1];
+                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+                const { payload } = await jwtVerify(bearerToken, secret);
+                token = payload;
+            } catch (e) {}
+        }
+
+        if (!token) {
+            token = await getToken({ req: req as any });
+        }
+
+        await dbConnect();
+        const [{ id }, body] = await Promise.all([params, req.json()]);
         await dbConnect();
         if (!token || token.role !== "hostel_admin") {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });

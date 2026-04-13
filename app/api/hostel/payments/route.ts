@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
-import { getToken } from "@/lib/universalAuth";
+import { getToken } from "next-auth/jwt";
+import { jwtVerify } from "jose";
 import { HostelPayment } from "@/models/HostelPayment";
 import { HostelMember } from "@/models/HostelMember";
 import { HostelBlock } from "@/models/HostelBlock";
@@ -15,7 +16,24 @@ export const dynamic = "force-dynamic";
 // GET /api/hostel/payments — list payments (with optional block filter)
 export async function GET(req: Request) {
     try {
-        const [token] = await Promise.all([getToken({ req: req as any }), dbConnect()]);
+                const authHeader = req.headers.get("authorization");
+        let token = null;
+
+        if (authHeader?.startsWith("Bearer ")) {
+            try {
+                const bearerToken = authHeader.split(" ")[1];
+                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+                const { payload } = await jwtVerify(bearerToken, secret);
+                token = payload;
+            } catch (e) {}
+        }
+
+        if (!token) {
+            token = await getToken({ req: req as any });
+        }
+
+        await dbConnect();
+
         if (!token || token.role !== "hostel_admin") {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
@@ -71,7 +89,24 @@ export async function GET(req: Request) {
 // POST /api/hostel/payments — add a payment (ledger cycle)
 export async function POST(req: Request) {
     try {
-        const [token, body] = await Promise.all([getToken({ req: req as any }), req.json()]);
+                const authHeader = req.headers.get("authorization");
+        let token = null;
+
+        if (authHeader?.startsWith("Bearer ")) {
+            try {
+                const bearerToken = authHeader.split(" ")[1];
+                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+                const { payload } = await jwtVerify(bearerToken, secret);
+                token = payload;
+            } catch (e) {}
+        }
+
+        if (!token) {
+            token = await getToken({ req: req as any });
+        }
+
+        await dbConnect();
+        const [body] = await Promise.all([req.json()]);
         await dbConnect();
         if (!token || token.role !== "hostel_admin") {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });

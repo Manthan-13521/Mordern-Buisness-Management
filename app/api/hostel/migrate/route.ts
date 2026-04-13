@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { HostelMember } from "@/models/HostelMember";
 import { HostelPlan } from "@/models/HostelPlan";
-import { getToken } from "@/lib/universalAuth";
+import { getToken } from "next-auth/jwt";
+import { jwtVerify } from "jose";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,24 @@ export const dynamic = "force-dynamic";
 // One-time script to migrate the database schema
 export async function POST(req: Request) {
     try {
-        const token = await getToken({ req: req as any });
+                const authHeader = req.headers.get("authorization");
+        let token = null;
+
+        if (authHeader?.startsWith("Bearer ")) {
+            try {
+                const bearerToken = authHeader.split(" ")[1];
+                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+                const { payload } = await jwtVerify(bearerToken, secret);
+                token = payload;
+            } catch (e) {}
+        }
+
+        if (!token) {
+            token = await getToken({ req: req as any });
+        }
+
+        await dbConnect();
+
         if (!token || token.role !== "superadmin") {
             // allowing hostel_admin to trigger it for their own hostel for testing
             if (token?.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });

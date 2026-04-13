@@ -8,7 +8,8 @@ import { HostelFloor } from "@/models/HostelFloor";
 import { HostelBlock } from "@/models/HostelBlock";
 import { HostelPlan } from "@/models/HostelPlan";
 import { DeletedHostelMember } from "@/models/DeletedHostelMember";
-import { getServerSession } from "@/lib/universalAuth";
+import { getServerSession } from "next-auth";
+import { jwtVerify } from "jose";
 import { authOptions } from "@/lib/auth";
 import { uploadBackup } from "@/lib/s3";
 import { gzipSync } from "zlib";
@@ -16,7 +17,26 @@ import { gzipSync } from "zlib";
 export async function POST(req: Request) {
     try {
         await dbConnect();
-        const session = await getServerSession(authOptions);
+                const authHeader = req.headers.get("authorization");
+        let token = null;
+
+        if (authHeader?.startsWith("Bearer ")) {
+            try {
+                const bearerToken = authHeader.split(" ")[1];
+                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+                const { payload } = await jwtVerify(bearerToken, secret);
+                token = payload;
+            } catch (e) {}
+        }
+
+        if (!token) {
+            const session = await getServerSession(authOptions);
+        token = session?.user || null;
+        }
+
+        await dbConnect();
+
+        const session = { user: token }; // Mock session for compatibility
 
         if (!session?.user || (session.user.role !== "admin" && session.user.role !== "superadmin" && session.user.role !== "hostel_admin")) {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });

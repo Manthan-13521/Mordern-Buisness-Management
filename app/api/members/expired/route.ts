@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
-import { getServerSession } from "@/lib/universalAuth";
+import { getServerSession } from "next-auth";
+import { jwtVerify } from "jose";
 import { authOptions } from "@/lib/auth";
 import { getTenantFilter } from "@/lib/tenant";
 
