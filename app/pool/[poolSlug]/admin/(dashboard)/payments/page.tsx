@@ -41,14 +41,21 @@ export default function PaymentsPage() {
     const [members, setMembers] = useState<{ _id: string; name: string; memberId: string }[]>([]);
     const [plans, setPlans] = useState<{ _id: string; name: string; price: number }[]>([]);
 
-    const fetchPayments = useCallback(async (signal?: AbortSignal) => {
+    const fetchPayments = useCallback(async (signal?: AbortSignal, retryCount = 0) => {
         setLoading(true);
         try {
             const r = await fetch(`/api/payments?page=${page}&limit=${LIMIT}&type=${selectedType}&t=${Date.now()}`, { 
                 cache: "no-store",
                 signal
             });
-            if (!r.ok) throw new Error("Fetch failed");
+            if (!r.ok) {
+                // On transient auth or server error, retry once before giving up
+                if (retryCount < 1 && (r.status === 401 || r.status >= 500)) {
+                    await new Promise(res => setTimeout(res, 800));
+                    return fetchPayments(signal, retryCount + 1);
+                }
+                throw new Error(`Fetch failed: ${r.status}`);
+            }
             const data = await r.json();
             const list = Array.isArray(data) ? data : (data.data ?? []);
             setPayments(list);
@@ -56,7 +63,8 @@ export default function PaymentsPage() {
         } catch (err: any) {
             if (err?.name === "AbortError") return; // ← don't clear data on cancel
             console.error("Payment fetch error:", err);
-            setPayments([]);
+            // ── CRITICAL: Do NOT clear payments on transient errors ──
+            // Preserve last valid state instead of showing "No payments found"
         } finally {
             setLoading(false);
         }

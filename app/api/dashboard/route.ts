@@ -52,7 +52,10 @@ export async function GET(req: Request) {
         if (targetPoolId && session.user.role === "superadmin") {
             baseMatch.poolId = targetPoolId;
         } else if (session.user.role !== "superadmin") {
-            baseMatch.poolId = session.user.poolId || "UNASSIGNED_POOL";
+            if (!session.user.poolId) {
+                return NextResponse.json({ error: "No pool assigned to this account" }, { status: 400, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+            baseMatch.poolId = session.user.poolId;
         }
             
         // ── 1. Safe Initialization Logic for Immutable Counters (Self-Healing) ──

@@ -83,7 +83,7 @@ export async function GET(req: Request) {
             limit,
             totalPages: Math.ceil(total / limit),
         }, {
-            headers: { "Cache-Control": "private, max-age=2, stale-while-revalidate=30" },
+            headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" },
         });
     } catch (error) {
         console.error("[GET /api/payments]", error);

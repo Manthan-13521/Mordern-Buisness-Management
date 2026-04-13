@@ -25,10 +25,15 @@ export async function DELETE(req: Request, props: { params: Promise<{ poolId: st
             return NextResponse.json({ error: "Pool not found" }, { status: 404 });
         }
 
-        // Delete all members belonging to this pool
+        // ── Cascade delete ALL tenant-scoped data ────────────────────────
+        // Delete members (both regular and entertainment)
         await Member.deleteMany({ poolId });
+        try {
+            const { EntertainmentMember } = await import("@/models/EntertainmentMember");
+            await EntertainmentMember.deleteMany({ poolId });
+        } catch {}
 
-        // Delete related users, plans, staff, etc.
+        // Delete related users, plans, staff, entry logs
         try {
             const { User } = await import("@/models/User");
             await User.deleteMany({ poolId });
@@ -45,9 +50,41 @@ export async function DELETE(req: Request, props: { params: Promise<{ poolId: st
             const { EntryLog } = await import("@/models/EntryLog");
             await EntryLog.deleteMany({ poolId });
         } catch {}
+
+        // Delete payments
         try {
             const { Payment } = await import("@/models/Payment");
             await Payment.deleteMany({ poolId });
+        } catch {}
+
+        // Delete ledger, subscriptions, pool stats, analytics
+        try {
+            const { Ledger } = await import("@/models/Ledger");
+            await Ledger.deleteMany({ poolId });
+        } catch {}
+        try {
+            const { Subscription } = await import("@/models/Subscription");
+            await Subscription.deleteMany({ poolId });
+        } catch {}
+        try {
+            const { PoolStats } = await import("@/models/PoolStats");
+            await PoolStats.deleteMany({ poolId });
+        } catch {}
+        try {
+            const { PoolAnalytics } = await import("@/models/PoolAnalytics");
+            await PoolAnalytics.deleteMany({ poolId });
+        } catch {}
+
+        // Delete synced unified users for this pool's members
+        try {
+            const { UnifiedUser } = await import("@/models/UnifiedUser");
+            await UnifiedUser.deleteMany({ organizationId: poolId });
+        } catch {}
+
+        // ── Invalidate member cache to prevent serving stale data ─────────
+        try {
+            const { invalidateCache } = await import("@/lib/membersCache");
+            await invalidateCache(poolId);
         } catch {}
 
         // Delete the pool itself

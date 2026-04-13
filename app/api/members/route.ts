@@ -58,7 +58,7 @@ export async function GET(req: Request) {
         const cached = await getCache(cacheKey);
         if (cached) {
             return NextResponse.json(cached, {
-                headers: { "Cache-Control": "private, max-age=10, stale-while-revalidate=30" },
+                headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" },
             });
         }
 
@@ -241,7 +241,7 @@ export async function GET(req: Request) {
         setCache(cacheKey, response).catch(() => {});
 
         return NextResponse.json(response, {
-            headers: { "Cache-Control": "private, max-age=10, stale-while-revalidate=30" },
+            headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" },
         });
     } catch (error) {
         console.error("[GET /api/members]", error);
