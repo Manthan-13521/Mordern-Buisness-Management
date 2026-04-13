@@ -7,6 +7,8 @@ import { requireBusinessId } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
+let isCleaning = false;
+
 export async function POST(req: Request, { params }: { params: Promise<{ labourId: string }> }) {
     try {
         const session = await getServerSession(authOptions);
@@ -36,10 +38,32 @@ export async function POST(req: Request, { params }: { params: Promise<{ labourI
 
         await payment.save();
 
-        // ── 90-Day Rolling Window Cleanup (On-Write Sweep) ──
-        const ninetyDaysAgo = new Date();
-        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-        BusinessLabourPayment.deleteMany({ businessId, createdAt: { $lt: ninetyDaysAgo } }).catch(console.error);
+        // ── 90-Day Rolling Window Cleanup (Optimized Locked Sweep) ──
+        if (!isCleaning && Math.random() < 0.05) {
+            isCleaning = true;
+            (async () => {
+                try {
+                    const ninetyDaysAgo = new Date();
+                    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+                    
+                    const result = await BusinessLabourPayment.deleteMany({ 
+                        businessId, 
+                        createdAt: { $lt: ninetyDaysAgo } 
+                    });
+
+                    console.info(JSON.stringify({
+                        type: "PAYMENT_CLEANUP_SUCCESS",
+                        businessId,
+                        deletedCount: result.deletedCount,
+                        timestamp: new Date().toISOString()
+                    }));
+                } catch (err: any) {
+                    console.error("Cleanup Error:", err.message);
+                } finally {
+                    isCleaning = false;
+                }
+            })();
+        }
 
         return NextResponse.json({ success: true, payment }, {
             headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }

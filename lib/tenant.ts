@@ -21,6 +21,7 @@
  */
 
 import { logger } from "@/lib/logger";
+import mongoose from "mongoose";
 
 export class TenantIsolationError extends Error {
     readonly statusCode = 400;
@@ -74,11 +75,12 @@ export function requireTenant(user?: SessionUser | null): string {
     // Superadmins don't strictly require a poolId in session to fetch all,
     // but if a specific route needs one, they should use resolvePoolId instead.
     // If a non-superadmin lacks a poolId, it's a critical security violation.
-    if (user.role !== "superadmin" && !user.poolId) {
-        console.error("SECURITY: Missing poolId access attempt", {
-            userId: user.id || "unknown"
+    if (user.role !== "superadmin" && (!user.poolId || typeof user.poolId !== "string" || !mongoose.Types.ObjectId.isValid(user.poolId))) {
+        console.error("SECURITY: Missing or invalid poolId access attempt", {
+            userId: user.id || "unknown",
+            providedId: user.poolId
         });
-        throw new Error("No pool assigned to this account");
+        throw new Error("Invalid or missing pool assignment");
     }
 
     return user.poolId || "superadmin"; // Safe to return "superadmin" here ONLY if user.role === "superadmin"
@@ -92,15 +94,20 @@ export function requireTenant(user?: SessionUser | null): string {
 export function requireBusinessId(user?: SessionUser | null): string {
     if (!user) throw new Error("Unauthorized");
 
+    const businessId = (user as any).businessId;
+
     // Superadmins don't strictly require a businessId in session to fetch all
-    if (user.role !== "superadmin" && !(user as any).businessId) {
-        console.error("SECURITY: Missing businessId access attempt", {
-            userId: user.id || "unknown"
-        });
-        throw new Error("Missing businessId");
+    if (user.role !== "superadmin") {
+        if (!businessId || typeof businessId !== "string" || !mongoose.Types.ObjectId.isValid(businessId)) {
+            console.error("SECURITY: Missing or invalid businessId access attempt", {
+                userId: user.id || "unknown",
+                providedId: businessId
+            });
+            throw new Error("Invalid or missing businessId");
+        }
     }
 
-    return (user as any).businessId || "superadmin";
+    return businessId || "superadmin";
 }
 
 /**

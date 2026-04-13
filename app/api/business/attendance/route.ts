@@ -7,6 +7,8 @@ import { requireBusinessId } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
+let isCleaning = false;
+
 export async function POST(req: Request) {
     try {
         const session = await getServerSession(authOptions);
@@ -44,12 +46,32 @@ export async function POST(req: Request) {
             );
         }
 
-        // ── 90-Day Rolling Window Cleanup (On-Write Sweep) ──
-        const ninetyDaysAgo = new Date();
-        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-        
-        // Non-blocking cleanup of deeply historically stale records
-        BusinessAttendance.deleteMany({ businessId, date: { $lt: ninetyDaysAgo } }).catch(console.error);
+        // ── 90-Day Rolling Window Cleanup (Optimized Locked Sweep) ──
+        if (!isCleaning && Math.random() < 0.05) {
+            isCleaning = true;
+            (async () => {
+                try {
+                    const ninetyDaysAgo = new Date();
+                    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+                    
+                    const result = await BusinessAttendance.deleteMany({ 
+                        businessId, 
+                        date: { $lt: ninetyDaysAgo } 
+                    });
+
+                    console.info(JSON.stringify({
+                        type: "ATTENDANCE_CLEANUP_SUCCESS",
+                        businessId,
+                        deletedCount: result.deletedCount,
+                        timestamp: new Date().toISOString()
+                    }));
+                } catch (err: any) {
+                    console.error("Cleanup Error:", err.message);
+                } finally {
+                    isCleaning = false;
+                }
+            })();
+        }
 
         return NextResponse.json({ success: true }, {
             headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }

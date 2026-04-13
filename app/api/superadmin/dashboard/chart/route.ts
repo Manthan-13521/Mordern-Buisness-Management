@@ -11,7 +11,10 @@ const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Se
 export async function GET() {
     try {
         const session = await getServerSession(authOptions);
-        if (!session?.user || (session.user as any).role !== "superadmin") {
+        if (!session?.user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        if ((session.user as any).role !== "superadmin") {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
