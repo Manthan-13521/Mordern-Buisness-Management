@@ -458,7 +458,7 @@ export default function MembersPage() {
                                         <tr><td colSpan={8} className="py-12 text-center text-gray-500">No members found.</td></tr>
                                     ) : processedMembers.map((member) => {
                                         const plan = member.planId as Plan;
-                                        const unreturned = (member.equipmentTaken ?? []).filter((e: any) => !e.isReturned);
+                                        const unreturned = (member.equipmentTaken ?? []).filter(e => !e.isReturned);
                                         const endDate = member._endDate;
 
                                         return (

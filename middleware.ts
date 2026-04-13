@@ -5,8 +5,6 @@ import { applySecurityHeaders, applyCORS, withSecurity } from "./middlewares/sec
 import { withRateLimit, getIp } from "./middlewares/rateLimit";
 import { withAbuse } from "./middlewares/abuse";
 import { withAuthRouting } from "./middlewares/auth";
-import { jwtVerify } from "jose";
-import { encode } from "next-auth/jwt";
 
 export default withAuth(
     async function middleware(req: NextRequestWithAuth) {
