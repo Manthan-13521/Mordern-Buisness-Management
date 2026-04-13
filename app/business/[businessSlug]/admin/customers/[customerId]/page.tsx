@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Fragment } from "react";
 import { 
   Clock, 
   ShoppingBag, 
@@ -419,8 +419,8 @@ export default function CustomerDetailPage() {
                 <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide">Product Name</th>
                 <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide text-right">Qty</th>
                 <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide text-right">Price</th>
+                <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide text-right">Transportation</th>
                 <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide text-right">Total Price</th>
-                <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide text-right">Paid Amt</th>
                 <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide text-right">Receipt</th>
               </tr>
             </thead>
@@ -428,78 +428,98 @@ export default function CustomerDetailPage() {
               {history.length > 0 ? history.map((entry: any, i) => {
                 const isSale = entry.category === 'SALE';
                 return (
-                  <tr key={i} className={clsx(
-                    "transition-colors group border-b border-slate-800 last:border-0",
-                    isSale ? "hover:bg-[#8b5cf6]/5" : "bg-[#00ff00]/35 hover:bg-[#00ff00]/45"
-                  )}>
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-5 h-5 text-[#9ca3af]" />
-                        <p className="text-base font-semibold text-white">{new Date(entry.date).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}</p>
-                      </div>
-                    </td>
-                    {isSale ? (
-                      <>
-                        <td className="px-6 py-5">
-                          <div className="flex items-center gap-3">
-                            <div className={clsx(
-                              "w-12 h-12 rounded-xl flex items-center justify-center transition-all bg-[#020617] border border-[#1f2937]",
-                              "text-[#38bdf8] group-hover:text-[#38bdf8]"
-                            )}>
-                              <ShoppingBag className="w-5 h-5" />
+                  <Fragment key={i}>
+                    <tr className={clsx(
+                      "transition-colors group border-b border-slate-800 last:border-0",
+                      isSale ? "hover:bg-[#8b5cf6]/5" : "bg-[#00ff00]/35 hover:bg-[#00ff00]/45"
+                    )}>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-5 h-5 text-[#9ca3af]" />
+                          <p className="text-base font-semibold text-white">{new Date(entry.date).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}</p>
+                        </div>
+                      </td>
+                      {isSale ? (
+                        <>
+                          <td className="px-6 py-5">
+                            <div className="flex items-center gap-3">
+                              <div className={clsx(
+                                "w-12 h-12 rounded-xl flex items-center justify-center transition-all bg-[#020617] border border-[#1f2937]",
+                                "text-[#38bdf8] group-hover:text-[#38bdf8]"
+                              )}>
+                                <ShoppingBag className="w-5 h-5" />
+                              </div>
+                              <div>
+                                <p className="text-base font-semibold text-white">
+                                  {entry.items?.map((it:any)=>it.name).join(', ') || 'Purchase'}
+                                </p>
+                                {entry.transactionType === 'received' && (
+                                  <p className="text-[10px] font-bold text-[#8b5cf6] uppercase tracking-widest mt-0.5">Business Purchase</p>
+                                )}
+                              </div>
                             </div>
-                            <div>
-                              <p className="text-base font-semibold text-white">
-                                {entry.items?.map((it:any)=>it.name).join(', ') || 'Purchase'}
-                              </p>
-                              {entry.transactionType === 'received' && (
-                                <p className="text-[10px] font-bold text-[#8b5cf6] uppercase tracking-widest mt-0.5">Business Purchase</p>
-                              )}
-                            </div>
-                          </div>
+                          </td>
+                          <td className="px-6 py-5 text-right font-medium text-base text-white">
+                            {entry.items?.[0] ? entry.items[0].qty : ''}
+                          </td>
+                          <td className="px-6 py-5 text-right font-medium text-base text-white">
+                            {entry.items?.[0] ? `₹${entry.items[0].price.toLocaleString()}` : ''}
+                          </td>
+                          <td className="px-6 py-5 text-right font-medium text-base text-[#9ca3af]">
+                            {entry.transportationCost ? `₹${entry.transportationCost.toLocaleString()}` : '—'}
+                          </td>
+                          <td className={clsx(
+                            "px-6 py-5 text-right font-semibold text-lg",
+                            entry.transactionType !== 'received' ? "text-[#ef4444]" : "text-[#22c55e]"
+                          )}>
+                            {entry.transactionType !== 'received' ? `₹${entry.amount.toLocaleString()}` : ''}
+                          </td>
+                        </>
+                      ) : (
+                        <td colSpan={5} className="px-6 py-5 text-center">
+                          <p className="text-lg font-bold text-white uppercase tracking-widest">
+                            ₹{entry.amount.toLocaleString()} {entry.transactionType === 'received' ? 'payment received from customer' : 'payment sent to customer'}
+                          </p>
+                          {entry.notes && (
+                            <p className="text-xs font-medium text-slate-300 mt-1 opacity-80">{entry.notes}</p>
+                          )}
                         </td>
-                        <td className="px-6 py-5 text-right font-medium text-base text-white">
-                          {entry.items?.[0] ? entry.items[0].qty : ''}
-                        </td>
-                        <td className="px-6 py-5 text-right font-medium text-base text-white">
-                          {entry.items?.[0] ? `₹${entry.items[0].price.toLocaleString()}` : ''}
-                        </td>
-                        <td className={clsx(
-                          "px-6 py-5 text-right font-semibold text-lg",
-                          entry.transactionType !== 'received' ? "text-[#ef4444]" : "text-[#22c55e]"
-                        )}>
-                          {entry.transactionType !== 'received' ? `₹${entry.amount.toLocaleString()}` : ''}
-                        </td>
-                        <td className="px-6 py-5 text-right font-bold text-[22.5px] text-[#22c55e]">
-                          {isSale && entry.paidAmount > 0 ? `₹${entry.paidAmount.toLocaleString()}` : isSale ? <span className="text-slate-700 text-sm">₹0</span> : ''}
-                        </td>
-                      </>
-                    ) : (
-                      <td colSpan={5} className="px-6 py-5 text-center">
-                        <p className="text-lg font-bold text-white uppercase tracking-widest">
-                          ₹{entry.amount.toLocaleString()} {entry.transactionType === 'received' ? 'payment received from customer' : 'payment sent to customer'}
-                        </p>
-                        {entry.notes && (
-                          <p className="text-xs font-medium text-slate-300 mt-1 opacity-80">{entry.notes}</p>
+                      )}
+                      <td className="px-6 py-5 text-right">
+                        {entry.receiptUrl ? (
+                          <a 
+                            href={entry.receiptUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="p-2 inline-flex items-center justify-center bg-[#111827] border border-[#1f2937] text-[#9ca3af] hover:text-[#8b5cf6] hover:border-[#8b5cf6]/50 rounded-lg transition-all"
+                            title="View Receipt"
+                          >
+                            <Eye className="w-5 h-5" />
+                          </a>
+                        ) : (
+                          <span className="text-[10px] font-bold text-[#1f2937] uppercase tracking-widest">No File</span>
                         )}
                       </td>
+                    </tr>
+                    {isSale && entry.paidAmount > 0 && (
+                      <tr className="transition-colors group border-b border-slate-800 last:border-0 bg-[#00ff00]/35 hover:bg-[#00ff00]/45">
+                        <td className="px-6 py-5">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-5 h-5 text-[#9ca3af]" />
+                            <p className="text-base font-semibold text-white">{new Date(entry.date).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}</p>
+                          </div>
+                        </td>
+                        <td colSpan={5} className="px-6 py-5 text-center">
+                          <p className="text-lg font-bold text-white uppercase tracking-widest">
+                            ₹{entry.paidAmount.toLocaleString()} payment received during sale
+                          </p>
+                        </td>
+                        <td className="px-6 py-5 text-right">
+                          <span className="text-[10px] font-bold text-[#1f2937] uppercase tracking-widest">Included Above</span>
+                        </td>
+                      </tr>
                     )}
-                    <td className="px-6 py-5 text-right">
-                      {entry.receiptUrl ? (
-                        <a 
-                          href={entry.receiptUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="p-2 inline-flex items-center justify-center bg-[#111827] border border-[#1f2937] text-[#9ca3af] hover:text-[#8b5cf6] hover:border-[#8b5cf6]/50 rounded-lg transition-all"
-                          title="View Receipt"
-                        >
-                          <Eye className="w-5 h-5" />
-                        </a>
-                      ) : (
-                        <span className="text-[10px] font-bold text-[#1f2937] uppercase tracking-widest">No File</span>
-                      )}
-                    </td>
-                  </tr>
+                  </Fragment>
                 );
               }) : (
                 <tr>

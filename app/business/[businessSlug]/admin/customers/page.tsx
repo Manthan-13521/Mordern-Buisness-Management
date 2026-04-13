@@ -321,22 +321,11 @@ export default function CustomersPage() {
                       </td>
                       <td className="px-6 py-[53px] text-right">
                         <div className="flex items-center justify-end gap-3">
-                          <button 
-                            onClick={() => {
-                              setSelectedCustomer(customer);
-                              setTransactionType("receive");
-                              setShowTransactionModal(true);
-                            }}
-                            className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white text-sm font-semibold rounded-lg transition-all shadow-sm"
-                          >
-                            <Plus className="w-4 h-4 flex-shrink-0" />
-                            <span className="text-[1.05rem]">Add</span>
-                          </button>
                           <Link 
                             href={`/business/${businessSlug}/admin/customers/${customer._id}`}
-                            className="inline-flex items-center justify-center p-2.5 bg-[#111827] hover:bg-[#1f2937] text-[#9ca3af] hover:text-white rounded-lg transition-all border border-[#1f2937]"
+                            className="inline-flex items-center gap-1.5 px-6 py-2.5 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white text-sm font-bold rounded-lg transition-all shadow-sm"
                           >
-                            <ChevronRight className="w-5 h-5" />
+                            <span className="text-[1.05rem]">Details</span>
                           </Link>
                         </div>
                       </td>
