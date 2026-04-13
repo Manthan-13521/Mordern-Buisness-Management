@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessCustomer } from "@/models/BusinessCustomer";
 import { requireBusinessId } from "@/lib/tenant";
@@ -9,10 +8,10 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
     try {
-        const session = await getServerSession(authOptions);
+        const user = await resolveUser(req);
         let businessId;
         try {
-            businessId = requireBusinessId(session?.user);
+            businessId = requireBusinessId(user);
         } catch (err: any) {
             return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
         }
@@ -21,7 +20,7 @@ export async function GET(req: Request) {
         console.info(JSON.stringify({
             type: "BUSINESS_CUSTOMERS_LIST",
             businessId,
-            userId: session?.user?.id,
+            userId: user.id,
             route: "/api/business/customers",
             method: "GET",
             timestamp: new Date().toISOString()
@@ -118,8 +117,8 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session || session.user.role !== "business_admin") {
+        const user = await resolveUser(req);
+        if (!user || user.role !== "business_admin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -128,7 +127,7 @@ export async function POST(req: Request) {
 
         let businessId;
         try {
-            businessId = requireBusinessId(session?.user);
+            businessId = requireBusinessId(user);
         } catch (err: any) {
             return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
         }
@@ -141,7 +140,7 @@ export async function POST(req: Request) {
         console.info(JSON.stringify({
             type: "BUSINESS_CUSTOMER_CREATE",
             businessId,
-            userId: session?.user?.id,
+            userId: user.id,
             route: "/api/business/customers",
             method: "POST",
             timestamp: new Date().toISOString()

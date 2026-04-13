@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { Plan } from "@/models/Plan";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
 import { PlanSchema } from "@/lib/validators";
 import { secureUpdateById } from "@/lib/tenantSecurity";
 
@@ -13,8 +13,8 @@ export async function PUT(
     try {
         await dbConnect();
 
-        const session = await getServerSession(authOptions);
-        if (!session?.user || session.user.role !== "admin") {
+        const user = await resolveUser(req);
+        if (!user || user.role !== "admin") {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
@@ -48,7 +48,7 @@ export async function PUT(
             updateFields.messages = body.messages;
         }
 
-        const updatedPlan = await secureUpdateById(Plan, id, { $set: updateFields }, session.user);
+        const updatedPlan = await secureUpdateById(Plan, id, { $set: updateFields }, user);
 
         if (!updatedPlan) {
             return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
@@ -68,8 +68,8 @@ export async function DELETE(
     try {
         await dbConnect();
 
-        const session = await getServerSession(authOptions);
-        if (!session?.user || session.user.role !== "admin") {
+        const user = await resolveUser(req);
+        if (!user || user.role !== "admin") {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
@@ -80,7 +80,7 @@ export async function DELETE(
 
         // Soft-delete: set deletedAt timestamp so it disappears from charts
         // but historical data (member records, payments) stays intact
-        const softDeleted = await secureUpdateById(Plan, id, { $set: { deletedAt: new Date() } }, session.user);
+        const softDeleted = await secureUpdateById(Plan, id, { $set: { deletedAt: new Date() } }, user);
 
         if (!softDeleted) {
             return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });

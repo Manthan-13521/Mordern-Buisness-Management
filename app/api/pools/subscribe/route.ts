@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { Pool } from "@/models/Pool";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -44,10 +44,10 @@ export async function POST(req: NextRequest) {
     try {
         await dbConnect();
 
-        const session = await getServerSession(authOptions) as any;
+        const user = await resolveUser(req) as any;
 
         // Allow superadmin OR authenticated admins upgrading their own pool
-        if (!session?.user) {
+        if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Admins can only upgrade their own pool
-        if (session.user.role !== "superadmin" && session.user.poolId !== poolId) {
+        if (user.role !== "superadmin" && user.poolId !== poolId) {
             return NextResponse.json({ error: "Forbidden — you can only manage your own pool" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
@@ -119,15 +119,15 @@ export async function GET(req: NextRequest) {
     try {
         await dbConnect();
 
-        const session = await getServerSession(authOptions) as any;
-        if (!session?.user) {
+        const user = await resolveUser(req) as any;
+        if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const url    = new URL(req.url);
-        const poolId = session.user.role === "superadmin"
+        const poolId = user.role === "superadmin"
             ? (url.searchParams.get("poolId") ?? undefined)
-            : session.user.poolId;
+            : user.poolId;
 
         if (!poolId) {
             return NextResponse.json({ error: "No poolId available" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { Staff } from "@/models/Staff";
 import { StaffAttendance } from "@/models/StaffAttendance";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -17,8 +17,8 @@ export async function GET(req: NextRequest) {
     try {
         await dbConnect();
 
-        const session = await getServerSession(authOptions);
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const user = await resolveUser(req);
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const { searchParams } = new URL(req.url);
         const page    = Math.max(1, Number(searchParams.get("page")  ?? 1));
@@ -27,9 +27,9 @@ export async function GET(req: NextRequest) {
         const staffId = searchParams.get("staffId");
         const monthParam = searchParams.get("month"); // 1-12
         const yearParam  = searchParams.get("year");
-        const poolId  = session.user.role === "superadmin"
-            ? (searchParams.get("poolId") ?? session.user.poolId)
-            : session.user.poolId;
+        const poolId  = user.role === "superadmin"
+            ? (searchParams.get("poolId") ?? user.poolId)
+            : user.poolId;
 
         let since: Date;
         let until: Date | undefined;
@@ -74,13 +74,13 @@ export async function POST(req: Request) {
     try {
         await dbConnect();
 
-        const session = await getServerSession(authOptions);
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const user = await resolveUser(req);
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const body = await req.json();
         const { staffId, method, type } = body;
 
-        const poolId = session.user.poolId;
+        const poolId = user.poolId;
 
         if (!poolId || !staffId || !method || !type) {
             return NextResponse.json({ error: "Missing fields: staffId, method, type" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });

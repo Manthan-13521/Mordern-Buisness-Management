@@ -1,18 +1,17 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { listBackups } from "@/lib/s3";
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
-    const session = await getServerSession(authOptions);
-    if (!session?.user || (session.user.role !== "admin" && session.user.role !== "superadmin")) {
+    const user = await resolveUser(req);
+    if (!user || (user.role !== "admin" && user.role !== "superadmin")) {
         return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 
     try {
-        const poolFolder = session.user.role === "superadmin" ? "superadmin" : session.user.poolId;
+        const poolFolder = user.role === "superadmin" ? "superadmin" : user.poolId;
         if (!poolFolder) {
              return NextResponse.json({ error: "No pool assigned" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }

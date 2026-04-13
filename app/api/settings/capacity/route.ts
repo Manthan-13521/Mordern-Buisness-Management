@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { Settings, getSettings } from "@/models/Settings";
 import { Pool } from "@/models/Pool";
 import { PoolSession } from "@/models/PoolSession";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
 import { SettingsCapacitySchema } from "@/lib/validators";
 import { apiError } from "@/lib/apiError";
 
@@ -13,10 +13,10 @@ export const revalidate = 0;
 
 export async function GET(req: Request) {
     try {
-        const [, settings, session] = await Promise.all([
+        const [, settings, user] = await Promise.all([
             dbConnect(),
             getSettings(),
-            getServerSession(authOptions),
+            resolveUser(req),
         ]);
 
         const url = new URL(req.url);
@@ -27,8 +27,8 @@ export async function GET(req: Request) {
 
         if (poolslug) {
             pool = await Pool.findOne({ slug: poolslug }).select("capacity slug poolName adminEmail plan subscriptionStatus subscriptionEndsAt isTwilioConnected").lean();
-        } else if (session?.user?.poolId) {
-            pool = await Pool.findOne({ poolId: session.user.poolId }).select("capacity slug poolName adminEmail plan subscriptionStatus subscriptionEndsAt isTwilioConnected").lean();
+        } else if (user?.poolId) {
+            pool = await Pool.findOne({ poolId: user.poolId }).select("capacity slug poolName adminEmail plan subscriptionStatus subscriptionEndsAt isTwilioConnected").lean();
         }
 
         if (pool) {
@@ -59,11 +59,11 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
     try {
-        const [, session] = await Promise.all([
+        const [, user] = await Promise.all([
             dbConnect(),
-            getServerSession(authOptions),
+            resolveUser(req),
         ]);
-        if (!session?.user || !["admin", "superadmin"].includes(session.user.role)) {
+        if (!user || !["admin", "superadmin"].includes(user.role)) {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
@@ -80,8 +80,8 @@ export async function POST(req: Request) {
             let pool = null;
             if (poolslug) {
                 pool = await Pool.findOne({ slug: poolslug });
-            } else if (session.user.poolId) {
-                pool = await Pool.findOne({ poolId: session.user.poolId });
+            } else if (user.poolId) {
+                pool = await Pool.findOne({ poolId: user.poolId });
             }
 
             if (pool) {
@@ -102,8 +102,8 @@ export async function POST(req: Request) {
             if (poolslug) {
                 const poolDoc = await Pool.findOne({ slug: poolslug }).select("poolId").lean();
                 if (poolDoc) poolId = (poolDoc as any).poolId;
-            } else if (session.user.poolId) {
-                poolId = session.user.poolId;
+            } else if (user.poolId) {
+                poolId = user.poolId;
             }
 
             if (poolId) {

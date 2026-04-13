@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessTransaction } from "@/models/BusinessTransaction";
 import { BusinessCustomer } from "@/models/BusinessCustomer";
@@ -12,11 +11,11 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
     const start = Date.now();
     try {
-        const session = await getServerSession(authOptions);
+        const user = await resolveUser(req);
         
         let businessId;
         try {
-            businessId = requireBusinessId(session?.user);
+            businessId = requireBusinessId(user);
         } catch (err: any) {
             return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
         }
@@ -33,7 +32,7 @@ export async function GET(req: Request) {
         console.info(JSON.stringify({
             type: "BUSINESS_ANALYTICS_QUERY",
             businessId,
-            userId: session?.user?.id,
+            userId: user.id,
             route: "/api/business/analytics",
             method: "GET",
             timestamp: new Date().toISOString()

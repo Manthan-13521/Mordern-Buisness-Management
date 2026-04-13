@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
 
 /**
  * GET /api/export/members
@@ -11,18 +11,18 @@ import { authOptions } from "@/lib/auth";
  */
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
         await dbConnect();
 
-        const session = await getServerSession(authOptions);
-        if (!session?.user || !["admin", "superadmin"].includes(session.user.role)) {
+        const user = await resolveUser(req);
+        if (!user || !["admin", "superadmin"].includes(user.role)) {
             return NextResponse.json({ error: "Unauthorized: Admins only" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const query: Record<string, unknown> = {};
-        if (session.user.role !== "superadmin") {
-            query.poolId = session.user.poolId || "UNASSIGNED_POOL";
+        if (user.role !== "superadmin") {
+            query.poolId = user.poolId || "UNASSIGNED_POOL";
         }
 
         const populateFields = "name price";

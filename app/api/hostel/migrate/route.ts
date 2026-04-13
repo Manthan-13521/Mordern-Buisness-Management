@@ -2,44 +2,27 @@ import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { HostelMember } from "@/models/HostelMember";
 import { HostelPlan } from "@/models/HostelPlan";
-import { getToken } from "next-auth/jwt";
-import { jwtVerify } from "jose";
-
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 export const dynamic = "force-dynamic";
 
 // POST /api/hostel/migrate
 // One-time script to migrate the database schema
 export async function POST(req: Request) {
     try {
-                const authHeader = req.headers.get("authorization");
-        let token = null;
-
-        if (authHeader?.startsWith("Bearer ")) {
-            try {
-                const bearerToken = authHeader.split(" ")[1];
-                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-                const { payload } = await jwtVerify(bearerToken, secret);
-                token = payload;
-            } catch (e) {}
-        }
-
-        if (!token) {
-            token = await getToken({ req: req as any });
-        }
-
+        const user = await resolveUser(req);
         await dbConnect();
 
-        if (!token || token.role !== "superadmin") {
+        if (!user || user.role !== "superadmin") {
             // allowing hostel_admin to trigger it for their own hostel for testing
-            if (token?.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            if (user ?.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         
         await dbConnect();
 
         // If migrating all hostels, remove hostelId filter. For scope isolation, let's keep it to user's hostel if they are hostel_admin
         const filter: any = {};
-        if (token.role === "hostel_admin") {
-            filter.hostelId = token.hostelId;
+        if (user.role === "hostel_admin") {
+            filter.hostelId = user.hostelId;
         }
 
         const members = await HostelMember.find(filter).lean() as any[];

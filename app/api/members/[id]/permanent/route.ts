@@ -2,13 +2,10 @@ import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
-import { getServerSession } from "next-auth";
-import { jwtVerify } from "jose";
-import { authOptions } from "@/lib/auth";
 import { secureFindById } from "@/lib/tenantSecurity";
 import { invalidateCache } from "@/lib/membersCache";
 import { deleteS3Object } from "@/lib/s3";
-
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
@@ -19,38 +16,20 @@ export async function DELETE(req: Request, props: RouteContext) {
     try {
         await dbConnect();
 
-                const authHeader = req.headers.get("authorization");
-        let token = null;
-
-        if (authHeader?.startsWith("Bearer ")) {
-            try {
-                const bearerToken = authHeader.split(" ")[1];
-                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-                const { payload } = await jwtVerify(bearerToken, secret);
-                token = payload;
-            } catch (e) {}
-        }
-
-        if (!token) {
-            const session = await getServerSession(authOptions);
-        token = session?.user || null;
-        }
-
-        await dbConnect();
-
-        const session = { user: token }; // Mock session for compatibility
-        if (!session?.user || session.user.role !== "admin") {
+                const user = await resolveUser(req);
+                await dbConnect();
+        if (!user || user.role !== "admin") {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const { id } = await props.params;
         if (!id) return NextResponse.json({ error: "Missing member ID" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
-        let member: any = await secureFindById(Member, id, session.user);
+        let member: any = await secureFindById(Member, id, user);
         let Model: any = Member;
         
         if (!member) {
-            member = await secureFindById(EntertainmentMember, id, session.user);
+            member = await secureFindById(EntertainmentMember, id, user);
             Model = EntertainmentMember;
         }
 

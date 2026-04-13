@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { Business } from "@/models/Business";
 import { User } from "@/models/User";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 
-export async function GET() {
+
+export async function GET(req: Request) {
     try {
         await dbConnect();
 
-        const session = await getServerSession(authOptions);
-        if (!session?.user || (session.user as any).role !== "superadmin") {
+        const user = await resolveUser(req);
+        if (!user || user.role !== "superadmin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 

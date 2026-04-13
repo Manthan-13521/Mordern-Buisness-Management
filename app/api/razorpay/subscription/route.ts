@@ -1,23 +1,23 @@
 import { NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
 import { redis } from "@/lib/redis";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
     try {
-        const [session, body] = await Promise.all([
-            getServerSession(authOptions),
+        const [user, body] = await Promise.all([
+            resolveUser(req),
             req.json()
         ]);
 
         // ── C-1 FIX: Hard auth guard — always required ─────────────────────
-        if (!session?.user) {
+        if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-        const isSuperAdmin = (session.user as any).role === "superadmin";
+        const isSuperAdmin = user.role === "superadmin";
 
         await dbConnect();
 
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
         // ── C-1 FIX: Non-superadmins can only activate their own org ────────
         if (!isSuperAdmin) {
             const ownerId = org.ownerId?.toString();
-            const userId = (session.user as any).id || (session.user as any)._id;
+            const userId = user.id || user._id;
             if (!ownerId || ownerId !== userId?.toString()) {
                 return NextResponse.json({ error: "Forbidden: you can only manage your own organization" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }

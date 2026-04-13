@@ -1,17 +1,17 @@
 import { NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { Business } from "@/models/Business";
 import { User } from "@/models/User";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
 import { BusinessTransaction } from "@/models/BusinessTransaction";
 import { BusinessCustomer } from "@/models/BusinessCustomer";
 
 export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
     try {
         await dbConnect();
-        const session = await getServerSession(authOptions);
-        if (!session?.user || (session.user as any).role !== "superadmin") {
+        const user = await resolveUser(req);
+        if (!user || user.role !== "superadmin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -43,8 +43,8 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
 export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
     try {
         await dbConnect();
-        const session = await getServerSession(authOptions);
-        if (!session?.user || (session.user as any).role !== "superadmin") {
+        const user = await resolveUser(req);
+        if (!user || user.role !== "superadmin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -71,8 +71,8 @@ export async function PATCH(req: Request, props: { params: Promise<{ id: string 
 export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
     try {
         await dbConnect();
-        const session = await getServerSession(authOptions);
-        if (!session?.user || (session.user as any).role !== "superadmin") {
+        const user = await resolveUser(req);
+        if (!user || user.role !== "superadmin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 

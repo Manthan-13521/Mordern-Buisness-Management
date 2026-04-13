@@ -1,26 +1,26 @@
 import { NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { Plan } from "@/models/Plan";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
         await dbConnect();
 
-        const session = await getServerSession(authOptions);
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const user = await resolveUser(req);
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         // Ensure Plan model is loaded before populate
         await Plan.findOne({}).lean();
 
         const now = new Date();
 
-        const baseMatch = session.user.role !== "superadmin" ? { poolId: session.user.poolId || "UNASSIGNED_POOL" } : {};
+        const baseMatch = user.role !== "superadmin" ? { poolId: user.poolId || "UNASSIGNED_POOL" } : {};
 
         // Find all active members past expiry
         const expiredMembersRaw = await Member.find({

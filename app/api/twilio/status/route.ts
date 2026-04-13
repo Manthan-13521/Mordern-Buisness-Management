@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
 import { Pool } from "@/models/Pool";
 
 export const dynamic = "force-dynamic";
@@ -11,15 +11,15 @@ export const dynamic = "force-dynamic";
  * Returns Twilio connection status for the authenticated pool.
  * NEVER returns the auth token or encrypted data.
  */
-export async function GET() {
+export async function GET(req: Request) {
     try {
-        const [, session] = await Promise.all([dbConnect(), getServerSession(authOptions)]);
+        const [, user] = await Promise.all([dbConnect(), resolveUser(req)]);
 
-        if (!session?.user || session.user.role !== "admin") {
+        if (!user || user.role !== "admin") {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
-        const pool = await Pool.findOne({ poolId: session.user.poolId })
+        const pool = await Pool.findOne({ poolId: user.poolId })
             .select("isTwilioConnected twilio.sid twilio.whatsappNumber")
             .lean() as any;
 

@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
-import { getServerSession } from "next-auth";
-import { jwtVerify } from "jose";
-import { authOptions } from "@/lib/auth";
 import { auditCrossTenantAccess, secureFindById, secureUpdateById, secureDeleteById } from "@/lib/tenantSecurity";
-
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -21,35 +18,17 @@ export async function GET(_req: Request, props: RouteContext) {
     try {
         await dbConnect();
 
-                const authHeader = req.headers.get("authorization");
-        let token = null;
-
-        if (authHeader?.startsWith("Bearer ")) {
-            try {
-                const bearerToken = authHeader.split(" ")[1];
-                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-                const { payload } = await jwtVerify(bearerToken, secret);
-                token = payload;
-            } catch (e) {}
-        }
-
-        if (!token) {
-            const session = await getServerSession(authOptions);
-        token = session?.user || null;
-        }
-
-        await dbConnect();
-
-        const session = { user: token }; // Mock session for compatibility
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+                const user = await resolveUser(req);
+                await dbConnect();
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const { id } = await props.params;
 
         const populateFields = "name price durationDays durationHours durationMinutes hasTokenPrint quickDelete hasEntertainment hasFaceScan";
-        let member = await secureFindById(Member, id, session.user, { select: "+photoUrl", populate: { path: "planId", select: populateFields } });
+        let member = await secureFindById(Member, id, user, { select: "+photoUrl", populate: { path: "planId", select: populateFields } });
 
         if (!member) {
-            member = await secureFindById(EntertainmentMember, id, session.user, { select: "+photoUrl", populate: { path: "planId", select: populateFields } });
+            member = await secureFindById(EntertainmentMember, id, user, { select: "+photoUrl", populate: { path: "planId", select: populateFields } });
         }
 
         if (!member) return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
@@ -69,27 +48,9 @@ export async function PATCH(req: Request, props: RouteContext) {
     try {
         await dbConnect();
 
-                const authHeader = req.headers.get("authorization");
-        let token = null;
-
-        if (authHeader?.startsWith("Bearer ")) {
-            try {
-                const bearerToken = authHeader.split(" ")[1];
-                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-                const { payload } = await jwtVerify(bearerToken, secret);
-                token = payload;
-            } catch (e) {}
-        }
-
-        if (!token) {
-            const session = await getServerSession(authOptions);
-        token = session?.user || null;
-        }
-
-        await dbConnect();
-
-        const session = { user: token }; // Mock session for compatibility
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+                const user = await resolveUser(req);
+                await dbConnect();
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const { id } = await props.params;
 
@@ -97,10 +58,10 @@ export async function PATCH(req: Request, props: RouteContext) {
         const { isDeleted, deletedAt, memberId, poolId, ...safeUpdates } = body;
 
         // ── Ownership check: strictly scoped via secure wrapper ──
-        let member = await secureUpdateById(Member, id, { $set: safeUpdates }, session.user, { populate: { path: "planId", select: "name price hasTokenPrint" } });
+        let member = await secureUpdateById(Member, id, { $set: safeUpdates }, user, { populate: { path: "planId", select: "name price hasTokenPrint" } });
 
         if (!member) {
-            member = await secureUpdateById(EntertainmentMember, id, { $set: safeUpdates }, session.user, { populate: { path: "planId", select: "name price hasTokenPrint" } });
+            member = await secureUpdateById(EntertainmentMember, id, { $set: safeUpdates }, user, { populate: { path: "planId", select: "name price hasTokenPrint" } });
         }
 
         if (!member) return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
@@ -120,27 +81,9 @@ export async function DELETE(req: Request, props: RouteContext) {
     try {
         await dbConnect();
 
-                const authHeader = req.headers.get("authorization");
-        let token = null;
-
-        if (authHeader?.startsWith("Bearer ")) {
-            try {
-                const bearerToken = authHeader.split(" ")[1];
-                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-                const { payload } = await jwtVerify(bearerToken, secret);
-                token = payload;
-            } catch (e) {}
-        }
-
-        if (!token) {
-            const session = await getServerSession(authOptions);
-        token = session?.user || null;
-        }
-
-        await dbConnect();
-
-        const session = { user: token }; // Mock session for compatibility
-        if (!session?.user || session.user.role !== "admin") {
+                const user = await resolveUser(req);
+                await dbConnect();
+        if (!user || user.role !== "admin") {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
@@ -150,15 +93,15 @@ export async function DELETE(req: Request, props: RouteContext) {
 
         
         // 1. Hard Delete
-        let deleted = await secureDeleteById(Member, id, session.user);
+        let deleted = await secureDeleteById(Member, id, user);
         if (!deleted) {
-            deleted = await secureDeleteById(EntertainmentMember, id, session.user);
+            deleted = await secureDeleteById(EntertainmentMember, id, user);
         }
 
         if (!deleted) {
             // Log intrusion if existed in another pool
-            await auditCrossTenantAccess(Member, id, session.user);
-            await auditCrossTenantAccess(EntertainmentMember, id, session.user);
+            await auditCrossTenantAccess(Member, id, user);
+            await auditCrossTenantAccess(EntertainmentMember, id, user);
             return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 

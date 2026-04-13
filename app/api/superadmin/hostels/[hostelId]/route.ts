@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
-import { getToken } from "next-auth/jwt";
+
 import { Hostel } from "@/models/Hostel";
 import { User } from "@/models/User";
 import bcrypt from "bcryptjs";
@@ -10,9 +11,9 @@ export const dynamic = "force-dynamic";
 // GET /api/superadmin/hostels/[hostelId] — single hostel detail
 export async function GET(req: Request, { params }: { params: Promise<{ hostelId: string }> }) {
     try {
-        const [token, { hostelId }] = await Promise.all([getToken({ req: req as any }), params]);
+        const [user, { hostelId }] = await Promise.all([resolveUser(req), params]);
         await dbConnect();
-        if (!token || token.role !== "superadmin") {
+        if (!user || user.role !== "superadmin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -30,9 +31,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ hostelId
 // PATCH /api/superadmin/hostels/[hostelId] — update status / metadata / reset password
 export async function PATCH(req: Request, { params }: { params: Promise<{ hostelId: string }> }) {
     try {
-        const [token, { hostelId }, body] = await Promise.all([getToken({ req: req as any }), params, req.json()]);
+        const [user, { hostelId }, body] = await Promise.all([resolveUser(req), params, req.json()]);
         await dbConnect();
-        if (!token || token.role !== "superadmin") {
+        if (!user || user.role !== "superadmin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -84,10 +85,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ hostel
 // DELETE /api/superadmin/hostels/[hostelId] — cascade delete hostel and all associated data
 export async function DELETE(req: Request, { params }: { params: Promise<{ hostelId: string }> }) {
     try {
-        const [token, { hostelId }] = await Promise.all([getToken({ req: req as any }), params]);
+        const [user, { hostelId }] = await Promise.all([resolveUser(req), params]);
         await dbConnect();
 
-        if (!token || token.role !== "superadmin") {
+        if (!user || user.role !== "superadmin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 

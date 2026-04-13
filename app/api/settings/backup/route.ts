@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { Plan } from "@/models/Plan";
@@ -6,10 +7,9 @@ import { Member } from "@/models/Member";
 import { Payment } from "@/models/Payment";
 import { EntryLog } from "@/models/EntryLog";
 import { NotificationLog } from "@/models/NotificationLog";
-import { getServerSession } from "next-auth";
-import type { Session } from "next-auth";
+
+
 import { requireCronAuth } from "@/lib/requireCronAuth";
-import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -17,15 +17,15 @@ export const revalidate = 0;
 export async function GET(req: Request) {
     // Allow Cron Jobs with Secret OR Authenticated Admins
     let isAuthorized = false;
-    let session: Session | null = null;
+    let user: AuthUser | null = null;
 
     const cronErr = requireCronAuth(req);
     if (!cronErr) {
         isAuthorized = true;
     } else {
         await dbConnect();
-        session = await getServerSession(authOptions);
-        if (session?.user && session.user.role === "admin") {
+        user = await resolveUser(req);
+        if (user && user.role === "admin") {
             isAuthorized = true;
         }
     }
@@ -38,8 +38,8 @@ export async function GET(req: Request) {
         await dbConnect();
         
         // Ensure pool separation for non-superadmins
-        const baseMatch = session?.user && session.user.role !== "superadmin" && session.user.poolId 
-            ? { poolId: session.user.poolId } : {};
+        const baseMatch = user && user.role !== "superadmin" && user.poolId 
+            ? { poolId: user.poolId } : {};
 
         // Fetch all records from all collections
         const [users, plans, members, payments, entries, notifications] = await Promise.all([

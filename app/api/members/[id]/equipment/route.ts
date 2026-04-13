@@ -2,12 +2,9 @@ import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
-import { getServerSession } from "next-auth";
-import { jwtVerify } from "jose";
-import { authOptions } from "@/lib/auth";
 import { auditCrossTenantAccess, secureUpdateById } from "@/lib/tenantSecurity";
 import { getTenantFilter } from "@/lib/tenant";
-
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
@@ -19,27 +16,9 @@ export async function POST(req: Request, props: RouteContext) {
     try {
         await dbConnect();
 
-                const authHeader = req.headers.get("authorization");
-        let token = null;
-
-        if (authHeader?.startsWith("Bearer ")) {
-            try {
-                const bearerToken = authHeader.split(" ")[1];
-                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-                const { payload } = await jwtVerify(bearerToken, secret);
-                token = payload;
-            } catch (e) {}
-        }
-
-        if (!token) {
-            const session = await getServerSession(authOptions);
-        token = session?.user || null;
-        }
-
-        await dbConnect();
-
-        const session = { user: token }; // Mock session for compatibility
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+                const user = await resolveUser(req);
+                await dbConnect();
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const { id } = await props.params;
         const { itemName } = await req.json();
@@ -56,7 +35,7 @@ export async function POST(req: Request, props: RouteContext) {
                     isReturned:  false,
                 },
             },
-        }, session.user, { select: "memberId name equipmentTaken" });
+        }, user, { select: "memberId name equipmentTaken" });
 
         if (!member) {
             member = await secureUpdateById(EntertainmentMember, id, {
@@ -67,7 +46,7 @@ export async function POST(req: Request, props: RouteContext) {
                         isReturned:  false,
                     },
                 },
-            }, session.user, { select: "memberId name equipmentTaken" });
+            }, user, { select: "memberId name equipmentTaken" });
         }
 
         if (!member) return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
@@ -88,27 +67,9 @@ export async function PATCH(req: Request, props: RouteContext) {
     try {
         await dbConnect();
 
-                const authHeader = req.headers.get("authorization");
-        let token = null;
-
-        if (authHeader?.startsWith("Bearer ")) {
-            try {
-                const bearerToken = authHeader.split(" ")[1];
-                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-                const { payload } = await jwtVerify(bearerToken, secret);
-                token = payload;
-            } catch (e) {}
-        }
-
-        if (!token) {
-            const session = await getServerSession(authOptions);
-        token = session?.user || null;
-        }
-
-        await dbConnect();
-
-        const session = { user: token }; // Mock session for compatibility
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+                const user = await resolveUser(req);
+                await dbConnect();
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const { id } = await props.params;
         const { equipmentItemId } = await req.json();
@@ -117,7 +78,7 @@ export async function PATCH(req: Request, props: RouteContext) {
             return NextResponse.json({ error: "equipmentItemId is required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
-        const tenantFilter = getTenantFilter(session.user);
+        const tenantFilter = getTenantFilter(user);
 
         let member: any = await Member.findOneAndUpdate(
             { _id: id, "equipmentTaken._id": equipmentItemId, ...tenantFilter },
@@ -144,8 +105,8 @@ export async function PATCH(req: Request, props: RouteContext) {
         }
 
         if (!member) {
-            await auditCrossTenantAccess(Member, id, session.user);
-            await auditCrossTenantAccess(EntertainmentMember, id, session.user);
+            await auditCrossTenantAccess(Member, id, user);
+            await auditCrossTenantAccess(EntertainmentMember, id, user);
             return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 

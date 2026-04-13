@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
-import { getServerSession } from "next-auth";
-import type { Session } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
+
 import { dispatchJob } from "@/lib/queueAdapter";
 
 export async function POST(req: Request) {
@@ -10,17 +10,17 @@ export async function POST(req: Request) {
 
     // Allow Cron Jobs with Secret OR Authenticated Admins
     let isAuthorized = false;
-    let session: Session | null = null;
+    let user: AuthUser | null = null;
     let poolId: string | undefined;
 
     if (authHeader === `Bearer ${process.env.CRON_SECRET}`) {
         isAuthorized = true;
     } else {
         await dbConnect();
-        session = await getServerSession(authOptions);
-        if (session?.user && session.user.role === "admin") {
+        user = await resolveUser(req);
+        if (user && user.role === "admin") {
             isAuthorized = true;
-            poolId = session.user.poolId;
+            poolId = user.poolId;
         }
     }
 

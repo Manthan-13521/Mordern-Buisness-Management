@@ -1,43 +1,26 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
-import { getToken } from "next-auth/jwt";
-import { jwtVerify } from "jose";
 import { HostelMember } from "@/models/HostelMember";
 import { HostelPayment } from "@/models/HostelPayment";
 import { HostelLog } from "@/models/HostelLog";
 import { HostelAnalytics } from "@/models/HostelAnalytics";
 import mongoose from "mongoose";
-
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 export const dynamic = "force-dynamic";
 
 // POST /api/hostel/members/[id]/vacate
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-                const authHeader = req.headers.get("authorization");
-        let token = null;
-
-        if (authHeader?.startsWith("Bearer ")) {
-            try {
-                const bearerToken = authHeader.split(" ")[1];
-                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-                const { payload } = await jwtVerify(bearerToken, secret);
-                token = payload;
-            } catch (e) {}
-        }
-
-        if (!token) {
-            token = await getToken({ req: req as any });
-        }
-
+        const user = await resolveUser(req);
         await dbConnect();
         const [{ id }] = await Promise.all([params]);
         await dbConnect();
         
-        if (!token || token.role !== "hostel_admin") {
+        if (!user || user.role !== "hostel_admin") {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         
-        const hostelId = token.hostelId as string;
+        const hostelId = user.hostelId as string;
 
         const body = await req.json();
         const settleAmount = Number(body.settleAmount) || 0;
@@ -110,7 +93,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             memberObjectId: member._id,
             memberName: member.name,
             description: `Member ${member.name} (${member.memberId}) vacated their room. Rent cycle stopped. Settled amount: ₹${settleAmount}`,
-            performedBy: token.email as string,
+            performedBy: user.email as string,
         });
 
         return NextResponse.json({ success: true, member }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });

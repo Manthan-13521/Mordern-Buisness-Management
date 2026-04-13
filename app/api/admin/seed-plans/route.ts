@@ -10,9 +10,9 @@
  */
 
 import { NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
 
 export const dynamic = "force-dynamic";
 
@@ -58,10 +58,10 @@ const DEFAULT_PLANS = [
     },
 ];
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user || (session.user as any).role !== "superadmin") {
+        const user = await resolveUser(req);
+        if (!user || user.role !== "superadmin") {
             return NextResponse.json({ error: "Forbidden" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 

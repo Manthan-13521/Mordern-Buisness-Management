@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
 import { ReferralCode } from "@/models/ReferralCode";
 import { ReferralUsage } from "@/models/ReferralUsage";
 import mongoose from "mongoose";
@@ -10,8 +10,8 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user || (session.user as any).role !== "superadmin") {
+        const user = await resolveUser(req);
+        if (!user || user.role !== "superadmin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -64,8 +64,8 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user || (session.user as any).role !== "superadmin") {
+        const user = await resolveUser(req);
+        if (!user || user.role !== "superadmin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -84,7 +84,7 @@ export async function POST(req: Request) {
 
         const newCode = await ReferralCode.create({
             code,
-            createdBy: new mongoose.Types.ObjectId(session.user.id),
+            createdBy: new mongoose.Types.ObjectId(user.id),
             discountType,
             discountValue,
             maxUses: maxUses || 0,
@@ -101,8 +101,8 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user || (session.user as any).role !== "superadmin") {
+        const user = await resolveUser(req);
+        if (!user || user.role !== "superadmin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
         await dbConnect();
@@ -124,8 +124,8 @@ export async function PATCH(req: Request) {
 
 export async function DELETE(req: Request) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user || (session.user as any).role !== "superadmin") {
+        const user = await resolveUser(req);
+        if (!user || user.role !== "superadmin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
         await dbConnect();

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { PoolSession } from "@/models/PoolSession";
 import { EntryLog } from "@/models/EntryLog";
 import { Pool } from "@/models/Pool";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
 
 export const dynamic = "force-dynamic";
 
@@ -17,13 +17,13 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: NextRequest) {
     try {
-        const [, session] = await Promise.all([
+        const [, user] = await Promise.all([
             dbConnect(),
-            getServerSession(authOptions),
+            resolveUser(req),
         ]);
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
-        let poolId = session.user.poolId;
+        let poolId = user.poolId;
         const searchParams = new URL(req.url).searchParams;
         const poolslug = searchParams.get("poolslug");
 
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
         if (poolslug) {
             const poolDoc = await Pool.findOne({ slug: poolslug }).select("poolId").lean();
             if (poolDoc) poolId = (poolDoc as any).poolId;
-        } else if (session.user.role === "superadmin") {
+        } else if (user.role === "superadmin") {
             const queryId = searchParams.get("poolId");
             if (queryId) poolId = queryId;
         }

@@ -1,25 +1,22 @@
 import { NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { Feedback } from "@/models/Feedback";
+import { resolveUser } from "@/lib/authHelper";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
     try {
-        const [token, body] = await Promise.all([
-            getToken({ req: req as any }),
-            req.json(),
-            dbConnect(),
-        ]);
+        const user = await resolveUser(req);
+        const [body] = await Promise.all([req.json(), dbConnect()]);
         
-        if (!token) {
+        if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
-        const sessionUser = token as any;
-        const userId = sessionUser.id || sessionUser.sub;
-        const userName = sessionUser.name || sessionUser.email || "Unknown User";
+        const userId = user.id;
+        const userName = user.name || user.email || "Unknown User";
 
         const { type, message, screenshot, page } = body;
 

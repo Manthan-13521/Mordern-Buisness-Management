@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { Payment } from "@/models/Payment";
 import { Member } from "@/models/Member";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
 import mongoose from "mongoose";
 import { PaymentSchema } from "@/lib/validators";
 import { logger } from "@/lib/logger";
@@ -18,11 +18,11 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: Request) {
     try {
-        const [, session] = await Promise.all([
+        const [, user] = await Promise.all([
             dbConnect(),
-            getServerSession(authOptions),
+            resolveUser(req),
         ]);
-        if (!session?.user)
+        if (!user)
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const url = new URL(req.url);
@@ -33,10 +33,10 @@ export async function GET(req: Request) {
         const query: Record<string, unknown> = {};
 
         // ── Tenant isolation: non-superadmin MUST have poolId ─────────────────
-        if (session.user.role !== "superadmin" && !session.user.poolId) {
+        if (user.role !== "superadmin" && !user.poolId) {
             return NextResponse.json({ error: "No pool assigned to this account" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-        const tenantFilter = getTenantFilter(session.user);
+        const tenantFilter = getTenantFilter(user);
         Object.assign(query, tenantFilter);
 
         // Optional filters
@@ -104,11 +104,11 @@ export async function GET(req: Request) {
  */
 export async function POST(req: Request) {
     try {
-        const [, session] = await Promise.all([
+        const [, user] = await Promise.all([
             dbConnect(),
-            getServerSession(authOptions),
+            resolveUser(req),
         ]);
-        if (!session?.user)
+        if (!user)
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const body = await req.json();
@@ -132,7 +132,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "UPI payments require a transactionId" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
-        const poolId = resolvePoolId(session.user, body.poolId);
+        const poolId = resolvePoolId(user, body.poolId);
         
         // --- STEP 12 SaaS Gating: Hard Kill Switch ---
         // C-7 FIX: Offline payment syncs (identified by clientId) bypass the kill switch.
@@ -171,7 +171,7 @@ export async function POST(req: Request) {
                 if (existing) {
                     logger.audit({
                         type: "PAYMENT_DUPLICATE",
-                        userId: session.user.id,
+                        userId: user.id,
                         meta: { clientId, idempotencyKey, existingPaymentId: (existing as any)._id },
                     });
                     console.log("Duplicate prevented", { clientId, idempotencyKey });
@@ -212,13 +212,13 @@ export async function POST(req: Request) {
                     notes:            notes          || undefined,
                     idempotencyKey:   idempotencyKey || undefined,
                     clientId:         clientId       || undefined,
-                    recordedBy:       new mongoose.Types.ObjectId(session.user.id),
+                    recordedBy:       new mongoose.Types.ObjectId(user.id),
                     status:           "success",
                 });
                 
                 logger.audit({
                     type: "PAYMENT_SUCCESS",
-                    userId: session.user.id,
+                    userId: user.id,
                     poolId: poolId,
                     ip: req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown",
                     meta: { amount: Number(amount), paymentMethod, memberId },

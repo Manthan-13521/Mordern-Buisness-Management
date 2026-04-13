@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { Pool } from "@/models/Pool";
 import { Member } from "@/models/Member";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
 
 export async function DELETE(req: Request, props: { params: Promise<{ poolId: string }> }) {
     try {
         await dbConnect();
 
-        const session = await getServerSession(authOptions);
-        if (!session?.user || session.user.role !== "superadmin") {
+        const user = await resolveUser(req);
+        if (!user || user.role !== "superadmin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 

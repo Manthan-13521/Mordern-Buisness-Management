@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessAttendance } from "@/models/BusinessAttendance";
 import { requireBusinessId } from "@/lib/tenant";
@@ -11,10 +10,10 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
     try {
-        const session = await getServerSession(authOptions);
+        const user = await resolveUser(req);
         let businessId;
         try {
-            businessId = requireBusinessId(session?.user);
+            businessId = requireBusinessId(user);
         } catch (err: any) {
             return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
         }
@@ -30,7 +29,7 @@ export async function POST(req: Request) {
         console.info(JSON.stringify({
             type: "BUSINESS_ATTENDANCE_SYNC",
             businessId,
-            userId: session?.user?.id,
+            userId: user.id,
             route: "/api/business/attendance",
             method: "POST",
             timestamp: new Date().toISOString()
@@ -88,7 +87,7 @@ export async function POST(req: Request) {
                         throw err;
                     });
 
-                    // Verify we actually own this lock session
+                    // Verify we actually own this lock user
                     const lockDoc = (lock as any)?.value;
                     if (!lock || (lockDoc && lockDoc.ownerId !== instanceId)) {
                         return;
@@ -148,10 +147,10 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
     try {
-        const session = await getServerSession(authOptions);
+        const user = await resolveUser(req);
         let businessId;
         try {
-            businessId = requireBusinessId(session?.user);
+            businessId = requireBusinessId(user);
         } catch (err: any) {
             return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
         }
@@ -160,7 +159,7 @@ export async function GET(req: Request) {
         console.info(JSON.stringify({
             type: "BUSINESS_ATTENDANCE_LIST",
             businessId,
-            userId: session?.user?.id,
+            userId: user.id,
             route: "/api/business/attendance",
             method: "GET",
             timestamp: new Date().toISOString()

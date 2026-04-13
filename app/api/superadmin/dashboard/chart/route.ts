@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { SystemStats } from "@/models/SystemStats";
 
@@ -8,13 +7,13 @@ export const dynamic = "force-dynamic";
 
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user) {
+        const user = await resolveUser(req);
+        if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-        if ((session.user as any).role !== "superadmin") {
+        if (user.role !== "superadmin") {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 

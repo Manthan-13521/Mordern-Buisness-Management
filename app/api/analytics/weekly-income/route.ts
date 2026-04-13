@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -9,13 +9,13 @@ export const revalidate = 0;
 export async function GET(req: Request) {
     try {
         await dbConnect();
-        const session = await getServerSession(authOptions);
+        const user = await resolveUser(req);
 
-        if (!session?.user) {
+        if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
-        const poolId = session.user.poolId;
+        const poolId = user.poolId;
         if (!poolId) {
             return NextResponse.json({ error: "No pool assigned" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }

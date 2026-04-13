@@ -2,21 +2,18 @@ import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
-import { getServerSession } from "next-auth";
-import { jwtVerify } from "jose";
-import { authOptions } from "@/lib/auth";
 import { getTenantFilter } from "@/lib/tenant";
-
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function GET(req: Request) {
     try {
-        const [, session] = await Promise.all([
+        const [, user] = await Promise.all([
             dbConnect(),
-            getServerSession(authOptions),
+            resolveUser(req),
         ]);
-        if (!session?.user) {
+        if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
@@ -29,10 +26,10 @@ export async function GET(req: Request) {
         const now = new Date();
 
         // ── Tenant isolation guard ───────────────────────────────────────────
-        if (session.user.role !== "superadmin" && !session.user.poolId) {
+        if (user.role !== "superadmin" && !user.poolId) {
             return NextResponse.json({ error: "No pool assigned to this account" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-        const tenantFilter = getTenantFilter(session.user);
+        const tenantFilter = getTenantFilter(user);
 
         const baseMatch: any = {
             isDeleted: false,

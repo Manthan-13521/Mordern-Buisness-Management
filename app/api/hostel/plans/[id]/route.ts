@@ -1,35 +1,18 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
-import { getToken } from "next-auth/jwt";
-import { jwtVerify } from "jose";
 import { HostelPlan } from "@/models/HostelPlan";
-
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 export const dynamic = "force-dynamic";
 
 // PUT /api/hostel/plans/[id]
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-                const authHeader = req.headers.get("authorization");
-        let token = null;
-
-        if (authHeader?.startsWith("Bearer ")) {
-            try {
-                const bearerToken = authHeader.split(" ")[1];
-                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-                const { payload } = await jwtVerify(bearerToken, secret);
-                token = payload;
-            } catch (e) {}
-        }
-
-        if (!token) {
-            token = await getToken({ req: req as any });
-        }
-
+        const user = await resolveUser(req);
         await dbConnect();
         const [{ id }, body] = await Promise.all([params, req.json()]);
         await dbConnect();
-        if (!token || token.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        const hostelId = token.hostelId as string;
+        if (!user || user.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const hostelId = user.hostelId as string;
 
         const { name, durationDays, price, description, enableWhatsApp, messages, isActive } = body;
         const plan = await HostelPlan.findOneAndUpdate(
@@ -48,27 +31,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 // DELETE /api/hostel/plans/[id]
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-                const authHeader = req.headers.get("authorization");
-        let token = null;
-
-        if (authHeader?.startsWith("Bearer ")) {
-            try {
-                const bearerToken = authHeader.split(" ")[1];
-                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-                const { payload } = await jwtVerify(bearerToken, secret);
-                token = payload;
-            } catch (e) {}
-        }
-
-        if (!token) {
-            token = await getToken({ req: req as any });
-        }
-
+        const user = await resolveUser(req);
         await dbConnect();
         const [{ id }] = await Promise.all([params]);
         await dbConnect();
-        if (!token || token.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        const hostelId = token.hostelId as string;
+        if (!user || user.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const hostelId = user.hostelId as string;
 
         const plan = await HostelPlan.findOneAndDelete({ _id: id, hostelId }).lean();
         if (!plan) return NextResponse.json({ error: "Plan not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });

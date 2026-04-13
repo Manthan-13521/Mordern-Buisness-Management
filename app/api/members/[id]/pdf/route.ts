@@ -3,15 +3,12 @@ import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import "@/models/Plan";
-import { getServerSession } from "next-auth";
-import { jwtVerify } from "jose";
-import { authOptions } from "@/lib/auth";
 import fs from "fs";
 import path from "path";
 import QRCode from "qrcode";
 import { signQRToken } from "@/lib/qrSigner";
 import { uploadBuffer } from "@/lib/local-upload";
-
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 

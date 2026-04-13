@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     const authHeader = req.headers.get("authorization") ?? "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
 
-    if (!token || token !== seedSecret) {
+    if (!user || token !== seedSecret) {
         return NextResponse.json({ error: "Unauthorized", code: "FORBIDDEN" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
 /**
  * GET /api/seed — always returns 404 in production, 401 otherwise
  */
-export async function GET() {
+export async function GET(req: Request) {
     if (process.env.NODE_ENV === "production") {
         return new NextResponse(null, { status: 404 });
     }

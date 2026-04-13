@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { Hostel } from "@/models/Hostel";
@@ -28,13 +27,13 @@ function computeStatus(expiryDate?: Date, storedStatus?: string): "active" | "ex
  */
 export async function GET(req: Request) {
     try {
-        const session = await getServerSession(authOptions) as any;
-        if (!session?.user?.id) {
+        const user = await resolveUser(req) as any;
+        if (!user.id) {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // Superadmin bypass
-        if (session.user.role === "superadmin") {
+        if (user.role === "superadmin") {
             return NextResponse.json({
                 status:     "active",
                 planType:   "superadmin",
@@ -46,13 +45,13 @@ export async function GET(req: Request) {
         }
 
         await dbConnect();
-        const user = await User.findById(session.user.id)
+        const user = await User.findById(user.id)
             .select("subscription trial role hostelId poolId")
             .lean() as any;
 
         if (!user) return NextResponse.json({ error: "User not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
-        let sub = user.subscription;
+        let sub = user.idscription;
 
         // Fallback to tenant model if user record lacks subscription data
         if (!sub) {

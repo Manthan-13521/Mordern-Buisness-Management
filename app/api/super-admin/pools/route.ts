@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { Pool } from "@/models/Pool";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
 import { nanoid } from "nanoid";
 
 export const dynamic = "force-dynamic";
@@ -17,8 +17,8 @@ export async function GET(req: NextRequest) {
     try {
         await dbConnect();
 
-        const session = await getServerSession(authOptions) as any;
-        if (!session?.user || session.user.role !== "superadmin") {
+        const user = await resolveUser(req) as any;
+        if (!user || user.role !== "superadmin") {
             return NextResponse.json({ error: "Superadmin only", code: "FORBIDDEN" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
@@ -74,8 +74,8 @@ export async function POST(req: NextRequest) {
     try {
         await dbConnect();
 
-        const session = await getServerSession(authOptions) as any;
-        if (!session?.user || session.user.role !== "superadmin") {
+        const user = await resolveUser(req) as any;
+        if (!user || user.role !== "superadmin") {
             return NextResponse.json({ error: "Superadmin only", code: "FORBIDDEN" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
@@ -125,8 +125,8 @@ export async function PATCH(req: NextRequest) {
     try {
         await dbConnect();
 
-        const session = await getServerSession(authOptions) as any;
-        if (!session?.user || session.user.role !== "superadmin") {
+        const user = await resolveUser(req) as any;
+        if (!user || user.role !== "superadmin") {
             return NextResponse.json({ error: "Superadmin only", code: "FORBIDDEN" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 

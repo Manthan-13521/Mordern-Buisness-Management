@@ -1,37 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
-import { getToken } from "next-auth/jwt";
-import { jwtVerify } from "jose";
 import { HostelMember } from "@/models/HostelMember";
-
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
     try {
         const { id: memberId } = await context.params;
-                const authHeader = req.headers.get("authorization");
-        let token = null;
-
-        if (authHeader?.startsWith("Bearer ")) {
-            try {
-                const bearerToken = authHeader.split(" ")[1];
-                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-                const { payload } = await jwtVerify(bearerToken, secret);
-                token = payload;
-            } catch (e) {}
-        }
-
-        if (!token) {
-            token = await getToken({ req: req as any });
-        }
-
+        const user = await resolveUser(req);
         await dbConnect();
 
-        if (!token || token.role !== "hostel_admin") {
+        if (!user || user.role !== "hostel_admin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const hostelId = token.hostelId as string;
+        const hostelId = user.hostelId as string;
 
         if (!hostelId || !memberId) {
             return NextResponse.json({ error: "Missing parameters" }, { status: 400 });

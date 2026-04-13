@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { Staff } from "@/models/Staff";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
 import { StaffCreateSchema } from "@/lib/validators";
 import { apiError } from "@/lib/apiError";
 
@@ -23,19 +23,19 @@ function generateStaffId(role: string): string {
  */
 export async function GET(req: NextRequest) {
     try {
-        const [, session] = await Promise.all([
+        const [, user] = await Promise.all([
             dbConnect(),
-            getServerSession(authOptions),
+            resolveUser(req),
         ]);
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const { searchParams } = new URL(req.url);
         const page  = Math.max(1, Number(searchParams.get("page")  ?? 1));
         const limit = Math.min(50, Math.max(1, Number(searchParams.get("limit") ?? 20)));
         const search = searchParams.get("search") ?? "";
-        const poolId = session.user.role === "superadmin"
+        const poolId = user.role === "superadmin"
             ? (searchParams.get("poolId") ?? "")
-            : (session.user.poolId ?? "");
+            : (user.poolId ?? "");
 
         const filter: Record<string, unknown> = { poolId };
         if (search) {
@@ -71,11 +71,11 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
     try {
-        const [, session] = await Promise.all([
+        const [, user] = await Promise.all([
             dbConnect(),
-            getServerSession(authOptions),
+            resolveUser(req),
         ]);
-        if (!session?.user || session.user.role !== "admin") {
+        if (!user || user.role !== "admin") {
             return NextResponse.json({ error: "Admin only" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
         const staffId = generateStaffId(role);
         const staff = await Staff.create({
             staffId,
-            poolId: session.user.poolId,
+            poolId: user.poolId,
             name:   name.trim(),
             phone:  phone.trim(),
             role,
@@ -104,11 +104,11 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
     try {
-        const [, session] = await Promise.all([
+        const [, user] = await Promise.all([
             dbConnect(),
-            getServerSession(authOptions),
+            resolveUser(req),
         ]);
-        if (!session?.user || session.user.role !== "admin") {
+        if (!user || user.role !== "admin") {
             return NextResponse.json({ error: "Admin only" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
@@ -121,7 +121,7 @@ export async function DELETE(req: NextRequest) {
 
         const deletedStaff = await Staff.findOneAndDelete({ 
             staffId, 
-            poolId: session.user.poolId 
+            poolId: user.poolId 
         });
 
         if (!deletedStaff) {

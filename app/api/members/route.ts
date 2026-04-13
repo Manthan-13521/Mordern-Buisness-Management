@@ -4,10 +4,6 @@ import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
 import { Payment } from "@/models/Payment";
-import { getServerSession } from "next-auth";
-import { getToken } from "next-auth/jwt";
-import { authOptions } from "@/lib/auth";
-import { jwtVerify } from "jose";
 import QRCode from "qrcode";
 import crypto from "crypto";
 import { uploadBuffer } from "@/lib/local-upload";
@@ -15,6 +11,7 @@ import { savePhoto } from "@/lib/savePhoto";
 import { signQRToken } from "@/lib/qrSigner";
 import { PRIVATE_API_STALE_MS } from "@/lib/apiCache";
 import { getTenantFilter, requireTenant, resolvePoolId } from "@/lib/tenant";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { secureFindById } from "@/lib/tenantSecurity"; 
 
 export const dynamic = "force-dynamic";
@@ -28,35 +25,16 @@ import { MemberCreateSchema } from "@/lib/validators";
 
 export async function GET(req: Request) {
     try {
-        const authHeader = req.headers.get("authorization");
-        let token = null;
-
-        if (authHeader?.startsWith("Bearer ")) {
-            try {
-                const bearerToken = authHeader.split(" ")[1];
-                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-                const { payload } = await jwtVerify(bearerToken, secret);
-                token = payload;
-            } catch (e) {
-                console.error("[Auth] Bearer verify failed:", e);
-            }
-        }
-
-        if (!token) {
-            token = await getToken({ req: req as any });
-        }
-
+        const user = await resolveUser(req);
         await dbConnect();
 
-        if (!token)
+        if (!user)
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-
-        const sessionUser = token as any;
 
         // ── Tenant isolation guard (Hardened Golden Rule) ───────────────
         let poolId;
         try {
-            poolId = requireTenant(sessionUser);
+            poolId = requireTenant(user);
         } catch (err: any) {
              return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 400, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
@@ -75,7 +53,7 @@ export async function GET(req: Request) {
         const memberType = url.searchParams.get("type") || "all";
 
         // ── Build match filter ───────────────────────────────────────────
-        const tenantFilter = getTenantFilter(sessionUser);
+        const tenantFilter = getTenantFilter(user);
         
         const deletedFilter = url.searchParams.get("deleted");
         const isDeletedValue = deletedFilter === "true" ? true : false;
@@ -158,8 +136,8 @@ export async function GET(req: Request) {
 
         // ── Self Healing Fallback Due Generation ────────────────────────────
         // Trigger natively decoupled in-memory preventing dashboard blocking
-        if (sessionUser.poolId) {
-            import("@/lib/billingEngine").then(m => m.processDueGenerations(sessionUser.poolId).catch(() => {}));
+        if (user.poolId) {
+            import("@/lib/billingEngine").then(m => m.processDueGenerations(user.poolId).catch(() => {}));
         }
 
         const [rawData] = await Promise.all([
@@ -175,7 +153,7 @@ export async function GET(req: Request) {
             let defaulterObj = { isDefaulter: false, overdueDays: 0, defaulterStatus: "active" as ("active"|"warning"|"blocked") };
             
             if (!isEntertainment && !m.isDeleted) {
-                defaulterObj = await resolveDefaulterState(m._id, sessionUser.poolId);
+                defaulterObj = await resolveDefaulterState(m._id, user.poolId);
             }
             
             m.isDefaulter = defaulterObj.isDefaulter;
@@ -212,28 +190,11 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
     try {
-        const authHeader = req.headers.get("authorization");
-        let token = null;
-
-        if (authHeader?.startsWith("Bearer ")) {
-            try {
-                const bearerToken = authHeader.split(" ")[1];
-                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-                const { payload } = await jwtVerify(bearerToken, secret);
-                token = payload;
-            } catch (e) {}
-        }
-
-        if (!token) {
-            token = await getToken({ req: req as any });
-        }
-
+        const user = await resolveUser(req);
         await dbConnect();
 
-        if (!token)
+        if (!user)
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-
-        const sessionUser = token as any;
         const body = await req.json();
 
         // Rate limiting is now handled globally by middleware
@@ -241,7 +202,7 @@ export async function POST(req: Request) {
         // --- STEP 12 SaaS Gating: Enforce Tenant Limits ---
         try {
             const { enforceMemberCreationLimit } = await import("@/lib/saasGuard");
-            const poolId = resolvePoolId(sessionUser, body.poolId);
+            const poolId = resolvePoolId(user, body.poolId);
             await enforceMemberCreationLimit(poolId);
         } catch (e: any) {
             if (e.message === "SaaS_Member_Limit_Reached") {
@@ -283,11 +244,11 @@ export async function POST(req: Request) {
         const photoBase64 = body.photoBase64 || data.photo;
 
         const { Plan } = await import("@/models/Plan");
-        const plan = await secureFindById(Plan, planId, sessionUser, { lean: true });
+        const plan = await secureFindById(Plan, planId, user, { lean: true });
         if (!plan)
             return NextResponse.json({ error: "Invalid Plan" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
-        const poolId = resolvePoolId(sessionUser, body.poolId);
+        const poolId = resolvePoolId(user, body.poolId);
 
         // Atomic ID generation via Counters collection (Section 5)
         const isEntertainment = plan.hasEntertainment ?? false;
@@ -377,14 +338,14 @@ export async function POST(req: Request) {
         dbSession.startTransaction();
 
         try {
-            await newMember.save({ session: dbSession });
+            await newMember.save({ user: dbSession });
 
             // ── Enterprise Rule: Increment immutable counter explicitly within transaction
             const { PoolStats } = await import("@/models/PoolStats");
             await PoolStats.findOneAndUpdate(
                 { poolId },
                 { $inc: isEntertainment ? { totalEntertainmentMembers: 1 } : { totalMembers: 1 } },
-                { upsert: true, session: dbSession }
+                { upsert: true, user: dbSession }
             );
 
             await dbSession.commitTransaction();
@@ -450,8 +411,8 @@ export async function POST(req: Request) {
                     memberCollection: isEntertainment ? "entertainment_members" : "members",
                     amount: safePaid,
                     paymentMethod: modeMap[body.paymentMode] || "cash",
-                    recordedBy: (typeof sessionUser.id === "string" && sessionUser.id.length === 24)
-                        ? new mongoose.Types.ObjectId(sessionUser.id)
+                    recordedBy: (typeof user.id === "string" && user.id.length === 24)
+                        ? new mongoose.Types.ObjectId(user.id)
                         : undefined,
                     status: "success",
                     notes: `Auto-recorded on member registration`,
@@ -470,8 +431,8 @@ export async function POST(req: Request) {
         }
 
         const savedMember = isEntertainment
-            ? await secureFindById(EntertainmentMember, newMember._id.toString(), sessionUser, { populate: { path: "planId", select: "name hasTokenPrint quickDelete price" } })
-            : await secureFindById(Member, newMember._id.toString(), sessionUser, { populate: { path: "planId", select: "name hasTokenPrint quickDelete price" } });
+            ? await secureFindById(EntertainmentMember, newMember._id.toString(), user, { populate: { path: "planId", select: "name hasTokenPrint quickDelete price" } })
+            : await secureFindById(Member, newMember._id.toString(), user, { populate: { path: "planId", select: "name hasTokenPrint quickDelete price" } });
 
         // No background job needed since generation is inline
 

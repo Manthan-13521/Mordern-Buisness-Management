@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
 import { DeletedMember } from "@/models/DeletedMember";
-import { getServerSession } from "next-auth";
-import type { Session } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
+
 import { requireCronAuth } from "@/lib/requireCronAuth";
 import { logger } from "@/lib/logger";
 import type ExcelJSType from "exceljs";
@@ -16,15 +16,15 @@ export const revalidate = 0;
 
 export async function GET(req: Request) {
     let isAuthorized = false;
-    let session: Session | null = null;
+    let user: AuthUser | null = null;
 
     const cronErr = requireCronAuth(req);
     if (!cronErr) {
         isAuthorized = true;
     } else {
         await dbConnect();
-        session = await getServerSession(authOptions);
-        if (session?.user && session.user.role === "admin") {
+        user = await resolveUser(req);
+        if (user && user.role === "admin") {
             isAuthorized = true;
         }
     }
@@ -35,8 +35,8 @@ export async function GET(req: Request) {
 
     try {
         await dbConnect();
-        const baseMatch = session?.user && session.user.role !== "superadmin" && session.user.poolId 
-            ? { poolId: session.user.poolId } : {};
+        const baseMatch = user && user.role !== "superadmin" && user.poolId 
+            ? { poolId: user.poolId } : {};
 
         // Fetch all deleted member types in parallel
         const [softDeletedMembers, softDeletedEntertainment, hardDeletedMembers] = await Promise.all([
@@ -115,7 +115,7 @@ export async function GET(req: Request) {
                 });
 
                 // Scope backup to specific user pool
-                const poolFolder = session?.user?.poolId || "superadmin";
+                const poolFolder = user?.poolId || "superadmin";
                 const s3Key = `backups/${poolFolder}/${filename}`;
 
                 await s3Client.send(

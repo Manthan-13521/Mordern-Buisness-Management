@@ -1,18 +1,17 @@
 import { NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { Feedback } from "@/models/Feedback";
+import { resolveUser } from "@/lib/authHelper";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
     try {
-        const [token] = await Promise.all([
-            getToken({ req: req as any }),
-            dbConnect(),
-        ]);
+        const user = await resolveUser(req);
+        await dbConnect();
 
-        if (!token || token.role !== "superadmin") {
+        if (!user || user.role !== "superadmin") {
             return NextResponse.json({ error: "Unauthorized. Superadmin only." }, { status: 403 });
         }
 
@@ -35,13 +34,10 @@ export async function GET(req: Request) {
 
 export async function PATCH(req: Request) {
     try {
-        const [token, body] = await Promise.all([
-            getToken({ req: req as any }),
-            req.json(),
-            dbConnect(),
-        ]);
+        const user = await resolveUser(req);
+        const [body] = await Promise.all([req.json(), dbConnect()]);
 
-        if (!token || token.role !== "superadmin") {
+        if (!user || user.role !== "superadmin") {
             return NextResponse.json({ error: "Unauthorized. Superadmin only." }, { status: 403 });
         }
 

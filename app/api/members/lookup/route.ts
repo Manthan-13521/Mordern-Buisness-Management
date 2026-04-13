@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
-import { getServerSession } from "next-auth";
-import { jwtVerify } from "jose";
-import { authOptions } from "@/lib/auth";
-
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -18,34 +15,16 @@ export async function GET(req: NextRequest) {
     try {
         await dbConnect();
 
-                const authHeader = req.headers.get("authorization");
-        let token = null;
-
-        if (authHeader?.startsWith("Bearer ")) {
-            try {
-                const bearerToken = authHeader.split(" ")[1];
-                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-                const { payload } = await jwtVerify(bearerToken, secret);
-                token = payload;
-            } catch (e) {}
-        }
-
-        if (!token) {
-            const session = await getServerSession(authOptions);
-        token = session?.user || null;
-        }
-
-        await dbConnect();
-
-        const session = { user: token }; // Mock session for compatibility
-        if (!session?.user)
+                const user = await resolveUser(req);
+                await dbConnect();
+        if (!user)
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const uid = req.nextUrl.searchParams.get("uid")?.trim();
         if (!uid)
             return NextResponse.json({ error: "uid query parameter required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
-        const poolId = session.user.role !== "superadmin" ? (session.user.poolId || "UNASSIGNED_POOL") : undefined;
+        const poolId = user.role !== "superadmin" ? (user.poolId || "UNASSIGNED_POOL") : undefined;
         const query: Record<string, unknown> = { memberId: { $regex: `^${uid}$`, $options: "i" } };
         if (poolId) query.poolId = poolId;
 

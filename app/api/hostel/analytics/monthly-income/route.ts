@@ -6,43 +6,22 @@ import { HostelMember } from "@/models/HostelMember";
 import { HostelPlan } from "@/models/HostelPlan";
 import { HostelRoom } from "@/models/HostelRoom";
 import { HostelFloor } from "@/models/HostelFloor";
-import { getServerSession } from "next-auth";
-import { jwtVerify } from "jose";
-import { authOptions } from "@/lib/auth";
 import mongoose from "mongoose";
-
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function GET(req: Request) {
     try {
         await dbConnect();
-                const authHeader = req.headers.get("authorization");
-        let token = null;
+                const user = await resolveUser(req);
+                await dbConnect();
 
-        if (authHeader?.startsWith("Bearer ")) {
-            try {
-                const bearerToken = authHeader.split(" ")[1];
-                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-                const { payload } = await jwtVerify(bearerToken, secret);
-                token = payload;
-            } catch (e) {}
-        }
-
-        if (!token) {
-            const session = await getServerSession(authOptions);
-        token = session?.user || null;
-        }
-
-        await dbConnect();
-
-        const session = { user: token }; // Mock session for compatibility
-
-        if (!session?.user) {
+        if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
-        const hostelId = (session.user as any).hostelId;
+        const hostelId = user.hostelId;
         if (!hostelId) {
             return NextResponse.json({ error: "No hostel assigned" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }

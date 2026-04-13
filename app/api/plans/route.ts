@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { Plan } from "@/models/Plan";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
 import mongoose from "mongoose";
 import { PlanSchema } from "@/lib/validators";
 
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * GET /api/plans
- * Supports: ?page=1&limit=20&slug=<poolSlug> (public) or session-based
+ * Supports: ?page=1&limit=20&slug=<poolSlug> (public) or user-based
  */
 export async function GET(req: Request) {
     try {
@@ -30,8 +30,8 @@ export async function GET(req: Request) {
         }
 
         // ── Admin: paginated plan list ─────────────────────────────────────
-        const session = await getServerSession(authOptions);
-        if (!session?.user) {
+        const user = await resolveUser(req);
+        if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
@@ -41,8 +41,8 @@ export async function GET(req: Request) {
 
         const query: Record<string, unknown> = { deletedAt: null };
 
-        if (session.user.role !== "superadmin") {
-            query.poolId = session.user.poolId || "UNASSIGNED_POOL";
+        if (user.role !== "superadmin") {
+            query.poolId = user.poolId || "UNASSIGNED_POOL";
         }
 
         const activeFilter = searchParams.get("isActive");
@@ -68,11 +68,11 @@ export async function GET(req: Request) {
  */
 export async function POST(req: Request) {
     try {
-        const [, session] = await Promise.all([
+        const [, user] = await Promise.all([
             dbConnect(),
-            getServerSession(authOptions),
+            resolveUser(req),
         ]);
-        if (!session?.user || !["admin", "superadmin"].includes(session.user.role)) {
+        if (!user || !["admin", "superadmin"].includes(user.role)) {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
@@ -91,7 +91,7 @@ export async function POST(req: Request) {
             poolId: bodyPoolId,
         } = { ...body, ...data }; // Merge specific body items that are not in schema
 
-        const poolId = session.user.role === "superadmin" ? bodyPoolId : session.user.poolId;
+        const poolId = user.role === "superadmin" ? bodyPoolId : user.poolId;
         if (!poolId) return NextResponse.json({ error: "Pool ID required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         // Use enableWhatsAppAlerts as canonical; fall back to whatsAppAlert for legacy

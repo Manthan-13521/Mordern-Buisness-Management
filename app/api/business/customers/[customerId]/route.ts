@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessCustomer } from "@/models/BusinessCustomer";
 
@@ -9,13 +8,13 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request, { params }: { params: Promise<{ customerId: string }> }) {
     try {
         const { customerId } = await params;
-        const session = await getServerSession(authOptions);
-        if (!session || session.user.role !== "business_admin") {
+        const user = await resolveUser(req);
+        if (!user || user.role !== "business_admin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
         await dbConnect();
-        const businessId = session.user.businessId;
+        const businessId = user.businessId;
 
         const customer = await BusinessCustomer.findOne({ _id: customerId, businessId });
         if (!customer) {
@@ -33,8 +32,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ customer
 export async function PATCH(req: Request, { params }: { params: Promise<{ customerId: string }> }) {
     try {
         const { customerId } = await params;
-        const session = await getServerSession(authOptions);
-        if (!session || session.user.role !== "business_admin") {
+        const user = await resolveUser(req);
+        if (!user || user.role !== "business_admin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -42,7 +41,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ custom
         const { name, phone, businessName, gstNumber, address } = body;
 
         await dbConnect();
-        const businessId = session.user.businessId;
+        const businessId = user.businessId;
 
         const customer = await BusinessCustomer.findOneAndUpdate(
             { _id: customerId, businessId },

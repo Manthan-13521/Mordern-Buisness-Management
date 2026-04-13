@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessTransaction } from "@/models/BusinessTransaction";
 import { BusinessCustomer } from "@/models/BusinessCustomer";
@@ -14,13 +13,13 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session || session.user.role !== "business_admin") {
+        const user = await resolveUser(req);
+        if (!user || user.role !== "business_admin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
         await dbConnect();
-        const businessId = session.user.businessId;
+        const businessId = user.businessId;
 
         const { searchParams } = new URL(req.url);
         const customerId = searchParams.get("customerId");
@@ -46,8 +45,8 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
     let body: any;
     try {
-        const session = await getServerSession(authOptions);
-        if (!session || session.user.role !== "business_admin") {
+        const user = await resolveUser(req);
+        if (!user || user.role !== "business_admin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
         try {
@@ -68,7 +67,7 @@ export async function POST(req: Request) {
         const { customerId, items, transportationCost, totalAmount, date, saleType, receiptUrl, paidAmount } = parseResult.data;
 
         await dbConnect();
-        const businessId = session.user.businessId;
+        const businessId = user.businessId;
 
         const sale = new BusinessTransaction({
             customerId,

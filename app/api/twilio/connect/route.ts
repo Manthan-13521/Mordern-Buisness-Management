@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
 import { Pool } from "@/models/Pool";
 import { TwilioConnectSchema } from "@/lib/validators";
 import { encryptToken } from "@/lib/twilioService";
@@ -16,9 +16,9 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: Request) {
     try {
-        const [, session] = await Promise.all([dbConnect(), getServerSession(authOptions)]);
+        const [, user] = await Promise.all([dbConnect(), resolveUser(req)]);
 
-        if (!session?.user || session.user.role !== "admin") {
+        if (!user || user.role !== "admin") {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
@@ -67,7 +67,7 @@ export async function POST(req: Request) {
         const { encrypted, iv } = encryptToken(authToken);
 
         const pool = await Pool.findOneAndUpdate(
-            { poolId: session.user.poolId },
+            { poolId: user.poolId },
             {
                 $set: {
                     twilio: {

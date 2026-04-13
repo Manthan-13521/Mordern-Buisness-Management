@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { Plan } from "@/models/Plan"; // Added import for group QR handling
 import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
@@ -6,8 +7,7 @@ import { EntryLog } from "@/models/EntryLog";
 import { PoolSession } from "@/models/PoolSession";
 import { Pool } from "@/models/Pool";
 import { getSettings } from "@/models/Settings"; // Kept for legacy global fallback if needed
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
 import { logger } from "@/lib/logger";
 import { verifyQRToken } from "@/lib/qrSigner";
 import mongoose from "mongoose";
@@ -24,12 +24,12 @@ export async function POST(req: Request) {
 
     const startTime = Date.now(); // 1.3 Perf Tracking
     try {
-        const [, session, body] = await Promise.all([
+        const [, user, body] = await Promise.all([
             dbConnect(),
-            getServerSession(authOptions),
+            resolveUser(req),
             req.json(),
         ]);
-        if (!session?.user) {
+        if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
                 await EntryLog.create({
                     status: "denied",
                     reason: "Plan Not Found",
-                    operatorId: session.user.id ? new mongoose.Types.ObjectId(session.user.id) : undefined,
+                    operatorId: user.id ? new mongoose.Types.ObjectId(user.id) : undefined,
                     rawPayload: qrPayload,
                 });
                 return NextResponse.json({ error: "Plan not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
@@ -89,15 +89,15 @@ export async function POST(req: Request) {
             const numPersons = plan.maxEntriesPerQR || 1;
             
             // 1.3 Hybrid Occupancy Lookup
-            const pool = await Pool.findOne({ poolId: session.user.poolId }).select("capacity").lean();
+            const pool = await Pool.findOne({ poolId: user.poolId }).select("capacity").lean();
             const poolCapacity = pool?.capacity || 100;
             
-            let currentOccupancy = await getOccupancy(session.user.poolId || "UNKNOWN");
+            let currentOccupancy = await getOccupancy(user.poolId || "UNKNOWN");
 
             // Check capacity for the whole group
             if (currentOccupancy + numPersons > poolCapacity) {
                 await EntryLog.create({
-                    poolId: session.user.poolId,
+                    poolId: user.poolId,
                     status: "denied",
                     reason: "Pool Capacity Full for Group",
                     rawPayload: qrPayload,
@@ -111,7 +111,7 @@ export async function POST(req: Request) {
                 // Decrement remaining entries atomically
                 await Plan.updateOne({ _id: planId, remainingEntries: { $gt: 0 } }, { $inc: { remainingEntries: -1 } });
                 
-                // Calculate expiry for this session
+                // Calculate expiry for this user
                 const expiryTime = new Date();
                 if (plan.durationSeconds) expiryTime.setSeconds(expiryTime.getSeconds() + plan.durationSeconds);
                 else if (plan.durationMinutes) expiryTime.setMinutes(expiryTime.getMinutes() + plan.durationMinutes);
@@ -124,17 +124,17 @@ export async function POST(req: Request) {
 
                 // Create PoolSession for automated checkout
                 await PoolSession.create({
-                    poolId: session.user.poolId,
+                    poolId: user.poolId,
                     numPersons,
                     expiryTime,
                     status: "active",
                 });
                 
-                await incrOccupancy(session.user.poolId || "UNKNOWN", numPersons); // 1.3 Atomic sync
+                await incrOccupancy(user.poolId || "UNKNOWN", numPersons); // 1.3 Atomic sync
 
                 // Log entry without member association
                 await EntryLog.create({
-                    poolId: session.user.poolId,
+                    poolId: user.poolId,
                     status: "granted",
                     reason: "Group QR Entry",
                     rawPayload: qrPayload,
@@ -163,12 +163,12 @@ export async function POST(req: Request) {
         }
 
         // 1.3 Pre-fetch occupancy for early rejection (Individual & Entertainment)
-        const pool = await Pool.findOne({ poolId: session.user.poolId }).select("capacity").lean();
+        const pool = await Pool.findOne({ poolId: user.poolId }).select("capacity").lean();
         const poolCapacity = pool?.capacity || 100;
-        let currentOccupancy = await getOccupancy(session.user.poolId || "UNKNOWN");
+        let currentOccupancy = await getOccupancy(user.poolId || "UNKNOWN");
 
         // Existing individual member flow
-        const baseMatch = session.user.role !== "superadmin" ? { poolId: session.user.poolId || "UNASSIGNED_POOL" } : {};
+        const baseMatch = user.role !== "superadmin" ? { poolId: user.poolId || "UNASSIGNED_POOL" } : {};
         member = await Member.findOne({ memberId, ...baseMatch }).populate("planId");
 
         // Fallback to EntertainmentMember if not found in regular Member collection
@@ -180,10 +180,10 @@ export async function POST(req: Request) {
         if (!member) {
             logger.scan("QR scan denied — member not found", { memberId });
             await EntryLog.create({
-                poolId: session.user.poolId || "UNKNOWN",
+                poolId: user.poolId || "UNKNOWN",
                 status: "denied",
                 reason: "Member Not Found",
-                operatorId: session.user.id ? new mongoose.Types.ObjectId(session.user.id) : undefined,
+                operatorId: user.id ? new mongoose.Types.ObjectId(user.id) : undefined,
                 rawPayload: qrPayload,
             });
             return NextResponse.json({ error: "Member not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
@@ -196,11 +196,11 @@ export async function POST(req: Request) {
                 ip: req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown",
             });
             await EntryLog.create({
-                poolId: session.user.poolId,
+                poolId: user.poolId,
                 memberId: member._id,
                 status: "denied",
                 reason: "Invalid QR Token (possible screenshot reuse)",
-                operatorId: new mongoose.Types.ObjectId(session.user.id),
+                operatorId: new mongoose.Types.ObjectId(user.id),
                 qrToken: providedToken,
                 rawPayload: qrPayload,
             });
@@ -235,11 +235,11 @@ export async function POST(req: Request) {
                 }
             }
             await EntryLog.create({
-                poolId: session.user.poolId,
+                poolId: user.poolId,
                 memberId: member._id,
                 status: "denied",
                 reason: "Membership Expired",
-                operatorId: new mongoose.Types.ObjectId(session.user.id),
+                operatorId: new mongoose.Types.ObjectId(user.id),
                 rawPayload: qrPayload,
             });
             logger.scan("QR scan denied — expired", { memberId });
@@ -260,7 +260,7 @@ export async function POST(req: Request) {
                 let overdueDays = 0;
                 if (mAccess === "blocked") {
                     const { resolveDefaulterState } = await import("@/lib/defaulterEngine");
-                    const defaulterObj = await resolveDefaulterState(member._id, session.user.poolId || "UNASSIGNED_POOL");
+                    const defaulterObj = await resolveDefaulterState(member._id, user.poolId || "UNASSIGNED_POOL");
                     overdueDays = defaulterObj.overdueDays;
                 }
 
@@ -269,12 +269,12 @@ export async function POST(req: Request) {
                 const failReason = isSuspended ? "suspended_admin" : "blocked_defaulter";
 
                 await EntryLog.create({
-                    poolId: session.user.poolId,
+                    poolId: user.poolId,
                     memberId: member._id,
                     status: "denied",
                     reason: reasonStr,
                     failReason: failReason,
-                    operatorId: session.user.id ? new mongoose.Types.ObjectId(session.user.id) : undefined,
+                    operatorId: user.id ? new mongoose.Types.ObjectId(user.id) : undefined,
                     rawPayload: qrPayload,
                 });
                 logger.scan(`QR scan denied — ${failReason}`, { memberId, overdueDays });
@@ -304,11 +304,11 @@ export async function POST(req: Request) {
 
             if (entriesUsed >= totalEntriesAllowed) {
                 await EntryLog.create({
-                    poolId: session.user.poolId,
+                    poolId: user.poolId,
                     memberId: member._id,
                     status: "denied",
                     reason: "Entry Limit Reached",
-                    operatorId: new mongoose.Types.ObjectId(session.user.id),
+                    operatorId: new mongoose.Types.ObjectId(user.id),
                     rawPayload: qrPayload,
                 });
                 logger.scan("QR scan denied — entry limit", { memberId, entriesUsed, totalEntriesAllowed });
@@ -326,7 +326,7 @@ export async function POST(req: Request) {
         );
 
         const alreadyEnteredToday = await EntryLog.findOne({
-            poolId: session.user.poolId,
+            poolId: user.poolId,
             memberId: member._id,
             status: "granted",
             createdAt: { $gte: istMidnightUTC },
@@ -334,11 +334,11 @@ export async function POST(req: Request) {
 
         if (alreadyEnteredToday) {
             await EntryLog.create({
-                poolId: session.user.poolId,
+                poolId: user.poolId,
                 memberId: member._id,
                 status: "denied",
                 reason: "Already Entered Today",
-                operatorId: new mongoose.Types.ObjectId(session.user.id),
+                operatorId: new mongoose.Types.ObjectId(user.id),
                 rawPayload: qrPayload,
             });
             logger.scan("QR scan denied — already entered today", { memberId });
@@ -349,11 +349,11 @@ export async function POST(req: Request) {
 
         if (currentOccupancy + numPersons > poolCapacity) {
             await EntryLog.create({
-                poolId: session.user.poolId,
+                poolId: user.poolId,
                 memberId: member._id,
                 status: "denied",
                 reason: "Pool at Full Capacity",
-                operatorId: new mongoose.Types.ObjectId(session.user.id),
+                operatorId: new mongoose.Types.ObjectId(user.id),
                 rawPayload: qrPayload,
             });
             logger.scan("QR scan denied — pool full", {
@@ -415,21 +415,21 @@ export async function POST(req: Request) {
         }
 
         await PoolSession.create({
-            poolId: session.user.poolId,
+            poolId: user.poolId,
             memberId: member._id,
             numPersons,
             expiryTime: expiryFieldValueForSession,
             status: "active",
         });
 
-        await incrOccupancy(session.user.poolId || "UNKNOWN", numPersons); // 1.3 Atomic sync
+        await incrOccupancy(user.poolId || "UNKNOWN", numPersons); // 1.3 Atomic sync
 
         const entry = await EntryLog.create({
-            poolId: session.user.poolId,
+            poolId: user.poolId,
             memberId: member._id,
             status: "granted",
-            operatorId: (typeof session.user.id === "string" && session.user.id.length === 24) 
-                ? new mongoose.Types.ObjectId(session.user.id) 
+            operatorId: (typeof user.id === "string" && user.id.length === 24) 
+                ? new mongoose.Types.ObjectId(user.id) 
                 : undefined,
             qrToken: oldToken,
             rawPayload: qrPayload,
@@ -444,7 +444,7 @@ export async function POST(req: Request) {
         });
 
         import("@/lib/events").then(mod => {
-            mod.dispatchEvent("entry.logged", { poolId: session.user.poolId, count: currentOccupancy + numPersons });
+            mod.dispatchEvent("entry.logged", { poolId: user.poolId, count: currentOccupancy + numPersons });
         }).catch(() => {});
 
         const endTime = Date.now();

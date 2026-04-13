@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
 import { Payment } from "@/models/Payment";
 import { EntryLog } from "@/models/EntryLog";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
 import { runOccupancyCleanupInBackground } from "@/lib/cleanup";
 
 export const dynamic = "force-dynamic";
@@ -36,11 +36,11 @@ function getISTDayBounds() {
 
 export async function GET(req: Request) {
     try {
-        const [, session] = await Promise.all([
+        const [, user] = await Promise.all([
             dbConnect(),
-            getServerSession(authOptions),
+            resolveUser(req),
         ]);
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         
         runOccupancyCleanupInBackground();
 
@@ -49,13 +49,13 @@ export async function GET(req: Request) {
         const targetPoolId = new URL(req.url).searchParams.get("poolId");
         
         const baseMatch: any = { isDeleted: false };
-        if (targetPoolId && session.user.role === "superadmin") {
+        if (targetPoolId && user.role === "superadmin") {
             baseMatch.poolId = targetPoolId;
-        } else if (session.user.role !== "superadmin") {
-            if (!session.user.poolId) {
+        } else if (user.role !== "superadmin") {
+            if (!user.poolId) {
                 return NextResponse.json({ error: "No pool assigned to this account" }, { status: 400, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
-            baseMatch.poolId = session.user.poolId;
+            baseMatch.poolId = user.poolId;
         }
             
         // ── 1. Safe Initialization Logic for Immutable Counters (Self-Healing) ──

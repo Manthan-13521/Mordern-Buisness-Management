@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic"; // disable caching
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const memory = process.memoryUsage();
 

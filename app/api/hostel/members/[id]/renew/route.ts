@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
-import { getToken } from "next-auth/jwt";
-import { jwtVerify } from "jose";
 import { HostelMember } from "@/models/HostelMember";
 import { HostelPayment } from "@/models/HostelPayment";
 import { HostelPlan } from "@/models/HostelPlan";
@@ -10,7 +8,7 @@ import { HostelLog } from "@/models/HostelLog";
 import { HostelAnalytics } from "@/models/HostelAnalytics";
 import mongoose from "mongoose";
 import { HostelPaymentLog } from "@/models/HostelPaymentLog";
-
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 export const dynamic = "force-dynamic";
 
 /**
@@ -20,29 +18,14 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-                const authHeader = req.headers.get("authorization");
-        let token = null;
-
-        if (authHeader?.startsWith("Bearer ")) {
-            try {
-                const bearerToken = authHeader.split(" ")[1];
-                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-                const { payload } = await jwtVerify(bearerToken, secret);
-                token = payload;
-            } catch (e) {}
-        }
-
-        if (!token) {
-            token = await getToken({ req: req as any });
-        }
-
+        const user = await resolveUser(req);
         await dbConnect();
         const [{ id }, body] = await Promise.all([params, req.json()]);
         await dbConnect();
-        if (!token || token.role !== "hostel_admin") {
+        if (!user || user.role !== "hostel_admin") {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-        const hostelId = token.hostelId as string;
+        const hostelId = user.hostelId as string;
 
         const { planId, paidAmount, paymentMode, transactionId, notes, idempotencyKey } = body;
         
@@ -127,11 +110,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             paymentMode: paymentMode || "cash",
             transactionId,
             notes,
-            renewedBy: token.email as string,
+            renewedBy: user.email as string,
             idempotencyKey,
         });
 
-        const createdByName = (token.name || token.email || "Admin") as string;
+        const createdByName = (user.name || user.email || "Admin") as string;
         await HostelPaymentLog.create({
             hostelId,
             memberId: member.memberId,

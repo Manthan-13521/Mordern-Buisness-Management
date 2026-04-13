@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
-import { getServerSession } from "next-auth";
-import { jwtVerify } from "jose";
-import { authOptions } from "@/lib/auth";
 import { secureUpdateById } from "@/lib/tenantSecurity";
-
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
@@ -17,27 +14,9 @@ export async function POST(req: Request, props: RouteContext) {
     try {
         await dbConnect();
 
-                const authHeader = req.headers.get("authorization");
-        let token = null;
-
-        if (authHeader?.startsWith("Bearer ")) {
-            try {
-                const bearerToken = authHeader.split(" ")[1];
-                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-                const { payload } = await jwtVerify(bearerToken, secret);
-                token = payload;
-            } catch (e) {}
-        }
-
-        if (!token) {
-            const session = await getServerSession(authOptions);
-        token = session?.user || null;
-        }
-
-        await dbConnect();
-
-        const session = { user: token }; // Mock session for compatibility
-        if (!session?.user || session.user.role !== "admin") {
+                const user = await resolveUser(req);
+                await dbConnect();
+        if (!user || user.role !== "admin") {
             return NextResponse.json({ error: "Admin only" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
@@ -63,7 +42,7 @@ export async function POST(req: Request, props: RouteContext) {
             updates.expiryDate  = new Date(body.planEndDate);
         }
 
-        const member = await secureUpdateById(Member, id, { $set: updates }, session.user, { populate: { path: "planId", select: "name price hasTokenPrint" } });
+        const member = await secureUpdateById(Member, id, { $set: updates }, user, { populate: { path: "planId", select: "name price hasTokenPrint" } });
 
         if (!member) return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 

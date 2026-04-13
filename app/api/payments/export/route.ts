@@ -1,23 +1,23 @@
 import { NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { Payment } from "@/models/Payment";
 import { Member } from "@/models/Member";
 import { Plan } from "@/models/Plan";
 import { User } from "@/models/User";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
         await dbConnect();
 
-        const session = await getServerSession(authOptions);
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        const baseMatch = session.user.role !== "superadmin" && session.user.poolId ? { poolId: session.user.poolId } : {};
+        const user = await resolveUser(req);
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const baseMatch = user.role !== "superadmin" && user.poolId ? { poolId: user.poolId } : {};
 
         const payments = await Payment.find({ ...baseMatch })
             .populate("memberId", "name memberId")

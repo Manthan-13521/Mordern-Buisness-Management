@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { activateSubscription } from "@/lib/services/subscriptionActivationService";
 
@@ -11,8 +10,8 @@ import { activateSubscription } from "@/lib/services/subscriptionActivationServi
  */
 export async function POST(req: Request) {
     try {
-        const session = await getServerSession(authOptions) as any;
-        if (!session?.user?.id) {
+        const user = await resolveUser(req) as any;
+        if (!user.id) {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
@@ -34,7 +33,7 @@ export async function POST(req: Request) {
             razorpayPaymentId: razorpayPaymentId || `mock_pay_${Date.now()}`,
             razorpaySignature: razorpaySignature || "",
             isMock:            isMock === true,
-            userId:            session.user.id,
+            userId:            user.id,
             planType,
             module,
             blocks:            blocks ? parseInt(blocks) : undefined,

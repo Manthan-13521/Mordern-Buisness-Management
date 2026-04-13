@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { Competition } from "@/models/Competition";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
 import mongoose from "mongoose";
 
 export const dynamic = "force-dynamic";
@@ -18,15 +18,15 @@ export async function GET(_req: Request, props: RouteContext) {
     try {
         await dbConnect();
 
-        const session = await getServerSession(authOptions);
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const user = await resolveUser(req);
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const { id } = await props.params;
 
         const competition = await Competition.findById(id).lean();
 
         if (!competition) return NextResponse.json({ error: "Not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        if (session.user.role !== "superadmin" && (competition as any).poolId !== session.user.poolId) {
+        if (user.role !== "superadmin" && (competition as any).poolId !== user.poolId) {
             return NextResponse.json({ error: "Forbidden" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
@@ -46,8 +46,8 @@ export async function PATCH(req: Request, props: RouteContext) {
     try {
         await dbConnect();
 
-        const session = await getServerSession(authOptions);
-        if (!session?.user || !["admin", "superadmin"].includes(session.user.role)) {
+        const user = await resolveUser(req);
+        if (!user || !["admin", "superadmin"].includes(user.role)) {
             return NextResponse.json({ error: "Admin only" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 

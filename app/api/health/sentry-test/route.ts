@@ -13,7 +13,7 @@ export const revalidate = 0;
  * ⚠️  Use sparingly — this creates a real error event in your Sentry dashboard.
  *     Should be called once after setup, or when debugging Sentry connectivity.
  */
-export async function GET() {
+export async function GET(req: Request) {
   try {
     // Deliberately throw to verify Sentry captures it
     throw new Error("[Sentry Test] Manual verification from /api/health/sentry-test");

@@ -5,7 +5,7 @@ import { dbConnect } from "@/lib/mongodb";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
     let dbStatus = "disconnected";
     let redisStatus = "disconnected";
     const start = Date.now();

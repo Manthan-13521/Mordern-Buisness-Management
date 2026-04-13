@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { Pool } from "@/models/Pool";
@@ -11,8 +10,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ poolId:
     try {
         await dbConnect();
 
-        const session = await getServerSession(authOptions);
-        if (!session?.user || session.user.role !== "superadmin") {
+        const user = await resolveUser(req);
+        if (!user || user.role !== "superadmin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
         

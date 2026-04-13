@@ -2,26 +2,22 @@ import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { HostelMember } from "@/models/HostelMember";
 import { HostelPayment } from "@/models/HostelPayment";
-import { getServerSession } from "next-auth";
-import { jwtVerify } from "jose";
-import type { Session } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { HostelPlan } from "@/models/HostelPlan";
 import { HostelBlock } from "@/models/HostelBlock";
 import { HostelFloor } from "@/models/HostelFloor";
 import { HostelRoom } from "@/models/HostelRoom";
-
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function GET(req: Request) {
     let isAuthorized = false;
-    let session: Session | null = null;
+    let user: AuthUser | null = null;
 
     try {
         await dbConnect();
-        session = await getServerSession(authOptions);
-        if (session?.user && (session.user.role === "admin" || session.user.role === "superadmin" || session.user.role === "hostel_admin")) {
+        user = await resolveUser(req);
+        if (user && (user.role === "admin" || user.role === "superadmin" || user.role === "hostel_admin")) {
             isAuthorized = true;
         }
 
@@ -29,7 +25,7 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
-        const hostelId = (session?.user as any)?.hostelId || (session?.user as any)?.poolId;
+        const hostelId = user?.hostelId || user?.poolId;
         const baseMatch = hostelId ? { hostelId } : {};
 
         const [members, payments] = await Promise.all([

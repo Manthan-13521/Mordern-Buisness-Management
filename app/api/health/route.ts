@@ -9,7 +9,7 @@ export const revalidate = 0;
  * Use this for uptime monitors (UptimeRobot, Better Uptime, Vercel cron, etc.)
  * For dependency checks → /api/health/ready
  */
-export async function GET() {
+export async function GET(req: Request) {
   return NextResponse.json({ status: "ok" },
     {
       status: 200,

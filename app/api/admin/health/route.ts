@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { getSettings } from "@/models/Settings";
 import { EntryLog } from "@/models/EntryLog";
 import { Member } from "@/models/Member";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
 import os from "os";
 import fs from "fs";
 import path from "path";
@@ -15,12 +15,12 @@ export const revalidate = 0;
 // Simple 30-second in-memory cache for dashboard stats
 let dashboardCache: { data: any; expiresAt: number } | null = null;
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
         await dbConnect();
 
-        const session = await getServerSession(authOptions);
-        if (!session?.user || session.user.role !== "admin") {
+        const user = await resolveUser(req);
+        if (!user || user.role !== "admin") {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 

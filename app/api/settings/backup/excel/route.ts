@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { Payment } from "@/models/Payment";
 import { Settings } from "@/models/Settings";
-import { getServerSession } from "next-auth";
-import type { Session } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
+
 import { requireCronAuth } from "@/lib/requireCronAuth";
 import { logger } from "@/lib/logger";
 import type ExcelJSType from "exceljs";
@@ -20,7 +20,7 @@ export async function GET(req: Request) {
 
     // Allow cron job OR authenticated admin
     let isAuthorized = false;
-    let session: Session | null = null;
+    let user: AuthUser | null = null;
 
     const cronErr = requireCronAuth(req);
     if (!cronErr) {
@@ -28,10 +28,10 @@ export async function GET(req: Request) {
     } else {
         const [, s] = await Promise.all([
             dbConnect(),
-            getServerSession(authOptions),
+            resolveUser(req),
         ]);
-        session = s;
-        if (session?.user && session.user.role === "admin") {
+        user = s;
+        if (user && user.role === "admin") {
             isAuthorized = true;
         }
     }
@@ -44,7 +44,7 @@ export async function GET(req: Request) {
         await dbConnect();
         
         // Scope backup to specific user pool (or superadmin)
-        const poolFolder = session?.user?.poolId || "superadmin";
+        const poolFolder = user?.poolId || "superadmin";
         const dateStrDay = new Date().toISOString().split("T")[0].replace(/-/g, "_");
         
         // 1. Prevent Duplicate Backups (Check if a backup exists for the SAME DAY)
@@ -59,8 +59,8 @@ export async function GET(req: Request) {
             }
         }
 
-        const baseMatch = session?.user && session.user.role !== "superadmin" && session.user.poolId 
-            ? { poolId: session.user.poolId } : {};
+        const baseMatch = user && user.role !== "superadmin" && user.poolId 
+            ? { poolId: user.poolId } : {};
 
         // 2. Backup Data Restriction: Include ONLY Member details & Payment details.
         const [members, payments] = await Promise.all([

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessStock } from "@/models/BusinessStock";
 
@@ -8,13 +7,13 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session || session.user.role !== "business_admin") {
+        const user = await resolveUser(req);
+        if (!user || user.role !== "business_admin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
         await dbConnect();
-        const businessId = session.user.businessId;
+        const businessId = user.businessId;
 
         const stocks = await BusinessStock.find({ businessId }).sort({ name: 1 });
         return NextResponse.json(stocks, {
@@ -27,8 +26,8 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session || session.user.role !== "business_admin") {
+        const user = await resolveUser(req);
+        if (!user || user.role !== "business_admin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -40,7 +39,7 @@ export async function POST(req: Request) {
         }
 
         await dbConnect();
-        const businessId = session.user.businessId;
+        const businessId = user.businessId;
 
         const stock = new BusinessStock({
             name,
@@ -64,8 +63,8 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session || session.user.role !== "business_admin") {
+        const user = await resolveUser(req);
+        if (!user || user.role !== "business_admin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -77,7 +76,7 @@ export async function PUT(req: Request) {
         }
 
         await dbConnect();
-        const businessId = session.user.businessId;
+        const businessId = user.businessId;
 
         const stock = await BusinessStock.findOneAndUpdate(
             { _id, businessId },

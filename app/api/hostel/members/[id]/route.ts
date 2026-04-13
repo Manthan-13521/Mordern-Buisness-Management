@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
-import { getToken } from "next-auth/jwt";
-import { jwtVerify } from "jose";
 import { HostelMember } from "@/models/HostelMember";
 import { HostelPayment } from "@/models/HostelPayment";
 import { HostelLog } from "@/models/HostelLog";
@@ -10,33 +8,18 @@ import { HostelFloor } from "@/models/HostelFloor";
 import { HostelRoom } from "@/models/HostelRoom";
 import { HostelPlan } from "@/models/HostelPlan";
 import mongoose from "mongoose";
-
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 export const dynamic = "force-dynamic";
 
 // GET /api/hostel/members/[id]
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-                const authHeader = req.headers.get("authorization");
-        let token = null;
-
-        if (authHeader?.startsWith("Bearer ")) {
-            try {
-                const bearerToken = authHeader.split(" ")[1];
-                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-                const { payload } = await jwtVerify(bearerToken, secret);
-                token = payload;
-            } catch (e) {}
-        }
-
-        if (!token) {
-            token = await getToken({ req: req as any });
-        }
-
+        const user = await resolveUser(req);
         await dbConnect();
         const [{ id }] = await Promise.all([params]);
         await dbConnect();
-        if (!token || token.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        const hostelId = token.hostelId as string;
+        if (!user || user.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const hostelId = user.hostelId as string;
         const member = await HostelMember.findOne({ _id: id, hostelId })
             .populate("planId", "name durationDays price")
             .populate("roomId", "roomNo capacity")
@@ -66,27 +49,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 // PUT /api/hostel/members/[id]
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-                const authHeader = req.headers.get("authorization");
-        let token = null;
-
-        if (authHeader?.startsWith("Bearer ")) {
-            try {
-                const bearerToken = authHeader.split(" ")[1];
-                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-                const { payload } = await jwtVerify(bearerToken, secret);
-                token = payload;
-            } catch (e) {}
-        }
-
-        if (!token) {
-            token = await getToken({ req: req as any });
-        }
-
+        const user = await resolveUser(req);
         await dbConnect();
         const [{ id }, body] = await Promise.all([params, req.json()]);
         await dbConnect();
-        if (!token || token.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        const hostelId = token.hostelId as string;
+        if (!user || user.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const hostelId = user.hostelId as string;
         const { name, phone, collegeName, notes, blockNo, roomNo, floorNo } = body;
         
         let updateData: any = { name, phone, collegeName, notes };
@@ -134,27 +102,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 // DELETE /api/hostel/members/[id]
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-                const authHeader = req.headers.get("authorization");
-        let token = null;
-
-        if (authHeader?.startsWith("Bearer ")) {
-            try {
-                const bearerToken = authHeader.split(" ")[1];
-                const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-                const { payload } = await jwtVerify(bearerToken, secret);
-                token = payload;
-            } catch (e) {}
-        }
-
-        if (!token) {
-            token = await getToken({ req: req as any });
-        }
-
+        const user = await resolveUser(req);
         await dbConnect();
         const [{ id }] = await Promise.all([params]);
         await dbConnect();
-        if (!token || token.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        const hostelId = token.hostelId as string;
+        if (!user || user.role !== "hostel_admin") return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const hostelId = user.hostelId as string;
         const member = await HostelMember.findOne({ _id: id, hostelId }).lean() as any;
         if (!member) return NextResponse.json({ error: "Member not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
@@ -182,7 +135,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
             memberObjectId: member._id,
             memberName: member.name,
             description: `Manual hard-delete performed. Member ${member.name} (${member.memberId}) archived to permanent storage.`,
-            performedBy: token.email as string,
+            performedBy: user.email as string,
         });
         return NextResponse.json({ success: true }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { ReferralCode } from "@/models/ReferralCode";
@@ -18,8 +17,8 @@ const razorpay = new Razorpay({
  */
 export async function POST(req: Request) {
     try {
-        const session = await getServerSession(authOptions) as any;
-        if (!session?.user?.id) {
+        const user = await resolveUser(req) as any;
+        if (!user.id) {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
@@ -35,14 +34,14 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "planType and module are required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
-        // Validate module matches session user type
-        const userModule: SubscriptionModule = session.user.hostelId ? "hostel" : "pool";
+        // Validate module matches user user type
+        const userModule: SubscriptionModule = user.hostelId ? "hostel" : "pool";
         if (module !== userModule) {
             return NextResponse.json({ error: "Module mismatch with your account type" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         await dbConnect();
-        const user = await User.findById(session.user.id).lean() as any;
+        const user = await User.findById(user.id).lean() as any;
         if (!user) return NextResponse.json({ error: "User not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         // Trial guard
@@ -97,9 +96,9 @@ export async function POST(req: Request) {
         const order = await razorpay.orders.create({
             amount:   amountPaise,
             currency: "INR",
-            receipt:  `sub_${session.user.id}_${planType}_${Date.now()}`,
+            receipt:  `sub_${user.id}_${planType}_${Date.now()}`,
             notes: {
-                userId:  session.user.id,
+                userId:  user.id,
                 planType,
                 module,
                 blocks:  blocks?.toString() || "",

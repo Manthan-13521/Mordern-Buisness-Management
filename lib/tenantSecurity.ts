@@ -1,5 +1,5 @@
 import { logger } from "@/lib/logger";
-import { SessionUser } from "./tenant";
+import { AuthUser } from "./authHelper";
 
 interface SecureQueryOptions {
     select?: string;
@@ -11,7 +11,7 @@ interface SecureQueryOptions {
  * Validates cross-tenant access internally for logging purposes.
  * This function handles the advanced security boost: Detect Tampering Attempts.
  */
-export async function auditCrossTenantAccess(model: any, id: string, user: SessionUser) {
+export async function auditCrossTenantAccess(model: any, id: string, user: AuthUser) {
     if (user.role === "superadmin") return;
     try {
         const item = await model.findById(id).select("poolId").lean() as any;
@@ -33,12 +33,7 @@ export async function auditCrossTenantAccess(model: any, id: string, user: Sessi
     }
 }
 
-/**
- * Securely finds a document by ID. 
- * Superadmins are allowed global access. All other roles are strictly scoped to their poolId.
- * If a document is fetched and not found, we audit for tampering and return null to simulate a 404.
- */
-export async function secureFindById(model: any, id: string, user: SessionUser, opts: SecureQueryOptions = {}) {
+export async function secureFindById(model: any, id: string, user: AuthUser, opts: SecureQueryOptions = {}) {
     let query = user.role === "superadmin" 
         ? model.findById(id) 
         : model.findOne({ _id: id, poolId: user.poolId });
@@ -56,11 +51,7 @@ export async function secureFindById(model: any, id: string, user: SessionUser, 
     return result as any;
 }
 
-/**
- * Securely updates a document by ID.
- * Employs the same isolation logic as secureFindById.
- */
-export async function secureUpdateById(model: any, id: string, updateData: any, user: SessionUser, opts: SecureQueryOptions = {}) {
+export async function secureUpdateById(model: any, id: string, updateData: any, user: AuthUser, opts: SecureQueryOptions = {}) {
     let query = user.role === "superadmin" 
         ? model.findByIdAndUpdate(id, updateData, { returnDocument: 'after' }) 
         : model.findOneAndUpdate({ _id: id, poolId: user.poolId }, updateData, { returnDocument: 'after' });
@@ -78,11 +69,7 @@ export async function secureUpdateById(model: any, id: string, updateData: any, 
     return result as any;
 }
 
-/**
- * Securely deletes a document by ID.
- * Returns the deleted document, or null if not found/access denied.
- */
-export async function secureDeleteById(model: any, id: string, user: SessionUser) {
+export async function secureDeleteById(model: any, id: string, user: AuthUser) {
     let query = user.role === "superadmin" 
         ? model.findByIdAndDelete(id) 
         : model.findOneAndDelete({ _id: id, poolId: user.poolId });

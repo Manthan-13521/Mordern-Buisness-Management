@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { Competition } from "@/models/Competition";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -14,19 +14,19 @@ export const revalidate = 0;
  */
 export async function GET(req: NextRequest) {
     try {
-        const [, session] = await Promise.all([
+        const [, user] = await Promise.all([
             dbConnect(),
-            getServerSession(authOptions),
+            resolveUser(req),
         ]);
-        if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const { searchParams } = new URL(req.url);
         const page     = Math.max(1, Number(searchParams.get("page")  ?? 1));
         const limit    = Math.min(50, Number(searchParams.get("limit") ?? 20));
         const status   = searchParams.get("status"); // "upcoming" | "completed" | null (all)
-        const poolId   = session.user.role === "superadmin"
-            ? (searchParams.get("poolId") ?? session.user.poolId)
-            : session.user.poolId;
+        const poolId   = user.role === "superadmin"
+            ? (searchParams.get("poolId") ?? user.poolId)
+            : user.poolId;
 
         const filter: Record<string, unknown> = { poolId };
         if (status === "completed") filter.isCompleted = true;
@@ -56,11 +56,11 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
     try {
-        const [, session] = await Promise.all([
+        const [, user] = await Promise.all([
             dbConnect(),
-            getServerSession(authOptions),
+            resolveUser(req),
         ]);
-        if (!session?.user || !["admin", "superadmin"].includes(session.user.role)) {
+        if (!user || !["admin", "superadmin"].includes(user.role)) {
             return NextResponse.json({ error: "Admin only" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
         }
 
         const competition = await Competition.create({
-            poolId:       session.user.poolId,
+            poolId:       user.poolId,
             name:         name.trim(),
             date:         new Date(date),
             category:     category.trim(),

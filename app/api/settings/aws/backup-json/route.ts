@@ -1,26 +1,26 @@
 import { NextResponse } from "next/server";
+import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { Payment } from "@/models/Payment";
 import { Plan } from "@/models/Plan";
 import { EntryLog } from "@/models/EntryLog";
 import { DeletedMember } from "@/models/DeletedMember";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
 import { uploadBackup } from "@/lib/s3";
 import { gzipSync } from "zlib";
 
 export async function POST(req: Request) {
     try {
         await dbConnect();
-        const session = await getServerSession(authOptions);
+        const user = await resolveUser(req);
 
-        if (!session?.user || (session.user.role !== "admin" && session.user.role !== "superadmin")) {
+        if (!user || (user.role !== "admin" && user.role !== "superadmin")) {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
-        const poolId = (session.user as any).poolId;
-        if (!poolId && session.user.role !== "superadmin") {
+        const poolId = user.poolId;
+        if (!poolId && user.role !== "superadmin") {
             return NextResponse.json({ error: "No pool ID found for user" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 

@@ -22,6 +22,7 @@
 
 import { logger } from "@/lib/logger";
 import mongoose from "mongoose";
+import { AuthUser } from "./authHelper";
 
 export class TenantIsolationError extends Error {
     readonly statusCode = 400;
@@ -38,11 +39,7 @@ export class TenantIsolationError extends Error {
     }
 }
 
-export interface SessionUser {
-    id?: string;
-    role?: string;
-    poolId?: string | null;
-}
+// We use AuthUser from authHelper as the canonical type
 
 /**
  * Returns a MongoDB query filter scoped to the authenticated user's pool.
@@ -53,9 +50,8 @@ export interface SessionUser {
  * Throws `TenantIsolationError` if a non-superadmin has no poolId —
  * this prevents leaking data from other tenants via an empty filter.
  */
-export function getTenantFilter(user: SessionUser): Record<string, string> {
+export function getTenantFilter(user: AuthUser): Record<string, string> {
     if (user.role === "superadmin") {
-        // Superadmin intentionally sees all — no pool filter applied
         return {};
     }
 
@@ -63,19 +59,9 @@ export function getTenantFilter(user: SessionUser): Record<string, string> {
     return { poolId: user.poolId! };
 }
 
-/**
- * Global Tenant Guard (Hardened)
- * Validates the session and returns the poolId. 
- * Throws explicit errors and logs access violations.
- * Use this everywhere instead of manual checks.
- */
-export function requireTenant(user?: SessionUser | null): string {
+export function requireTenant(user?: AuthUser | null): string {
     if (!user) throw new Error("Unauthorized");
 
-    // Superadmins don't strictly require a poolId in session to fetch all,
-    // but if a specific route needs one, they should use resolvePoolId instead.
-    // If a non-superadmin lacks a poolId, it's a critical security violation.
-    // NOTE: poolId can be an ObjectId (standard) or a Slug (Pool/Hostel fallback).
     if (user.role !== "superadmin" && (!user.poolId || typeof user.poolId !== "string" || user.poolId.trim() === "")) {
         console.error("SECURITY: Missing or empty poolId access attempt", {
             userId: user.id || "unknown",
@@ -84,20 +70,14 @@ export function requireTenant(user?: SessionUser | null): string {
         throw new Error("Invalid or missing pool assignment");
     }
 
-    return user.poolId || "superadmin"; // Safe to return "superadmin" here ONLY if user.role === "superadmin"
+    return user.poolId || "superadmin";
 }
 
-/**
- * Business Module Tenant Guard 
- * Validates the session and returns the businessId. 
- * Throws explicit errors and logs access violations.
- */
-export function requireBusinessId(user?: SessionUser | null): string {
+export function requireBusinessId(user?: AuthUser | null): string {
     if (!user) throw new Error("Unauthorized");
 
-    const businessId = (user as any).businessId;
+    const businessId = user.businessId;
 
-    // Superadmins don't strictly require a businessId in session to fetch all
     if (user.role !== "superadmin") {
         if (!businessId || typeof businessId !== "string" || !mongoose.Types.ObjectId.isValid(businessId)) {
             console.error("SECURITY: Missing or invalid businessId access attempt", {
@@ -111,26 +91,13 @@ export function requireBusinessId(user?: SessionUser | null): string {
     return businessId || "superadmin";
 }
 
-/**
- * Asserts that the session user has a valid poolId.
- * Call this at the top of any route that MUST be tenant-scoped.
- *
- * Throws `TenantIsolationError` (HTTP 400) if poolId is falsy.
- */
-export function requirePoolId(user: SessionUser): asserts user is SessionUser & { poolId: string } {
+export function requirePoolId(user: AuthUser): asserts user is AuthUser & { poolId: string } {
     if (!user.poolId) {
         throw new TenantIsolationError(user.id, user.role, "Strict tenant scope required but session lacks poolId.");
     }
 }
 
-/**
- * Safely resolves the poolId for a write operation:
- *  - non-superadmin → always returns session poolId (ignores body)
- *  - superadmin     → uses body.poolId (must be provided by caller)
- *
- * Throws if the result is falsy.
- */
-export function resolvePoolId(user: SessionUser, bodyPoolId?: string): string {
+export function resolvePoolId(user: AuthUser, bodyPoolId?: string): string {
     const poolId = user.role === "superadmin" ? bodyPoolId : user.poolId;
     if (!poolId) {
         throw new TenantIsolationError(
