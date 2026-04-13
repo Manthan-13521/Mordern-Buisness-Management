@@ -192,7 +192,7 @@ export default function LabourPage() {
     try {
       const res = await fetch("/api/business/labour", { cache: "no-store" });
       const json = await res.json();
-      // Destructure from standardized response { data, meta }
+      // Robust null-safety fallback: json.data || []
       setLabours(Array.isArray(json.data) ? json.data : []);
     } catch {
       toast.error("Failed to load staff");

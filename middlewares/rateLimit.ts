@@ -46,6 +46,13 @@ const RATE_LIMITS: Record<string, number> = {
     'GET:/api/subscription/status':         30,
     'GET:/api/cron/subscription-expiry':     2,
     'POST:/api/cron/subscription-expiry':    2,
+    // Business module rate limits
+    'GET:/api/business/analytics': 100,
+    'GET:/api/business/customers': 100,
+    'POST:/api/business/customers': 100,
+    'GET:/api/business/labour': 100,
+    'POST:/api/business/labour': 100,
+    'POST:/api/business/attendance': 100,
 };
 const DEFAULT_LIMIT = 50;
 const WINDOW_MS = 60_000;

@@ -5,6 +5,7 @@ import { dbConnect } from "@/lib/mongodb";
 import { BusinessLabourPayment } from "@/models/BusinessLabourPayment";
 import { requireBusinessId } from "@/lib/tenant";
 import { SystemLock } from "@/models/SystemLock";
+import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -53,22 +54,39 @@ export async function POST(req: Request, { params }: { params: Promise<{ labourI
 
         await payment.save();
 
-        // ── 90-Day Rolling Window Cleanup (Distributed Locked Sweep) ──
+        // ── 90-Day Rolling Window Cleanup (Distributed Atomic Locked Sweep) ──
         if (Math.random() < 0.05) {
             (async () => {
+                const instanceId = crypto.randomUUID();
                 try {
                     const now = new Date();
-                    // Attempt to acquire distributed lock (1 min TTL)
+                    // 🟡 ATOMIC LOCK ACQUISITION WITH OWNERSHIP
                     const lock = await SystemLock.findOneAndUpdate(
                         { 
                             key: "labour_cleanup", 
-                            $or: [{ expiresAt: { $lt: now } }, { expiresAt: { $exists: false } }] 
+                            $or: [
+                                { expiresAt: { $lt: now } }, 
+                                { expiresAt: { $exists: false } }
+                            ] 
                         },
-                        { $set: { key: "labour_cleanup", expiresAt: new Date(now.getTime() + 60000) } },
-                        { upsert: true, new: true }
-                    ).catch(err => (err.code === 11000 ? null : Promise.reject(err)));
+                        { 
+                            $set: { 
+                                key: "labour_cleanup", 
+                                ownerId: instanceId,
+                                expiresAt: new Date(now.getTime() + 60000) 
+                            } 
+                        },
+                        { upsert: true, new: true, rawResult: true }
+                    ).catch(err => {
+                        if (err.code === 11000) return null; // Duplicate key (lock held)
+                        throw err;
+                    });
 
-                    if (!lock) return; // Lock held by another instance
+                    // Verify we actually own this lock session
+                    const lockDoc = (lock as any)?.value;
+                    if (!lock || (lockDoc && lockDoc.ownerId !== instanceId)) {
+                        return;
+                    }
 
                     const ninetyDaysAgo = new Date();
                     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
@@ -81,13 +99,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ labourI
                     console.info(JSON.stringify({
                         type: "PAYMENT_CLEANUP_SUCCESS",
                         businessId,
+                        ownerId: instanceId,
                         deletedCount: result.deletedCount,
                         route: `/api/business/labour/${labourId}/payments`,
                         method: "POST",
                         timestamp: new Date().toISOString()
                     }));
                 } catch (err: any) {
-                    console.error("Cleanup Error:", err.message);
+                    console.error(JSON.stringify({
+                        type: "CLEANUP_FAILED",
+                        key: "labour_cleanup",
+                        ownerId: instanceId,
+                        error: err.message,
+                        timestamp: new Date().toISOString()
+                    }));
                 }
             })();
         }

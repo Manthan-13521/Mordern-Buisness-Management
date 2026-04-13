@@ -34,8 +34,8 @@ export default function AnalyticsPage() {
       try {
         const res = await fetch("/api/business/analytics", { cache: "no-store" });
         const json = await res.json();
-        // Standardized response shape { data, meta }
-        setStats(json.data);
+        // Standardized safety fallback: json.data || {}
+        setStats(json.data || {});
       } catch (err) {
         console.error(err);
       } finally {

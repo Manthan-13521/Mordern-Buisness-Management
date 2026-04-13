@@ -10,6 +10,7 @@ import mongoose from "mongoose";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
+    const start = Date.now();
     try {
         const session = await getServerSession(authOptions);
         
@@ -94,6 +95,14 @@ export async function GET(req: Request) {
 
         const hasNoData = recentSales.length === 0 && recentPayments.length === 0;
 
+        // 📊 PERFORMANCE TRACKING
+        console.info(JSON.stringify({
+            type: "ANALYTICS_PERF",
+            businessId,
+            duration: Date.now() - start,
+            timestamp: new Date().toISOString()
+        }));
+
         return NextResponse.json({
             data: {
                 stats: {
@@ -120,6 +129,7 @@ export async function GET(req: Request) {
             meta: {
                 error: "Failed to fetch analytics",
                 details: error.message,
+                duration: Date.now() - start,
                 timestamp: new Date().toISOString()
             }
         }, { status: 500 });

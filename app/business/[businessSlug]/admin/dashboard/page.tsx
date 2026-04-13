@@ -23,7 +23,7 @@ export default function BusinessDashboard() {
         const res = await fetch("/api/business/analytics", { cache: "no-store" });
         const json = await res.json();
         if (res.ok) {
-          // Destructure from the new standardized { data, meta } shape
+          // Robust null-safety fallbacks for production resilience
           setStats(json.data?.stats || {});
           setRecentSales(json.data?.recentSales || []);
         } else {

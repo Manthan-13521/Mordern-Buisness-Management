@@ -2,11 +2,13 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface ISystemLock extends Document {
     key: string;
+    ownerId?: string;
     expiresAt: Date;
 }
 
 const SystemLockSchema = new Schema<ISystemLock>({
     key: { type: String, required: true, unique: true },
+    ownerId: { type: String, required: false },
     expiresAt: { type: Date, required: true }
 }, { timestamps: true });
 
