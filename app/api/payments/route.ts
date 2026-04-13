@@ -76,7 +76,7 @@ export async function GET(req: Request) {
             Payment.countDocuments(query),
         ]);
 
-        const headers = process.env.NODE_ENV === "development"
+        const headers: HeadersInit = process.env.NODE_ENV === "development"
             ? { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
             : {};
 
