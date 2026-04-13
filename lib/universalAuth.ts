@@ -9,7 +9,7 @@ import { jwtVerify } from "jose";
  */
 async function verifyBearerToken(): Promise<any | null> {
     try {
-        const headersList = headers();
+        const headersList = await headers();
         const authHeader = headersList.get("authorization");
 
         if (authHeader && authHeader.startsWith("Bearer ")) {
