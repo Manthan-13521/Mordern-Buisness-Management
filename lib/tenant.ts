@@ -63,6 +63,28 @@ export function getTenantFilter(user: SessionUser): Record<string, string> {
 }
 
 /**
+ * Global Tenant Guard (Hardened)
+ * Validates the session and returns the poolId. 
+ * Throws explicit errors and logs access violations.
+ * Use this everywhere instead of manual checks.
+ */
+export function requireTenant(user?: SessionUser | null): string {
+    if (!user) throw new Error("Unauthorized");
+
+    // Superadmins don't strictly require a poolId in session to fetch all,
+    // but if a specific route needs one, they should use resolvePoolId instead.
+    // If a non-superadmin lacks a poolId, it's a critical security violation.
+    if (user.role !== "superadmin" && !user.poolId) {
+        console.error("SECURITY: Missing poolId access attempt", {
+            userId: user.id || "unknown"
+        });
+        throw new Error("No pool assigned to this account");
+    }
+
+    return user.poolId || "superadmin"; // Safe to return "superadmin" here ONLY if user.role === "superadmin"
+}
+
+/**
  * Asserts that the session user has a valid poolId.
  * Call this at the top of any route that MUST be tenant-scoped.
  *

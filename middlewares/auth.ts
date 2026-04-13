@@ -58,6 +58,22 @@ export function withAuthRouting(req: NextRequestWithAuth): NextResponse | undefi
             applySecurityHeaders(res);
             return res;
         }
+
+        // ── Fast-Fail Pool API Edge Guard ──
+        // Only target Pool APIs (exclude hostel, business, auth)
+        if (
+            !isAlwaysAllowed &&
+            !path.startsWith("/api/hostel") &&
+            !path.startsWith("/api/business") &&
+            token?.role !== "superadmin" &&
+            !token?.poolId
+        ) {
+             console.error(`[Middleware] SECURITY BLOCK: Missing poolId on ${path}`, { userId: token?.id });
+             const res = NextResponse.json({ error: "Tenant isolated: No poolId assigned to session" }, { status: 401 });
+             applySecurityHeaders(res);
+             return res;
+        }
+
         return undefined; // Pass through to handler inside middleware.ts
     }
 

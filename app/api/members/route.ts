@@ -13,7 +13,7 @@ import { uploadBuffer } from "@/lib/local-upload";
 import { savePhoto } from "@/lib/savePhoto";
 import { signQRToken } from "@/lib/qrSigner";
 import { PRIVATE_API_STALE_MS } from "@/lib/apiCache";
-import { getTenantFilter, requirePoolId, resolvePoolId } from "@/lib/tenant";
+import { getTenantFilter, requireTenant, resolvePoolId } from "@/lib/tenant";
 import { secureFindById } from "@/lib/tenantSecurity"; 
 
 export const dynamic = "force-dynamic";
@@ -39,6 +39,14 @@ export async function GET(req: Request) {
 
         const sessionUser = token as any;
 
+        // ── Tenant isolation guard (Hardened Golden Rule) ───────────────
+        let poolId;
+        try {
+            poolId = requireTenant(sessionUser);
+        } catch (err: any) {
+             return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 400, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        }
+
         const url = new URL(req.url);
         const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1"));
         const limit = Math.min(
@@ -52,17 +60,9 @@ export async function GET(req: Request) {
         const balanceOnly = url.searchParams.get("balanceOnly") || "";
         const memberType = url.searchParams.get("type") || "all";
 
-        // ── Tenant isolation guard ────────────────────────────────────────
-        // For non-superadmin sessions, poolId MUST be present. If the session is
-        // somehow missing a poolId (e.g. misconfigured user), we reject hard — 
-        // we never fall back to an "UNASSIGNED_POOL" ghost value.
-        if (sessionUser.role !== "superadmin" && !sessionUser.poolId) {
-            return NextResponse.json({ error: "No pool assigned to this account" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
-
-        // ── Cache check (Redis → in-memory fallback) ─────────────────────
-        const poolKey = sessionUser.poolId || "superadmin";
-        const cacheKey = `members-${poolKey}-${page}-${limit}-${search}-${planFilter}-${statusFilter}-${balanceOnly}-${memberType}`;
+        // ── Safe Cache check (Redis → in-memory fallback) ─────────────────────
+        // Key hardened against same-tenant bleed
+        const cacheKey = `members-${sessionUser.id}-${poolId}-${page}-${limit}-${search}-${planFilter}-${statusFilter}-${balanceOnly}-${memberType}`;
         const cached = await getCache(cacheKey);
         if (cached) {
             return NextResponse.json(cached, {
