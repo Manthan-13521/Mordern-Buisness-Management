@@ -29,7 +29,7 @@ export async function POST(req: Request) {
             );
         }
 
-        const user = await User.findOne({ email }).lean();
+        const user: any = await User.findOne({ email }).lean();
 
         if (!user) {
             return NextResponse.json(
