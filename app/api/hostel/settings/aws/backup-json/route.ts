@@ -8,7 +8,7 @@ import { HostelFloor } from "@/models/HostelFloor";
 import { HostelBlock } from "@/models/HostelBlock";
 import { HostelPlan } from "@/models/HostelPlan";
 import { DeletedHostelMember } from "@/models/DeletedHostelMember";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "@/lib/universalAuth";
 import { authOptions } from "@/lib/auth";
 import { uploadBackup } from "@/lib/s3";
 import { gzipSync } from "zlib";

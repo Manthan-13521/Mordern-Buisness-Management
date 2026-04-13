@@ -210,12 +210,66 @@ export default function MembersPage() {
     const isUsingLocal = (!data?.members || data.members.length === 0) && localMembers !== null && localMembers.length > 0;
     const pendingSyncCount = localMembers ? localMembers.filter(m => (m as any).synced === false).length : 0;
 
-    // ── Pre-compute only the parsed date (everything else is API-provided) ──
+    // ── Computing view-model attributes (verdict, daysLeft) on the frontend ──
     const processedMembers = useMemo(() => {
-        return members.map((member) => ({
-            ...member,
-            _endDate: new Date(member.planEndDate || member.expiryDate || ""),
-        }));
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const nowMs = now.getTime();
+
+        return members.map((m: any) => {
+            const endDate = new Date(m.planEndDate || m.expiryDate || 0);
+            const msLeft = endDate.getTime() - nowMs;
+            
+            let verdict = "ACTIVE";
+            let verdictClass = "bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-500/10 dark:text-green-400";
+            let rowClass = "";
+            let daysLeftLabel = "";
+            let daysLeft = 0;
+
+            if (m.isDeleted) {
+                verdict = "DELETED";
+                verdictClass = "bg-gray-100 text-gray-600 ring-gray-500/20 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg dark:text-gray-400";
+                rowClass = "bg-red-50 dark:bg-red-950/30";
+                daysLeftLabel = "Deleted";
+            } else if (m.defaulterStatus === "blocked") {
+                verdict = "BLOCKED";
+                verdictClass = "bg-red-600 text-white ring-red-600/30 shadow animate-pulse";
+                rowClass = "bg-red-50/80 dark:bg-red-900/40 border-l-4 border-red-500";
+                daysLeftLabel = `Blocked: ${m.overdueDays}d overdue`;
+            } else if (m.defaulterStatus === "warning") {
+                verdict = "WARNING";
+                verdictClass = "bg-rose-50 text-rose-700 ring-rose-600/30 dark:bg-rose-500/20 dark:text-rose-400 font-bold border border-rose-200 dark:border-rose-800";
+                rowClass = "bg-rose-50/50 dark:bg-rose-950/20 border-l-4 border-rose-400";
+                daysLeftLabel = `Warning: ${m.overdueDays}d overdue`;
+            } else if (m.isExpired || msLeft <= 0) {
+                verdict = "EXPIRED";
+                verdictClass = "bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-500/10 dark:text-red-400";
+                rowClass = "bg-red-50 dark:bg-red-950/30";
+                daysLeftLabel = "Expired";
+            } else {
+                daysLeft = Math.ceil(msLeft / 86400000);
+                if (daysLeft <= 1) {
+                    daysLeftLabel = "Expires today";
+                } else {
+                    daysLeftLabel = `${daysLeft} days left`;
+                }
+                if (daysLeft <= 7) {
+                    verdict = "EXPIRING";
+                    verdictClass = "bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400";
+                    rowClass = "bg-amber-50 dark:bg-amber-950/30";
+                }
+            }
+
+            return {
+                ...m,
+                _endDate: endDate,
+                verdict,
+                verdictClass,
+                rowClass,
+                daysLeftLabel,
+                daysLeft
+            };
+        });
     }, [members]);
 
     // ── Prefetch next page for instant pagination ──────────────────────

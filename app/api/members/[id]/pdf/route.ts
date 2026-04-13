@@ -3,7 +3,7 @@ import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import "@/models/Plan";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "@/lib/universalAuth";
 import { authOptions } from "@/lib/auth";
 import fs from "fs";
 import path from "path";

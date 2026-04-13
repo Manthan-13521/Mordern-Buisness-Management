@@ -3,7 +3,7 @@ import { dbConnect } from "@/lib/mongodb";
 import { HostelPayment } from "@/models/HostelPayment";
 import { HostelMember } from "@/models/HostelMember";
 import { HostelPaymentArchive } from "@/models/HostelPaymentArchive";
-import { getToken } from "next-auth/jwt";
+import { getToken } from "@/lib/universalAuth";
 
 export const dynamic = "force-dynamic";
 

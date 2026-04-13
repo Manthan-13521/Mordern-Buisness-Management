@@ -7,7 +7,7 @@ import { HostelPlan } from "@/models/HostelPlan";
 import { HostelBlock } from "@/models/HostelBlock";
 import { HostelFloor } from "@/models/HostelFloor";
 import { HostelRoom } from "@/models/HostelRoom";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "@/lib/universalAuth";
 import { authOptions } from "@/lib/auth";
 import { uploadBackup } from "@/lib/s3";
 

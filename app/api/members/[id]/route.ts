@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "@/lib/universalAuth";
 import { authOptions } from "@/lib/auth";
 import { auditCrossTenantAccess, secureFindById, secureUpdateById, secureDeleteById } from "@/lib/tenantSecurity";
 
@@ -9,7 +9,6 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 import { EntertainmentMember } from "@/models/EntertainmentMember";
-import { invalidateCache } from "@/lib/membersCache";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -67,9 +66,6 @@ export async function PATCH(req: Request, props: RouteContext) {
 
         if (!member) return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
-        // Invalidate members list cache
-        invalidateCache(member.poolId).catch(() => {});
-
         return NextResponse.json(member, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[PATCH /api/members/[id]]", error);
@@ -107,9 +103,6 @@ export async function DELETE(req: Request, props: RouteContext) {
             await auditCrossTenantAccess(EntertainmentMember, id, session.user);
             return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-
-        // 2. Cache Invalidation
-        invalidateCache(deleted.poolId).catch(() => {});
 
         return NextResponse.json({ message: "Member deleted successfully." }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {

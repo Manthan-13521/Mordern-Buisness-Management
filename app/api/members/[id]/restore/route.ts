@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "@/lib/universalAuth";
 import { authOptions } from "@/lib/auth";
 import { secureUpdateById } from "@/lib/tenantSecurity";
 

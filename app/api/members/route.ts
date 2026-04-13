@@ -4,8 +4,8 @@ import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
 import { Payment } from "@/models/Payment";
-import { getServerSession } from "next-auth";
-import { getToken } from "next-auth/jwt";
+import { getServerSession } from "@/lib/universalAuth";
+import { getToken } from "@/lib/universalAuth";
 import { authOptions } from "@/lib/auth";
 import QRCode from "qrcode";
 import crypto from "crypto";
@@ -24,8 +24,6 @@ const LIST_SELECT = "-faceDescriptor -photoUrl";
 
 import { generateMemberId } from "@/lib/generateMemberId";
 import { MemberCreateSchema } from "@/lib/validators";
-
-import { getCache, setCache, invalidateCache } from "@/lib/membersCache";
 
 export async function GET(req: Request) {
     try {
@@ -59,16 +57,6 @@ export async function GET(req: Request) {
         const statusFilter = url.searchParams.get("status") || "";
         const balanceOnly = url.searchParams.get("balanceOnly") || "";
         const memberType = url.searchParams.get("type") || "all";
-
-        // ── Safe Cache check (Redis → in-memory fallback) ─────────────────────
-        // Key hardened against same-tenant bleed
-        const cacheKey = `members-${sessionUser.id}-${poolId}-${page}-${limit}-${search}-${planFilter}-${statusFilter}-${balanceOnly}-${memberType}`;
-        const cached = await getCache(cacheKey);
-        if (cached) {
-            return NextResponse.json(cached, {
-                headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" },
-            });
-        }
 
         // ── Build match filter ───────────────────────────────────────────
         const tenantFilter = getTenantFilter(sessionUser);
@@ -125,7 +113,7 @@ export async function GET(req: Request) {
         }
 
         pipeline.push(
-            { $sort: { createdAt: -1 } },
+            { $sort: { createdAt: -1, _id: -1 } },
             { $skip: skip },
             { $limit: limit },
             {
@@ -135,6 +123,8 @@ export async function GET(req: Request) {
                     foreignField: "_id",
                     as: "_plan",
                     pipeline: [
+                        { $match: { poolId } },
+                        { $sort: { createdAt: -1, _id: -1 } },
                         { $project: { name: 1, durationDays: 1, durationHours: 1, durationMinutes: 1, price: 1, voiceAlert: 1, hasTokenPrint: 1, quickDelete: 1 } },
                     ],
                 },
@@ -161,14 +151,9 @@ export async function GET(req: Request) {
         ]);
         const total = regularBaseCount + entertainmentBaseCount;
 
-        // ── Compute verdict server-side in JS (fast, resilient) ──────────
-        const now = Date.now();
         const { resolveDefaulterState } = await import("@/lib/defaulterEngine");
 
         const data = await Promise.all(rawData.map(async (m: any) => {
-            const endDate = new Date(m.planEndDate || m.expiryDate || 0);
-            const msLeft = endDate.getTime() - now;
-            
             // ── STEP 8: Inject Native Defaulter UI Matrix ────────────────────
             const isEntertainment = !('status' in m) && m._source === "entertainment";
             let defaulterObj = { isDefaulter: false, overdueDays: 0, defaulterStatus: "active" as ("active"|"warning"|"blocked") };
@@ -181,68 +166,26 @@ export async function GET(req: Request) {
             m.defaulterStatus = defaulterObj.defaulterStatus;
             m.overdueDays = defaulterObj.overdueDays;
 
-            let verdict = "ACTIVE";
-            let verdictClass = "bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-500/10 dark:text-green-400";
-            let rowClass = "";
-            let daysLeftLabel = "";
-
-            if (m.isDeleted) {
-                verdict = "DELETED";
-                verdictClass = "bg-gray-100 text-gray-600 ring-gray-500/20 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg dark:text-gray-400";
-                rowClass = "bg-red-50 dark:bg-red-950/30";
-                daysLeftLabel = "Deleted";
-            } else if (defaulterObj.defaulterStatus === "blocked") {
-                verdict = "BLOCKED";
-                verdictClass = "bg-red-600 text-white ring-red-600/30 shadow animate-pulse";
-                rowClass = "bg-red-50/80 dark:bg-red-900/40 border-l-4 border-red-500";
-                daysLeftLabel = `Blocked: ${defaulterObj.overdueDays}d overdue`;
-            } else if (defaulterObj.defaulterStatus === "warning") {
-                verdict = "WARNING";
-                verdictClass = "bg-rose-50 text-rose-700 ring-rose-600/30 dark:bg-rose-500/20 dark:text-rose-400 font-bold border border-rose-200 dark:border-rose-800";
-                rowClass = "bg-rose-50/50 dark:bg-rose-950/20 border-l-4 border-rose-400";
-                daysLeftLabel = `Warning: ${defaulterObj.overdueDays}d overdue`;
-            } else if (m.isExpired || msLeft <= 0) {
-                verdict = "EXPIRED";
-                verdictClass = "bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-500/10 dark:text-red-400";
-                rowClass = "bg-red-50 dark:bg-red-950/30";
-                daysLeftLabel = "Expired";
-            } else {
-                const daysLeft = Math.ceil(msLeft / 86400000);
-                if (daysLeft <= 1) {
-                    daysLeftLabel = "Expires today";
-                } else {
-                    daysLeftLabel = `${daysLeft} days left`;
-                }
-                if (daysLeft <= 7) {
-                    verdict = "EXPIRING";
-                    verdictClass = "bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400";
-                    rowClass = "bg-amber-50 dark:bg-amber-950/30";
-                }
-                m.daysLeft = daysLeft;
-            }
-
-            m.verdict = verdict;
-            m.verdictClass = verdictClass;
-            m.rowClass = rowClass;
-            m.daysLeftLabel = daysLeftLabel;
-            if (!m.daysLeft) m.daysLeft = 0;
             return m;
         }));
 
         const response = {
-            data,
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
+            success: true,
+            data: Array.isArray(data) ? data : [],
+            meta: {
+                stable: true,
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            }
         };
 
-        // Cache response (async, non-blocking)
-        setCache(cacheKey, response).catch(() => {});
+        const headers = process.env.NODE_ENV === "development"
+            ? { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
+            : {};
 
-        return NextResponse.json(response, {
-            headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" },
-        });
+        return NextResponse.json(response, { headers });
     } catch (error) {
         console.error("[GET /api/members]", error);
         return NextResponse.json({ error: "Failed to fetch members" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
@@ -502,9 +445,6 @@ export async function POST(req: Request) {
             : await secureFindById(Member, newMember._id.toString(), sessionUser, { populate: { path: "planId", select: "name hasTokenPrint quickDelete price" } });
 
         // No background job needed since generation is inline
-
-        // Invalidate members cache for this pool
-        invalidateCache(poolId).catch(() => {});
 
         return NextResponse.json(savedMember, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {

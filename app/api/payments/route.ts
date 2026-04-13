@@ -69,22 +69,28 @@ export async function GET(req: Request) {
                 .populate("memberId", "name memberId")
                 .populate("planId",   "name")
                 .populate("recordedBy", "name")
-                .sort({ createdAt: -1 })
+                .sort({ createdAt: -1, _id: -1 })
                 .skip(skip)
                 .limit(limit)
                 .lean(),
             Payment.countDocuments(query),
         ]);
 
+        const headers = process.env.NODE_ENV === "development"
+            ? { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
+            : {};
+
         return NextResponse.json({
+            success: true,
             data: payments,
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
-        }, {
-            headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" },
-        });
+            meta: {
+                stable: true,
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            }
+        }, { headers });
     } catch (error) {
         console.error("[GET /api/payments]", error);
         return NextResponse.json({ error: "Failed to fetch payments" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });

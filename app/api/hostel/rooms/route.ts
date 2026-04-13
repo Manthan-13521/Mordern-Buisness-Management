@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
-import { getToken } from "next-auth/jwt";
+import { getToken } from "@/lib/universalAuth";
 import { HostelMember } from "@/models/HostelMember";
 import { HostelBlock } from "@/models/HostelBlock";
 import { HostelFloor } from "@/models/HostelFloor";
