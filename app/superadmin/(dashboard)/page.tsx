@@ -7,6 +7,9 @@ import {
     RefreshCw, Zap, XCircle, CheckCircle2, ArrowUpRight, BarChart3,
     BadgePercent, Target, Flame, Bell
 } from "lucide-react";
+import {
+    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from "recharts";
 
 interface DashboardData {
     kpis: {
@@ -30,14 +33,19 @@ interface DashboardData {
 
 export default function SuperAdminDashboard() {
     const [data, setData] = useState<DashboardData | null>(null);
+    const [chartData, setChartData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<"overview" | "orgs" | "referrals" | "billing">("overview");
 
     const fetchDashboard = async () => {
         setLoading(true);
         try {
-            const res = await fetch("/api/superadmin/dashboard");
+            const [res, chartRes] = await Promise.all([
+                fetch("/api/superadmin/dashboard"),
+                fetch("/api/superadmin/dashboard/chart")
+            ]);
             if (res.ok) setData(await res.json());
+            if (chartRes.ok) setChartData(await chartRes.json());
         } catch (e) {
             console.error(e);
         } finally {
@@ -72,7 +80,7 @@ export default function SuperAdminDashboard() {
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* ── Header ── */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-white">SaaS Command Center</h1>
                     <p className="text-neutral-400 mt-1 text-sm">Revenue · Organizations · Growth · Risk — everything in 5 seconds.</p>
@@ -106,12 +114,12 @@ export default function SuperAdminDashboard() {
             )}
 
             {/* ── Tabs ── */}
-            <div className="flex gap-1 bg-white/5 p-1 rounded-xl border border-white/10 w-fit">
+            <div className="flex overflow-x-auto gap-1 bg-white/5 p-1 rounded-xl border border-white/10 w-fit">
                 {(["overview", "orgs", "referrals", "billing"] as const).map(tab => (
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
-                        className={`px-5 py-2 rounded-lg text-sm font-semibold capitalize transition-all ${
+                        className={`px-5 py-2 whitespace-nowrap rounded-lg text-sm font-semibold capitalize transition-all ${
                             activeTab === tab
                                 ? "bg-blue-600 text-white shadow-lg shadow-blue-500/25"
                                 : "text-neutral-400 hover:text-white hover:bg-white/5"
@@ -128,7 +136,7 @@ export default function SuperAdminDashboard() {
                     {/* Row 1: Revenue KPIs */}
                     <div>
                         <p className="text-xs font-bold uppercase tracking-widest text-emerald-400 mb-4 flex items-center gap-2"><DollarSign className="w-3.5 h-3.5" /> Revenue Intelligence</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                             <KpiCard title="Total SaaS Revenue" value={`₹${kpis.totalRevenue.toLocaleString("en-IN")}`} icon={<DollarSign className="w-5 h-5" />} color="emerald" />
                             <KpiCard title="MRR (30 days)" value={`₹${kpis.mrr.toLocaleString("en-IN")}`} icon={<TrendingUp className="w-5 h-5" />} color="blue" />
                             <KpiCard title="Active Organizations" value={kpis.activeOrgs.toString()} icon={<CheckCircle2 className="w-5 h-5" />} color="green" />
@@ -140,7 +148,7 @@ export default function SuperAdminDashboard() {
                     {/* Row 2: Platform Stats */}
                     <div>
                         <p className="text-xs font-bold uppercase tracking-widest text-blue-400 mb-4 flex items-center gap-2"><Activity className="w-3.5 h-3.5" /> Platform Health</p>
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                             <MiniStat label="Pools" value={kpis.totalPools} icon={<Droplets className="w-4 h-4" />} />
                             <MiniStat label="Hostels" value={kpis.totalHostels} icon={<Building2 className="w-4 h-4" />} />
                             <MiniStat label="Total Members" value={kpis.totalMembers} icon={<Users className="w-4 h-4" />} />
@@ -149,32 +157,33 @@ export default function SuperAdminDashboard() {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {/* Growth Chart */}
-                        <div className="lg:col-span-2 bg-neutral-900/80 border border-white/5 rounded-2xl p-6 shadow-xl">
+                        {/* System Overview Line Graph */}
+                        <div className="lg:col-span-2 bg-neutral-900/80 border border-white/5 rounded-2xl p-6 shadow-xl overflow-x-auto">
                             <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2">
-                                <BarChart3 className="w-4 h-4 text-blue-400" /> Daily Signups (30d)
+                                <BarChart3 className="w-4 h-4 text-blue-400" /> System Ecosystem Growth
                             </h3>
-                            {dailySignups.length === 0 ? (
-                                <p className="text-neutral-500 text-sm text-center py-10">No signup data yet.</p>
-                            ) : (
-                                <div className="flex items-end gap-1 h-36">
-                                    {dailySignups.map((d: any, i: number) => {
-                                        const maxCount = Math.max(...dailySignups.map((x: any) => x.count), 1);
-                                        const heightPct = (d.count / maxCount) * 100;
-                                        return (
-                                            <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative">
-                                                <div
-                                                    className="w-full bg-gradient-to-t from-blue-600 to-blue-400 rounded-t-sm transition-all duration-300 hover:from-blue-500 hover:to-blue-300 min-h-[2px]"
-                                                    style={{ height: `${heightPct}%` }}
-                                                />
-                                                <div className="absolute -top-8 bg-neutral-800 text-white text-[10px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                                                    {d._id}: {d.count}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
+                            <div className="h-72 min-w-[500px]">
+                                {chartData.length === 0 ? (
+                                    <div className="h-full flex items-center justify-center"><p className="text-neutral-500">No chart data sync available</p></div>
+                                ) : (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                                            <XAxis dataKey="month" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+                                            <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+                                            <Tooltip 
+                                                contentStyle={{ backgroundColor: "#0f172a", border: "1px solid #1e293b", borderRadius: "8px" }}
+                                                itemStyle={{ fontSize: 13, fontWeight: "bold" }}
+                                            />
+                                            <Legend wrapperStyle={{ fontSize: 12, paddingTop: "10px" }} />
+                                            <Line type="monotone" name="Pool Users" dataKey="pool" stroke="#3b82f6" strokeWidth={3} dot={{ stroke: "#1d4ed8", strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
+                                            <Line type="monotone" name="Hostel Users" dataKey="hostel" stroke="#10b981" strokeWidth={3} dot={{ stroke: "#047857", strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
+                                            <Line type="monotone" name="Business Users" dataKey="business" stroke="#8b5cf6" strokeWidth={3} dot={{ stroke: "#6d28d9", strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
+                                            <Line type="monotone" name="System Active Users" dataKey="active" stroke="#f59e0b" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                )}
+                            </div>
                         </div>
 
                         {/* Quick Actions */}

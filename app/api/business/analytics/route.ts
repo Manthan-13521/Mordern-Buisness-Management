@@ -4,18 +4,22 @@ import { authOptions } from "@/lib/auth";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessTransaction } from "@/models/BusinessTransaction";
 import { BusinessCustomer } from "@/models/BusinessCustomer";
+import { requireBusinessId } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
     try {
         const session = await getServerSession(authOptions);
-        if (!session || session.user.role !== "business_admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        
+        let businessId;
+        try {
+            businessId = requireBusinessId(session?.user);
+        } catch (err: any) {
+            return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
         }
 
         await dbConnect();
-        const businessId = session.user.businessId;
 
         const now = new Date();
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());

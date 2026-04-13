@@ -3,14 +3,18 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessAttendance } from "@/models/BusinessAttendance";
+import { requireBusinessId } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
     try {
         const session = await getServerSession(authOptions);
-        if (!session || session.user.role !== "business_admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        let businessId;
+        try {
+            businessId = requireBusinessId(session?.user);
+        } catch (err: any) {
+            return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
         }
 
         const body = await req.json();
@@ -21,7 +25,6 @@ export async function POST(req: Request) {
         }
 
         await dbConnect();
-        const businessId = session.user.businessId;
 
         // Upsert approach: remove existing for this date and business, then insert new
         // For production, a more careful update would be better, but this is clean for MVP
@@ -41,6 +44,13 @@ export async function POST(req: Request) {
             );
         }
 
+        // ── 90-Day Rolling Window Cleanup (On-Write Sweep) ──
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+        
+        // Non-blocking cleanup of deeply historically stale records
+        BusinessAttendance.deleteMany({ businessId, date: { $lt: ninetyDaysAgo } }).catch(console.error);
+
         return NextResponse.json({ success: true }, {
             headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
         });
@@ -53,8 +63,11 @@ export async function POST(req: Request) {
 export async function GET(req: Request) {
     try {
         const session = await getServerSession(authOptions);
-        if (!session || session.user.role !== "business_admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        let businessId;
+        try {
+            businessId = requireBusinessId(session?.user);
+        } catch (err: any) {
+            return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
         }
 
         const { searchParams } = new URL(req.url);
@@ -64,7 +77,6 @@ export async function GET(req: Request) {
         const to = searchParams.get("to");
 
         await dbConnect();
-        const businessId = session.user.businessId;
 
         const query: any = { businessId };
         if (date) {

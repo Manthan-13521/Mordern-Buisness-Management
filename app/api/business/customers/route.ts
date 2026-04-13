@@ -3,18 +3,21 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessCustomer } from "@/models/BusinessCustomer";
+import { requireBusinessId } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
     try {
         const session = await getServerSession(authOptions);
-        if (!session || session.user.role !== "business_admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        let businessId;
+        try {
+            businessId = requireBusinessId(session?.user);
+        } catch (err: any) {
+            return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
         }
 
         await dbConnect();
-        const businessId = session.user.businessId;
 
         const { searchParams } = new URL(req.url);
         const hasDue = searchParams.get("hasDue") === "true";
@@ -27,9 +30,17 @@ export async function GET(req: Request) {
             {
                 $lookup: {
                     from: "businesstransactions",
-                    let: { custId: "$_id" },
+                    let: { custId: "$_id", businessId: "$businessId" },
                     pipeline: [
-                        { $match: { $expr: { $eq: ["$customerId", "$$custId"] }, category: "SALE" } },
+                        { $match: { 
+                            $expr: { 
+                                $and: [
+                                    { $eq: ["$customerId", "$$custId"] },
+                                    { $eq: ["$businessId", "$$businessId"] }
+                                ]
+                            }, 
+                            category: "SALE" 
+                        }},
                         { $sort: { date: -1, createdAt: -1 } },
                         { $limit: 1 }
                     ],
@@ -39,9 +50,17 @@ export async function GET(req: Request) {
             {
                 $lookup: {
                     from: "businesstransactions",
-                    let: { custId: "$_id" },
+                    let: { custId: "$_id", businessId: "$businessId" },
                     pipeline: [
-                        { $match: { $expr: { $eq: ["$customerId", "$$custId"] }, category: "PAYMENT" } },
+                        { $match: { 
+                            $expr: { 
+                                $and: [
+                                    { $eq: ["$customerId", "$$custId"] },
+                                    { $eq: ["$businessId", "$$businessId"] }
+                                ]
+                            }, 
+                            category: "PAYMENT" 
+                        }},
                         { $sort: { date: -1, createdAt: -1 } },
                         { $limit: 1 }
                     ],
@@ -76,12 +95,18 @@ export async function POST(req: Request) {
         const body = await req.json();
         const { name, phone, businessName, gstNumber, address } = body;
 
+        let businessId;
+        try {
+            businessId = requireBusinessId(session?.user);
+        } catch (err: any) {
+            return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
+        }
+
         if (!name) {
             return NextResponse.json({ error: "Name is required" }, { status: 400 });
         }
 
         await dbConnect();
-        const businessId = session.user.businessId;
 
         const customer = new BusinessCustomer({
             name,

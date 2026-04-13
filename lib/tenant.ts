@@ -85,6 +85,25 @@ export function requireTenant(user?: SessionUser | null): string {
 }
 
 /**
+ * Business Module Tenant Guard 
+ * Validates the session and returns the businessId. 
+ * Throws explicit errors and logs access violations.
+ */
+export function requireBusinessId(user?: SessionUser | null): string {
+    if (!user) throw new Error("Unauthorized");
+
+    // Superadmins don't strictly require a businessId in session to fetch all
+    if (user.role !== "superadmin" && !(user as any).businessId) {
+        console.error("SECURITY: Missing businessId access attempt", {
+            userId: user.id || "unknown"
+        });
+        throw new Error("Missing businessId");
+    }
+
+    return (user as any).businessId || "superadmin";
+}
+
+/**
  * Asserts that the session user has a valid poolId.
  * Call this at the top of any route that MUST be tenant-scoped.
  *

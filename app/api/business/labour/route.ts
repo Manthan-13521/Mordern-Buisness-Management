@@ -4,41 +4,58 @@ import { authOptions } from "@/lib/auth";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessLabour } from "@/models/BusinessLabour";
 import { BusinessAttendance } from "@/models/BusinessAttendance";
+import { requireBusinessId } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
     try {
         const session = await getServerSession(authOptions);
-        if (!session || session.user.role !== "business_admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        let businessId;
+        try {
+            businessId = requireBusinessId(session?.user);
+        } catch (err: any) {
+            return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
         }
 
         await dbConnect();
-        const businessId = session.user.businessId;
 
         const labours = await BusinessLabour.aggregate([
             { $match: { businessId, isActive: true } },
             {
                 $lookup: {
                     from: "businessattendances",
-                    localField: "_id",
-                    foreignField: "labourId",
-                    as: "recentAttendance",
+                    let: { labId: "$_id", businessId: "$businessId" },
                     pipeline: [
+                        { $match: { 
+                            $expr: { 
+                                $and: [
+                                    { $eq: ["$labourId", "$$labId"] },
+                                    { $eq: ["$businessId", "$$businessId"] }
+                                ]
+                            } 
+                        }},
                         { $sort: { date: -1 } }
-                    ]
+                    ],
+                    as: "recentAttendance"
                 }
             },
             {
                 $lookup: {
                     from: "businesslabourpayments",
-                    localField: "_id",
-                    foreignField: "labourId",
-                    as: "payments",
+                    let: { labId: "$_id", businessId: "$businessId" },
                     pipeline: [
+                        { $match: { 
+                            $expr: { 
+                                $and: [
+                                    { $eq: ["$labourId", "$$labId"] },
+                                    { $eq: ["$businessId", "$$businessId"] }
+                                ]
+                            } 
+                        }},
                         { $sort: { date: -1 } }
-                    ]
+                    ],
+                    as: "payments"
                 }
             },
             { $sort: { name: 1 } }
@@ -62,12 +79,18 @@ export async function POST(req: Request) {
         const body = await req.json();
         const { name, role, salary, phone } = body;
 
+        let businessId;
+        try {
+            businessId = requireBusinessId(session?.user);
+        } catch (err: any) {
+            return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
+        }
+
         if (!name || !role || !salary) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
         await dbConnect();
-        const businessId = session.user.businessId;
 
         const labour = new BusinessLabour({
             name,
