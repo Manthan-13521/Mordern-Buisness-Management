@@ -30,9 +30,15 @@ export async function GET(req: Request) {
             query.customerId = customerId;
         }
 
-            const payments = await BusinessTransaction.find({ ...query, category: 'PAYMENT' })
-                .populate("customerId", "name")
-                .sort({ date: -1 });
+        const payments = await BusinessTransaction.find({ 
+            ...query, 
+            $or: [
+                { category: 'PAYMENT' },
+                { category: 'SALE', paidAmount: { $gt: 0 } }
+            ]
+        })
+        .populate("customerId", "name")
+        .sort({ date: -1 });
 
             return NextResponse.json({ success: true, data: payments }, {
                 headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }

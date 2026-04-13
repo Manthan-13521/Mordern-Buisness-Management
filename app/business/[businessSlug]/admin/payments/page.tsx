@@ -116,7 +116,13 @@ export default function PaymentsPage() {
         <div className="p-6 rounded-2xl bg-[#0b1220] border border-[#1f2937] flex items-center justify-between shadow-sm group">
           <div>
             <p className="text-xs font-bold text-[#9ca3af] uppercase tracking-widest mb-1.5">Total Receipts</p>
-            <h4 className="text-2xl font-bold text-[#22c55e]">₹{payments.filter((p:any)=>p.transactionType==='received').reduce((s,p:any)=>s+p.amount, 0).toLocaleString()}</h4>
+            <h4 className="text-2xl font-bold text-[#22c55e]">
+              ₹{payments.reduce((s, p: any) => {
+                const isReceived = p.transactionType === 'received' || (p.category === 'SALE' && p.transactionType === 'sent');
+                const amt = p.category === 'SALE' ? (p.paidAmount || 0) : p.amount;
+                return isReceived ? s + amt : s;
+              }, 0).toLocaleString()}
+            </h4>
           </div>
           <div className="w-12 h-12 rounded-xl bg-[#22c55e]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
             <ArrowDownRight className="w-6 h-6 text-[#22c55e]" />
@@ -125,7 +131,13 @@ export default function PaymentsPage() {
         <div className="p-6 rounded-2xl bg-[#0b1220] border border-[#1f2937] flex items-center justify-between shadow-sm group">
           <div>
             <p className="text-xs font-bold text-[#9ca3af] uppercase tracking-widest mb-1.5">Total Disbursements</p>
-            <h4 className="text-2xl font-bold text-[#ef4444]">₹{payments.filter((p:any)=>p.transactionType==='paid').reduce((s,p:any)=>s+p.amount, 0).toLocaleString()}</h4>
+            <h4 className="text-2xl font-bold text-[#ef4444]">
+              ₹{payments.reduce((s, p: any) => {
+                const isPaid = p.transactionType === 'paid' || (p.category === 'SALE' && p.transactionType === 'received');
+                const amt = p.category === 'SALE' ? (p.paidAmount || 0) : p.amount;
+                return isPaid ? s + amt : s;
+              }, 0).toLocaleString()}
+            </h4>
           </div>
           <div className="w-12 h-12 rounded-xl bg-[#ef4444]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
             <ArrowUpRight className="w-6 h-6 text-[#ef4444]" />
@@ -152,42 +164,50 @@ export default function PaymentsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#1f2937]">
-                {payments.map((payment: any) => (
-                  <tr key={payment._id} className="hover:bg-[#8b5cf6]/5 transition-colors group border-b border-slate-800 last:border-0">
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-2 text-base font-semibold text-white">
-                        <Calendar className="w-5 h-5 text-[#9ca3af]" />
-                        {new Date(payment.date).toLocaleDateString()}
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      <p className="text-base font-semibold text-white group-hover:text-[#8b5cf6] transition-colors">{payment.customerId?.name || "Market Expense"}</p>
-                      <p className="text-sm text-slate-400 font-medium max-w-xs truncate mt-0.5">{payment.notes || "No notes"}</p>
-                    </td>
-                    <td className="px-6 py-5">
-                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase text-slate-400">
-                        <CreditCard className="w-5 h-5"/>
-                        {payment.paymentMethod}
-                      </span>
-                    </td>
-                    <td className="px-6 py-5 text-right">
-                      <p className={clsx(
-                        "text-lg font-semibold",
-                        payment.transactionType === 'received' ? "text-[#22c55e]" : "text-[#ef4444]"
-                      )}>
-                        {payment.transactionType === 'received' ? '+' : '-'}₹{payment.amount.toLocaleString()}
-                      </p>
-                    </td>
-                    <td className="px-6 py-5 text-right">
-                      <span className={clsx(
-                        "inline-flex items-center px-4 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider border",
-                        payment.transactionType === 'received' ? "bg-[#22c55e]/10 text-[#22c55e] border-[#22c55e]/20" : "bg-[#ef4444]/10 text-[#ef4444] border-[#ef4444]/20"
-                      )}>
-                        {payment.transactionType}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {payments.map((payment: any) => {
+                  const isSale = payment.category === 'SALE';
+                  const displayAmount = isSale ? (payment.paidAmount || 0) : payment.amount;
+                  const isReceived = payment.transactionType === 'received' || (isSale && payment.transactionType === 'sent');
+                  
+                  return (
+                    <tr key={payment._id} className="hover:bg-[#8b5cf6]/5 transition-colors group border-b border-slate-800 last:border-0">
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-2 text-base font-semibold text-white">
+                          <Calendar className="w-5 h-5 text-[#9ca3af]" />
+                          {new Date(payment.date).toLocaleDateString()}
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <p className="text-base font-semibold text-white group-hover:text-[#8b5cf6] transition-colors">{payment.customerId?.name || "Market Expense"}</p>
+                        <p className="text-sm text-slate-400 font-medium max-w-xs truncate mt-0.5">
+                          {isSale ? `Payment during sale: ${payment.items?.map((it:any)=>it.name).join(', ')}` : (payment.notes || "No notes")}
+                        </p>
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase text-slate-400">
+                          <CreditCard className="w-5 h-5"/>
+                          {isSale ? "Sale Split" : (payment.paymentMethod || "N/A")}
+                        </span>
+                      </td>
+                      <td className="px-6 py-5 text-right">
+                        <p className={clsx(
+                          "text-lg font-semibold",
+                          isReceived ? "text-[#22c55e]" : "text-[#ef4444]"
+                        )}>
+                          {isReceived ? '+' : '-'}₹{displayAmount.toLocaleString()}
+                        </p>
+                      </td>
+                      <td className="px-6 py-5 text-right">
+                        <span className={clsx(
+                          "inline-flex items-center px-4 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider border",
+                          isReceived ? "bg-[#22c55e]/10 text-[#22c55e] border-[#22c55e]/20" : "bg-[#ef4444]/10 text-[#ef4444] border-[#ef4444]/20"
+                        )}>
+                          {isReceived ? 'received' : 'paid'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
