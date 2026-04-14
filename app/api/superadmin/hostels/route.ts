@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 // GET /api/superadmin/hostels — list all hostel tenants
 export async function GET(req: Request) {
     try {
-        const [token] = await Promise.all([resolveUser(req), dbConnect()]);
+        const [user] = await Promise.all([resolveUser(req), dbConnect()]);
         if (!user || user.role !== "superadmin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
