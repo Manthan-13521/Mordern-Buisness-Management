@@ -50,6 +50,7 @@ next-env.d.ts
 /public/exports/
 test-*.js
 fix-*.js
+tester.js
 .gitignore-additions.txt
 .keep
 scratch/

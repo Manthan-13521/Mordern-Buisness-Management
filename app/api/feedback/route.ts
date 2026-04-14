@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { Feedback } from "@/models/Feedback";
-import { resolveUser } from "@/lib/authHelper";
 
 export const dynamic = "force-dynamic";
 
