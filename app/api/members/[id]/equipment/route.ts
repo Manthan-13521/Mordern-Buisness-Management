@@ -16,9 +16,8 @@ export async function POST(req: Request, props: RouteContext) {
     try {
         await dbConnect();
 
-                const user = await resolveUser(req);
-                await dbConnect();
-        if (!user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const user = await resolveUser(req);
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const { id } = await props.params;
         const { itemName } = await req.json();
@@ -67,9 +66,8 @@ export async function PATCH(req: Request, props: RouteContext) {
     try {
         await dbConnect();
 
-                const user = await resolveUser(req);
-                await dbConnect();
-        if (!user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const user = await resolveUser(req);
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const { id } = await props.params;
         const { equipmentItemId } = await req.json();

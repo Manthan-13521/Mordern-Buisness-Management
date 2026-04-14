@@ -9,16 +9,15 @@ export const revalidate = 0;
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-                const user = await resolveUser(req);
-                await dbConnect();
+        const user = await resolveUser(req);
+        await dbConnect();
+
         if (!user) {
             return new NextResponse("Unauthorized", { status: 401 });
         }
 
         const { id } = await params;
         if (!id) return new NextResponse("Invalid ID", { status: 400 });
-
-        await dbConnect();
 
         let member = await secureFindById(Member, id, user, { select: "+photoUrl" });
         if (!member) {

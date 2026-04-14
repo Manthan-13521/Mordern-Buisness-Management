@@ -14,13 +14,12 @@ type RouteContext = { params: Promise<{ id: string }> };
  * GET /api/members/[id]
  * Returns a single member with populated plan.
  */
-export async function GET(_req: Request, props: RouteContext) {
+export async function GET(req: Request, props: RouteContext) {
     try {
         await dbConnect();
 
-                const user = await resolveUser(req);
-                await dbConnect();
-        if (!user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const user = await resolveUser(req);
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const { id } = await props.params;
 
@@ -48,9 +47,8 @@ export async function PATCH(req: Request, props: RouteContext) {
     try {
         await dbConnect();
 
-                const user = await resolveUser(req);
-                await dbConnect();
-        if (!user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const user = await resolveUser(req);
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const { id } = await props.params;
 
@@ -81,10 +79,9 @@ export async function DELETE(req: Request, props: RouteContext) {
     try {
         await dbConnect();
 
-                const user = await resolveUser(req);
-                await dbConnect();
+        const user = await resolveUser(req);
         if (!user || user.role !== "admin") {
-            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const { id } = await props.params;
