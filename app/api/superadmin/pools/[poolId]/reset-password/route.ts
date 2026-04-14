@@ -20,21 +20,21 @@ export async function POST(req: Request, { params }: { params: Promise<{ poolId:
         const pool = await Pool.findOne({ poolId }).lean();
         if (!pool) return NextResponse.json({ error: "Pool mapping not found" }, { status: 404 });
 
-        const user = await User.findOne({ poolId, role: "admin" }).sort({ createdAt: 1 });
-        if (!user) return NextResponse.json({ error: "Pool Administrator account not found" }, { status: 404 });
+        const adminUser = await User.findOne({ poolId, role: "admin" }).sort({ createdAt: 1 });
+        if (!adminUser) return NextResponse.json({ error: "Pool Administrator account not found" }, { status: 404 });
 
         // Generate strong random 12 character password
         const rawPassword = crypto.randomBytes(6).toString("hex");
         const passwordHash = await bcrypt.hash(rawPassword, 10);
 
         // Mutate the user schema explicitly bypassing the missing Pool plain-text schema mapping requirement fully
-        user.passwordHash = passwordHash;
-        await user.save();
+        adminUser.passwordHash = passwordHash;
+        await adminUser.save();
 
         return NextResponse.json({ 
             success: true, 
             newPassword: rawPassword,
-            adminEmail: user.email
+            adminEmail: adminUser.email
         });
 
     } catch (e: any) {

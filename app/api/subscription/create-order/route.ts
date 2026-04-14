@@ -41,11 +41,11 @@ export async function POST(req: Request) {
         }
 
         await dbConnect();
-        const user = await User.findById(user.id).lean() as any;
-        if (!user) return NextResponse.json({ error: "User not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const dbUser = await User.findById(user.id).lean() as any;
+        if (!dbUser) return NextResponse.json({ error: "User not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         // Trial guard
-        if (planType === "trial" && user.trial?.isUsed) {
+        if (planType === "trial" && dbUser.trial?.isUsed) {
             return NextResponse.json({ error: "Free trial already used. Please select a paid plan." }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 

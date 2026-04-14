@@ -21,20 +21,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         if (!business) return NextResponse.json({ error: "Business mapping not found" }, { status: 404 });
 
         // Find the admin user for this business
-        const user = await User.findOne({ businessId: id, role: "business_admin" }).sort({ createdAt: 1 });
-        if (!user) return NextResponse.json({ error: "Business Administrator account not found" }, { status: 404 });
+        const adminUser = await User.findOne({ businessId: id, role: "business_admin" }).sort({ createdAt: 1 });
+        if (!adminUser) return NextResponse.json({ error: "Business Administrator account not found" }, { status: 404 });
 
         // Generate strong random 12 character password (hex => 12 chars)
         const rawPassword = crypto.randomBytes(6).toString("hex");
         const passwordHash = await bcrypt.hash(rawPassword, 10);
 
-        user.passwordHash = passwordHash;
-        await user.save();
+        adminUser.passwordHash = passwordHash;
+        await adminUser.save();
 
         return NextResponse.json({ 
             success: true, 
             newPassword: rawPassword,
-            adminEmail: user.email
+            adminEmail: adminUser.email
         });
 
     } catch (e: any) {

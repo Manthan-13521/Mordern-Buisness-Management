@@ -45,18 +45,18 @@ export async function GET(req: Request) {
         }
 
         await dbConnect();
-        const user = await User.findById(user.id)
+        const dbUser = await User.findById(user.id)
             .select("subscription trial role hostelId poolId")
             .lean() as any;
 
-        if (!user) return NextResponse.json({ error: "User not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        if (!dbUser) return NextResponse.json({ error: "User not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
-        let sub = user.idscription;
+        let sub = dbUser.subscription;
 
         // Fallback to tenant model if user record lacks subscription data
         if (!sub) {
-            if (user.role === "hostel_admin" && user.hostelId) {
-                const hostel = await Hostel.findOne({ hostelId: user.hostelId })
+            if (dbUser.role === "hostel_admin" && dbUser.hostelId) {
+                const hostel = await Hostel.findOne({ hostelId: dbUser.hostelId })
                     .select("plan subscriptionStatus subscriptionEndsAt")
                     .lean() as any;
                 if (hostel) {
@@ -66,8 +66,8 @@ export async function GET(req: Request) {
                         expiryDate: hostel.subscriptionEndsAt,
                     };
                 }
-            } else if (user.role === "admin" && user.poolId) {
-                const pool = await Pool.findOne({ poolId: user.poolId })
+            } else if (dbUser.role === "admin" && dbUser.poolId) {
+                const pool = await Pool.findOne({ poolId: dbUser.poolId })
                     .select("plan subscriptionStatus subscriptionEndsAt")
                     .lean() as any;
                 if (pool) {
@@ -89,13 +89,13 @@ export async function GET(req: Request) {
         return NextResponse.json({
             status:     liveStatus,          // "active" | "expired" | "none"
             planType:   sub?.planType || sub?.plan || null,
-            module:     sub?.module || (user.role === "hostel_admin" ? "hostel" : user.role === "admin" ? "pool" : null),
+            module:     sub?.module || (dbUser.role === "hostel_admin" ? "hostel" : dbUser.role === "admin" ? "pool" : null),
             blocks:     sub?.blocks || null,
             pricePaid:  sub?.pricePaid || null,
             startDate:  sub?.startDate || null,
             expiryDate: sub?.expiryDate || null,
             daysLeft:   liveStatus === "none" ? null : daysLeft,
-            trialUsed:  user.trial?.isUsed || false,
+            trialUsed:  dbUser.trial?.isUsed || false,
         }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         console.error("[GET /api/subscription/status]", error);
