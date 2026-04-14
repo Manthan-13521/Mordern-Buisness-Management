@@ -66,7 +66,7 @@ export async function GET(req: Request) {
         for (const user of usersToAlert) {
             if (!user.phone) continue;
 
-            const expiryDate = new Date(user.idscription!.expiryDate);
+            const expiryDate = new Date(user.subscription!.expiryDate);
             const expiryStr = expiryDate.toLocaleDateString("en-GB");
             
             const message = `Your AquaSync subscription expires on ${expiryStr}. Renew now to avoid service interruption.`;
