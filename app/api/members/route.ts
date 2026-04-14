@@ -175,7 +175,7 @@ export async function GET(req: Request) {
             }
         };
 
-        const headers = process.env.NODE_ENV === "development"
+        const headers: Record<string, string> = process.env.NODE_ENV === "development"
             ? { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
             : {};
 
