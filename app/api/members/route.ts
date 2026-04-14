@@ -338,14 +338,14 @@ export async function POST(req: Request) {
         dbSession.startTransaction();
 
         try {
-            await newMember.save({ user: dbSession });
+            await newMember.save({ session: dbSession });
 
             // ── Enterprise Rule: Increment immutable counter explicitly within transaction
             const { PoolStats } = await import("@/models/PoolStats");
             await PoolStats.findOneAndUpdate(
                 { poolId },
                 { $inc: isEntertainment ? { totalEntertainmentMembers: 1 } : { totalMembers: 1 } },
-                { upsert: true, user: dbSession }
+                { upsert: true, session: dbSession }
             );
 
             await dbSession.commitTransaction();
