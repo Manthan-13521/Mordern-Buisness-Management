@@ -47,12 +47,12 @@ export async function POST(req: Request) {
         }
 
         // ── Fetch PasswordReset record by userId (not email alone) ─────────────
-        const resetRecord = await PasswordReset.findOne({ userId: user.id });
+        const resetRecord = await PasswordReset.findOne({ userId: user._id });
 
         if (!resetRecord) {
             logger.audit({
                 type:   "PASSWORD_RESET_FAILED",
-                userId: user.id.toString(),
+                userId: user._id.toString(),
                 meta:   { email: normalizedEmail, reason: "no_reset_record" },
             });
             return NextResponse.json(
@@ -63,10 +63,10 @@ export async function POST(req: Request) {
 
         // ── Check expiry ───────────────────────────────────────────────────────
         if (new Date() > resetRecord.expiresAt) {
-            await PasswordReset.deleteOne({ userId: user.id });
+            await PasswordReset.deleteOne({ userId: user._id });
             logger.audit({
                 type:   "PASSWORD_RESET_FAILED",
-                userId: user.id.toString(),
+                userId: user._id.toString(),
                 meta:   { email: normalizedEmail, reason: "otp_expired" },
             });
             return NextResponse.json(
@@ -79,7 +79,7 @@ export async function POST(req: Request) {
         if (resetRecord.attempts >= MAX_ATTEMPTS) {
             logger.audit({
                 type:   "PASSWORD_RESET_FAILED",
-                userId: user.id.toString(),
+                userId: user._id.toString(),
                 meta:   { email: normalizedEmail, reason: "max_attempts_exceeded" },
             });
             return NextResponse.json(
@@ -94,14 +94,14 @@ export async function POST(req: Request) {
         if (!isValid) {
             // Increment attempts
             await PasswordReset.updateOne(
-                { userId: user.id },
+                { userId: user._id },
                 { $inc: { attempts: 1 } }
             );
 
             const remaining = MAX_ATTEMPTS - (resetRecord.attempts + 1);
             logger.audit({
                 type:   "PASSWORD_RESET_FAILED",
-                userId: user.id.toString(),
+                userId: user._id.toString(),
                 meta:   { email: normalizedEmail, reason: "invalid_otp", attemptsRemaining: remaining },
             });
 
@@ -119,25 +119,25 @@ export async function POST(req: Request) {
         const newPasswordHash = await bcrypt.hash(newPassword, 12);
 
         await User.updateOne(
-            { _id: user.id },
+            { _id: user._id },
             { $set: { passwordHash: newPasswordHash } }
         );
 
         // ── Delete the PasswordReset record (single-use, invalidate immediately) ──
-        await PasswordReset.deleteOne({ userId: user.id });
+        await PasswordReset.deleteOne({ userId: user._id });
 
         // ── Session invalidation: update a version field so all existing JWT tokens
         //    become stale. Since we use JWT sessions (not DB sessions), we track
         //    passwordChangedAt. Middleware/auth can compare token.iat to this field.
         //    For now we store it on the user — can be used in future auth checks.
         await User.updateOne(
-            { _id: user.id },
+            { _id: user._id },
             { $set: { passwordChangedAt: new Date() } }
         );
 
         logger.audit({
             type:   "PASSWORD_RESET_SUCCESS",
-            userId: user.id.toString(),
+            userId: user._id.toString(),
             meta:   { email: normalizedEmail },
         });
 

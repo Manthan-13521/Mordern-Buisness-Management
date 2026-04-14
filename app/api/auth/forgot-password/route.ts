@@ -80,9 +80,9 @@ export async function POST(req: Request) {
 
         // ── Upsert: replaces any existing OTP for this user (resend invalidates old OTP) ──
         await PasswordReset.findOneAndUpdate(
-            { userId: user.id },
+            { userId: user._id },
             {
-                userId:    user.id,
+                userId:    user._id,
                 email:     user.email,  // Always use the DB email, never the frontend input
                 otpHash,
                 expiresAt,
@@ -96,7 +96,7 @@ export async function POST(req: Request) {
             await sendOtpEmail(user.email, otp);
         } catch (emailErr: any) {
             logger.error("[ForgotPassword] Email send failed", {
-                userId: user.id.toString(),
+                userId: user._id.toString(),
                 error: emailErr?.message,
             });
             // Don't reveal email sending errors to the client
@@ -105,7 +105,7 @@ export async function POST(req: Request) {
 
         logger.audit({
             type:   "PASSWORD_RESET_REQUESTED",
-            userId: user.id.toString(),
+            userId: user._id.toString(),
             meta:   { email: user.email, found: true, status: "otp_sent" },
         });
 
