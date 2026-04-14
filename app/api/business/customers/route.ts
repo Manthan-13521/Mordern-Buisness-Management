@@ -9,6 +9,9 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
     try {
         const user = await resolveUser(req);
+        if (!user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
         let businessId;
         try {
             businessId = requireBusinessId(user);
@@ -118,7 +121,10 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
     try {
         const user = await resolveUser(req);
-        if (!user || user.role !== "business_admin") {
+        if (!user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        if (user.role !== "business_admin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 

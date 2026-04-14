@@ -11,6 +11,9 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request, { params }: { params: Promise<{ labourId: string }> }) {
     try {
         const user = await resolveUser(req);
+        if (!user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
         let businessId;
         try {
             businessId = requireBusinessId(user);

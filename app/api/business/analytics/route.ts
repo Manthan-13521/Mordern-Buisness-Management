@@ -12,6 +12,9 @@ export async function GET(req: Request) {
     const start = Date.now();
     try {
         const user = await resolveUser(req);
+        if (!user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
         
         let businessId;
         try {
