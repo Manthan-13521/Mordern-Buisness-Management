@@ -14,7 +14,7 @@ type RouteContext = { params: Promise<{ id: string }> };
  * GET /api/competitions/[id]
  * Competition detail — returns all participants and winners.
  */
-export async function GET(_req: Request, props: RouteContext) {
+export async function GET(req: Request, props: RouteContext) {
     try {
         await dbConnect();
 
