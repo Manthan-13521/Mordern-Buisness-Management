@@ -153,7 +153,7 @@ export async function GET(req: Request) {
             let defaulterObj = { isDefaulter: false, overdueDays: 0, defaulterStatus: "active" as ("active"|"warning"|"blocked") };
             
             if (!isEntertainment && !m.isDeleted) {
-                defaulterObj = await resolveDefaulterState(m._id, user.poolId);
+                defaulterObj = await resolveDefaulterState(m._id, m.poolId);
             }
             
             m.isDefaulter = defaulterObj.isDefaulter;
