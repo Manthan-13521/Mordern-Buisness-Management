@@ -1,61 +1,163 @@
-# Telangana Swimming Pool Management System
+# Multi-Business Management System (Workforce + Operations)
 
-A production-ready Next.js 15 application for managing swimming pool memberships, plans, payments, QR code entry logs, and WhatsApp automated reminders. Made with Tailwind CSS, TypeScript, and MongoDB.
+A production-ready Next.js application designed to manage multiple business types using a consistent and scalable interface.
 
-## Features Included
+Currently supports:
+1. Business Workforce Management (Labour)
+2. Swimming Pool Staff Management
+3. Hostel Staff Management
 
-- **Authentication:** NextAuth credentials based login with session management. Role-based access (Admin & Operator).
-- **Member Management:** Registration with webcam photo capture, auto-id generation (e.g. M0001), expiry calculation.
-- **Plans & Payments:** Custom plan creation, recording payments via Cash or UPI (with transaction ID).
-- **ID Cards:** Automated PDF generation with member photo and QR code (using `pdf-lib` & `qrcode`).
-- **QR Entry System:** React webcam scanner to scan member cards, validate expiration, log entries, and prevent duplicates.
-- **Analytics Dashboard:** Recharts-based dashboard showing Active/Expired members, Revenue, Plan popularity, and expiring soon alerts.
-- **Notifications:** Built-in Twilio WhatsApp Reminder Cron Endpoint + UI to track message logs.
-- **System Logs & Exports:** Consolidated log timeline of registrations, entries, and payments with Excel Export via `exceljs`.
-- **System Settings:** Light/Dark/System theme switching and Full Database JSON Backup Export.
-- **Global Error Handling:** Custom `error.tsx` and `not-found.tsx` components.
+--------------------------------------------------
 
-## Prerequisites
-- Node.js 18.17+
-- MongoDB instance (local or Atlas)
-- Twilio Account (for WhatsApp messages - *Optional*)
+## CORE CONCEPT
 
-## Getting Started
+One unified experience across different businesses.
 
-1. **Environment Variables**
-Copy `.env.local.example` to `.env.local` and fill in your own values:
-```bash
-cp .env.local.example .env.local
-# Then edit .env.local with your real credentials
-```
-> ⚠️ **Never commit real secrets.** Copy `.env.local.example` and fill in your own values. Generate unique secrets with `openssl rand -hex 32`.
+Each module uses the SAME UI/UX structure:
+- Clean dark theme
+- Compact staff management layout
+- Inline actions for speed
+- Expandable detailed views
 
-2. **Install Dependencies**
-```bash
-npm install
-```
+Users feel like they are using the same system, adapted to different business needs.
 
-3. **Start Development Server**
-```bash
-npm run dev
-```
+--------------------------------------------------
 
-4. **Seed the Database (First-time run)**
-The seed endpoint is protected. Pass your `SEED_SECRET` value:
-```bash
-curl -H "Authorization: Bearer <YOUR_SEED_SECRET>" http://localhost:3000/api/seed
-```
-*Default credentials are set by environment variables — see `.env.example`.*
+## MODULES
 
-5. **Login and Explore**
-Navigate to `http://localhost:3000/<pool-slug>/admin/login` and sign in.
+### 1. Business Workforce (Labour)
+- Daily wage staff management
+- Attendance tracking (Present / Half Day / Absent)
+- Earnings calculation based on days worked
+- Advance tracking
+- Payment management
+- Due / Paid status system
 
-## Project Architecture Highlight
-- `/app/admin/(dashboard)/*`: Protected admin layout with sidebar and NextAuth session validation via middleware.
-- `/app/api/*`: Backend logical endpoints integrated with mongoose aggregations and strict validation workflows.
-- `models/`: Mongoose schemas outlining Members, Plans, EntryLogs, NotificationLogs, Payments and Users.
-- `lib/mongodb.ts`: Centralized MongoDB connector utilizing connection caching to prevent hot-reload connection spikes next dev.
+---
 
-Developed keeping real-world production constraints in mind with robust global boundaries and comprehensive UI componentry utilizing Lucide icons and pure Tailwind logic.
+### 2. Swimming Pool Staff
+- Staff types: Trainer, Lifeguard, Cleaner
+- Monthly or session-based salary
+- Same attendance and payment workflow
+- Designed for pool operations without changing UI
 
-# Last deploy trigger: Sun Mar 22 13:23:51 IST 2026
+---
+
+### 3. Hostel Staff
+- Staff types: Warden, Cook, Security, Cleaner
+- Monthly salary system
+- Daily attendance tracking
+- Same payroll and due tracking system
+
+--------------------------------------------------
+
+## KEY FEATURES
+
+### Workforce Dashboard
+- Total Staff
+- Present Today
+- Total Paid
+- Total Due
+
+---
+
+### Staff Management UI
+- Compact row-based layout
+- Columns:
+  Name | Rate | Present | Earned | Paid | Due | Status
+
+---
+
+### Attendance System
+- One-click actions:
+  ✔ Present
+  ✖ Absent
+- Real-time updates
+
+---
+
+### Earnings Calculation
+- Daily / Monthly based logic
+- Automatic due calculation
+
+---
+
+### Payment System
+- Inline payment entry
+- No popup complexity
+- Instant updates to due status
+
+---
+
+### Advance Tracking
+- Track advance amounts
+- Integrated with salary calculation
+
+---
+
+### Expandable Staff View
+- Mark attendance
+- Add payments
+- View last 3 months summary
+
+---
+
+### Last 3 Months Summary
+- Month-wise breakdown:
+  Days | Earned | Paid | Status
+
+---
+
+### Search & Filtering
+- Search staff instantly
+- Fast UI response
+
+--------------------------------------------------
+
+## UI/UX PRINCIPLES
+
+- Same design across all business modules
+- No learning curve between pages
+- Minimal clicks, maximum speed
+- Clean and non-congested interface
+- No unnecessary modals
+
+--------------------------------------------------
+
+## TECH STACK
+
+- Next.js (App Router)
+- MongoDB
+- Tailwind CSS
+- TypeScript
+
+--------------------------------------------------
+
+## SYSTEM DESIGN APPROACH
+
+- Reuse same UI for multiple domains
+- Only change:
+  - Labels
+  - Roles
+  - API endpoints
+- No unnecessary complexity
+- Fast and maintainable
+
+--------------------------------------------------
+
+## FUTURE EXTENSIBILITY
+
+The system can easily expand to:
+- Gym Management
+- School Staff
+- Factory Workforce
+
+Without redesigning the UI.
+
+--------------------------------------------------
+
+## GOAL
+
+Build a fast, simple, and scalable business management tool where:
+
+"Same system works for multiple businesses with minimal changes."
