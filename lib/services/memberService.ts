@@ -129,10 +129,10 @@ export async function handleMemberExpiry(): Promise<ExpireMembersResult> {
         if (toHardDelete.length > 0) {
             const archiveDocs = toHardDelete.map((doc: any) => ({
                 originalId: doc._id,
-                memberId: doc.memberId,
-                name: doc.name,
-                phone: doc.phone,
-                poolId: doc.poolId,
+                memberId: doc.memberId || doc._id.toString(),
+                name: doc.name || "Unknown",
+                phone: doc.phone || "Unknown",
+                poolId: doc.poolId?.toString() || "unknown",
                 deletedAt: now,
                 deletionType: "auto",
                 collectionSource: isEntertainment ? "entertainment_members" : "members",

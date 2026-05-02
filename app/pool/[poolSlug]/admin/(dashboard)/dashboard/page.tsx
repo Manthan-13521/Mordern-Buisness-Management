@@ -17,8 +17,8 @@ async function DashboardStats({ poolId, isAdmin, memberType }: { poolId: string,
         { name: "Total Members", stat: counts.totalMembers, icon: Users, color: "bg-blue-500" },
         { name: "Active Members", stat: counts.activeMembers, icon: Activity, color: "bg-green-500" },
         { name: "Expired Members", stat: counts.totalMembers - counts.activeMembers, icon: UserX, color: "bg-red-500" },
-        { name: "Today's Members Added", stat: counts.todaysMemberEntries, icon: UserPlus, color: "bg-indigo-500" },
-        { name: "Today's Entertainment Members Added", stat: counts.todaysEntertainmentEntries, icon: Gamepad2, color: "bg-pink-500" },
+        { name: "New Members Today", stat: counts.todaysMemberEntries, icon: UserPlus, color: "bg-indigo-500" },
+        { name: "New Ent. Members Today", stat: counts.todaysEntertainmentEntries, icon: Gamepad2, color: "bg-pink-500" },
     ];
 
     if (isAdmin) {
@@ -38,7 +38,7 @@ async function DashboardStats({ poolId, isAdmin, memberType }: { poolId: string,
                         <div className={`absolute rounded-md ${item.color} p-3`}>
                             <item.icon className="h-6 w-6 text-white" aria-hidden="true" />
                         </div>
-                        <p className="ml-16 truncate text-sm font-medium text-gray-500 dark:text-gray-400">
+                        <p className="ml-16 line-clamp-2 text-sm font-medium leading-tight text-gray-500 dark:text-gray-400">
                             {item.name}
                         </p>
                     </dt>

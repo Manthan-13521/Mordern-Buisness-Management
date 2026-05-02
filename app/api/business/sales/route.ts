@@ -92,7 +92,7 @@ export async function POST(req: Request) {
                 $inc: { 
                     totalPurchase: isReceived ? 0 : totalAmount, 
                     totalPaid: isReceived ? 0 : paidAmount,
-                    currentDue: isReceived ? -totalAmount : (totalAmount - paidAmount)
+                    currentDue: isReceived ? -(totalAmount - paidAmount) : (totalAmount - paidAmount)
                 } 
             }
         );

@@ -15,7 +15,7 @@ export async function POST(req: Request) {
         const body = await req.json();
         const result = RazorpayOrderSchema.safeParse(body);
         if (!result.success) {
-            return NextResponse.json({ error: result.error.flatten() }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            return NextResponse.json({ error: Object.entries(result.error.flatten().fieldErrors).map(([f, m]) => `${f}: ${(m as string[])?.join(", ")}`).join(" | ") || "Validation failed" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         const { planId, cartQuantity } = result.data;
 

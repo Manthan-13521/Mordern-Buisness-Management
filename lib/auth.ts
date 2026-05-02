@@ -229,8 +229,14 @@ export const authOptions: NextAuthOptions = {
                 let user = await UserModel.findOne({ email: credentials.username }).lean() as IUser | null;
 
                 // Fallback: try name match, but ONLY if email didn't match
+                // SECURITY: Name-based login without poolSlug is ambiguous — only allow if exactly one match
                 if (!user) {
-                    user = await UserModel.findOne({ name: credentials.username }).lean() as IUser | null;
+                    const nameMatches = await UserModel.find({ name: credentials.username }).lean() as IUser[];
+                    if (nameMatches.length === 1) {
+                        user = nameMatches[0];
+                    } else if (nameMatches.length > 1) {
+                        throw new Error("Multiple accounts found with this name. Please login with your email or use pool-specific login URL.");
+                    }
                 }
 
                 if (!user) {

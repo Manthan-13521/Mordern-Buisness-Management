@@ -22,6 +22,7 @@ const nextConfig: NextConfig = {
 
   images: {
     formats: ["image/avif", "image/webp"],
+    qualities: [75, 90],
     deviceSizes: [640, 828, 1080],
     minimumCacheTTL: 86400, // 24 hours — photos don't change often
     remotePatterns: [

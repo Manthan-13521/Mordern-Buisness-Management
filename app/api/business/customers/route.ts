@@ -20,14 +20,16 @@ export async function GET(req: Request) {
         }
 
         // 🟢 STRUCTURED AUDIT LOGGING
-        console.info(JSON.stringify({
-            type: "BUSINESS_CUSTOMERS_LIST",
-            businessId,
-            userId: user.id,
-            route: "/api/business/customers",
-            method: "GET",
-            timestamp: new Date().toISOString()
-        }));
+        if (process.env.DEBUG_ANALYTICS === "true") {
+            console.info(JSON.stringify({
+                type: "BUSINESS_CUSTOMERS_LIST",
+                businessId,
+                userId: user.id,
+                route: "/api/business/customers",
+                method: "GET",
+                timestamp: new Date().toISOString()
+            }));
+        }
 
         await dbConnect();
 

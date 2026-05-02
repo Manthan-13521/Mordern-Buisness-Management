@@ -1,6 +1,6 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
 
-export type HostelLogType = "registration" | "renewal" | "delete" | "payment_update";
+export type HostelLogType = "registration" | "renewal" | "delete" | "payment_update" | "checkin" | "checkout" | "payment" | "plan_change" | "manual_delete";
 
 export interface IHostelLog extends Document {
     hostelId: string;
@@ -19,7 +19,7 @@ const hostelLogSchema = new Schema<IHostelLog>(
         hostelId:       { type: String, required: true, index: true },
         type: {
             type: String,
-            enum: ["registration", "renewal", "delete", "payment_update"],
+            enum: ["registration", "renewal", "delete", "payment_update", "checkin", "checkout", "payment", "plan_change", "manual_delete"],
             required: true,
         },
         memberId:       { type: String },

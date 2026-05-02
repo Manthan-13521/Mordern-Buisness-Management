@@ -16,11 +16,15 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import clsx from "clsx";
+import { useBusinessPayments, useBusinessCustomers } from "@/hooks/useAnalytics";
 
 export default function PaymentsPage() {
-  const [payments, setPayments] = useState([]);
-  const [customers, setCustomers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: paymentsData, isLoading: payLoading, refetch: fetchPayments } = useBusinessPayments();
+  const { data: customersData, isLoading: custLoading } = useBusinessCustomers();
+
+  const payments = paymentsData || [];
+  const customers = customersData || [];
+  const loading = payLoading || custLoading;
   const [showAddModal, setShowAddModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -33,40 +37,7 @@ export default function PaymentsPage() {
     notes: ""
   });
 
-  async function fetchData() {
-    try {
-      const [payRes, custRes] = await Promise.all([
-        fetch("/api/business/payments", { cache: "no-store" }),
-        fetch("/api/business/customers", { cache: "no-store" })
-      ]);
-      
-      if (!payRes.ok) {
-        toast.error("Failed to load payments");
-      } else {
-        const payData = await payRes.json();
-        if (payData.success === false) {
-          toast.error(payData.error || "Failed to load payments");
-        } else {
-          setPayments(Array.isArray(payData) ? payData : payData.data || []);
-        }
-      }
-      
-      if (!custRes.ok) {
-        toast.error("Failed to load customers");
-      } else {
-        const custData = await custRes.json();
-        setCustomers(Array.isArray(custData) ? custData : custData.data || custData);
-      }
-    } catch (err) {
-      toast.error("Network error — please check your connection");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const fetchData = fetchPayments;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

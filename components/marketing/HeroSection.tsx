@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, PlayCircle } from "lucide-react";
+import Image from "next/image";
+import { PlayCircle } from "lucide-react";
 import { motion } from "framer-motion";
 
 export function HeroSection() {
@@ -43,33 +44,53 @@ export function HeroSection() {
           </motion.div>
         </div>
 
-        {/* Dashboard Preview Mockup */}
-        <motion.div 
-          className="mt-16 sm:mt-24"
+        {/* Dashboard Preview — Real Product Image */}
+        <motion.div
+          className="mt-16 sm:mt-24 relative"
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
+          transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
         >
-          <div className="rounded-xl lg:rounded-3xl p-2 sm:p-4 bg-black/5 dark:bg-white/5 ring-1 ring-inset ring-gray-900/10 dark:ring-white/10 backdrop-blur-md">
-            <div className="rounded-md lg:rounded-2xl overflow-hidden shadow-2xl relative bg-white dark:bg-[#020617] border border-gray-200 dark:border-white/10 flex items-center justify-center p-8 lg:p-12 min-h-[400px]">
-              {/* Mock content for the dashboard picture */}
-              <div className="w-full flex flex-col gap-6 w-full">
-                <div className="flex justify-between items-center border-b border-gray-200 dark:border-white/10 pb-4">
-                  <div className="h-6 w-32 bg-gray-200 dark:bg-white/10 rounded animate-pulse" />
-                  <div className="h-8 w-24 bg-blue-500/20 rounded-full animate-pulse" />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {[1,2,3].map(i => (
-                    <div key={i} className="h-28 rounded-xl bg-gray-100 dark:bg-white/5 dark:border dark:border-white/10 animate-pulse flex p-4 flex-col justify-end">
-                       <div className="h-4 w-1/2 bg-gray-200 dark:bg-white/10 rounded mb-2" />
-                       <div className="h-6 w-1/3 bg-gray-300 dark:bg-white/20 rounded" />
-                    </div>
-                  ))}
-                </div>
-                <div className="h-64 mt-4 w-full rounded-xl bg-gray-100 dark:bg-white/5 dark:border dark:border-white/10 animate-pulse relative overflow-hidden">
-                   <div className="absolute bottom-0 w-full h-1/2 bg-gradient-to-t from-blue-500/20 to-transparent" />
-                </div>
-              </div>
+          {/* Radial gradient glow behind image */}
+          <div
+            className="absolute inset-0 -z-10 pointer-events-none"
+            aria-hidden="true"
+            style={{
+              background: 'radial-gradient(ellipse 70% 50% at 50% 60%, rgba(59,130,246,0.15) 0%, rgba(139,92,246,0.08) 40%, transparent 70%)',
+            }}
+          />
+
+          <div className="mx-auto max-w-[1100px] px-2 sm:px-4">
+            <div
+              className="hero-dashboard-wrapper relative rounded-[16px] sm:rounded-[20px] overflow-hidden"
+              style={{
+                boxShadow: '0 30px 80px rgba(0,0,0,0.7), 0 0 60px rgba(59,130,246,0.25)',
+                transform: 'perspective(1200px) rotateX(6deg) rotateY(-4deg)',
+                transition: 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+              }}
+            >
+              {/* Light Mode Image */}
+              <Image
+                src="/dashboard-light.png"
+                alt="AquaSync SaaS Revenue Analytics Dashboard — Light Mode"
+                width={1100}
+                height={700}
+                priority
+                quality={90}
+                className="w-full h-auto block dark:hidden"
+                sizes="(max-width: 768px) 95vw, (max-width: 1200px) 85vw, 1100px"
+              />
+              {/* Dark Mode Image */}
+              <Image
+                src="/dashboard-dark.png"
+                alt="AquaSync SaaS Revenue Analytics Dashboard — Dark Mode"
+                width={1100}
+                height={700}
+                priority
+                quality={90}
+                className="w-full h-auto hidden dark:block"
+                sizes="(max-width: 768px) 95vw, (max-width: 1200px) 85vw, 1100px"
+              />
             </div>
           </div>
         </motion.div>

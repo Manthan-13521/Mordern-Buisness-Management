@@ -29,7 +29,10 @@ export async function GET(req: Request) {
         const skip = (page - 1) * limit;
 
         const query: Record<string, unknown> = { isDeleted: false };
-        if (user.role !== "superadmin" && user.poolId) {
+        if (user.role !== "superadmin") {
+            if (!user.poolId) {
+                return NextResponse.json({ error: "No pool assigned to this account" }, { status: 400, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
             query.poolId = user.poolId;
         }
 
@@ -78,17 +81,21 @@ export async function POST(req: Request) {
         const body = await req.json();
         const result = EntertainmentMemberCreateSchema.safeParse(body);
         if (!result.success) {
-            return NextResponse.json({ error: result.error.flatten() }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            const errs = result.error.flatten().fieldErrors;
+            const errMsg = Object.entries(errs).map(([f, m]) => `${f}: ${(m as string[])?.join(", ")}`).join(" | ") || result.error.flatten().formErrors?.join(", ") || "Validation failed";
+            return NextResponse.json({ error: errMsg }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         const { name, phone, planId, dob, photoBase64, aadharCard, address, planQuantity = 1, paidAmount = 0, balanceAmount = 0 } = result.data;
-
-        const plan = await Plan.findById(planId).lean();
-        if (!plan)
-            return NextResponse.json({ error: "Invalid Plan" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
         const poolId = user.role !== "superadmin" ? user.poolId : body.poolId;
         if (!poolId)
             return NextResponse.json({ error: "Pool ID required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+
+        const plan = await Plan.findOne({ _id: planId, poolId }).lean();
+        if (!plan)
+            return NextResponse.json({ error: "Invalid Plan" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+
+        // poolId already resolved above before plan lookup
 
         // Atomic counter from Pool (not Plan) to avoid duplicates
         const { Pool } = await import("@/models/Pool");

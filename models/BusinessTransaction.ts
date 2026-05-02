@@ -61,5 +61,9 @@ const businessTransactionSchema = new Schema<IBusinessTransaction>(
 
 businessTransactionSchema.index({ businessId: 1, customerId: 1, date: -1 });
 
+// Compound index optimized for analytics aggregation queries:
+// Revenue (SALE+sent) and Expenses (SALE+received) both filter on these 4 fields
+businessTransactionSchema.index({ businessId: 1, category: 1, transactionType: 1, date: -1 });
+
 export const BusinessTransaction: Model<IBusinessTransaction> =
   mongoose.models.BusinessTransaction || mongoose.model<IBusinessTransaction>("BusinessTransaction", businessTransactionSchema);

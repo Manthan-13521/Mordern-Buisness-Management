@@ -26,7 +26,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
                 _id: memberId,
                 hostelId: hostelId, // Strict Tenant Isolation Enforcement
                 status: { $ne: "checkout" },
-                balance: { $gte: 0 } // Hard Rule: Checkout mathematically blocked if dues exist
+                balance: { $gte: 0 } // Allow checkout if balance is 0 or positive (advance)
             },
             {
                 $set: {
@@ -40,15 +40,15 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
 
         if (!updatedMember) {
             // Fail gracefully if checkout blocked by logic or dual-run race conditionally
-            const ghostMember = await HostelMember.findOne({ _id: memberId, hostelId }).lean();
+            const ghostMember = await HostelMember.findOne({ _id: memberId, hostelId }).lean() as any;
             if (!ghostMember) {
                 return NextResponse.json({ error: "Member not found" }, { status: 404 });
             }
             if (ghostMember.status === "checkout") {
                 return NextResponse.json({ error: "Member has already completed checkout" }, { status: 400 });
             }
-            if (ghostMember.balance && ghostMember.balance < 0) {
-                return NextResponse.json({ error: "Clear dues before checkout" }, { status: 400 });
+            if (ghostMember.balance < 0) {
+                return NextResponse.json({ error: `Member has pending dues (₹${Math.abs(ghostMember.balance)}). Cannot checkout.` }, { status: 400 });
             }
             return NextResponse.json({ error: "Failed to process checkout transaction" }, { status: 400 });
         }

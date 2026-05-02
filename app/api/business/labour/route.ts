@@ -3,6 +3,7 @@ import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessLabour } from "@/models/BusinessLabour";
 import { BusinessAttendance } from "@/models/BusinessAttendance";
+import { BusinessLabourAdvance } from "@/models/BusinessLabourAdvance";
 import { requireBusinessId } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
@@ -21,14 +22,16 @@ export async function GET(req: Request) {
         }
 
         // 🟢 STRUCTURED AUDIT LOGGING
-        console.info(JSON.stringify({
-            type: "BUSINESS_LABOUR_LIST",
-            businessId,
-            userId: user.id,
-            route: "/api/business/labour",
-            method: "GET",
-            timestamp: new Date().toISOString()
-        }));
+        if (process.env.DEBUG_ANALYTICS === "true") {
+            console.info(JSON.stringify({
+                type: "BUSINESS_LABOUR_LIST",
+                businessId,
+                userId: user.id,
+                route: "/api/business/labour",
+                method: "GET",
+                timestamp: new Date().toISOString()
+            }));
+        }
 
         await dbConnect();
 
@@ -36,6 +39,9 @@ export async function GET(req: Request) {
         if (!businessId) {
             throw new Error("Tenant context lost before query execution");
         }
+
+        const now = new Date();
+        const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
         const laboursRaw = await BusinessLabour.aggregate([
             { $match: { businessId, isActive: true } },
@@ -73,6 +79,29 @@ export async function GET(req: Request) {
                         { $sort: { date: -1 } }
                     ],
                     as: "payments"
+                }
+            },
+            {
+                $lookup: {
+                    from: "businesslabouradvances",
+                    let: { labId: "$_id", businessId: "$businessId" },
+                    pipeline: [
+                        { $match: { 
+                            $expr: { 
+                                $and: [
+                                    { $eq: ["$labourId", "$$labId"] },
+                                    { $eq: ["$businessId", "$$businessId"] },
+                                    { $eq: ["$month", currentMonthKey] }
+                                ]
+                            } 
+                        }}
+                    ],
+                    as: "advances"
+                }
+            },
+            {
+                $addFields: {
+                    advancePaid: { $ifNull: [{ $arrayElemAt: ["$advances.amount", 0] }, 0] }
                 }
             },
             { $sort: { name: 1 } }
@@ -122,7 +151,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
         }
 
-        if (!name || !role || !salary) {
+        if (!name || !role || salary === undefined) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 

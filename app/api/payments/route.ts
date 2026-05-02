@@ -114,7 +114,9 @@ export async function POST(req: Request) {
         const body = await req.json();
         const result = PaymentSchema.safeParse(body);
         if (!result.success) {
-            return NextResponse.json({ error: result.error.flatten() }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            const errs = result.error.flatten().fieldErrors;
+            const errMsg = Object.entries(errs).map(([f, m]) => `${f}: ${(m as string[])?.join(", ")}`).join(" | ") || result.error.flatten().formErrors?.join(", ") || "Validation failed";
+            return NextResponse.json({ error: errMsg }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
         
         const {
@@ -190,7 +192,7 @@ export async function POST(req: Request) {
 
         if (planId) {
             const { Plan } = await import("@/models/Plan");
-            const plan = await Plan.findById(planId).lean();
+            const plan = await Plan.findOne({ _id: planId, poolId }).lean();
             if (plan && safeAmount > (plan as any).price) {
                 return NextResponse.json({ error: "Amount exceeds expected plan price parameters." }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }

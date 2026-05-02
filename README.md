@@ -1,61 +1,59 @@
-# Telangana Swimming Pool Management System
+# AquaSync SaaS — All-in-One Business Management
 
-A production-ready Next.js 15 application for managing swimming pool memberships, plans, payments, QR code entry logs, and WhatsApp automated reminders. Made with Tailwind CSS, TypeScript, and MongoDB.
+A production-ready SaaS platform for managing Swimming Pools, Hostels, and Workforce. Built with **Next.js 15**, **React 19**, **MongoDB**, and **TypeScript**.
 
-## Features Included
+## 🚀 Key Modules
 
-- **Authentication:** NextAuth credentials based login with session management. Role-based access (Admin & Operator).
-- **Member Management:** Registration with webcam photo capture, auto-id generation (e.g. M0001), expiry calculation.
-- **Plans & Payments:** Custom plan creation, recording payments via Cash or UPI (with transaction ID).
-- **ID Cards:** Automated PDF generation with member photo and QR code (using `pdf-lib` & `qrcode`).
-- **QR Entry System:** React webcam scanner to scan member cards, validate expiration, log entries, and prevent duplicates.
-- **Analytics Dashboard:** Recharts-based dashboard showing Active/Expired members, Revenue, Plan popularity, and expiring soon alerts.
-- **Notifications:** Built-in Twilio WhatsApp Reminder Cron Endpoint + UI to track message logs.
-- **System Logs & Exports:** Consolidated log timeline of registrations, entries, and payments with Excel Export via `exceljs`.
-- **System Settings:** Light/Dark/System theme switching and Full Database JSON Backup Export.
-- **Global Error Handling:** Custom `error.tsx` and `not-found.tsx` components.
+- **🏊 Swimming Pool Management**: Complete membership lifecycle, plan creation, QR-based attendance tracking, and revenue analytics.
+- **🏠 Hostel Management**: Room & block allocation, rent cycles, member billing, and vacancy tracking.
+- **💼 Workforce & Business**: Staff attendance, payroll management, advance tracking, and performance analytics.
+- **📊 Unified Dashboard**: Consolidated metrics for income, active members, and system health.
 
-## Prerequisites
-- Node.js 18.17+
-- MongoDB instance (local or Atlas)
-- Twilio Account (for WhatsApp messages - *Optional*)
+## ✨ Premium Features
 
-## Getting Started
+- **🛡️ Secure Auth**: NextAuth.js with role-based access control (SuperAdmin, Admin, Operator).
+- **📱 Smart Entry**: QR Code generation for members and integrated camera scanner for validation.
+- **💬 Automation**: Automated WhatsApp reminders via Twilio for overdue payments and expiry alerts.
+- **💳 Payment Integration**: Support for Cash, UPI, and Razorpay online payments.
+- **📄 Digital Receipts**: Automated PDF generation and Thermal Receipt printing for instant billing.
+- **📷 Photo Capture**: Integrated webcam capture for member registration.
+- **🌓 Modern UI**: Neo-dark 3D glass aesthetics with full dark/light mode support.
 
-1. **Environment Variables**
-Copy `.env.local.example` to `.env.local` and fill in your own values:
-```bash
-cp .env.local.example .env.local
-# Then edit .env.local with your real credentials
-```
-> ⚠️ **Never commit real secrets.** Copy `.env.local.example` and fill in your own values. Generate unique secrets with `openssl rand -hex 32`.
+## 🛠️ Technical Stack
 
-2. **Install Dependencies**
-```bash
-npm install
-```
+- **Frontend**: Next.js 15 (App Router), Tailwind CSS 4, Framer Motion, Lucide Icons.
+- **Backend**: Next.js API Routes, Mongoose (MongoDB Atlas), Upstash Redis (Rate limiting).
+- **DevOps**: Vercel (Deployment), Sentry (Error tracking), GitHub Actions.
 
-3. **Start Development Server**
-```bash
-npm run dev
-```
+## 🏁 Getting Started
 
-4. **Seed the Database (First-time run)**
-The seed endpoint is protected. Pass your `SEED_SECRET` value:
-```bash
-curl -H "Authorization: Bearer <YOUR_SEED_SECRET>" http://localhost:3000/api/seed
-```
-*Default credentials are set by environment variables — see `.env.example`.*
+1. **Clone & Install**
+   ```bash
+   npm install
+   ```
 
-5. **Login and Explore**
-Navigate to `http://localhost:3000/<pool-slug>/admin/login` and sign in.
+2. **Environment Setup**
+   Copy `.env.example` to `.env.local` and fill in:
+   - `MONGODB_URI`
+   - `NEXTAUTH_SECRET`
+   - `NEXTAUTH_URL`
 
-## Project Architecture Highlight
-- `/app/admin/(dashboard)/*`: Protected admin layout with sidebar and NextAuth session validation via middleware.
-- `/app/api/*`: Backend logical endpoints integrated with mongoose aggregations and strict validation workflows.
-- `models/`: Mongoose schemas outlining Members, Plans, EntryLogs, NotificationLogs, Payments and Users.
-- `lib/mongodb.ts`: Centralized MongoDB connector utilizing connection caching to prevent hot-reload connection spikes next dev.
+3. **Database Seed**
+   ```bash
+   curl -H "Authorization: Bearer YOUR_SEED_SECRET" http://localhost:3000/api/seed
+   ```
 
-Developed keeping real-world production constraints in mind with robust global boundaries and comprehensive UI componentry utilizing Lucide icons and pure Tailwind logic.
+4. **Run Dev**
+   ```bash
+   npm run dev
+   ```
 
-# Last deploy trigger: Sun Mar 22 13:23:51 IST 2026
+## ☁️ Vercel Deployment
+
+1. Connect your GitHub repository to Vercel.
+2. Add all environment variables from `.env.example`.
+3. Set the build command to `npm run build`.
+4. Ensure `CRON_SECRET` is set to secure the scheduled tasks in `vercel.json`.
+
+---
+Developed for modern businesses with performance and aesthetics in mind.

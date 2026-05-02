@@ -13,6 +13,7 @@ import { PRIVATE_API_STALE_MS } from "@/lib/apiCache";
 import { getTenantFilter, requireTenant, resolvePoolId } from "@/lib/tenant";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { secureFindById } from "@/lib/tenantSecurity"; 
+import { withTransaction } from "@/lib/withTransaction";
 
 export const dynamic = "force-dynamic";
 
@@ -200,14 +201,15 @@ export async function POST(req: Request) {
         // Rate limiting is now handled globally by middleware
         
         // --- STEP 12 SaaS Gating: Enforce Tenant Limits ---
+        const poolId = resolvePoolId(user, body.poolId);
         try {
             const { enforceMemberCreationLimit } = await import("@/lib/saasGuard");
-            const poolId = resolvePoolId(user, body.poolId);
             await enforceMemberCreationLimit(poolId);
         } catch (e: any) {
             if (e.message === "SaaS_Member_Limit_Reached") {
                 return NextResponse.json({ error: "Organization member limit reached. Please upgrade your SaaS plan." }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
+            throw e; // Bubble up unexpected errors
         }
         // ------------------------------------------------
 
@@ -247,8 +249,6 @@ export async function POST(req: Request) {
         const plan = await secureFindById(Plan, planId, user, { lean: true });
         if (!plan)
             return NextResponse.json({ error: "Invalid Plan" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-
-        const poolId = resolvePoolId(user, body.poolId);
 
         // Atomic ID generation via Counters collection (Section 5)
         const isEntertainment = plan.hasEntertainment ?? false;
@@ -333,29 +333,24 @@ export async function POST(req: Request) {
             cardStatus: "ready",
         });
 
-        const mongoose = (await import("mongoose")).default;
-        const dbSession = await mongoose.startSession();
-        dbSession.startTransaction();
-
-        try {
-            await newMember.save({ session: dbSession });
+        await withTransaction(async (dbSession) => {
+            const saveOpts = dbSession ? { session: dbSession } : undefined;
+            await newMember.save(saveOpts);
 
             // ── Enterprise Rule: Increment immutable counter explicitly within transaction
             const { PoolStats } = await import("@/models/PoolStats");
+            const currentYear = new Date().getFullYear();
+            
+            const statsOpts = dbSession ? { upsert: true, session: dbSession } : { upsert: true };
             await PoolStats.findOneAndUpdate(
-                { poolId },
+                { poolId, year: currentYear },
                 { $inc: isEntertainment ? { totalEntertainmentMembers: 1 } : { totalMembers: 1 } },
-                { upsert: true, session: dbSession }
+                statsOpts
             );
-
-            await dbSession.commitTransaction();
-        } catch (txnError) {
-            await dbSession.abortTransaction();
+        }).catch(txnError => {
             console.error("Atomic transaction failed during member creation:", txnError);
-            return NextResponse.json({ error: "Failed to securely save member records" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        } finally {
-            dbSession.endSession();
-        }
+            throw new Error(`Failed to securely save member records: ${txnError.message || 'Transaction aborted'}`);
+        });
 
         // ── STEP 7B: Automated Subscription & Revenue Ledger Generation ──────────────
         try {

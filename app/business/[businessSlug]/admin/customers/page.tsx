@@ -22,12 +22,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import toast from "react-hot-toast";
 import clsx from "clsx";
+import { useBusinessCustomers } from "@/hooks/useAnalytics";
 
 export default function CustomersPage() {
-  const [customers, setCustomers] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("all"); 
+  const { data: customersData, isLoading: loading, refetch: fetchCustomers } = useBusinessCustomers(tab === "due");
+  const customers = customersData || []; 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ name: "", phone: "", businessName: "", gstNumber: "", address: "" });
   const [isSaving, setIsSaving] = useState(false);
@@ -50,23 +51,7 @@ export default function CustomersPage() {
   const match = pathname.match(/^\/business\/([^/]+)\/admin/);
   const businessSlug = match?.[1] ?? "";
 
-  async function fetchCustomers() {
-    try {
-      const url = `/api/business/customers${tab === "due" ? "?hasDue=true" : ""}`;
-      const res = await fetch(url, { cache: "no-store" });
-      const json = await res.json();
-      // Robust null-safety fallback: json.data || []
-      setCustomers(json.data || []);
-    } catch (err) {
-      toast.error("Failed to load customers");
-    } finally {
-      setLoading(false);
-    }
-  }
 
-  useEffect(() => {
-    fetchCustomers();
-  }, [tab]);
 
   const filteredCustomers = customers.filter((c: any) => 
     c.name.toLowerCase().includes(search.toLowerCase()) || 

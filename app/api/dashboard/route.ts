@@ -58,34 +58,24 @@ export async function GET(req: Request) {
             baseMatch.poolId = user.poolId;
         }
             
-        // ── 1. Safe Initialization Logic for Immutable Counters (Self-Healing) ──
-        const { PoolStats } = await import("@/models/PoolStats");
-        let poolStats = await PoolStats.findOne({ poolId: baseMatch.poolId });
-        
-        if (!poolStats || !poolStats.isInitialized) {
-            // Seize the initialization lock atomically
-            const initOp = await PoolStats.findOneAndUpdate(
-                { poolId: baseMatch.poolId, isInitialized: { $ne: true } },
-                { $setOnInsert: { poolId: baseMatch.poolId } },
-                { upsert: true, new: true }
-            );
+        // ── 1. Total Members = ALL members added this year (never decreases on deletion) ──
+        // Direct count from DB: current members + archived deleted members
+        const currentYear = new Date().getFullYear();
+        const startOfYear = new Date(currentYear, 0, 1);
+        const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59, 999);
+        const yearCreatedFilter = { $gte: startOfYear, $lte: endOfYear };
+        const poolId = baseMatch.poolId;
 
-            if (!initOp.isInitialized) {
-                // Compute historical data once
-                const regCount = await Member.countDocuments(baseMatch);
-                const entCount = await EntertainmentMember.countDocuments(baseMatch);
-                
-                poolStats = await PoolStats.findOneAndUpdate(
-                    { poolId: baseMatch.poolId },
-                    { $set: { totalMembers: regCount, totalEntertainmentMembers: entCount, isInitialized: true } },
-                    { new: true }
-                );
-            } else {
-                poolStats = initOp;
-            }
-        }
+        const { DeletedMember } = await import("@/models/DeletedMember");
+        const [regThisYear, entThisYear, deletedThisYear] = await Promise.all([
+            // Members still in DB, created this year (includes soft-deleted)
+            Member.countDocuments({ poolId, createdAt: yearCreatedFilter }),
+            EntertainmentMember.countDocuments({ poolId, createdAt: yearCreatedFilter }),
+            // Members hard-deleted this year (archived before deletion)
+            DeletedMember.countDocuments({ poolId, "fullData.createdAt": yearCreatedFilter }),
+        ]);
 
-        const immutableTotalMembers = (poolStats?.totalMembers || 0) + (poolStats?.totalEntertainmentMembers || 0);
+        const immutableTotalMembers = regThisYear + entThisYear + deletedThisYear;
 
         // Execute all independent queries in parallel — NO CACHE, always fresh
         const [

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React from "react";
 import { 
  ShoppingBag, 
  Users, 
@@ -11,32 +11,12 @@ import {
  Clock,
  Package
 } from "lucide-react";
+import { useDashboardStats } from "@/hooks/useAnalytics";
 
 export default function BusinessDashboard() {
-  const [stats, setStats] = useState<any>(null);
-  const [recentSales, setRecentSales] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchStats() {
-      try {
-        const res = await fetch("/api/business/analytics", { cache: "no-store" });
-        const json = await res.json();
-        if (res.ok) {
-          // Robust null-safety fallbacks for production resilience
-          setStats(json.data?.stats || {});
-          setRecentSales(json.data?.recentSales || []);
-        } else {
-          console.error("Analytics Error:", json.error);
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchStats();
-  }, []);
+  const { data: dashboardData, isLoading: loading } = useDashboardStats();
+  const stats = dashboardData?.stats || {};
+  const recentSales = dashboardData?.recentSales || [];
 
   if (loading) {
     return (
@@ -134,7 +114,7 @@ export default function BusinessDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#1f2937]">
-                {recentSales.length > 0 ? recentSales.map((sale: any, i) => (
+                {recentSales.length > 0 ? recentSales.map((sale: any, i: number) => (
                   <tr key={i} className="hover:bg-[#8b5cf6]/5 transition-colors group border-b border-slate-800 last:border-0">
                     <td className="px-6 py-5">
                       <p className="text-base font-semibold text-white">{sale.customerId?.name || "N/A"}</p>

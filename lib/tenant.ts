@@ -79,7 +79,7 @@ export function requireBusinessId(user?: AuthUser | null): string {
     const businessId = user.businessId;
 
     if (user.role !== "superadmin") {
-        if (!businessId || typeof businessId !== "string" || !mongoose.Types.ObjectId.isValid(businessId)) {
+        if (!businessId || typeof businessId !== "string" || businessId.trim() === "") {
             console.error("SECURITY: Missing or invalid businessId access attempt", {
                 userId: user.id || "unknown",
                 providedId: businessId

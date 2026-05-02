@@ -218,7 +218,7 @@ export default function MembersPage() {
             }
 
             const data = await res.json();
-            if (!res.ok) { setError(data.error || "Failed"); setSubmitting(false); return; }
+            if (!res.ok) { setError(typeof data.error === "string" ? data.error : (data.error?.message || JSON.stringify(data.error) || "Failed")); setSubmitting(false); return; }
             setShowForm(false); stopCamera(); fetchMembers();
         } catch { setError("Network error"); }
         setSubmitting(false);
@@ -226,8 +226,17 @@ export default function MembersPage() {
 
     const handleDelete = async (id: string) => {
         if (!confirm("Delete this member? This action is irreversible.")) return;
-        await fetch(`/api/hostel/members/${id}`, { method: "DELETE" });
-        fetchMembers();
+        try {
+            const res = await fetch(`/api/hostel/members/${id}`, { method: "DELETE" });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || "Failed to delete member.");
+                return;
+            }
+            fetchMembers();
+        } catch (e) {
+            alert("Network error. Please try again.");
+        }
     };
 
     const handleRenew = async (e: React.FormEvent) => {
@@ -244,7 +253,7 @@ export default function MembersPage() {
             }),
         });
         const data = await res.json();
-        if (!res.ok) { setError(data.error || "Payment failed"); setSubmitting(false); return; }
+        if (!res.ok) { setError(typeof data.error === "string" ? data.error : (data.error?.message || JSON.stringify(data.error) || "Payment failed")); setSubmitting(false); return; }
         setRenewMember(null); fetchMembers(); setSubmitting(false);
     };
 

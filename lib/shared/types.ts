@@ -32,7 +32,7 @@ export const PaymentSchema = z.object({
   customerId: z.string().min(1, "Customer ID required"),
   amount: z.number().min(0, "Amount must be positive"),
   type: z.string().min(1),
-  paymentType: z.enum(["sent", "received"]),
+  paymentType: z.enum(["paid", "sent", "received"]),
   fileUrl: z.string().optional(),
   receiptUrl: z.string().optional(),
   date: z.string().optional(),

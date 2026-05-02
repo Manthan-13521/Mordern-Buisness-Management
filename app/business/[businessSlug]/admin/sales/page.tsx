@@ -11,60 +11,34 @@ import {
   Package,
   Trash2,
   Save,
-  IndianRupee
+  IndianRupee,
+  ArrowUpRight,
+  ArrowDownRight
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useBusinessSales, useBusinessCustomers } from "@/hooks/useAnalytics";
 
 export default function SalesPage() {
-  const [sales, setSales] = useState([]);
-  const [customers, setCustomers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: salesData, isLoading: salesLoading, refetch: fetchSales } = useBusinessSales();
+  const { data: customersData, isLoading: custLoading } = useBusinessCustomers();
+  
+  const sales = salesData || [];
+  const customers = customersData || [];
+  const loading = salesLoading || custLoading;
   const [showAddModal, setShowAddModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   // New Sale State
   const [newSale, setNewSale] = useState({
     customerId: "",
+    saleType: "sent",
     items: [{ name: "", qty: 1, price: 0 }],
     transportationCost: 0,
     paidAmount: 0,
     date: new Date().toISOString().split('T')[0]
   });
 
-  async function fetchData() {
-    try {
-      const [salesRes, custRes] = await Promise.all([
-        fetch("/api/business/sales", { cache: "no-store" }),
-        fetch("/api/business/customers", { cache: "no-store" })
-      ]);
-      
-      if (!salesRes.ok) {
-        toast.error("Failed to load sales");
-      } else {
-        const salesData = await salesRes.json();
-        if (salesData.success === false) {
-          toast.error(salesData.error || "Failed to load sales");
-        } else {
-          setSales(Array.isArray(salesData) ? salesData : salesData.data || []);
-        }
-      }
-      
-      if (!custRes.ok) {
-        toast.error("Failed to load customers");
-      } else {
-        const custData = await custRes.json();
-        setCustomers(Array.isArray(custData) ? custData : custData.data || custData);
-      }
-    } catch (err) {
-      toast.error("Network error — please check your connection");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const fetchData = fetchSales;
 
   const addItem = () => {
     setNewSale({
@@ -103,6 +77,7 @@ export default function SalesPage() {
         setShowAddModal(false);
         setNewSale({
           customerId: "",
+          saleType: "sent",
           items: [{ name: "", qty: 1, price: 0 }],
           transportationCost: 0,
           paidAmount: 0,
@@ -151,6 +126,7 @@ export default function SalesPage() {
                   <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide">Date</th>
                   <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide">Customer</th>
                   <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide">Items</th>
+                  <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide">Type</th>
                   <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide text-right">Total Amount</th>
                   <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide text-right">Paid Amt</th>
                   <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide text-right">Balance</th>
@@ -174,6 +150,16 @@ export default function SalesPage() {
                         <Package className="w-5 h-5 text-slate-400" />
                         <p className="text-sm text-slate-400 font-medium">{sale.items?.length || 0} Items</p>
                       </div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider border ${
+                        sale.transactionType === 'sent' 
+                          ? 'bg-[#ef4444]/10 text-[#ef4444] border-[#ef4444]/20' 
+                          : 'bg-[#38bdf8]/10 text-[#38bdf8] border-[#38bdf8]/20'
+                      }`}>
+                        {sale.transactionType === 'sent' ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
+                        {sale.transactionType === 'sent' ? 'Sent' : 'Received'}
+                      </span>
                     </td>
                     <td className="px-6 py-5 text-right font-semibold text-lg text-[#ef4444]">
                       ₹{sale.amount.toLocaleString()}
@@ -218,7 +204,7 @@ export default function SalesPage() {
             </div>
             
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-[#0b1220]">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest block">Select Customer</label>
                   <select 
@@ -231,6 +217,18 @@ export default function SalesPage() {
                     {customers.map((c: any) => (
                       <option key={c._id} value={c._id}>{c.name}</option>
                     ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest block">Sale Type</label>
+                  <select 
+                    required
+                    value={newSale.saleType}
+                    onChange={(e) => setNewSale({ ...newSale, saleType: e.target.value })}
+                    className="w-full bg-[#020617] border border-[#1f2937] rounded-xl px-4 py-3.5 text-sm font-medium text-[#f9fafb] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all appearance-none cursor-pointer"
+                  >
+                    <option value="sent">Sent to Customer</option>
+                    <option value="received">Received from Customer</option>
                   </select>
                 </div>
                 <div className="space-y-2">

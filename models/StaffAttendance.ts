@@ -6,6 +6,8 @@ export interface IStaffAttendance extends Document {
     timestamp: Date;
     method: "qr" | "face_scan" | "manual";
     type: "clock_in" | "clock_out" | "checkIn" | "checkOut";
+    date?: string;
+    status?: string;
 }
 
 const staffAttendanceSchema = new Schema<IStaffAttendance>(
@@ -15,6 +17,8 @@ const staffAttendanceSchema = new Schema<IStaffAttendance>(
         timestamp: { type: Date, default: Date.now, index: true },
         method: { type: String, enum: ["qr", "face_scan", "manual"], required: true },
         type: { type: String, enum: ["clock_in", "clock_out", "checkIn", "checkOut"], required: true },
+        date: { type: String },
+        status: { type: String },
     },
     { timestamps: true }
 );

@@ -200,15 +200,24 @@ export const getCachedDashboardCounts = unstable_cache(
         let includeRegular = memberType === "all" || memberType === "member";
         let includeEntertainment = memberType === "all" || memberType === "entertainment";
 
-        const [totalRegular, totalEntertainment, activeRegular, activeEntertainment, todaysEntries, todaysMemberEntries, todaysEntertainmentEntries] = await Promise.all([
-            includeRegular ? Member.countDocuments({
-                ...memberQueryMatch,
-                memberId: { $regex: /^M(?!S)/i }
-            }) : 0,
-            includeEntertainment ? EntertainmentMember.countDocuments({
-                ...memberQueryMatch,
-                memberId: { $regex: /^MS/i }
-            }) : 0,
+        // Immutable total count (current year)
+        const currentYear = new Date().getFullYear();
+        const startOfYear = new Date(currentYear, 0, 1);
+        const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59, 999);
+        const yearCreatedFilter = { $gte: startOfYear, $lte: endOfYear };
+        const { DeletedMember } = await import("@/models/DeletedMember");
+
+        const [
+            activeRegular, 
+            activeEntertainment, 
+            todaysEntries, 
+            todaysMemberEntries, 
+            todaysEntertainmentEntries,
+            regThisYear,
+            entThisYear,
+            delRegThisYear,
+            delEntThisYear
+        ] = await Promise.all([
             includeRegular ? Member.countDocuments({
                 ...memberQueryMatch,
                 memberId: { $regex: /^M(?!S)/i },
@@ -232,11 +241,19 @@ export const getCachedDashboardCounts = unstable_cache(
                 ...memberQueryMatch,
                 memberId: { $regex: /^MS/i },
                 createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
-            }) : 0
+            }) : 0,
+            // Immutable count queries
+            includeRegular ? Member.countDocuments({ ...baseMatch, createdAt: yearCreatedFilter }) : 0,
+            includeEntertainment ? EntertainmentMember.countDocuments({ ...baseMatch, createdAt: yearCreatedFilter }) : 0,
+            includeRegular ? DeletedMember.countDocuments({ ...baseMatch, "fullData.createdAt": yearCreatedFilter, collectionSource: "members" }) : 0,
+            includeEntertainment ? DeletedMember.countDocuments({ ...baseMatch, "fullData.createdAt": yearCreatedFilter, collectionSource: "entertainment_members" }) : 0
         ]);
 
+        const totalRegular = (regThisYear as number) + (delRegThisYear as number);
+        const totalEntertainment = (entThisYear as number) + (delEntThisYear as number);
+
         return {
-            totalMembers: (totalRegular as number) + (totalEntertainment as number),
+            totalMembers: totalRegular + totalEntertainment,
             activeMembers: (activeRegular as number) + (activeEntertainment as number),
             todaysEntries: todaysEntries[0]?.total || 0,
             todaysMemberEntries,

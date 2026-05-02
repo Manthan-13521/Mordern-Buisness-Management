@@ -91,7 +91,7 @@ export default function BalancePaymentsPage() {
         setSubmitting(false);
 
         if (!res.ok) {
-            setError(data.error || "Failed to record payment");
+            setError(typeof data.error === "string" ? data.error : (data.error?.message || JSON.stringify(data.error) || "Failed to record payment"));
             return;
         }
 
