@@ -70,24 +70,6 @@ function normalizeRawPayload(raw: Record<string, unknown> | null | undefined): A
  * Returns a strongly-typed AuthUser or null if unauthenticated.
  */
 export async function resolveUser(req: Request): Promise<AuthUser | null> {
-    // --- LOAD TEST BYPASS (MANDATORY SECURITY CHECK) ---
-    if (process.env.LOAD_TEST === "true") {
-        try {
-            // Use fallback base URL to prevent "Invalid URL" TypeError if req.url is relative
-            const url = new URL(req.url, "http://localhost");
-            if (url.searchParams.get("test") === "true") {
-                return {
-                    id: "test-user",
-                    email: "b@1.com",
-                    role: "admin",
-                    poolId: "BIZ001", // 🔥 REQUIRED to pass tenant isolation
-                };
-            }
-        } catch {
-            // Ignore URL parsing errors and fall through
-        }
-    }
-
     // 1. Bearer token check
     const authHeader = req.headers.get("authorization");
     if (authHeader?.startsWith("Bearer ")) {
