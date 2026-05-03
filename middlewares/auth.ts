@@ -34,6 +34,11 @@ const SUBSCRIPTION_ALWAYS_ALLOW = [
 ];
 
 export function withAuthRouting(req: NextRequestWithAuth): NextResponse | undefined {
+    // --- LOAD TEST BYPASS ---
+    if (process.env.LOAD_TEST === "true" && req.nextUrl.searchParams.get("test") === "true") {
+        return undefined;
+    }
+
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
 
