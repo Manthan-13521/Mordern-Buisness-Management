@@ -70,9 +70,9 @@ export async function GET(req: Request) {
         if (balanceOnly === "true") baseMatch.balanceAmount = { $gt: 0 };
 
         if (memberType === "member") {
-            baseMatch.memberId = { $regex: /^M(?!S)/i };
+            baseMatch.memberType = "regular";
         } else if (memberType === "entertainment") {
-            baseMatch.memberId = { $regex: /^MS/i };
+            baseMatch.memberType = "entertainment";
         }
 
         // ── Check if we should query Members, Entertainment, or both ─────

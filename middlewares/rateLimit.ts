@@ -20,6 +20,7 @@ const RATE_LIMITS: Record<string, number> = {
     'POST:/api/razorpay/verify': 10,
     'POST:/api/entry': 60,
     'POST:/api/pool/scan': 60,
+    'GET:/api/metrics/health': 60, // Uptime monitoring allowlist
     'POST:/api/settings/backup': 3,
     'GET:/api/settings/backup/excel': 3,
     'GET:/api/backups/list': 10,

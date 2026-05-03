@@ -43,9 +43,9 @@ export async function GET(req: Request) {
         };
 
         if (memberType === "member") {
-            baseMatch.memberId = { $regex: /^M(?!S)/i };
+            baseMatch.memberType = "regular";
         } else if (memberType === "entertainment") {
-            baseMatch.memberId = { $regex: /^MS/i };
+            baseMatch.memberType = "entertainment";
         }
 
         const includeRegular = memberType === "all" || memberType === "member";

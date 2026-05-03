@@ -1,5 +1,16 @@
 import pino from "pino";
 
+// ── Log Sampling for Production ──────────────────────────────────────────────
+// Under heavy load, even info logs become I/O noise.
+// error/warn: ALWAYS | payment/auth context: ALWAYS | info: 20% | debug: 5%
+function shouldSample(level: string, context?: string): boolean {
+    if (level === "error" || level === "warn" || level === "fatal") return true;
+    if (context === "payment" || context === "auth" || context === "AUDIT") return true;
+    if (process.env.NODE_ENV !== "production") return true;
+    const rate = level === "info" ? 0.2 : 0.05;
+    return Math.random() < rate;
+}
+
 // ── 4.1 Production Grade Pino Setup ──────────────────────────────────────────
 export const pinoLogger = pino({
     level: process.env.NODE_ENV === "production" ? "warn" : "debug",
@@ -54,11 +65,15 @@ interface AuditEvent {
 }
 
 /**
- * Backward-compatible wrapper exposing pino while honoring existing API paths
+ * Backward-compatible wrapper with request-level sampling.
+ * error/warn: ALWAYS logged. info/debug: sampled in production.
+ * Payment + auth events: ALWAYS logged regardless of level.
  */
 export const logger = {
-    info(message: string, meta?: object) {
-        pinoLogger.info(meta || {}, message);
+    info(message: string, meta?: object, context?: string) {
+        if (shouldSample("info", context)) {
+            pinoLogger.info(meta || {}, message);
+        }
     },
     warn(message: string, meta?: object) {
         pinoLogger.warn(meta || {}, message);
@@ -66,16 +81,23 @@ export const logger = {
     error(message: string, meta?: object) {
         pinoLogger.error(meta || {}, message);
     },
+    debug(message: string, meta?: object, context?: string) {
+        if (shouldSample("debug", context)) {
+            pinoLogger.debug(meta || {}, message);
+        }
+    },
     scan(message: string, meta?: object) {
-        // Keeping as info level logic internally but tagged as "scan" event
-        pinoLogger.info({ category: "SCAN", ...meta }, message);
+        if (shouldSample("info")) {
+            pinoLogger.info({ category: "SCAN", ...meta }, message);
+        }
     },
 
     /**
      * Structured audit log for security-sensitive events.
+     * ALWAYS logged — never sampled, uses warn level to survive production filter.
      */
     audit(event: AuditEvent) {
-        pinoLogger.info({
+        pinoLogger.warn({
             category: "AUDIT", 
             type: event.type,
             userId: event.userId,

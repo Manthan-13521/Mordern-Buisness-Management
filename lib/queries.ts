@@ -106,12 +106,12 @@ export const getCachedAnalyticsSummary = unstable_cache(
         ] = await Promise.all([
             (includeRegular ? Member.countDocuments({
                 ...memberQueryMatch,
-                memberId: { $regex: /^M(?!S)/i },
+                memberType: "regular",
                 $or: [{ planEndDate: { $gte: now } }, { expiryDate: { $gte: now } }]
             }) : Promise.resolve(0)) as Promise<number>,
-            (includeEntertainment ? EntertainmentMember.countDocuments({
+            (includeEntertainment ? Member.countDocuments({
                 ...memberQueryMatch,
-                memberId: { $regex: /^MS/i },
+                memberType: "entertainment",
                 $or: [{ planEndDate: { $gte: now } }, { expiryDate: { $gte: now } }]
             }) : Promise.resolve(0)) as Promise<number>,
             Payment.aggregate([
@@ -132,12 +132,12 @@ export const getCachedAnalyticsSummary = unstable_cache(
             ]),
             includeRegular ? Member.countDocuments({
                 ...memberQueryMatch,
-                memberId: { $regex: /^M(?!S)/i },
+                memberType: "regular",
                 createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
             }) : 0,
-            includeEntertainment ? EntertainmentMember.countDocuments({
+            includeEntertainment ? Member.countDocuments({
                 ...memberQueryMatch,
-                memberId: { $regex: /^MS/i },
+                memberType: "entertainment",
                 createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
             }) : 0
         ]);
@@ -220,12 +220,12 @@ export const getCachedDashboardCounts = unstable_cache(
         ] = await Promise.all([
             includeRegular ? Member.countDocuments({
                 ...memberQueryMatch,
-                memberId: { $regex: /^M(?!S)/i },
+                memberType: "regular",
                 $or: [{ planEndDate: { $gte: now } }, { expiryDate: { $gte: now } }]
             }) : 0,
-            includeEntertainment ? EntertainmentMember.countDocuments({
+            includeEntertainment ? Member.countDocuments({
                 ...memberQueryMatch,
-                memberId: { $regex: /^MS/i },
+                memberType: "entertainment",
                 $or: [{ planEndDate: { $gte: now } }, { expiryDate: { $gte: now } }]
             }) : 0,
             EntryLog.aggregate([
@@ -234,12 +234,12 @@ export const getCachedDashboardCounts = unstable_cache(
             ]),
             includeRegular ? Member.countDocuments({
                 ...memberQueryMatch,
-                memberId: { $regex: /^M(?!S)/i },
+                memberType: "regular",
                 createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
             }) : 0,
-            includeEntertainment ? EntertainmentMember.countDocuments({
+            includeEntertainment ? Member.countDocuments({
                 ...memberQueryMatch,
-                memberId: { $regex: /^MS/i },
+                memberType: "entertainment",
                 createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
             }) : 0,
             // Immutable count queries

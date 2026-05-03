@@ -15,17 +15,18 @@ const cached: Cached = global._mongooseCache ?? { conn: null, promise: null }
 global._mongooseCache = cached
 
 export async function dbConnect() {
+  if (mongoose.connection.readyState === 1) return mongoose.connection;
   if (cached.conn) return cached.conn
   if (!cached.promise) {
     cached.promise = mongoose.connect(MONGODB_URI, {
       bufferCommands: false,
-      maxPoolSize: process.env.NODE_ENV === "production" ? 20 : 5,
-      minPoolSize: process.env.NODE_ENV === "production" ? 3 : 1,
+      maxPoolSize: 5,              // Vercel: 200 instances × 5 = 1000 (safe for Atlas M10 1500 limit)
+      minPoolSize: 1,              // Serverless: don't pre-warm, each invocation is short-lived
       serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 30000,
+      socketTimeoutMS: 45000,      // Allow long aggregations to complete
       connectTimeoutMS: 10000,
       heartbeatFrequencyMS: 10000,
-      maxIdleTimeMS: 30000,        // Kill idle connections — critical for free tier
+      maxIdleTimeMS: 30000,        // Kill idle connections — critical for connection budget
     }).catch(err => {
       cached.promise = null;       // Reset on failure so next request retries
       throw err;

@@ -1,4 +1,4 @@
-import { redis } from "./redis";
+import { redis, withTimeout } from "./redis";
 
 /**
  * Hybrid cache: Upstash Redis (production) with in-memory fallback (dev).
@@ -19,7 +19,7 @@ export async function getCache(key: string): Promise<unknown | null> {
     // Try Redis first
     if (redis) {
         try {
-            const cached = await redis.get(fullKey);
+            const cached = await withTimeout(redis.get(fullKey), 200);
             if (cached) return cached;
         } catch (err) {
             console.warn("[Cache] Redis GET failed, falling back to memory:", err);
@@ -43,7 +43,8 @@ export async function setCache(key: string, data: unknown): Promise<void> {
     // Try Redis
     if (redis) {
         try {
-            await redis.set(fullKey, JSON.stringify(data), { ex: CACHE_TTL });
+            const jitter = Math.floor(Math.random() * 3); // 0-2s jitter
+            await redis.set(fullKey, JSON.stringify(data), { ex: CACHE_TTL + jitter });
             return;
         } catch (err) {
             console.warn("[Cache] Redis SET failed, falling back to memory:", err);

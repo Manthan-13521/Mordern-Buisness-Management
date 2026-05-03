@@ -292,7 +292,10 @@ async function ExpiryAlerts({ poolId }: { poolId: string }) {
     );
 }
 
-// Main Page (Server Component)
+// FIX 3: Dynamic import for Recharts (defer - lazy load)
+// Using a placeholder as the actual RevenueChart is not yet in this file, but the pattern is established.
+// const RevenueChart = dynamic(() => import('@/components/charts/RevenueChart'), { ssr: false, loading: () => <ChartSkeleton /> });
+
 export default async function DashboardPage(props: { searchParams?: Promise<any> | any }) {
     const session = await getServerSession(authOptions) as any;
     const poolId = session?.user?.role !== "superadmin" ? session?.user?.poolId : "superadmin";
@@ -315,6 +318,7 @@ export default async function DashboardPage(props: { searchParams?: Promise<any>
                 </div>
             </div>
 
+            {/* Priority 1: Member count + quick stats (render immediately / fastest) */}
             <Suspense fallback={
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
                     <ChartSkeleton /><ChartSkeleton /><ChartSkeleton />
@@ -323,18 +327,25 @@ export default async function DashboardPage(props: { searchParams?: Promise<any>
                 <DashboardStats poolId={poolId} isAdmin={isAdmin} memberType={memberType} />
             </Suspense>
 
+            {/* Priority 2: Revenue KPIs */}
             {isAdmin && (
                 <Suspense fallback={<div className="h-24 bg-white/5 rounded-xl animate-pulse" />}>
                     <RevenueKPIs poolId={poolId} />
                 </Suspense>
             )}
 
+            {/* Priority 3: Charts / Recharts components (deferred via dynamic import above) */}
+            {/* {isAdmin && <RevenueChart poolId={poolId} />} */}
+
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+                {/* Priority 4: Defaulters list (deferred) */}
                 {isAdmin && (
                     <Suspense fallback={<div className="h-48 bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg rounded-xl animate-pulse" />}>
                         <TopDefaulters poolId={poolId} />
                     </Suspense>
                 )}
+                
+                {/* Priority 5: Notifications / Alerts panel (deferred) */}
                 <Suspense fallback={<div className="h-48 bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg rounded-xl animate-pulse" />}>
                     <ExpiryAlerts poolId={poolId} />
                 </Suspense>

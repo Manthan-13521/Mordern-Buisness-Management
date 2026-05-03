@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Razorpay from "razorpay";
 import { dbConnect } from "@/lib/mongodb";
 import { Plan } from "@/models/Plan";
+import { Payment } from "@/models/Payment";
 import { RazorpayOrderSchema } from "@/lib/validators";
 import { createBreaker } from "@/lib/circuitBreaker";
 
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
         if (!result.success) {
             return NextResponse.json({ error: Object.entries(result.error.flatten().fieldErrors).map(([f, m]) => `${f}: ${(m as string[])?.join(", ")}`).join(" | ") || "Validation failed" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-        const { planId, cartQuantity } = result.data;
+        const { planId, cartQuantity, memberId: reqMemberId } = result.data;
 
         await dbConnect();
         const plan = await Plan.findById(planId);
@@ -47,17 +48,68 @@ export async function POST(req: Request) {
             }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
-        // Idempotency: receipt acts as deduplication key per plan+quantity+timestamp
-        const idempotencyReceipt = `rcpt_${planId}_q${cartQuantity}_${Math.floor(Date.now() / 60000)}`;
+        // ── Idempotency: month-level window ──
+        // Format: rzp_${poolId}_${memberId}_${planId}_${YYYY-MM}
+        // Month window prevents duplicate orders within a billing cycle
+        // Never include hours or minutes — that defeats the purpose of dedup
+        const now = new Date();
+        const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+        const memberKey = reqMemberId || "new"; // "new" for first-time registrations
+        const idempotencyKey = `rzp_${plan.poolId}_${memberKey}_${planId}_${monthKey}`;
+
+        // Check for existing order with this idempotency key before calling Razorpay
+        const existingPayment = await Payment.findOne({
+            idempotencyKey,
+            razorpayOrderId: { $exists: true, $ne: null },
+            status: { $in: ["pending", "success"] },
+        }).select("razorpayOrderId amount status").lean();
+
+        if (existingPayment) {
+            // Return existing order — prevents double-charge on network timeout retry
+            return NextResponse.json({
+                id: (existingPayment as any).razorpayOrderId,
+                amount,
+                currency: "INR",
+                idempotent: true,
+            }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        }
 
         const orderOptions = {
             amount,
             currency: "INR",
-            receipt: idempotencyReceipt,
+            receipt: idempotencyKey,
+            notes: { idempotencyKey, poolId: plan.poolId, memberId: memberKey },
         };
 
         // Circuit breaker: fails fast (rejects immediately) if Razorpay is down
         const order = await razorpayBreaker.fire(orderOptions);
+
+        // Persist the Razorpay order ID + idempotency key for future lookups
+        // This is a lightweight "pending" record — full payment record created on webhook confirmation
+        try {
+            await Payment.findOneAndUpdate(
+                { idempotencyKey },
+                {
+                    $setOnInsert: {
+                        razorpayOrderId: (order as any).id,
+                        idempotencyKey,
+                        amount: plan.price * cartQuantity,
+                        planId,
+                        status: "pending",
+                        paymentMethod: "razorpay_online",
+                        poolId: plan.poolId,
+                        memberId: reqMemberId || "000000000000000000000000", // placeholder for new registrations
+                        date: now,
+                    }
+                },
+                { upsert: true, new: true }
+            );
+        } catch (persistErr: any) {
+            // Duplicate key = already persisted from a concurrent request — safe to ignore
+            if (persistErr?.code !== 11000) {
+                console.error("Failed to persist Razorpay order:", persistErr);
+            }
+        }
 
         return NextResponse.json(order, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
@@ -69,4 +121,3 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Failed to create payment order" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
-

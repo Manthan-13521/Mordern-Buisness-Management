@@ -40,9 +40,9 @@ export async function GET(req: Request) {
         };
 
         if (memberType === "member") {
-            query.memberId = { $regex: /^M(?!S)/i };
+            query.memberType = "regular";
         } else if (memberType === "entertainment") {
-            query.memberId = { $regex: /^MS/i };
+            query.memberType = "entertainment";
         }
 
         const selectFields = "memberId name phone planId planQuantity paidAmount balanceAmount paymentStatus createdAt photoUrl";

@@ -1,4 +1,4 @@
-import { redis } from "./redis";
+import { redis, withTimeout } from "./redis";
 import crypto from "crypto";
 
 /**
@@ -28,7 +28,7 @@ export async function verifyJWTCached(
     // L1: Redis cache check
     if (redis) {
         try {
-            const cached = await redis.get<string>(cacheKey);
+            const cached = await withTimeout(redis.get<string>(cacheKey), 200);
             if (cached) {
                 return typeof cached === "string" ? JSON.parse(cached) : cached;
             }
@@ -81,7 +81,7 @@ export async function getCachedSession(
     // L1: Redis check
     if (redis) {
         try {
-            const cached = await redis.get<string>(cacheKey);
+            const cached = await withTimeout(redis.get<string>(cacheKey), 200);
             if (cached) {
                 return typeof cached === "string" ? JSON.parse(cached) : cached;
             }
@@ -96,7 +96,8 @@ export async function getCachedSession(
     // Cache for 60 seconds
     if (redis && session) {
         try {
-            await redis.set(cacheKey, JSON.stringify(session), { ex: 60 });
+            const jitter = Math.floor(Math.random() * 10); // 0-10s jitter for sessions
+            await redis.set(cacheKey, JSON.stringify(session), { ex: 60 + jitter });
         } catch {
             // Non-critical
         }

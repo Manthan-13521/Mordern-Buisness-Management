@@ -99,7 +99,8 @@ hostelMemberSchema.index(
 );
 
 // ── Dual Write Hook for UnifiedUser (Prompt 3.1) ──────────────
-async function syncToUnifiedUser(doc: any, retries = 3) {
+// ── Dual Write Hook for UnifiedUser (Prompt 3.1) ──────────────
+async function syncToUnifiedUser(doc: any) {
     if (!doc) return;
     try {
         const { UnifiedUser } = await import("./UnifiedUser");
@@ -119,18 +120,13 @@ async function syncToUnifiedUser(doc: any, retries = 3) {
         );
         console.log(`UnifiedUser synced (Hostel: ${doc._id})`);
     } catch (e: any) {
-        console.error("Failed to sync UnifiedUser for HostelMember:", e?.message || e);
-        if (retries > 0) {
-            console.log(`Retrying UnifiedUser sync for Hostel ${doc._id}... (${retries} left)`);
-            setTimeout(() => syncToUnifiedUser(doc, retries - 1), 2000);
-        } else {
-            console.error(`[DLQ] UnifiedUser dual-write exhausted retries for Hostel ${doc._id}`);
-            try {
-                const { recordFailedJob } = await import("@/lib/queue");
-                await recordFailedJob("sync" as any, { memberId: doc._id, type: "hostel" }, e?.message || "Sync failed", 3);
-            } catch (dlqErr) {
-                console.error("Failed to write to DLQ:", dlqErr);
-            }
+        console.error("Failed to sync UnifiedUser for HostelMember, enqueuing to QStash:", e?.message || e);
+        try {
+            const { enqueueJob } = await import("@/lib/queue");
+            // Forward to QStash for background retries
+            await enqueueJob("sync", { memberId: doc._id, type: "hostel", data: doc });
+        } catch (queueErr) {
+            console.error("Failed to enqueue sync job:", queueErr);
         }
     }
 }

@@ -11,13 +11,14 @@ const qstashClient = qstashToken
   ? new Client({ token: qstashToken })
   : null;
 
-export type QueueType = "billing" | "defaulter" | "notification";
+export type QueueType = "billing" | "defaulter" | "notification" | "sync";
 
 function getEndpointForType(type: QueueType): string {
     switch (type) {
         case "billing": return "/api/workers/process-billing";
         case "defaulter": return "/api/workers/process-defaulter";
         case "notification": return "/api/workers/process-notification";
+        case "sync": return "/api/workers/process-sync";
         default: return "/api/workers/process-unknown";
     }
 }
