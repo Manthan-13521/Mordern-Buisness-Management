@@ -78,7 +78,7 @@ export async function GET(req: Request) {
 
         const headers: Record<string, string> = process.env.NODE_ENV === "development"
             ? { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
-            : {};
+            : { "Cache-Control": "private, max-age=10" };
 
         return NextResponse.json({
             success: true,
@@ -335,6 +335,9 @@ export async function POST(req: Request) {
             import("@/lib/events").then(mod => {
                 mod.dispatchEvent("payment.received", { paymentId: payment._id, amount: safeAmount, memberId: memberObjId });
             }).catch(() => {});
+
+            // Invalidate dashboard cache so revenue updates immediately
+            import("@/lib/dashboardCache").then(m => m.invalidateDashboard(poolId)).catch(() => {});
 
             return NextResponse.json(payment, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         } catch (trxError: any) {

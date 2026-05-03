@@ -135,34 +135,48 @@ export async function GET(req: Request) {
         const regularBaseCount = includeRegular ? await Member.countDocuments(baseMatch) : 0;
         const entertainmentBaseCount = includeEntertainment ? await EntertainmentMember.countDocuments(baseMatch) : 0;
 
-        // ── Self Healing Fallback Due Generation ────────────────────────────
-        // Trigger natively decoupled in-memory preventing dashboard blocking
-        if (user.poolId) {
-            import("@/lib/billingEngine").then(m => m.processDueGenerations(user.poolId).catch(() => {}));
-        }
-
-        const [rawData] = await Promise.all([
-            Member.aggregate(pipeline)
-        ]);
+        // Note: Due generation runs via /api/cron/billing cron job, not inline on reads
+        const rawData = await Member.aggregate(pipeline);
         const total = regularBaseCount + entertainmentBaseCount;
 
-        const { resolveDefaulterState } = await import("@/lib/defaulterEngine");
+        // ── Batch defaulter resolution: 2 queries for ALL members instead of 2*N ──
+        const { computeDefaulterStatus } = await import("@/lib/defaulterEngine");
+        const regularIds = rawData
+            .filter((m: any) => m._source !== "entertainment" && !m.isDeleted)
+            .map((m: any) => m._id);
 
-        const data = await Promise.all(rawData.map(async (m: any) => {
-            // ── STEP 8: Inject Native Defaulter UI Matrix ────────────────────
-            const isEntertainment = !('status' in m) && m._source === "entertainment";
-            let defaulterObj = { isDefaulter: false, overdueDays: 0, defaulterStatus: "active" as ("active"|"warning"|"blocked") };
-            
-            if (!isEntertainment && !m.isDeleted) {
-                defaulterObj = await resolveDefaulterState(m._id, m.poolId);
+        const [batchSubs, batchLedgers] = regularIds.length > 0
+            ? await Promise.all([
+                import("@/models/Subscription").then(mod =>
+                    mod.Subscription.find({ memberId: { $in: regularIds }, status: "active", poolId }).lean()
+                ),
+                import("@/models/Ledger").then(mod =>
+                    mod.Ledger.find({ memberId: { $in: regularIds }, poolId }).lean()
+                ),
+            ])
+            : [[], []];
+
+        const subMap = new Map((batchSubs as any[]).map(s => [s.memberId.toString(), s]));
+        const ledgerMap = new Map((batchLedgers as any[]).map(l => [l.memberId.toString(), l]));
+        const now = new Date();
+
+        const data = rawData.map((m: any) => {
+            if (m._source === "entertainment" || m.isDeleted) {
+                m.isDefaulter = false; m.defaulterStatus = "active"; m.overdueDays = 0;
+                return m;
             }
-            
-            m.isDefaulter = defaulterObj.isDefaulter;
-            m.defaulterStatus = defaulterObj.defaulterStatus;
-            m.overdueDays = defaulterObj.overdueDays;
-
+            const sub = subMap.get(m._id.toString());
+            const ledger = ledgerMap.get(m._id.toString());
+            if (!sub || !ledger || (ledger as any).balance <= 0 || new Date((sub as any).nextDueDate) >= now) {
+                m.isDefaulter = false; m.defaulterStatus = "active"; m.overdueDays = 0;
+            } else {
+                const overdueDays = Math.floor((now.getTime() - new Date((sub as any).nextDueDate).getTime()) / 86400000);
+                m.isDefaulter = true;
+                m.overdueDays = overdueDays;
+                m.defaulterStatus = computeDefaulterStatus(overdueDays);
+            }
             return m;
-        }));
+        });
 
         const response = {
             success: true,
@@ -178,7 +192,7 @@ export async function GET(req: Request) {
 
         const headers: Record<string, string> = process.env.NODE_ENV === "development"
             ? { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
-            : {};
+            : { "Cache-Control": "private, max-age=10" };
 
         return NextResponse.json(response, { headers });
     } catch (error) {
@@ -430,6 +444,9 @@ export async function POST(req: Request) {
             : await secureFindById(Member, newMember._id.toString(), user, { populate: { path: "planId", select: "name hasTokenPrint quickDelete price" } });
 
         // No background job needed since generation is inline
+
+        // Invalidate dashboard cache so new member shows immediately
+        import("@/lib/dashboardCache").then(m => m.invalidateDashboard(poolId)).catch(() => {});
 
         return NextResponse.json(savedMember, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {

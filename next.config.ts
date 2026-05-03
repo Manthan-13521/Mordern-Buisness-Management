@@ -14,6 +14,8 @@ const nextConfig: NextConfig = {
     optimizePackageImports: [
       "lucide-react",
       "recharts",
+      "framer-motion",
+      "exceljs",
       "@radix-ui/react-icons",
       "@radix-ui/react-dialog",
       "@radix-ui/react-dropdown-menu",
@@ -52,6 +54,20 @@ const nextConfig: NextConfig = {
         source: "/api/(.*)",
         headers: [
           { key: "Cache-Control", value: "no-store, no-cache, must-revalidate" },
+        ],
+      },
+      {
+        // Next.js static assets — immutable, content-hashed filenames
+        source: "/_next/static/(.*)",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+      {
+        // Public static files (favicon, manifest, etc.)
+        source: "/(.*)\\.(ico|png|jpg|jpeg|svg|webp|woff2|woff)",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" },
         ],
       },
     ];

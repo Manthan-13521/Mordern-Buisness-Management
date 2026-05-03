@@ -19,8 +19,8 @@ export async function dbConnect() {
   if (!cached.promise) {
     cached.promise = mongoose.connect(MONGODB_URI, {
       bufferCommands: false,
-      maxPoolSize: 5,              // Atlas M0: keep low — 500 total connections shared
-      minPoolSize: 1,
+      maxPoolSize: process.env.NODE_ENV === "production" ? 20 : 5,
+      minPoolSize: process.env.NODE_ENV === "production" ? 3 : 1,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 30000,
       connectTimeoutMS: 10000,

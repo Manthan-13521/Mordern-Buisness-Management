@@ -36,7 +36,7 @@ export async function enqueueJob(type: QueueType, payload: any) {
             body: payload,
             retries: 5, // QStash native exponential backoff activates automatically
         });
-        console.log(`Job enqueued (${type})`);
+
         return { success: true, fallback: false };
     } catch (e) {
         console.error(`[Queue] Failed to enqueue job for ${type}. Queue fallback triggered`);
@@ -75,9 +75,7 @@ export async function enqueueBatch(type: QueueType, payloads: any[]) {
     try {
         const results = await Promise.all(payloads.map(payload => enqueueJob(type, payload)));
         const anyFallback = results.some(r => r.fallback);
-        if (!anyFallback) {
-            console.log(`Queued ${payloads.length} jobs`);
-        } else {
+        if (anyFallback) {
             console.log("Queue fallback triggered");
         }
         return { success: true, fallback: anyFallback };

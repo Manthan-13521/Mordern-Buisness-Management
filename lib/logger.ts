@@ -2,8 +2,13 @@ import pino from "pino";
 
 // ── 4.1 Production Grade Pino Setup ──────────────────────────────────────────
 export const pinoLogger = pino({
-    level: process.env.NODE_ENV === "production" ? "info" : "debug",
+    level: process.env.NODE_ENV === "production" ? "warn" : "debug",
     base: { env: process.env.NODE_ENV },
+    // Redact PII fields from all log output (GDPR + security)
+    redact: {
+        paths: ["email", "phone", "name", "*.email", "*.phone", "*.name", "meta.phone", "meta.email"],
+        censor: "[REDACTED]",
+    },
     timestamp: () => `,"time":"${new Date().toISOString()}"`,
     transport: process.env.NODE_ENV === "development" ? {
         target: "pino-pretty",

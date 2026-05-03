@@ -84,10 +84,18 @@ export async function evaluateAutoBlock() {
             nextDueDate: { $lt: blockThreshold } 
         }).lean();
 
+        // Batch fetch all relevant ledgers in one query (was N+1 before)
+        const memberIds = lapsedSubs.map((s: any) => s.memberId);
+        const allLedgers = await Ledger.find({
+            memberId: { $in: memberIds },
+            balance: { $gt: 0 }
+        }).lean();
+        const ledgerMap = new Map((allLedgers as any[]).map(l => [l.memberId.toString(), l]));
+
         let processedCount = 0;
         
         for (const sub of lapsedSubs) {
-            const ledger = await Ledger.findOne({ memberId: sub.memberId }).lean();
+            const ledger = ledgerMap.get(sub.memberId.toString());
             if (ledger && (ledger as any).balance > 0) {
                 // Determine member's current status (could be fetched if needed, but Mongo handles predicate)
                 // Use robust identical update exactly as user specified

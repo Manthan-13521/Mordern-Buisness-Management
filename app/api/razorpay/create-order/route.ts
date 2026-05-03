@@ -3,12 +3,19 @@ import Razorpay from "razorpay";
 import { dbConnect } from "@/lib/mongodb";
 import { Plan } from "@/models/Plan";
 import { RazorpayOrderSchema } from "@/lib/validators";
+import { createBreaker } from "@/lib/circuitBreaker";
 
 // Initialize Razorpay instance conditionally
 const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_mock",
     key_secret: process.env.RAZORPAY_KEY_SECRET || "mock_secret",
 });
+
+// Circuit breaker for Razorpay API calls — fails fast if Razorpay is down
+const razorpayBreaker = createBreaker(
+    async (options: any) => razorpay.orders.create(options),
+    "razorpay-orders"
+);
 
 export async function POST(req: Request) {
     try {
@@ -40,17 +47,26 @@ export async function POST(req: Request) {
             }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
+        // Idempotency: receipt acts as deduplication key per plan+quantity+timestamp
+        const idempotencyReceipt = `rcpt_${planId}_q${cartQuantity}_${Math.floor(Date.now() / 60000)}`;
+
         const orderOptions = {
             amount,
             currency: "INR",
-            receipt: `receipt_rcpt_${Date.now()}`,
+            receipt: idempotencyReceipt,
         };
 
-        const order = await razorpay.orders.create(orderOptions);
+        // Circuit breaker: fails fast (rejects immediately) if Razorpay is down
+        const order = await razorpayBreaker.fire(orderOptions);
 
         return NextResponse.json(order, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    } catch (error) {
+    } catch (error: any) {
+        // Circuit breaker tripped
+        if (error?.message?.includes("Tripped Breaker")) {
+            return NextResponse.json({ error: "Payment service temporarily unavailable. Please try again shortly." }, { status: 503, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        }
         console.error("Razorpay Order Creation Error:", error);
         return NextResponse.json({ error: "Failed to create payment order" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
+

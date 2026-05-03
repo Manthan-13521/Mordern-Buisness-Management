@@ -65,7 +65,17 @@ async function logNotification(params: {
 // ── Sleep helper for batch safety ───────────────────────────────────────────
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// ── Send WhatsApp via Pool's Twilio credentials ─────────────────────────────
+// ── Send WhatsApp via Pool's Twilio credentials (circuit-breaker protected) ──
+import { createBreaker } from "@/lib/circuitBreaker";
+
+// Singleton breaker — shared across all pools to detect systemic Twilio outages
+const twilioBreaker = createBreaker(
+    async (client: any, from: string, to: string, body: string) => {
+        return client.messages.create({ from, to, body });
+    },
+    "twilio-whatsapp"
+);
+
 async function sendPoolWhatsApp(poolId: string, phone: string, message: string): Promise<{ success: boolean; retryable: boolean; error?: string }> {
     try {
         const { Pool } = await import("@/models/Pool");
@@ -76,8 +86,6 @@ async function sendPoolWhatsApp(poolId: string, phone: string, message: string):
         }
 
         const { getTwilioClient } = await import("@/lib/twilioService");
-        // We use the existing sendWhatsAppForPool but need a member-shaped object
-        // Direct Twilio call is simpler here since we already have the phone
         const client = getTwilioClient(pool as any);
 
         const rawPhone = phone.replace(/\D/g, "");
@@ -86,11 +94,8 @@ async function sendPoolWhatsApp(poolId: string, phone: string, message: string):
             : `+91${rawPhone}`;
         const to = `whatsapp:${toBase}`;
 
-        await client.messages.create({
-            from: pool.twilio.whatsappNumber,
-            to,
-            body: message,
-        });
+        // Circuit breaker: fails fast if Twilio is down instead of timing out per-call
+        await twilioBreaker.fire(client, pool.twilio.whatsappNumber, to, message);
 
         return { success: true, retryable: false };
     } catch (e: any) {
@@ -106,6 +111,11 @@ async function sendPoolWhatsApp(poolId: string, phone: string, message: string):
         
         // 21211 (Invalid number), 21614 (Not a valid WhatsApp number), 21610 (Opt-out), 63024 (Consent missing)
         if (e.code === 21211 || e.code === 21614 || e.code === 21610 || e.code === 63024) {
+            retryable = false;
+        }
+
+        // Circuit breaker tripped — not retryable until breaker resets
+        if (e.message?.includes("Tripped Breaker")) {
             retryable = false;
         }
         
@@ -139,6 +149,22 @@ export async function processDefaulterReminders(poolId?: string) {
 
     let sent = 0, skipped = 0;
 
+    // Batch-fetch all relevant members in ONE query (was N+1 before)
+    const memberIdsForLookup = dueLedgers
+        .filter((l: any) => {
+            const sub = subMap.get(l.memberId.toString());
+            if (!sub) return false;
+            const msDue = now.getTime() - new Date((sub as any).nextDueDate).getTime();
+            const overdueDays = Math.floor(msDue / 86400000);
+            return computeDefaulterStatus(overdueDays) !== "active";
+        })
+        .map((l: any) => l.memberId);
+
+    const allMembers = memberIdsForLookup.length > 0
+        ? await Member.find({ _id: { $in: memberIdsForLookup } }).select("name phone").lean()
+        : [];
+    const memberMap = new Map((allMembers as any[]).map(m => [m._id.toString(), m]));
+
     for (const ledger of dueLedgers as any[]) {
         const sub = subMap.get(ledger.memberId.toString());
         if (!sub) continue;
@@ -153,7 +179,7 @@ export async function processDefaulterReminders(poolId?: string) {
         // Idempotent check
         if (await alreadySentToday(ledger.memberId, "defaulter_reminder")) { skipped++; continue; }
 
-        const member = await Member.findById(ledger.memberId).select("name phone").lean();
+        const member = memberMap.get(ledger.memberId.toString());
         if (!member?.phone) { skipped++; continue; }
 
         const message = status === "blocked"

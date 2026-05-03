@@ -13,7 +13,7 @@ export async function getOccupancy(poolId: string): Promise<number> {
         try {
             const count = await redis.get<number>(key);
             if (count !== null) {
-                console.log("Redis occupancy used");
+                // Redis occupancy hit
                 return Number(count);
             }
         } catch (e) {
@@ -21,7 +21,7 @@ export async function getOccupancy(poolId: string): Promise<number> {
         }
     }
 
-    console.log("Fallback to Mongo occupancy");
+    // Fallback to Mongo occupancy
     // ── Safe Fallback: Calculate via DB directly ─────────────────────
     await dbConnect();
     const result = await PoolSession.aggregate([
