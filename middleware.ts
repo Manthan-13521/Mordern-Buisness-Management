@@ -19,8 +19,9 @@ export default withAuth(
 
         // 2. ABUSE & RATELIMIT (API Only)
         let rlHeaders = { limit: '50', remaining: '50' };
+        const isLoadTest = process.env.LOAD_TEST === "true" && req.nextUrl.searchParams.get("test") === "true";
 
-        if (path.startsWith("/api/")) {
+        if (path.startsWith("/api/") && !isLoadTest) {
             const ip = getIp(req);
             const token = req.nextauth.token;
             const role = token?.role as string | undefined;
