@@ -12,6 +12,7 @@ import { signQRToken } from "@/lib/qrSigner";
 import { PRIVATE_API_STALE_MS } from "@/lib/apiCache";
 import { getTenantFilter, requireTenant, resolvePoolId } from "@/lib/tenant";
 import { getCachedDashboard } from "@/lib/dashboardCache";
+import { withQueryTimeout } from "@/lib/queryTimeout";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { secureFindById } from "@/lib/tenantSecurity"; 
 import { withTransaction } from "@/lib/withTransaction";
@@ -199,17 +200,17 @@ export async function GET(req: Request) {
         let response;
         if (isCacheable) {
             const cacheKey = `members:${poolId}:p${page}:l${limit}:t${memberType}`;
-            response = await getCachedDashboard(cacheKey, fetchMembers, 15);
+            response = await getCachedDashboard(cacheKey, () => withQueryTimeout(fetchMembers(), 8000), 15);
         } else {
-            response = await fetchMembers();
+            response = await withQueryTimeout(fetchMembers(), 8000);
         }
 
-        const headers: Record<string, string> = process.env.NODE_ENV === "development"
-            ? { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
-            : { "Cache-Control": "private, max-age=10" };
-        if (isCacheable) {
-            (headers as any)["X-Cache"] = "MEMBERS";
-        }
+        const headers: Record<string, string> = isCacheable
+            ? {
+                "Cache-Control": "public, max-age=0, s-maxage=15, stale-while-revalidate=30",
+                "X-Cache": "MEMBERS",
+              }
+            : { "Cache-Control": "no-store, no-cache, must-revalidate, private" };
 
         return NextResponse.json(response, { headers });
     } catch (error) {

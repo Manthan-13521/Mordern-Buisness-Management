@@ -6,6 +6,7 @@ import { EntertainmentMember } from "@/models/EntertainmentMember";
 import { Payment } from "@/models/Payment";
 import { EntryLog } from "@/models/EntryLog";
 import { getCachedDashboard } from "@/lib/dashboardCache";
+import { withQueryTimeout } from "@/lib/queryTimeout";
 
 import { runOccupancyCleanupInBackground } from "@/lib/cleanup";
 
@@ -63,7 +64,7 @@ export async function GET(req: Request) {
 
         // ── Redis-cached dashboard — 15s TTL to share across concurrent requests ──
         const cacheKey = `dashboard:${poolId}:stats`;
-        const response = await getCachedDashboard(cacheKey, async () => {
+        const dashboardFetcher = async () => {
             // ── 1. Total Members = ALL members added this year (never decreases on deletion) ──
             // Direct count from DB: current members + archived deleted members
             const currentYear = new Date().getFullYear();
@@ -213,10 +214,15 @@ export async function GET(req: Request) {
                     }))
                 }
             };
-        });
+        };
+
+        const response = await getCachedDashboard(cacheKey, () => withQueryTimeout(dashboardFetcher(), 8000));
 
         return NextResponse.json(response, {
-            headers: { "Cache-Control": "private, max-age=10", "X-Cache": "REDIS" },
+            headers: {
+                "Cache-Control": "public, max-age=0, s-maxage=30, stale-while-revalidate=60",
+                "X-Cache": "REDIS",
+            },
         });
 
     } catch (error) {

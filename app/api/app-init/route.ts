@@ -131,7 +131,10 @@ export async function GET(req: Request) {
         }, 10); // 10s TTL (jitter applied internally)
 
         return NextResponse.json(response, {
-            headers: { "Cache-Control": "private, max-age=10", "X-Cache": "APP-INIT" },
+            headers: {
+                "Cache-Control": "public, max-age=0, s-maxage=30, stale-while-revalidate=60",
+                "X-Cache": "APP-INIT",
+            },
         });
 
     } catch (error) {
