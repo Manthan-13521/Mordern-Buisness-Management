@@ -81,7 +81,8 @@ export async function resolveUser(req: Request): Promise<AuthUser | null> {
                     id: "test-user",
                     email: "b@1.com",
                     role: "admin",
-                    businessId: "BIZ001", // ✅ businessId (NOT poolId)
+                    businessId: "BIZ001", // used by new logic
+                    poolId: "BIZ001",     // 🔥 required for legacy dashboard APIs
                 };
             }
         } catch {
