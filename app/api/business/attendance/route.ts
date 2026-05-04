@@ -45,21 +45,17 @@ export async function POST(req: Request) {
             throw new Error("Tenant context lost before database operation");
         }
 
-        // Upsert approach: remove existing for this date and business, then insert new
-        const attendances = records.map((rec: any) => ({
-            labourId: rec.labourId,
-            businessId,
-            date: new Date(date),
-            status: rec.status
+        // Optimized Bulk Upsert approach
+        const bulkOps = records.map((rec: any) => ({
+            updateOne: {
+                filter: { labourId: rec.labourId, businessId, date: new Date(date) },
+                update: { $set: { status: rec.status } },
+                upsert: true
+            }
         }));
 
-        // Batch operation
-        for (const log of attendances) {
-            await BusinessAttendance.findOneAndUpdate(
-                { labourId: log.labourId, businessId, date: log.date },
-                { $set: { status: log.status } },
-                { upsert: true }
-            );
+        if (bulkOps.length > 0) {
+            await BusinessAttendance.bulkWrite(bulkOps);
         }
 
         // ── 90-Day Rolling Window Cleanup (Distributed Atomic Locked Sweep) ──

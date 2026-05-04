@@ -12,17 +12,15 @@ export async function runOccupancyCleanupInBackground() {
             expiryTime: { $lte: now }
         });
 
-        if (expiredSessions.length === 0) return;
+        const sessionIds = expiredSessions.map(s => s._id);
+        const decrPromises = expiredSessions.map(s => 
+            s.poolId ? decrOccupancy(s.poolId, s.numPersons || 1) : Promise.resolve()
+        );
 
-        for (const session of expiredSessions) {
-            session.status = "completed";
-            await session.save();
-            
-            // ── Prompt 1.1: Redis Auto-Decrement ──
-            if (session.poolId) {
-                await decrOccupancy(session.poolId, session.numPersons || 1);
-            }
-        }
+        await Promise.all([
+            PoolSession.updateMany({ _id: { $in: sessionIds } }, { $set: { status: "completed" } }),
+            ...decrPromises
+        ]);
     } catch (error) {
         console.error("Cleanup error in background:", error);
     }

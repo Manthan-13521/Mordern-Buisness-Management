@@ -68,8 +68,8 @@ export async function POST(req: Request) {
             memberId = qrPayload;
         }
 
-        // Auto-cleanup expired sessions before checking capacity
-        await runOccupancyCleanupInBackground();
+        // Fire-and-forget cleanup (don't await in critical path)
+        runOccupancyCleanupInBackground().catch(e => console.error("Cleanup error:", e));
 
         let member = null;
         if (planId) {
@@ -162,20 +162,20 @@ export async function POST(req: Request) {
             }
         }
 
-        // 1.3 Pre-fetch occupancy for early rejection (Individual & Entertainment)
-        const pool = await Pool.findOne({ poolId: user.poolId }).select("capacity").lean();
+        // 1.3 Parallelized Lookup (Pool Capacity + Member + Entertainment Member)
+        const baseMatch = user.role !== "superadmin" ? { poolId: user.poolId || "UNASSIGNED_POOL" } : {};
+        
+        const [pool, regularMember, entMemberResult] = await Promise.all([
+            Pool.findOne({ poolId: user.poolId }).select("capacity").lean(),
+            Member.findOne({ memberId, ...baseMatch }).populate("planId").lean(),
+            import("@/models/EntertainmentMember").then(async ({ EntertainmentMember }) => 
+                EntertainmentMember.findOne({ memberId, ...baseMatch }).populate("planId").lean()
+            )
+        ]);
+
+        member = regularMember || entMemberResult;
         const poolCapacity = pool?.capacity || 100;
         let currentOccupancy = await getOccupancy(user.poolId || "UNKNOWN");
-
-        // Existing individual member flow
-        const baseMatch = user.role !== "superadmin" ? { poolId: user.poolId || "UNASSIGNED_POOL" } : {};
-        member = await Member.findOne({ memberId, ...baseMatch }).populate("planId");
-
-        // Fallback to EntertainmentMember if not found in regular Member collection
-        if (!member) {
-            const { EntertainmentMember } = await import("@/models/EntertainmentMember");
-            member = await EntertainmentMember.findOne({ memberId, ...baseMatch }).populate("planId");
-        }
 
         if (!member) {
             logger.scan("QR scan denied — member not found", { memberId });
@@ -224,14 +224,12 @@ export async function POST(req: Request) {
         if (memberStatus !== "active" || new Date(expiryFieldValue ?? 0) < new Date()) {
             if (isEntertainment) {
                 if ((member as any).isActive) {
-                    (member as any).isActive = false;
-                    (member as any).isExpired = true;
-                    await member.save();
+                    const { EntertainmentMember } = await import("@/models/EntertainmentMember");
+                    await EntertainmentMember.updateOne({ _id: member._id }, { $set: { isActive: false, isExpired: true } });
                 }
             } else {
                 if ((member as any).status === "active") {
-                    (member as any).status = "expired";
-                    await member.save();
+                    await Member.updateOne({ _id: member._id }, { $set: { status: "expired" } });
                 }
             }
             await EntryLog.create({
@@ -373,7 +371,7 @@ export async function POST(req: Request) {
 
         if (!isEntertainment) {
             // Use findOneAndUpdate to atomically increment entriesUsed while ensuring it's strictly less than total allowed
-            const updatedMember = await mongoose.models.Member.findOneAndUpdate(
+            const updatedMember = await Member.findOneAndUpdate(
                 { 
                     _id: member._id, 
                     entriesUsed: { $lt: (member as any).totalEntriesAllowed || 1 } 
@@ -383,7 +381,7 @@ export async function POST(req: Request) {
                     $set: { lastScannedAt: new Date(), qrToken: newToken }
                 },
                 { returnDocument: 'after' }
-            );
+            ).lean();
 
             if (!updatedMember) {
                 // Race condition! Another request beat us to the limit.
@@ -392,9 +390,14 @@ export async function POST(req: Request) {
             member = updatedMember; // Sync local object for logging
         } else {
             // Entertainment members don't have entry limits
-            member.lastScannedAt = new Date();
-            member.qrToken = newToken;
-            await member.save();
+            const { EntertainmentMember } = await import("@/models/EntertainmentMember");
+            await EntertainmentMember.updateOne(
+                { _id: member._id },
+                { $set: { lastScannedAt: new Date(), qrToken: newToken } }
+            );
+            // Update local object for response
+            (member as any).lastScannedAt = new Date();
+            (member as any).qrToken = newToken;
         }
 
         // Create PoolSession for automated checkout
