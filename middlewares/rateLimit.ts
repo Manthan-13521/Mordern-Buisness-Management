@@ -10,8 +10,20 @@ export const redis = (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_
       })
     : null;
 
+// ── In-memory fallback for when Redis is unavailable ──
 const rateMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMITS: Record<string, number> = {
+
+// ── Sliding Window Rate Limits ──────────────────────────────────────────
+// Per-endpoint limits (req/minute). These are the base limits;
+// burst allowance = 2× for 10 seconds, then throttle.
+const ENDPOINT_LIMITS: Record<string, number> = {
+    // Heavy endpoints (STRICTER)
+    'GET:/api/members': 40,
+    'GET:/api/dashboard': 50,
+    'GET:/api/app-init': 30,
+    // Light endpoints
+    'GET:/api/payments': 80,
+    // Write endpoints
     'POST:/api/member/login': 5,
     'POST:/api/members': 20,
     'POST:/api/entertainment-members': 20,
@@ -20,7 +32,7 @@ const RATE_LIMITS: Record<string, number> = {
     'POST:/api/razorpay/verify': 10,
     'POST:/api/entry': 60,
     'POST:/api/pool/scan': 60,
-    'GET:/api/metrics/health': 60, // Uptime monitoring allowlist
+    'GET:/api/metrics/health': 60,
     'POST:/api/settings/backup': 3,
     'GET:/api/settings/backup/excel': 3,
     'GET:/api/backups/list': 10,
@@ -34,20 +46,20 @@ const RATE_LIMITS: Record<string, number> = {
     'GET:/api/cron/cleanup': 2,
     'POST:/api/jobs/generate-card': 10,
     'POST:/api/seed': 2,
-    // Hostel rate limits
+    // Hostel
     'POST:/api/hostel/register': 10,
     'POST:/api/hostel/members': 20,
     'POST:/api/hostel/payments': 15,
     'POST:/api/hostel/plans': 10,
     'GET:/api/cron/hostel-expiry-alerts': 2,
-    // Subscription rate limits
+    // Subscription
     'POST:/api/subscription/create-order': 10,
-    'POST:/api/subscription/activate':     10,
-    'POST:/api/subscription/webhook':       20,
-    'GET:/api/subscription/status':         30,
-    'GET:/api/cron/subscription-expiry':     2,
-    'POST:/api/cron/subscription-expiry':    2,
-    // Business module rate limits
+    'POST:/api/subscription/activate': 10,
+    'POST:/api/subscription/webhook': 20,
+    'GET:/api/subscription/status': 30,
+    'GET:/api/cron/subscription-expiry': 2,
+    'POST:/api/cron/subscription-expiry': 2,
+    // Business module
     'GET:/api/business/analytics': 100,
     'GET:/api/business/customers': 100,
     'POST:/api/business/customers': 100,
@@ -55,8 +67,13 @@ const RATE_LIMITS: Record<string, number> = {
     'POST:/api/business/labour': 100,
     'POST:/api/business/attendance': 100,
 };
-const DEFAULT_LIMIT = 50;
-const WINDOW_MS = 60_000;
+
+// Global defaults
+const DEFAULT_LIMIT_PER_USER = 60;   // 60 req/min per authenticated user
+const DEFAULT_LIMIT_PER_IP = 120;    // 120 req/min per IP (unauthenticated)
+const WINDOW_SECONDS = 60;           // 1 minute sliding window
+const BURST_MULTIPLIER = 2;          // Allow 2× burst
+const BURST_WINDOW_SECONDS = 10;     // Burst window duration
 
 export function getIp(req: NextRequestWithAuth): string {
     return (
@@ -67,46 +84,111 @@ export function getIp(req: NextRequestWithAuth): string {
     );
 }
 
-export async function checkRateLimit(ip: string, userId: string, method: string, path: string) {
+/**
+ * Sliding Window Rate Limiter with Burst Support.
+ * 
+ * Uses two Redis keys per identifier:
+ *   - rate:{key}:main  → main window counter (60s TTL)
+ *   - rate:{key}:burst → burst window counter (10s TTL)
+ * 
+ * Algorithm:
+ *   1. Check burst window first — allow up to 2× limit in 10s
+ *   2. Check main window — allow up to limit in 60s
+ *   3. If either is exceeded → 429
+ */
+export async function checkRateLimit(
+    ip: string,
+    userId: string,
+    method: string,
+    path: string
+): Promise<{ allowed: boolean; limit: number; remaining: number; retryAfter: number }> {
     const normalized = path.replace(/\/[a-f0-9]{24}/g, "").replace(/\/[^/]+\/admin/, "");
     const endpointKey = `${method}:${normalized}`;
-    const limit = RATE_LIMITS[endpointKey] || DEFAULT_LIMIT;
-    const cacheKey = `rl:${endpointKey}:${userId}:${ip}`;
-    
+    const limit = ENDPOINT_LIMITS[endpointKey] || (userId !== "guest" ? DEFAULT_LIMIT_PER_USER : DEFAULT_LIMIT_PER_IP);
+    const burstLimit = Math.ceil(limit * BURST_MULTIPLIER / (WINDOW_SECONDS / BURST_WINDOW_SECONDS));
+
+    // Prefer user ID for auth'd users, fall back to IP
+    const identifier = userId !== "guest" ? `user:${userId}` : `ip:${ip}`;
+    const mainKey = `rate:${endpointKey}:${identifier}`;
+    const burstKey = `rate:burst:${endpointKey}:${identifier}`;
+
     if (redis) {
         try {
-            const current = await redis.incr(cacheKey);
-            if (current === 1) {
-                await redis.expire(cacheKey, 60);
+            // Pipeline: increment both counters atomically
+            const pipeline = redis.pipeline();
+            pipeline.incr(mainKey);
+            pipeline.incr(burstKey);
+            const results = await pipeline.exec();
+
+            const mainCount = (results[0] as number) || 0;
+            const burstCount = (results[1] as number) || 0;
+
+            // Set TTLs only on first increment (count === 1)
+            const ttlOps: Promise<any>[] = [];
+            if (mainCount === 1) {
+                ttlOps.push(redis.expire(mainKey, WINDOW_SECONDS));
             }
-            if (current > limit) {
-                return { allowed: false, limit, remaining: 0 };
+            if (burstCount === 1) {
+                ttlOps.push(redis.expire(burstKey, BURST_WINDOW_SECONDS));
             }
-            return { allowed: true, limit, remaining: limit - current };
+            if (ttlOps.length > 0) {
+                await Promise.all(ttlOps);
+            }
+
+            // Check burst limit (short-term spike protection)
+            if (burstCount > burstLimit) {
+                return {
+                    allowed: false,
+                    limit,
+                    remaining: 0,
+                    retryAfter: BURST_WINDOW_SECONDS
+                };
+            }
+
+            // Check main window limit
+            if (mainCount > limit) {
+                return {
+                    allowed: false,
+                    limit,
+                    remaining: 0,
+                    retryAfter: WINDOW_SECONDS
+                };
+            }
+
+            return {
+                allowed: true,
+                limit,
+                remaining: Math.max(0, limit - mainCount),
+                retryAfter: 0
+            };
         } catch (e) {
             console.warn("[RateLimit] Redis failed, falling back to memory:", e);
         }
     }
 
+    // ── In-Memory Fallback (single-instance only) ──
     const now = Date.now();
+    const cacheKey = `${endpointKey}:${identifier}`;
     const record = rateMap.get(cacheKey);
+
     if (record) {
         if (now > record.resetAt) {
-            rateMap.set(cacheKey, { count: 1, resetAt: now + WINDOW_MS });
-            return { allowed: true, limit, remaining: limit - 1 };
+            rateMap.set(cacheKey, { count: 1, resetAt: now + WINDOW_SECONDS * 1000 });
+            return { allowed: true, limit, remaining: limit - 1, retryAfter: 0 };
         }
         if (record.count >= limit) {
-            return { allowed: false, limit, remaining: 0 };
+            const retryAfter = Math.ceil((record.resetAt - now) / 1000);
+            return { allowed: false, limit, remaining: 0, retryAfter };
         }
         record.count++;
-        return { allowed: true, limit, remaining: limit - record.count };
+        return { allowed: true, limit, remaining: limit - record.count, retryAfter: 0 };
     }
 
-    rateMap.set(cacheKey, { count: 1, resetAt: now + WINDOW_MS });
-    return { allowed: true, limit, remaining: limit - 1 };
+    rateMap.set(cacheKey, { count: 1, resetAt: now + WINDOW_SECONDS * 1000 });
+    return { allowed: true, limit, remaining: limit - 1, retryAfter: 0 };
 }
 
-// Cleanup stale rate limit entries
+// Cleanup stale in-memory rate limit entries every 5 min
 setInterval(() => {
     const now = Date.now();
     for (const [key, val] of rateMap.entries()) {
@@ -114,27 +196,40 @@ setInterval(() => {
     }
 }, 5 * 60_000);
 
-// Middleware Execution Wrapper
-export async function withRateLimit(req: NextRequestWithAuth, role?: string): Promise<{ res?: NextResponse, rl?: any }> {
+/**
+ * Middleware wrapper — called from middleware.ts.
+ * Skips rate limiting for superadmin and load test requests.
+ */
+export async function withRateLimit(
+    req: NextRequestWithAuth,
+    role?: string
+): Promise<{ res?: NextResponse; rl?: { limit: number; remaining: number } }> {
     const path = req.nextUrl.pathname;
     const method = req.method;
     const ip = getIp(req);
     const userId = (req.nextauth?.token?.id as string) || (req.nextauth?.token?.email as string) || "guest";
 
-    let rl = { allowed: true, limit: DEFAULT_LIMIT, remaining: DEFAULT_LIMIT };
-    if (role !== "superadmin") {
-        rl = await checkRateLimit(ip, userId, method, path);
-        if (!rl.allowed) {
-            const res = NextResponse.json(
-                { error: "Too many requests. Please slow down.", retryAfterSeconds: 60 },
-                { status: 429 }
-            );
-            res.headers.set("Retry-After", "60");
-            res.headers.set("X-RateLimit-Limit", String(rl.limit));
-            res.headers.set("X-RateLimit-Remaining", "0");
-            applySecurityHeaders(res);
-            return { res, rl };
-        }
+    // Skip for superadmin (higher trust)
+    if (role === "superadmin") {
+        return { rl: { limit: 9999, remaining: 9999 } };
     }
-    return { rl };
+
+    const rl = await checkRateLimit(ip, userId, method, path);
+
+    if (!rl.allowed) {
+        const res = NextResponse.json(
+            {
+                error: "Rate limit exceeded. Try again later.",
+                retryAfterSeconds: rl.retryAfter,
+            },
+            { status: 429 }
+        );
+        res.headers.set("Retry-After", String(rl.retryAfter));
+        res.headers.set("X-RateLimit-Limit", String(rl.limit));
+        res.headers.set("X-RateLimit-Remaining", "0");
+        applySecurityHeaders(res);
+        return { res, rl: { limit: rl.limit, remaining: 0 } };
+    }
+
+    return { rl: { limit: rl.limit, remaining: rl.remaining } };
 }

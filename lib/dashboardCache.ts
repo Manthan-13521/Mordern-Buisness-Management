@@ -12,8 +12,8 @@ import { cacheHitCounter } from "./metrics";
  *   4. Stale-while-revalidate: serve stale, refresh in background if age > 12s
  */
 
-const DEFAULT_TTL = 15; // seconds base
-const STALE_THRESHOLD = 12; // serve stale but trigger refresh after this many seconds
+const DEFAULT_TTL = 30; // seconds base (increased from 15s for higher cache hit rate)
+const STALE_THRESHOLD = 25; // serve stale but trigger refresh after this many seconds
 
 /** Add jitter to prevent cache stampede: TTL + random(0, jitterMax) */
 function jitteredTTL(baseTTL: number, jitterMax: number = 5): number {
