@@ -11,6 +11,7 @@ import { savePhoto } from "@/lib/savePhoto";
 import { signQRToken } from "@/lib/qrSigner";
 import { PRIVATE_API_STALE_MS } from "@/lib/apiCache";
 import { getTenantFilter, requireTenant, resolvePoolId } from "@/lib/tenant";
+import { getCachedDashboard } from "@/lib/dashboardCache";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { secureFindById } from "@/lib/tenantSecurity"; 
 import { withTransaction } from "@/lib/withTransaction";
@@ -55,6 +56,9 @@ export async function GET(req: Request) {
         const statusFilter = url.searchParams.get("status") || "";
         const balanceOnly = url.searchParams.get("balanceOnly") || "";
         const memberType = url.searchParams.get("type") || "all";
+
+        // Determine if this request is cacheable (no search/filter params)
+        const isCacheable = !search && !planFilter && !statusFilter && !balanceOnly && memberType === "all" && !url.searchParams.get("deleted");
 
         // ── Build match filter ───────────────────────────────────────────
         const tenantFilter = getTenantFilter(user);
@@ -135,63 +139,77 @@ export async function GET(req: Request) {
             }
         );
 
-        // ── Run count + aggregate in parallel for performance ─────────────
-        const [regularBaseCount, entertainmentBaseCount, rawData] = await Promise.all([
-            includeRegular ? Member.countDocuments(baseMatch) : 0,
-            includeEntertainment ? EntertainmentMember.countDocuments(baseMatch) : 0,
-            Member.aggregate(pipeline),
-        ]);
-        const total = regularBaseCount + entertainmentBaseCount;
+        // ── Fetcher function (shared between cached and uncached paths) ────
+        const fetchMembers = async () => {
+            const [regularBaseCount, entertainmentBaseCount, rawData] = await Promise.all([
+                includeRegular ? Member.countDocuments(baseMatch) : 0,
+                includeEntertainment ? EntertainmentMember.countDocuments(baseMatch) : 0,
+                Member.aggregate(pipeline),
+            ]);
+            const total = regularBaseCount + entertainmentBaseCount;
 
-        // ── Batch defaulter resolution: 2 queries for ALL members instead of 2*N ──
-        const regularIds = rawData
-            .filter((m: any) => m._source !== "entertainment" && !m.isDeleted)
-            .map((m: any) => m._id);
+            // ── Batch defaulter resolution: 2 queries for ALL members instead of 2*N ──
+            const regularIds = rawData
+                .filter((m: any) => m._source !== "entertainment" && !m.isDeleted)
+                .map((m: any) => m._id);
 
-        const [batchSubs, batchLedgers] = regularIds.length > 0
-            ? await Promise.all([
-                Subscription.find({ memberId: { $in: regularIds }, status: "active", poolId }).lean(),
-                Ledger.find({ memberId: { $in: regularIds }, poolId }).lean(),
-            ])
-            : [[], []];
+            const [batchSubs, batchLedgers] = regularIds.length > 0
+                ? await Promise.all([
+                    Subscription.find({ memberId: { $in: regularIds }, status: "active", poolId }).lean(),
+                    Ledger.find({ memberId: { $in: regularIds }, poolId }).lean(),
+                ])
+                : [[], []];
 
-        const subMap = new Map((batchSubs as any[]).map(s => [s.memberId.toString(), s]));
-        const ledgerMap = new Map((batchLedgers as any[]).map(l => [l.memberId.toString(), l]));
-        const now = new Date();
+            const subMap = new Map((batchSubs as any[]).map(s => [s.memberId.toString(), s]));
+            const ledgerMap = new Map((batchLedgers as any[]).map(l => [l.memberId.toString(), l]));
+            const now = new Date();
 
-        const data = rawData.map((m: any) => {
-            if (m._source === "entertainment" || m.isDeleted) {
-                m.isDefaulter = false; m.defaulterStatus = "active"; m.overdueDays = 0;
+            const data = rawData.map((m: any) => {
+                if (m._source === "entertainment" || m.isDeleted) {
+                    m.isDefaulter = false; m.defaulterStatus = "active"; m.overdueDays = 0;
+                    return m;
+                }
+                const sub = subMap.get(m._id.toString());
+                const ledger = ledgerMap.get(m._id.toString());
+                if (!sub || !ledger || (ledger as any).balance <= 0 || new Date((sub as any).nextDueDate) >= now) {
+                    m.isDefaulter = false; m.defaulterStatus = "active"; m.overdueDays = 0;
+                } else {
+                    const overdueDays = Math.floor((now.getTime() - new Date((sub as any).nextDueDate).getTime()) / 86400000);
+                    m.isDefaulter = true;
+                    m.overdueDays = overdueDays;
+                    m.defaulterStatus = computeDefaulterStatus(overdueDays);
+                }
                 return m;
-            }
-            const sub = subMap.get(m._id.toString());
-            const ledger = ledgerMap.get(m._id.toString());
-            if (!sub || !ledger || (ledger as any).balance <= 0 || new Date((sub as any).nextDueDate) >= now) {
-                m.isDefaulter = false; m.defaulterStatus = "active"; m.overdueDays = 0;
-            } else {
-                const overdueDays = Math.floor((now.getTime() - new Date((sub as any).nextDueDate).getTime()) / 86400000);
-                m.isDefaulter = true;
-                m.overdueDays = overdueDays;
-                m.defaulterStatus = computeDefaulterStatus(overdueDays);
-            }
-            return m;
-        });
+            });
 
-        const response = {
-            success: true,
-            data: Array.isArray(data) ? data : [],
-            meta: {
-                stable: true,
-                total,
-                page,
-                limit,
-                totalPages: Math.ceil(total / limit),
-            }
+            return {
+                success: true,
+                data: Array.isArray(data) ? data : [],
+                meta: {
+                    stable: true,
+                    total,
+                    page,
+                    limit,
+                    totalPages: Math.ceil(total / limit),
+                }
+            };
         };
+
+        // ── Use Redis cache for default list requests (15s TTL) ────────────
+        let response;
+        if (isCacheable) {
+            const cacheKey = `members:${poolId}:p${page}:l${limit}:t${memberType}`;
+            response = await getCachedDashboard(cacheKey, fetchMembers, 15);
+        } else {
+            response = await fetchMembers();
+        }
 
         const headers: Record<string, string> = process.env.NODE_ENV === "development"
             ? { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
             : { "Cache-Control": "private, max-age=10" };
+        if (isCacheable) {
+            (headers as any)["X-Cache"] = "MEMBERS";
+        }
 
         return NextResponse.json(response, { headers });
     } catch (error) {
