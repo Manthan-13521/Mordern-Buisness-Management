@@ -59,29 +59,19 @@ export async function GET(req: Request) {
             baseMatch.poolId = user.poolId;
         }
             
-        // ── 1. Total Members = ALL members added this year (never decreases on deletion) ──
-        // Direct count from DB: current members + archived deleted members
-        const currentYear = new Date().getFullYear();
-        const startOfYear = new Date(currentYear, 0, 1);
-        const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59, 999);
-        const yearCreatedFilter = { $gte: startOfYear, $lte: endOfYear };
         const poolId = baseMatch.poolId;
-
-        const { DeletedMember } = await import("@/models/DeletedMember");
-        const [regThisYear, entThisYear, deletedThisYear] = await Promise.all([
-            // Members still in DB, created this year (includes soft-deleted)
-            Member.countDocuments({ poolId, createdAt: yearCreatedFilter }),
-            EntertainmentMember.countDocuments({ poolId, createdAt: yearCreatedFilter }),
-            // Members hard-deleted this year (archived before deletion)
-            DeletedMember.countDocuments({ poolId, "fullData.createdAt": yearCreatedFilter }),
-        ]);
-
-        const immutableTotalMembers = regThisYear + entThisYear + deletedThisYear;
 
         // ── Redis-cached dashboard — 15s TTL to share across concurrent requests ──
         const cacheKey = `dashboard:${poolId}:stats`;
         const response = await getCachedDashboard(cacheKey, async () => {
-            // Execute ALL queries in parallel — expired counts included (was sequential before)
+            // ── 1. Total Members = ALL members added this year (never decreases on deletion) ──
+            // Direct count from DB: current members + archived deleted members
+            const currentYear = new Date().getFullYear();
+            const startOfYear = new Date(currentYear, 0, 1);
+            const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59, 999);
+            const yearCreatedFilter = { $gte: startOfYear, $lte: endOfYear };
+
+            const { DeletedMember } = await import("@/models/DeletedMember");
             const [
                 regActiveMembers,
                 entActiveMembers,
@@ -94,7 +84,10 @@ export async function GET(req: Request) {
                 todaysMemberEntries,
                 todaysEntertainmentEntries,
                 expiredMembersCountResult,
-                entExpiredMembersCountResult
+                entExpiredMembersCountResult,
+                regThisYear,
+                entThisYear,
+                deletedThisYear
             ] = await Promise.all([
                 // Active = expiry is today or in the future (Trust expiryDate purely)
                 Member.countDocuments({
@@ -183,11 +176,17 @@ export async function GET(req: Request) {
                         { expiryDate: { $lt: startOfDayIST } }
                     ]
                 }),
+
+                // Immutable total counts (now inside cache)
+                Member.countDocuments({ poolId, createdAt: yearCreatedFilter }),
+                EntertainmentMember.countDocuments({ poolId, createdAt: yearCreatedFilter }),
+                DeletedMember.countDocuments({ poolId, "fullData.createdAt": yearCreatedFilter }),
             ]);
 
             const activeMembers = regActiveMembers + entActiveMembers;
             const expiredMembers = expiredMembersCountResult + entExpiredMembersCountResult;
             const expiringMembers = [...regExpiringMembers, ...entExpiringMembers];
+            const immutableTotalMembers = regThisYear + entThisYear + deletedThisYear;
 
             return {
                 stats: {

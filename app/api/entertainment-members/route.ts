@@ -25,7 +25,7 @@ export async function GET(req: Request) {
 
         const url = new URL(req.url);
         const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1"));
-        const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "20")));
+        const limit = Math.min(20, Math.max(1, parseInt(url.searchParams.get("limit") ?? "20")));
         const skip = (page - 1) * limit;
 
         const query: Record<string, unknown> = { isDeleted: false };
@@ -49,6 +49,7 @@ export async function GET(req: Request) {
         const [members, total] = await Promise.all([
             EntertainmentMember.find(query)
                 .populate("planId", "name price hasTokenPrint")
+                .select("memberId name phone planId planQuantity planStartDate planEndDate paidAmount balanceAmount paymentStatus photoUrl qrCodeUrl isActive isExpired createdAt")
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit)
@@ -97,7 +98,6 @@ export async function POST(req: Request) {
 
         // poolId already resolved above before plan lookup
 
-        // Atomic counter from Pool (not Plan) to avoid duplicates
         const { Pool } = await import("@/models/Pool");
         const updatedPool = await Pool.findOneAndUpdate(
             { poolId },

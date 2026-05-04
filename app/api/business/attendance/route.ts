@@ -197,7 +197,12 @@ export async function GET(req: Request) {
             if (to) query.date.$lte = new Date(to);
         }
 
-        const attendanceRaw = await BusinessAttendance.find(query).sort({ date: -1 }).populate("labourId", "name");
+        const attendanceRaw = await BusinessAttendance.find(query)
+            .select("labourId businessId date status")
+            .sort({ date: -1 })
+            .limit(200)
+            .populate("labourId", "name")
+            .lean();
         const attendance = Array.isArray(attendanceRaw) ? attendanceRaw : [];
 
         return NextResponse.json({

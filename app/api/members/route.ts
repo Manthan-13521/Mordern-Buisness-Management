@@ -14,6 +14,9 @@ import { getTenantFilter, requireTenant, resolvePoolId } from "@/lib/tenant";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { secureFindById } from "@/lib/tenantSecurity"; 
 import { withTransaction } from "@/lib/withTransaction";
+import { computeDefaulterStatus } from "@/lib/defaulterEngine";
+import { Subscription } from "@/models/Subscription";
+import { Ledger } from "@/models/Ledger";
 
 export const dynamic = "force-dynamic";
 
@@ -43,8 +46,8 @@ export async function GET(req: Request) {
         const url = new URL(req.url);
         const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1"));
         const limit = Math.min(
-            100,
-            Math.max(1, parseInt(url.searchParams.get("limit") ?? "12"))
+            20,
+            Math.max(1, parseInt(url.searchParams.get("limit") ?? "20"))
         );
         const skip = (page - 1) * limit;
         const search = url.searchParams.get("search") || "";
@@ -127,32 +130,28 @@ export async function GET(req: Request) {
             { $addFields: { planId: { $arrayElemAt: ["$_plan", 0] } } },
             {
                 $project: {
-                    _plan: 0, faceDescriptor: 0,
+                    _plan: 0, faceDescriptor: 0, photoUrl: 0, equipmentTaken: 0, qrCodeUrl: 0, qrToken: 0,
                 },
             }
         );
 
-        const regularBaseCount = includeRegular ? await Member.countDocuments(baseMatch) : 0;
-        const entertainmentBaseCount = includeEntertainment ? await EntertainmentMember.countDocuments(baseMatch) : 0;
-
-        // Note: Due generation runs via /api/cron/billing cron job, not inline on reads
-        const rawData = await Member.aggregate(pipeline);
+        // ── Run count + aggregate in parallel for performance ─────────────
+        const [regularBaseCount, entertainmentBaseCount, rawData] = await Promise.all([
+            includeRegular ? Member.countDocuments(baseMatch) : 0,
+            includeEntertainment ? EntertainmentMember.countDocuments(baseMatch) : 0,
+            Member.aggregate(pipeline),
+        ]);
         const total = regularBaseCount + entertainmentBaseCount;
 
         // ── Batch defaulter resolution: 2 queries for ALL members instead of 2*N ──
-        const { computeDefaulterStatus } = await import("@/lib/defaulterEngine");
         const regularIds = rawData
             .filter((m: any) => m._source !== "entertainment" && !m.isDeleted)
             .map((m: any) => m._id);
 
         const [batchSubs, batchLedgers] = regularIds.length > 0
             ? await Promise.all([
-                import("@/models/Subscription").then(mod =>
-                    mod.Subscription.find({ memberId: { $in: regularIds }, status: "active", poolId }).lean()
-                ),
-                import("@/models/Ledger").then(mod =>
-                    mod.Ledger.find({ memberId: { $in: regularIds }, poolId }).lean()
-                ),
+                Subscription.find({ memberId: { $in: regularIds }, status: "active", poolId }).lean(),
+                Ledger.find({ memberId: { $in: regularIds }, poolId }).lean(),
             ])
             : [[], []];
 

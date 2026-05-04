@@ -1,15 +1,26 @@
 /**
  * ═══════════════════════════════════════════════════════════════════
- *  k6 Load Test — Auth Bypass Mode
+ *  k6 Load Test — AquaSync 500-User Concurrency Target
  *  Target: https://modern-businesses-management.vercel.app
  *
  *  Pre-requisites:
  *    1. Set LOAD_TEST=true in Vercel Environment Variables
- *    2. Install k6: brew install k6
+ *    2. Ensure MongoDB is M10+ tier (1500 max connections)
+ *    3. Ensure Upstash Redis is working (latency < 150ms)
+ *    4. Install k6: brew install k6
  *
  *  Usage:
+ *    # Full 500 VU test (3 min)
  *    k6 run scripts/load-test.js
- *    k6 run --vus 50 --duration 30s scripts/load-test.js
+ *
+ *    # Progressive testing (RECOMMENDED):
+ *    k6 run scripts/load-test.js --env SCENARIO=smoke      # 5 VUs
+ *    k6 run scripts/load-test.js --env SCENARIO=load        # 50 VUs
+ *    k6 run scripts/load-test.js --env SCENARIO=stress      # 200 VUs
+ *    k6 run scripts/load-test.js --env SCENARIO=peak        # 500 VUs
+ *
+ *    # Custom overrides
+ *    k6 run --vus 100 --duration 2m scripts/load-test.js
  *    BASE_URL=http://localhost:3000 k6 run scripts/load-test.js
  *
  *  How it works:
@@ -32,6 +43,10 @@ const errorRate = new Rate('errors');
 const authErrors = new Counter('auth_errors');
 const tenantErrors = new Counter('tenant_errors');
 const rateLimitErrors = new Counter('rate_limit_errors');
+const cacheHits = new Counter('cache_hits');
+const cacheMisses = new Counter('cache_misses');
+
+// Per-endpoint P95 tracking
 const appInitDuration = new Trend('app_init_duration', true);
 const dashboardDuration = new Trend('dashboard_duration', true);
 const membersDuration = new Trend('members_duration', true);
@@ -40,42 +55,62 @@ const paymentsDuration = new Trend('payments_duration', true);
 // ── Configuration ────────────────────────────────────────────────
 const BASE_URL = __ENV.BASE_URL || 'https://modern-businesses-management.vercel.app';
 const TEST_PARAM = 'test=true';
+const SCENARIO = __ENV.SCENARIO || 'peak'; // smoke | load | stress | peak
 
-export const options = {
-  scenarios: {
-    // Smoke test: verify bypass works (1 VU, 5s)
+// ── Scenario Definitions ────────────────────────────────────────
+const scenarios = {
+  smoke: {
     smoke: {
       executor: 'constant-vus',
-      vus: 1,
-      duration: '5s',
-      startTime: '0s',
+      vus: 5,
+      duration: '30s',
       tags: { scenario: 'smoke' },
     },
-    // Load test: sustained traffic (10 VUs, 20s)
+  },
+  load: {
     load: {
       executor: 'constant-vus',
-      vus: 10,
-      duration: '20s',
-      startTime: '6s',
+      vus: 50,
+      duration: '1m',
       tags: { scenario: 'load' },
     },
-    // Spike test: burst traffic (30 VUs, 10s)
-    spike: {
+  },
+  stress: {
+    stress: {
       executor: 'constant-vus',
-      vus: 30,
-      duration: '10s',
-      startTime: '27s',
-      tags: { scenario: 'spike' },
+      vus: 200,
+      duration: '2m',
+      tags: { scenario: 'stress' },
     },
   },
+  peak: {
+    peak: {
+      executor: 'constant-vus',
+      vus: 500,
+      duration: '3m',
+      tags: { scenario: 'peak' },
+    },
+  },
+};
+
+export const options = {
+  scenarios: scenarios[SCENARIO] || scenarios.peak,
   thresholds: {
-    http_req_duration: ['p(95)<5000'],
-    errors: ['rate<0.05'],
+    // Global
+    http_req_duration: ['p(95)<800'],       // P95 < 800ms target
+    http_req_failed: ['rate<0.01'],         // Error rate < 1%
+    errors: ['rate<0.01'],
+
+    // Safety — zero auth/tenant errors expected with bypass
     auth_errors: ['count<1'],
     tenant_errors: ['count<1'],
     rate_limit_errors: ['count<1'],
-    app_init_duration: ['p(95)<4000'],
-    dashboard_duration: ['p(95)<4000'],
+
+    // Per-endpoint P95 targets
+    app_init_duration: ['p(95)<1000'],       // app-init: heaviest endpoint
+    dashboard_duration: ['p(95)<800'],       // dashboard: cached
+    members_duration: ['p(95)<800'],         // members: paginated
+    payments_duration: ['p(95)<800'],        // payments: paginated
   },
 };
 
@@ -86,6 +121,7 @@ function testGet(endpoint) {
   return http.get(url, {
     headers: { 'Accept': 'application/json' },
     tags: { endpoint: endpoint.split('?')[0] },
+    timeout: '30s',
   });
 }
 
@@ -95,14 +131,41 @@ function classifyError(res) {
   if (res.status === 429) rateLimitErrors.add(1);
 }
 
-// ── Main Test Function ───────────────────────────────────────────
-export default function () {
-  // 1. App Init — consolidated bootstrap endpoint
+function trackCacheHeader(res) {
+  const cacheHeader = res.headers['X-Cache'] || res.headers['x-cache'];
+  if (cacheHeader) {
+    cacheHits.add(1);
+  } else {
+    cacheMisses.add(1);
+  }
+}
+
+// ── Traffic Distribution ─────────────────────────────────────────
+// Weighted random selection:
+//   40% → app-init (heaviest, but cached — simulates page load)
+//   30% → dashboard (frequent polling)
+//   20% → members (browsing)
+//   10% → payments (least frequent)
+
+function selectEndpoint() {
+  const rand = Math.random();
+  if (rand < 0.40) return 'app-init';
+  if (rand < 0.70) return 'dashboard';
+  if (rand < 0.90) return 'members';
+  return 'payments';
+}
+
+// ── Endpoint Handlers ────────────────────────────────────────────
+function hitAppInit() {
   group('App Init', () => {
     const res = testGet('/api/app-init');
     const passed = check(res, {
       'app-init status 200': (r) => r.status === 200,
       'app-init has body': (r) => r.body && r.body.length > 2,
+      'app-init has dashboard': (r) => {
+        try { return JSON.parse(r.body).dashboard !== undefined; }
+        catch { return false; }
+      },
       'app-init no auth error': (r) => {
         try { return JSON.parse(r.body).error !== 'Unauthorized'; }
         catch { return true; }
@@ -110,15 +173,15 @@ export default function () {
     });
     errorRate.add(!passed);
     appInitDuration.add(res.timings.duration);
+    trackCacheHeader(res);
     if (res.status !== 200) {
       classifyError(res);
-      console.log(`[app-init] ${res.status}: ${res.body?.substring(0, 150)}`);
+      if (__VU <= 3) console.log(`[app-init] ${res.status}: ${res.body?.substring(0, 150)}`);
     }
   });
+}
 
-  sleep(0.3);
-
-  // 2. Dashboard
+function hitDashboard() {
   group('Dashboard', () => {
     const res = testGet('/api/dashboard');
     const passed = check(res, {
@@ -127,38 +190,38 @@ export default function () {
         try { return JSON.parse(r.body).stats !== undefined; }
         catch { return false; }
       },
-      'dashboard no pool error': (r) => {
-        try { return !JSON.parse(r.body).error?.includes('pool'); }
-        catch { return true; }
-      },
     });
     errorRate.add(!passed);
     dashboardDuration.add(res.timings.duration);
+    trackCacheHeader(res);
     if (res.status !== 200) {
       classifyError(res);
-      console.log(`[dashboard] ${res.status}: ${res.body?.substring(0, 150)}`);
+      if (__VU <= 3) console.log(`[dashboard] ${res.status}: ${res.body?.substring(0, 150)}`);
     }
   });
+}
 
-  sleep(0.3);
-
-  // 3. Members (paginated)
+function hitMembers() {
   group('Members', () => {
-    const res = testGet('/api/members?page=1&limit=10');
+    const page = Math.floor(Math.random() * 3) + 1; // Random page 1-3
+    const res = testGet(`/api/members?page=${page}&limit=20`);
     const passed = check(res, {
       'members status 200': (r) => r.status === 200,
+      'members has data': (r) => {
+        try { return Array.isArray(JSON.parse(r.body).data); }
+        catch { return false; }
+      },
     });
     errorRate.add(!passed);
     membersDuration.add(res.timings.duration);
     if (res.status !== 200) {
       classifyError(res);
-      console.log(`[members] ${res.status}: ${res.body?.substring(0, 150)}`);
+      if (__VU <= 3) console.log(`[members] ${res.status}: ${res.body?.substring(0, 150)}`);
     }
   });
+}
 
-  sleep(0.3);
-
-  // 4. Payments (paginated)
+function hitPayments() {
   group('Payments', () => {
     const res = testGet('/api/payments?page=1&limit=10');
     const passed = check(res, {
@@ -168,19 +231,71 @@ export default function () {
     paymentsDuration.add(res.timings.duration);
     if (res.status !== 200) {
       classifyError(res);
-      console.log(`[payments] ${res.status}: ${res.body?.substring(0, 150)}`);
+      if (__VU <= 3) console.log(`[payments] ${res.status}: ${res.body?.substring(0, 150)}`);
     }
   });
+}
 
-  sleep(0.3);
+// ── Main Test Function ───────────────────────────────────────────
+export default function () {
+  // Weighted random endpoint selection
+  const endpoint = selectEndpoint();
 
-  // 5. Health (always-allowed, baseline latency)
-  group('Health', () => {
-    const res = http.get(`${BASE_URL}/api/health`);
-    check(res, {
-      'health status 200': (r) => r.status === 200,
-    });
-  });
+  switch (endpoint) {
+    case 'app-init':
+      hitAppInit();
+      break;
+    case 'dashboard':
+      hitDashboard();
+      break;
+    case 'members':
+      hitMembers();
+      break;
+    case 'payments':
+      hitPayments();
+      break;
+  }
 
-  sleep(0.5);
+  // Realistic think time between requests (100-500ms)
+  sleep(0.1 + Math.random() * 0.4);
+}
+
+// ── Summary Handler ──────────────────────────────────────────────
+export function handleSummary(data) {
+  const p95 = data.metrics?.http_req_duration?.values?.['p(95)'] || 'N/A';
+  const p99 = data.metrics?.http_req_duration?.values?.['p(99)'] || 'N/A';
+  const errRate = data.metrics?.http_req_failed?.values?.rate || 0;
+  const totalReqs = data.metrics?.http_reqs?.values?.count || 0;
+
+  const appP95 = data.metrics?.app_init_duration?.values?.['p(95)'] || 'N/A';
+  const dashP95 = data.metrics?.dashboard_duration?.values?.['p(95)'] || 'N/A';
+  const memP95 = data.metrics?.members_duration?.values?.['p(95)'] || 'N/A';
+  const payP95 = data.metrics?.payments_duration?.values?.['p(95)'] || 'N/A';
+
+  const summary = `
+╔══════════════════════════════════════════════════════════════╗
+║          AquaSync Load Test Results Summary                  ║
+╠══════════════════════════════════════════════════════════════╣
+║  Total Requests:    ${String(totalReqs).padEnd(40)}║
+║  Error Rate:        ${String((errRate * 100).toFixed(2) + '%').padEnd(40)}║
+║  P95 Latency:       ${String(typeof p95 === 'number' ? p95.toFixed(0) + 'ms' : p95).padEnd(40)}║
+║  P99 Latency:       ${String(typeof p99 === 'number' ? p99.toFixed(0) + 'ms' : p99).padEnd(40)}║
+╠══════════════════════════════════════════════════════════════╣
+║  Per-Endpoint P95:                                           ║
+║    app-init:        ${String(typeof appP95 === 'number' ? appP95.toFixed(0) + 'ms' : appP95).padEnd(40)}║
+║    dashboard:       ${String(typeof dashP95 === 'number' ? dashP95.toFixed(0) + 'ms' : dashP95).padEnd(40)}║
+║    members:         ${String(typeof memP95 === 'number' ? memP95.toFixed(0) + 'ms' : memP95).padEnd(40)}║
+║    payments:        ${String(typeof payP95 === 'number' ? payP95.toFixed(0) + 'ms' : payP95).padEnd(40)}║
+╠══════════════════════════════════════════════════════════════╣
+║  Targets:                                                    ║
+║    P95 < 800ms:     ${String(typeof p95 === 'number' && p95 < 800 ? '✅ PASS' : '❌ FAIL').padEnd(40)}║
+║    Errors < 1%:     ${String(errRate < 0.01 ? '✅ PASS' : '❌ FAIL').padEnd(40)}║
+╚══════════════════════════════════════════════════════════════╝
+`;
+
+  console.log(summary);
+
+  return {
+    stdout: summary,
+  };
 }

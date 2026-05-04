@@ -5,12 +5,12 @@ import { HostelPayment } from "@/models/HostelPayment";
 import { HostelBlock } from "@/models/HostelBlock";
 import { getHostelSettings } from "@/models/HostelSettings";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
+import { getCachedDashboard } from "@/lib/dashboardCache";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
     try {
-        const user = await resolveUser(req);
-        await dbConnect();
+        const [user] = await Promise.all([resolveUser(req), dbConnect()]);
 
         if (!user || user.role !== "hostel_admin") {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
@@ -193,8 +193,6 @@ export async function GET(req: Request) {
             .limit(20)
             .lean();
 
-        console.log(`Dashboard data fetched: Income=${monthlyIncome}/${yearlyIncome}, ActiveMembers=${activeMembers}`);
-
         return NextResponse.json({
             monthlyJoined, yearlyJoined,
             monthlyIncome, yearlyIncome,
@@ -205,7 +203,7 @@ export async function GET(req: Request) {
             totalCapacity, occupiedBeds,
             occupancyRate, expiringList,
             totalDue,
-        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        }, { headers: { "Cache-Control": "private, max-age=10", "X-Cache": "REDIS" } });
     } catch (error) {
         console.error("[GET /api/hostel/dashboard]", error);
         return NextResponse.json({ error: "Failed to fetch dashboard" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });

@@ -71,12 +71,16 @@ export async function GET(req: Request) {
             getReceivables(businessId),
             BusinessTransaction.find({ businessId, category: 'SALE', transactionType: 'sent' })
                 .populate("customerId", "name")
-                .sort({ date: -1 })
-                .limit(5),
-            BusinessTransaction.find({ businessId, category: 'PAYMENT' })
-                .populate("customerId", "name")
+                .select("customerId amount paidAmount date transactionType items category createdAt")
                 .sort({ date: -1 })
                 .limit(5)
+                .lean(),
+            BusinessTransaction.find({ businessId, category: 'PAYMENT' })
+                .populate("customerId", "name")
+                .select("customerId amount date transactionType paymentMethod category createdAt")
+                .sort({ date: -1 })
+                .limit(5)
+                .lean()
         ]);
 
         // 🟠 AGGREGATION SAFETY: Fallback for Mongo structure quirks

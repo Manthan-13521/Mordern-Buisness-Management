@@ -67,11 +67,10 @@ export async function GET(req: Request) {
         const [payments, total] = await Promise.all([
             Payment.find(query)
                 .populate("memberId", "name memberId")
-                .populate("planId",   "name")
-                .populate("recordedBy", "name")
                 .sort({ createdAt: -1, _id: -1 })
                 .skip(skip)
                 .limit(limit)
+                .select("memberId planId amount paymentMethod status createdAt transactionId notes memberCollection recordedBy")
                 .lean(),
             Payment.countDocuments(query),
         ]);

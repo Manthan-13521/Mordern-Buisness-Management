@@ -1,4 +1,5 @@
 import { redis, withTimeout } from "./redis";
+import { cacheHitCounter } from "./metrics";
 
 /**
  * Redis-backed dashboard cache with TTL jitter to prevent stampede.
@@ -36,9 +37,10 @@ export async function getCachedDashboard<T>(
       const [cached, ageStr] = await withTimeout(Promise.all([
         redis.get<string>(key),
         redis.get<string>(`${key}:ts`),
-      ]), 200);
+      ]), 300);
       
       if (cached !== null && cached !== undefined) {
+        cacheHitCounter.inc({ layer: "redis", result: "hit" });
         const parsed = typeof cached === "string" ? JSON.parse(cached) : cached as T;
         
         // Stale-while-revalidate: if data is old, trigger background refresh
@@ -49,6 +51,8 @@ export async function getCachedDashboard<T>(
         }
         
         return parsed;
+      } else {
+        cacheHitCounter.inc({ layer: "redis", result: "miss" });
       }
     } catch {
       // Redis down — fall through to fetcher
