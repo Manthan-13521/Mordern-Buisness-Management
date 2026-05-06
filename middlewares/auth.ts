@@ -47,17 +47,25 @@ export function withAuthRouting(req: NextRequestWithAuth): NextResponse | undefi
     if (path.startsWith("/api/")) {
         const isProtectedApi = SUBSCRIPTION_PROTECTED_APIS.some((p) => path.startsWith(p));
         const isAlwaysAllowed = SUBSCRIPTION_ALWAYS_ALLOW.some((p) => path.startsWith(p));
+        const subStatus = (token as any)?.subscriptionStatus;
 
         if (
             isProtectedApi &&
             !isAlwaysAllowed &&
             token?.role !== "superadmin" &&
-            (token as any)?.subscriptionStatus === "expired"
+            token?.role !== "operator" &&
+            (!subStatus || subStatus === "expired" || subStatus === "none" || subStatus === "suspended" || subStatus === "cancelled")
         ) {
+            console.warn(`[Middleware] API subscription block: ${path}`, {
+                userId: token?.id, status: subStatus, role: token?.role
+            });
+            const errMsg = subStatus === "expired" || subStatus === "suspended"
+                ? "Subscription expired. Please renew to continue."
+                : "No active subscription. Please select a plan.";
             const res = NextResponse.json(
                 {
-                    error: "Subscription expired. Please renew to continue.",
-                    code: "SUBSCRIPTION_EXPIRED",
+                    error: errMsg,
+                    code: subStatus === "expired" ? "SUBSCRIPTION_EXPIRED" : "SUBSCRIPTION_REQUIRED",
                 },
                 { status: 403 }
             );
@@ -98,20 +106,36 @@ export function withAuthRouting(req: NextRequestWithAuth): NextResponse | undefi
         return res;
     }
 
-    // ── Subscription page guard ──
+    // ── Subscription page guard (admin pages) ──
     const isAdminPage = /^\/pool\/[^/]+\/admin(\/|$)/.test(path) || path.startsWith("/hostel/") || path.startsWith("/business/");
     const isPublicPage = ["/select-plan", "/renew-plan", "/login", "/subscribe", "/api"].some(
         (p) => path.startsWith(p)
     );
+    const subStatus = (token as any)?.subscriptionStatus;
     if (
         isAdminPage &&
         !isPublicPage &&
         token?.role !== "superadmin" &&
-        (token as any)?.subscriptionStatus === "expired"
+        token?.role !== "operator"
     ) {
-        const res = NextResponse.redirect(new URL("/renew-plan", req.url));
-        applySecurityHeaders(res);
-        return res;
+        // Expired → renew page
+        if (subStatus === "expired" || subStatus === "suspended") {
+            console.warn(`[Middleware] Page subscription redirect → /renew-plan`, {
+                userId: token?.id, status: subStatus, path
+            });
+            const res = NextResponse.redirect(new URL("/renew-plan", req.url));
+            applySecurityHeaders(res);
+            return res;
+        }
+        // Never subscribed → select plan page
+        if (!subStatus || subStatus === "none" || subStatus === "cancelled") {
+            console.warn(`[Middleware] Page subscription redirect → /select-plan`, {
+                userId: token?.id, status: subStatus, path
+            });
+            const res = NextResponse.redirect(new URL("/select-plan", req.url));
+            applySecurityHeaders(res);
+            return res;
+        }
     }
 
     // ── Hostel Admin protection ──

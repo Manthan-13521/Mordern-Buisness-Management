@@ -3,7 +3,9 @@ import { User } from "@/models/User";
 import { SubscriptionPaymentLog } from "@/models/SubscriptionPaymentLog";
 import { ReferralCode } from "@/models/ReferralCode";
 import { ReferralUsage } from "@/models/ReferralUsage";
+import { Organization } from "@/models/Organization";
 import { getPriceKey, SUBSCRIPTION_PRICES, SubscriptionPlanType, SubscriptionModule } from "@/lib/subscriptionConfig";
+import { redis } from "@/lib/redis";
 import crypto from "crypto";
 import { logger } from "@/lib/logger";
 
@@ -138,7 +140,7 @@ export async function activateSubscription(params: {
         pricePaid: amountINR,
         startDate: now,
         expiryDate,
-        status: "active",
+        status: planType === "trial" ? "trial" : "active",
     };
 
     if (planType === "trial") {
@@ -166,6 +168,39 @@ export async function activateSubscription(params: {
         userId,
         meta:   { planType, module, blocks, amountINR, expiryDate, razorpayPaymentId },
     });
+
+    // 8. Sync Organization model (if exists) — keeps saasGuard.ts in sync
+    try {
+        const org = await Organization.findOne({ ownerId: user._id });
+        if (org) {
+            org.status = planType === "trial" ? "trial" : "active";
+            org.currentPeriodEnd = expiryDate;
+            if (planType === "trial") {
+                org.trialEndsAt = expiryDate;
+            }
+            await org.save();
+
+            // Invalidate Redis SaaS guard cache so it picks up new state immediately
+            if (redis) {
+                try {
+                    await redis.del(`org:${org._id.toString()}:plan`);
+                    logger.info("[Activation] Redis saasGuard cache invalidated", { orgId: org._id.toString() });
+                } catch (e) {
+                    // Non-fatal — cache will expire naturally
+                    logger.warn("[Activation] Redis cache invalidation failed", { error: (e as Error).message });
+                }
+            }
+
+            logger.info("[Activation] Organization synced", {
+                orgId: org._id.toString(),
+                status: org.status,
+                currentPeriodEnd: expiryDate,
+            });
+        }
+    } catch (orgErr: any) {
+        // Non-fatal — Organization sync is best-effort
+        logger.warn("[Activation] Organization sync failed (non-fatal)", { error: orgErr?.message });
+    }
 
     return { user: user.toObject(), amountINR, expiryDate };
 }

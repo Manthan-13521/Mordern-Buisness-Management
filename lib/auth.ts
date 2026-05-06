@@ -351,8 +351,37 @@ export const authOptions: NextAuthOptions = {
                 token.subscriptionStatus = user.subscriptionStatus ?? "none";
                 token.subscriptionExpiryDate = user.subscriptionExpiryDate ?? null;
             }
-            if (trigger === "update" && session) {
-                 token = { ...token, ...session };
+            if (trigger === "update") {
+                 // ── Re-fetch subscription from DB to get post-payment state ──
+                 // CRITICAL: Do NOT blindly merge client session data.
+                 // The old code `token = { ...token, ...session }` let the client
+                 // send whatever it wanted, and never actually checked the DB.
+                 try {
+                     await dbConnect();
+                     const freshUser = await UserModel.findById(token.id)
+                         .select("subscription")
+                         .lean() as any;
+                     if (freshUser?.subscription?.expiryDate) {
+                         const expiry = new Date(freshUser.subscription.expiryDate);
+                         const isExpired = new Date() > expiry;
+                         token.subscriptionStatus = isExpired ? "expired" : "active";
+                         token.subscriptionExpiryDate = expiry.toISOString();
+                         logger.info("[Auth] JWT session refreshed from DB", {
+                             userId: token.id,
+                             newStatus: token.subscriptionStatus,
+                             expiry: token.subscriptionExpiryDate,
+                         });
+                     } else {
+                         token.subscriptionStatus = "none";
+                         token.subscriptionExpiryDate = null;
+                     }
+                 } catch (err: any) {
+                     // If DB fetch fails, don't break auth — keep existing token
+                     logger.error("[Auth] JWT refresh failed, keeping existing token", {
+                         userId: token.id,
+                         error: err?.message,
+                     });
+                 }
             }
             return token;
         },

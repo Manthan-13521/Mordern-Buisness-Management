@@ -110,6 +110,40 @@ export default function SelectPlanPage() {
         }
     };
 
+    /**
+     * After payment/activation, refresh the JWT session (triggers DB re-fetch)
+     * then poll /api/subscription/status to confirm it's active before redirecting.
+     * Handles the race condition where webhook hasn't processed yet.
+     */
+    const waitForSubscriptionActive = async (maxAttempts = 5): Promise<boolean> => {
+        // 1. Trigger JWT re-fetch from DB
+        await updateSession();
+        
+        // 2. Poll status API to confirm activation
+        for (let i = 0; i < maxAttempts; i++) {
+            try {
+                const res = await fetch("/api/subscription/status");
+                const data = await res.json();
+                if (data.status === "active" || data.status === "trial") {
+                    // Re-trigger session update one more time to ensure JWT has latest
+                    await updateSession();
+                    return true;
+                }
+            } catch (e) {
+                console.warn("Subscription status check failed:", e);
+            }
+            // Wait 1.5s between polls
+            await new Promise(r => setTimeout(r, 1500));
+        }
+        return false;
+    };
+
+    const getRedirectUrl = () => {
+        if (session.user.hostelId) return `/hostel/${session.user.hostelSlug}/admin/dashboard`;
+        if (session.user.businessId) return `/business/${session.user.businessSlug}/admin/dashboard`;
+        return `/${session.user.poolSlug}/admin/dashboard`;
+    };
+
     const handlePayment = async (planType: SubscriptionPlanType, blocks?: number) => {
         setSelectedPlan(planType);
         setLoading(true);
@@ -151,10 +185,13 @@ export default function SelectPlanPage() {
                 });
                 const verifyData = await verifyRes.json();
                 if (verifyData.success) {
-                    await updateSession();
-                    window.location.href = session.user.hostelId 
-                        ? `/hostel/${session.user.hostelSlug}/admin/dashboard` 
-                        : `/pool/${session.user.poolSlug}/admin/dashboard`;
+                    const isActive = await waitForSubscriptionActive();
+                    if (isActive) {
+                        window.location.href = getRedirectUrl();
+                    } else {
+                        alert("Subscription activated but session sync is delayed. Please refresh the page or re-login.");
+                        window.location.href = getRedirectUrl();
+                    }
                 } else {
                     alert(verifyData.error || "Activation failed. Please try again.");
                 }
@@ -192,10 +229,13 @@ export default function SelectPlanPage() {
                         });
                         const verifyData = await verifyRes.json();
                         if (verifyData.success) {
-                            await updateSession();
-                            window.location.href = session.user.hostelId 
-                                ? `/hostel/${session.user.hostelSlug}/admin/dashboard` 
-                                : `/pool/${session.user.poolSlug}/admin/dashboard`;
+                            const isActive = await waitForSubscriptionActive();
+                            if (isActive) {
+                                window.location.href = getRedirectUrl();
+                            } else {
+                                alert("Payment successful! Session sync is delayed. Redirecting...");
+                                window.location.href = getRedirectUrl();
+                            }
                         } else {
                             alert(verifyData.error || "Payment verification failed. Contact support if amount was deducted.");
                         }
