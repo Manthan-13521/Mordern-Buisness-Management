@@ -5,6 +5,9 @@ import { SubscriptionPlanType, SubscriptionModule } from "@/lib/subscriptionConf
 import crypto from "crypto";
 import { logger } from "@/lib/logger";
 
+// ── Force Node.js runtime (crypto module not available on Edge) ──
+export const runtime = "nodejs";
+
 /**
  * POST /api/subscription/webhook
  * PRIMARY: Razorpay webhook for subscription payment events.

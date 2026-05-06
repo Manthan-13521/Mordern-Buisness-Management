@@ -127,7 +127,10 @@ export default function SelectPlanPage() {
             const orderData = await res.json();
 
             if (orderData.error) {
-                alert(orderData.error);
+                // Show detailed error in development, user-friendly in production
+                const debugInfo = orderData.debug ? `\n\nDebug: ${JSON.stringify(orderData.debug)}` : "";
+                const errorCode = orderData.code ? ` [${orderData.code}]` : "";
+                alert(`${orderData.error}${errorCode}${debugInfo}`);
                 setLoading(false);
                 setSelectedPlan(null);
                 return;

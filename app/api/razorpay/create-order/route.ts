@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
-import { razorpay, isRazorpayConfigured } from "@/lib/razorpay";
+import { razorpay, isRazorpayConfigured, razorpayDiagnostics } from "@/lib/razorpay";
 import { dbConnect } from "@/lib/mongodb";
 import { Plan } from "@/models/Plan";
 import { Payment } from "@/models/Payment";
 import { RazorpayOrderSchema } from "@/lib/validators";
-import { createBreaker } from "@/lib/circuitBreaker";
+import { createBreaker, getBreakerState } from "@/lib/circuitBreaker";
+import { logger } from "@/lib/logger";
+
+// ── Force Node.js runtime (Razorpay SDK uses Node APIs incompatible with Edge) ──
+export const runtime = "nodejs";
 
 // Circuit breaker for Razorpay API calls — fails fast if Razorpay is down
 const razorpayBreaker = createBreaker(
@@ -13,6 +17,7 @@ const razorpayBreaker = createBreaker(
 );
 
 export async function POST(req: Request) {
+    const startTime = Date.now();
     try {
         const body = await req.json();
         const result = RazorpayOrderSchema.safeParse(body);
@@ -31,6 +36,16 @@ export async function POST(req: Request) {
         // Amount should be in smaller units (paise)
         const amount = plan.price * cartQuantity * 100;
 
+        // ── Pre-flight diagnostics ───────────────────────────────────────────
+        logger.info("[Razorpay] Create-order pre-flight", {
+            razorpayConfigured:  isRazorpayConfigured,
+            sdkInitSuccess:      razorpayDiagnostics.initSuccess,
+            sdkInitError:        razorpayDiagnostics.initError,
+            keyPrefix:           razorpayDiagnostics.keyPrefix,
+            breakerState:        getBreakerState(razorpayBreaker),
+            amount, planId,
+        }, "payment");
+
         // Optional Check: Is this a mock Razorpay run?
         if (!isRazorpayConfigured) {
             // Simulate Order Creation for Dev/Test mode without actual keys
@@ -40,6 +55,16 @@ export async function POST(req: Request) {
                 currency: "INR",
                 isMock: true,
             }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        }
+
+        // ── SDK init failed — return specific error, don't hit breaker ───────
+        if (!razorpay || !razorpayDiagnostics.initSuccess) {
+            const errMsg = razorpayDiagnostics.initError || "Razorpay SDK failed to initialize";
+            logger.error("[Razorpay] SDK not available for pool order", { initError: errMsg });
+            return NextResponse.json({
+                error: "Payment gateway configuration error",
+                ...(process.env.NODE_ENV !== "production" ? { debug: { initError: errMsg, diagnostics: razorpayDiagnostics } } : {}),
+            }, { status: 503, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // ── Idempotency: month-level window ──
@@ -105,13 +130,44 @@ export async function POST(req: Request) {
             }
         }
 
+        const elapsed = Date.now() - startTime;
+        logger.info("[Razorpay] ✅ Pool order created", { orderId: (order as any).id, elapsed: `${elapsed}ms` }, "payment");
+
         return NextResponse.json(order, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
+        const elapsed = Date.now() - startTime;
+        const statusCode = error?.statusCode || error?.status;
+        const isBreaker  = error?.code === "EOPENBREAKER" || error?.message?.includes("Breaker is open");
+
+        logger.error("[Razorpay] ❌ Pool order creation failed", {
+            elapsed: `${elapsed}ms`,
+            isBreaker,
+            statusCode,
+            description: error?.error?.description || error?.description || error?.message,
+            breakerState: getBreakerState(razorpayBreaker),
+        });
+
         // Circuit breaker tripped
-        if (error?.message?.includes("Tripped Breaker")) {
-            return NextResponse.json({ error: "Payment service temporarily unavailable. Please try again shortly." }, { status: 503, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        if (isBreaker) {
+            return NextResponse.json({
+                error: "Payment service temporarily unavailable. Please try again shortly.",
+                code:  "CIRCUIT_BREAKER_OPEN",
+            }, { status: 503, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-        console.error("Razorpay Order Creation Error:", error);
-        return NextResponse.json({ error: "Failed to create payment order" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+
+        // Razorpay 4xx
+        if (statusCode && statusCode >= 400 && statusCode < 500) {
+            return NextResponse.json({
+                error: "Payment gateway rejected the request",
+                ...(process.env.NODE_ENV !== "production" ? {
+                    debug: { statusCode, description: error?.error?.description || error?.message }
+                } : {}),
+            }, { status: 502, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        }
+
+        return NextResponse.json({
+            error: "Failed to create payment order",
+            ...(process.env.NODE_ENV !== "production" ? { debug: { message: error?.message } } : {}),
+        }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
