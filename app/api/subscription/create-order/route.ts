@@ -4,12 +4,14 @@ import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { ReferralCode } from "@/models/ReferralCode";
 import { getPriceKey, SUBSCRIPTION_PRICES, SubscriptionPlanType, SubscriptionModule } from "@/lib/subscriptionConfig";
-import Razorpay from "razorpay";
+import { razorpay, isRazorpayConfigured } from "@/lib/razorpay";
+import { createBreaker } from "@/lib/circuitBreaker";
 
-const razorpay = new Razorpay({
-    key_id:     process.env.RAZORPAY_KEY_ID     || "rzp_test_mock",
-    key_secret: process.env.RAZORPAY_KEY_SECRET || "mock_secret",
-});
+// Circuit breaker for subscription Razorpay calls
+const subscriptionBreaker = createBreaker(
+    async (options: any) => razorpay!.orders.create(options),
+    "razorpay-subscription-orders"
+);
 
 /**
  * POST /api/subscription/create-order
@@ -79,7 +81,7 @@ export async function POST(req: Request) {
         const amountPaise = amountINR * 100;
 
         // Mock mode
-        if (!process.env.RAZORPAY_KEY_ID) {
+        if (!isRazorpayConfigured) {
             return NextResponse.json({
                 orderId:  `order_mock_${Date.now()}`,
                 amount:   amountPaise,
@@ -93,7 +95,8 @@ export async function POST(req: Request) {
             }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
-        const order = await razorpay.orders.create({
+        // Circuit breaker: fails fast if Razorpay is down
+        const order = await subscriptionBreaker.fire({
             amount:   amountPaise,
             currency: "INR",
             receipt:  `sub_${user.id}_${planType}_${Date.now()}`,
@@ -104,7 +107,7 @@ export async function POST(req: Request) {
                 blocks:  blocks?.toString() || "",
                 referralCode: referralCode || "",
             },
-        });
+        }) as any;
 
         return NextResponse.json({
             orderId:  order.id,
@@ -118,6 +121,10 @@ export async function POST(req: Request) {
             referralCode,
         }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
+        // Circuit breaker tripped
+        if (error?.message?.includes("Tripped Breaker")) {
+            return NextResponse.json({ error: "Payment service temporarily unavailable. Please try again shortly." }, { status: 503, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        }
         console.error("[POST /api/subscription/create-order]", error);
         return NextResponse.json({ error: "Failed to create subscription order" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }

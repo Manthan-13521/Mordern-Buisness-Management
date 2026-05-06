@@ -12,8 +12,11 @@ import { signQRToken } from "@/lib/qrSigner";
 
 export async function POST(req: Request) {
     try {
-        const { razorpay_order_id, razorpay_payment_id, razorpay_signature, memberData, isMock } =
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature, memberData } =
             await req.json();
+
+        // Server-derived mock mode — NEVER trust client for this
+        const isMock = !process.env.RAZORPAY_KEY_ID;
 
         if (!memberData || !memberData.planId) {
             return NextResponse.json({ error: "Missing member registration data" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });

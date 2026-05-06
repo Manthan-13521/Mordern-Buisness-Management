@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Script from "next/script";
 import { Check, Loader2, Sparkles, Zap, Shield, Blocks, Tag, X } from "lucide-react";
 import { SUBSCRIPTION_PRICES, SubscriptionPlanType, SubscriptionModule } from "@/lib/subscriptionConfig";
 
@@ -110,6 +111,7 @@ export default function SelectPlanPage() {
     };
 
     const handlePayment = async (planType: SubscriptionPlanType, blocks?: number) => {
+        setSelectedPlan(planType);
         setLoading(true);
         try {
             const res = await fetch("/api/subscription/create-order", {
@@ -127,6 +129,7 @@ export default function SelectPlanPage() {
             if (orderData.error) {
                 alert(orderData.error);
                 setLoading(false);
+                setSelectedPlan(null);
                 return;
             }
 
@@ -149,11 +152,20 @@ export default function SelectPlanPage() {
                     window.location.href = session.user.hostelId 
                         ? `/hostel/${session.user.hostelSlug}/admin/dashboard` 
                         : `/pool/${session.user.poolSlug}/admin/dashboard`;
+                } else {
+                    alert(verifyData.error || "Activation failed. Please try again.");
                 }
                 return;
             }
 
-            // Real Razorpay
+            // Real Razorpay — guard against missing script
+            if (typeof window.Razorpay === "undefined") {
+                alert("Payment gateway is still loading. Please wait a moment and try again.");
+                setLoading(false);
+                setSelectedPlan(null);
+                return;
+            }
+
             const options = {
                 key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
                 amount: orderData.amount,
@@ -162,25 +174,41 @@ export default function SelectPlanPage() {
                 description: `${planType.toUpperCase()} Plan - ${module.toUpperCase()}`,
                 order_id: orderData.orderId,
                 handler: async (response: any) => {
-                    const verifyRes = await fetch("/api/subscription/activate", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            razorpayOrderId: response.razorpay_order_id,
-                            razorpayPaymentId: response.razorpay_payment_id,
-                            razorpaySignature: response.razorpay_signature,
-                            planType,
-                            module,
-                            blocks,
-                        }),
-                    });
-                    const verifyData = await verifyRes.json();
-                    if (verifyData.success) {
-                        await updateSession();
-                        window.location.href = session.user.hostelId 
-                            ? `/hostel/${session.user.hostelSlug}/admin/dashboard` 
-                            : `/pool/${session.user.poolSlug}/admin/dashboard`;
+                    try {
+                        const verifyRes = await fetch("/api/subscription/activate", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                razorpayOrderId: response.razorpay_order_id,
+                                razorpayPaymentId: response.razorpay_payment_id,
+                                razorpaySignature: response.razorpay_signature,
+                                planType,
+                                module,
+                                blocks,
+                            }),
+                        });
+                        const verifyData = await verifyRes.json();
+                        if (verifyData.success) {
+                            await updateSession();
+                            window.location.href = session.user.hostelId 
+                                ? `/hostel/${session.user.hostelSlug}/admin/dashboard` 
+                                : `/pool/${session.user.poolSlug}/admin/dashboard`;
+                        } else {
+                            alert(verifyData.error || "Payment verification failed. Contact support if amount was deducted.");
+                        }
+                    } catch (err) {
+                        console.error("Verification error", err);
+                        alert("Payment received but verification failed. Please contact support.");
+                    } finally {
+                        setLoading(false);
+                        setSelectedPlan(null);
                     }
+                },
+                modal: {
+                    ondismiss: () => {
+                        setLoading(false);
+                        setSelectedPlan(null);
+                    },
                 },
                 prefill: {
                     name: session.user.name,
@@ -190,12 +218,21 @@ export default function SelectPlanPage() {
             };
 
             const rzp = new window.Razorpay(options);
+            rzp.on("payment.failed", (response: any) => {
+                console.error("Payment failed:", response.error);
+                alert(response.error?.description || "Payment failed. Please try again.");
+                setLoading(false);
+                setSelectedPlan(null);
+            });
             rzp.open();
+            // Don't reset loading here — modal is open, handlers above will reset
+            return;
         } catch (error) {
             console.error("Payment error", error);
             alert("Something went wrong. Please try again.");
         } finally {
             setLoading(false);
+            setSelectedPlan(null);
         }
     };
 
@@ -209,8 +246,8 @@ export default function SelectPlanPage() {
 
     return (
         <div className="min-h-screen bg-slate-950 text-white font-sans selection:bg-sky-500/30">
-            {/* Razorpay Script */}
-            <script src="https://checkout.razorpay.com/v1/checkout.js" async />
+            {/* Razorpay Checkout Script — must use next/script for App Router */}
+            <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
 
             {/* Background Effects */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">

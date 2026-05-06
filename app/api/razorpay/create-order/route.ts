@@ -1,20 +1,14 @@
 import { NextResponse } from "next/server";
-import Razorpay from "razorpay";
+import { razorpay, isRazorpayConfigured } from "@/lib/razorpay";
 import { dbConnect } from "@/lib/mongodb";
 import { Plan } from "@/models/Plan";
 import { Payment } from "@/models/Payment";
 import { RazorpayOrderSchema } from "@/lib/validators";
 import { createBreaker } from "@/lib/circuitBreaker";
 
-// Initialize Razorpay instance conditionally
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_mock",
-    key_secret: process.env.RAZORPAY_KEY_SECRET || "mock_secret",
-});
-
 // Circuit breaker for Razorpay API calls — fails fast if Razorpay is down
 const razorpayBreaker = createBreaker(
-    async (options: any) => razorpay.orders.create(options),
+    async (options: any) => razorpay!.orders.create(options),
     "razorpay-orders"
 );
 
@@ -38,7 +32,7 @@ export async function POST(req: Request) {
         const amount = plan.price * cartQuantity * 100;
 
         // Optional Check: Is this a mock Razorpay run?
-        if (!process.env.RAZORPAY_KEY_ID) {
+        if (!isRazorpayConfigured) {
             // Simulate Order Creation for Dev/Test mode without actual keys
             return NextResponse.json({
                 id: `order_mock_${Date.now()}`,
