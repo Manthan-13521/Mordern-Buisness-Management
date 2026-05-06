@@ -125,21 +125,38 @@ export async function POST(req: Request) {
 
         // ── Payload validation ───────────────────────────────────────────────
         if (!Number.isInteger(amountPaise) || amountPaise < 100) {
-            return NextResponse.json({ error: "Invalid payment amount" }, { status: 400, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            logger.error("[Subscription] Invalid amount", { amountINR, amountPaise, isInteger: Number.isInteger(amountPaise) });
+            return NextResponse.json({ error: "Invalid payment amount", debug: { amountPaise, amountINR } }, { status: 400, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
+
+        // ── Build Razorpay payload ────────────────────────────────────────────
+        // CRITICAL: receipt MUST be ≤ 40 characters (Razorpay hard limit)
+        // Format: s_{last8ofUserId}_{plan4}_{timestamp} = max 32 chars
+        const shortUserId = String(user.id).slice(-8);
+        const shortPlan = planType.slice(0, 4);
+        const receipt = `s_${shortUserId}_${shortPlan}_${Date.now()}`.slice(0, 40);
 
         const orderPayload = {
             amount:   amountPaise,
             currency: "INR",
-            receipt:  `sub_${user.id}_${planType}_${Date.now()}`,
+            receipt,
             notes: {
-                userId:  user.id,
-                planType,
-                module,
-                blocks:  blocks?.toString() || "",
-                referralCode: referralCode || "",
+                userId:       String(user.id),
+                planType:     String(planType),
+                module:       String(module),
+                blocks:       blocks?.toString() || "",
+                referralCode: referralCode ? String(referralCode) : "",
             },
         };
+
+        // ── Pre-call payload logging ─────────────────────────────────────────
+        logger.info("[Subscription] Razorpay payload", {
+            amount: orderPayload.amount,
+            currency: orderPayload.currency,
+            receipt: orderPayload.receipt,
+            receiptLength: orderPayload.receipt.length,
+            notesKeys: Object.keys(orderPayload.notes),
+        }, "payment");
 
         // ── Emergency debug mode: bypass circuit breaker ─────────────────────
         // Set RAZORPAY_DEBUG_BYPASS=true in env to bypass the circuit breaker entirely
@@ -151,11 +168,16 @@ export async function POST(req: Request) {
                 order = await razorpay.orders.create(orderPayload);
                 logger.info("[Subscription] ✅ Direct Razorpay call succeeded", { orderId: order.id });
             } catch (directErr: any) {
+                const rzpErr = directErr?.error || {};
                 logger.error("[Subscription] ❌ Direct Razorpay call FAILED", {
-                    statusCode: directErr?.statusCode,
-                    error: directErr?.error,
-                    description: directErr?.description || directErr?.message,
-                    rawError: process.env.NODE_ENV !== "production" ? JSON.stringify(directErr, null, 2) : undefined,
+                    statusCode:  directErr?.statusCode,
+                    errorCode:   rzpErr?.code || rzpErr,
+                    description: rzpErr?.description || directErr?.description || directErr?.message,
+                    field:       rzpErr?.field,
+                    source:      rzpErr?.source,
+                    reason:      rzpErr?.reason,
+                    metadata:    rzpErr?.metadata,
+                    sentPayload: { amount: orderPayload.amount, currency: orderPayload.currency, receipt: orderPayload.receipt },
                 });
                 return NextResponse.json({
                     error: "Razorpay API call failed",
@@ -197,14 +219,18 @@ export async function POST(req: Request) {
         const isBreaker  = error?.code === "EOPENBREAKER" || error?.message?.includes("Breaker is open");
         const isTimeout  = error?.code === "ETIMEDOUT" || error?.message?.includes("Timed out");
 
-        // Structured error logging
+        // Structured error logging — extract full Razorpay error details
+        const rzpErr = error?.error || {};
         logger.error("[Subscription] ❌ Order creation failed", {
             elapsed:     `${elapsed}ms`,
             isBreaker,
             isTimeout,
             statusCode,
-            errorCode:   error?.error?.code || error?.code,
-            description: error?.error?.description || error?.description || error?.message,
+            errorCode:   rzpErr?.code || error?.code,
+            description: rzpErr?.description || error?.description || error?.message,
+            field:       rzpErr?.field,
+            source:      rzpErr?.source,
+            reason:      rzpErr?.reason,
             breakerState: getBreakerState(subscriptionBreaker),
         });
 

@@ -96,9 +96,24 @@ export async function POST(req: Request) {
         const orderOptions = {
             amount,
             currency: "INR",
-            receipt: idempotencyKey,
-            notes: { idempotencyKey, poolId: plan.poolId, memberId: memberKey },
+            // CRITICAL: receipt MUST be ≤ 40 characters (Razorpay hard limit)
+            // idempotencyKey can be 86+ chars, so we truncate for receipt only
+            receipt: idempotencyKey.slice(0, 40),
+            notes: {
+                idempotencyKey,
+                poolId:   String(plan.poolId),
+                memberId: String(memberKey),
+            },
         };
+
+        // ── Pre-call payload logging ─────────────────────────────────────────
+        logger.info("[Razorpay] Pool order payload", {
+            amount: orderOptions.amount,
+            currency: orderOptions.currency,
+            receipt: orderOptions.receipt,
+            receiptLength: orderOptions.receipt.length,
+            idempotencyKeyLength: idempotencyKey.length,
+        }, "payment");
 
         // Circuit breaker: fails fast (rejects immediately) if Razorpay is down
         const order = await razorpayBreaker.fire(orderOptions);
