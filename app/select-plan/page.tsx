@@ -24,7 +24,11 @@ export default function SelectPlanPage() {
     const [trialUsed, setTrialUsed] = useState(false);
     
     // Determine module from session (fallback to pool if no session yet)
-    const module: SubscriptionModule = session?.user?.hostelId ? "hostel" : "pool";
+    const module: SubscriptionModule = session?.user?.businessId 
+        ? "business" 
+        : session?.user?.hostelId 
+            ? "hostel" 
+            : "pool";
     const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlanType | null>(null);
     const [selectedBlocks, setSelectedBlocks] = useState<number>(1);
     
@@ -305,7 +309,7 @@ export default function SelectPlanPage() {
                         <Sparkles className="h-3 w-3" /> Subscription Plans
                     </div>
                     <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-b from-white to-slate-400 bg-clip-text text-transparent">
-                        Empower Your {module === "pool" ? "Aquatic" : "Hostel"} Management
+                        Empower Your {module === "pool" ? "Aquatic" : module === "hostel" ? "Hostel" : "Business"} Management
                     </h1>
                     <p className="text-slate-400 text-lg max-w-2xl mx-auto">
                         Choose the plan that fits your scale. Trial accounts available for new users to explore the premium features.
@@ -478,6 +482,95 @@ export default function SelectPlanPage() {
                                     className="w-full py-4 rounded-2xl bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 font-bold transition-all shadow-xl shadow-sky-900/40 active:scale-95 disabled:opacity-50"
                                 >
                                     {loading ? <Loader2 className="animate-spin h-5 w-5 mx-auto" /> : "Choose Yearly"}
+                                </button>
+                            </div>
+                        </>
+                    ) : module === "business" ? (
+                        <>
+                            {/* Business Quarterly */}
+                            <div className={PLAN_CARD}>
+                                <div className="flex justify-between items-start mb-6">
+                                    <div>
+                                        <h3 className="text-xl font-bold">3 Months Plan</h3>
+                                        <p className="text-slate-400 text-sm">Quarterly Business Access</p>
+                                    </div>
+                                    <div className="p-2 bg-emerald-500/10 rounded-xl">
+                                        <Shield className="h-6 w-6 text-emerald-400" />
+                                    </div>
+                                </div>
+                                <div className="mb-8">
+                                    {appliedReferral ? (
+                                        <div className="flex flex-col">
+                                            <span className="text-slate-500 line-through text-2xl font-bold">₹1,999</span>
+                                            <span className="text-4xl font-black text-emerald-400">₹{getDiscountedPrice(1999).toLocaleString()}</span>
+                                            <span className="text-emerald-500/70 text-sm mt-1">Discount applied!</span>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <span className="text-4xl font-black">₹1,999</span>
+                                            <span className="text-slate-400 ml-2">/ 3 months</span>
+                                        </>
+                                    )}
+                                </div>
+                                <ul className="space-y-4 mb-8 flex-grow">
+                                    <FeatureItem text="Unlimited Sales Logs" />
+                                    <FeatureItem text="Labour Management" />
+                                    <FeatureItem text="Stock Inventory" />
+                                    <FeatureItem text="Digital Customer Ledger" />
+                                    <FeatureItem text="Professional Invoicing" />
+                                </ul>
+                                <button
+                                    onClick={() => handlePayment("quarterly")}
+                                    disabled={loading}
+                                    className="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 font-bold transition-all shadow-lg shadow-emerald-900/20 active:scale-95 disabled:opacity-50"
+                                >
+                                    {loading && selectedPlan === "quarterly" ? <Loader2 className="animate-spin h-5 w-5 mx-auto" /> : "Choose 3 Months"}
+                                </button>
+                            </div>
+
+                            {/* Business Yearly — Best Value */}
+                            <div className={`${PLAN_CARD} border-emerald-500/50 ring-1 ring-emerald-500/20 bg-emerald-500/5`}>
+                                <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-emerald-500 rounded-full text-xs font-black uppercase tracking-widest text-slate-950">
+                                    Best Value
+                                </div>
+                                <div className="flex justify-between items-start mb-6">
+                                    <div>
+                                        <h3 className="text-xl font-bold">Yearly Plan</h3>
+                                        <p className="text-slate-400 text-sm">Full Access — 12 Months</p>
+                                    </div>
+                                    <div className="p-2 bg-emerald-500/20 rounded-xl">
+                                        <Sparkles className="h-6 w-6 text-emerald-400" />
+                                    </div>
+                                </div>
+                                <div className="mb-8">
+                                    {appliedReferral ? (
+                                        <div className="flex flex-col">
+                                            <span className="text-slate-500 line-through text-2xl font-bold">₹4,999</span>
+                                            <span className="text-5xl font-black text-emerald-400">₹{getDiscountedPrice(4999).toLocaleString()}</span>
+                                            <span className="text-emerald-500/70 text-sm mt-1">Huge discount applied!</span>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <span className="text-4xl font-black">₹4,999</span>
+                                            <span className="text-slate-400 ml-2">/ year</span>
+                                            <div className="mt-2 text-emerald-400 text-sm font-medium">Save ₹2,997 vs quarterly</div>
+                                        </>
+                                    )}
+                                </div>
+                                <ul className="space-y-4 mb-8 flex-grow">
+                                    <FeatureItem text="All Business Modules Included" />
+                                    <FeatureItem text="Revenue Analytics" />
+                                    <FeatureItem text="Staff & Labour Attendance" />
+                                    <FeatureItem text="Multi-Admin Access" />
+                                    <FeatureItem text="24/7 Priority Support" />
+                                    <FeatureItem text="WhatsApp Notifications" />
+                                </ul>
+                                <button
+                                    onClick={() => handlePayment("yearly")}
+                                    disabled={loading}
+                                    className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 font-bold transition-all shadow-xl shadow-emerald-900/40 active:scale-95 disabled:opacity-50"
+                                >
+                                    {loading && selectedPlan === "yearly" ? <Loader2 className="animate-spin h-5 w-5 mx-auto" /> : "Choose Yearly — Best Value"}
                                 </button>
                             </div>
                         </>

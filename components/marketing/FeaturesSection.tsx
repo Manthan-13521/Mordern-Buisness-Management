@@ -405,17 +405,31 @@ export function FeaturesSection() {
                 <h3 className="text-2xl font-bold text-gray-900 dark:text-white text-center mb-8">Business Launch Offer</h3>
                 
                 <div className="space-y-6 flex-1">
-                  <div className="rounded-2xl border-2 border-emerald-500 bg-emerald-50/50 dark:bg-emerald-500/10 p-6 relative">
-                    <span className="absolute -top-3 left-4 bg-emerald-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-full shadow-lg tracking-widest">
-                      Unlimited Suite
-                    </span>
+                  {/* Quarterly Plan */}
+                  <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-5 hover:border-emerald-500/50 transition-colors relative">
                     <div className="flex justify-between items-center">
                       <div>
-                        <h4 className="text-xl font-bold text-gray-900 dark:text-emerald-400 uppercase tracking-tight">Full Access</h4>
-                        <p className="text-xs text-emerald-600 dark:text-emerald-500/70 font-medium">All Business Modules Included</p>
+                        <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Quarterly Plan</h4>
+                        <p className="text-xs text-gray-500 mt-1">3 Months Business Access</p>
                       </div>
                       <div className="text-right">
-                        <span className="text-4xl font-black text-emerald-600 dark:text-emerald-400">₹4999<span className="text-sm font-normal opacity-60">/yr</span></span>
+                        <span className="text-2xl font-bold text-gray-900 dark:text-white">₹1999</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Yearly Plan - Best Value */}
+                  <div className="rounded-2xl border-2 border-emerald-500 bg-emerald-50/50 dark:bg-emerald-500/10 p-5 relative transform scale-105 shadow-xl">
+                    <span className="absolute -top-3 left-4 bg-emerald-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-full shadow-lg tracking-widest">
+                      🔥 Best Value
+                    </span>
+                    <div className="flex justify-between items-center mt-2">
+                      <div>
+                        <h4 className="text-lg font-bold text-gray-900 dark:text-emerald-400 uppercase tracking-tight">Yearly Plan</h4>
+                        <p className="text-xs text-emerald-600 dark:text-emerald-500/70 font-medium">Full Access — 12 Months</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400">₹4999</span>
                       </div>
                     </div>
                   </div>
