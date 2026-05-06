@@ -41,8 +41,12 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "planType and module are required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
-        // Validate module matches user user type
-        const userModule: SubscriptionModule = user.hostelId ? "hostel" : "pool";
+        // Validate module matches user's account type
+        const userModule: SubscriptionModule = user.businessId
+            ? "business"
+            : user.hostelId
+                ? "hostel"
+                : "pool";
         if (module !== userModule) {
             return NextResponse.json({ error: "Module mismatch with your account type" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
