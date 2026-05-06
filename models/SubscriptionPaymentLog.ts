@@ -4,7 +4,8 @@ export interface ISubscriptionPaymentLog extends Document {
     userId: mongoose.Types.ObjectId;
     poolId?: string;       // pool admin
     hostelId?: string;     // hostel admin
-    module: "pool" | "hostel";
+    businessId?: string;   // business admin
+    module: "pool" | "hostel" | "business";
     planType: "trial" | "quarterly" | "yearly" | "block-based";
     blocks?: number;
     amount: number;        // in ₹ (not paise)
@@ -21,7 +22,8 @@ const subscriptionPaymentLogSchema = new Schema<ISubscriptionPaymentLog>(
         userId:            { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
         poolId:            { type: String, index: true, sparse: true },
         hostelId:          { type: String, index: true, sparse: true },
-        module:            { type: String, enum: ["pool", "hostel"], required: true },
+        businessId:        { type: String, index: true, sparse: true },
+        module:            { type: String, enum: ["pool", "hostel", "business"], required: true },
         planType:          { type: String, enum: ["trial", "quarterly", "yearly", "block-based"], required: true },
         blocks:            { type: Number },
         amount:            { type: Number, required: true, min: 0 },

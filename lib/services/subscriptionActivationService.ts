@@ -154,6 +154,7 @@ export async function activateSubscription(params: {
         userId:            user._id,
         poolId:            user.poolId,
         hostelId:          user.hostelId,
+        businessId:        user.businessId,
         module,
         planType,
         blocks,

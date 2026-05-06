@@ -62,15 +62,20 @@ export function getTenantFilter(user: AuthUser): Record<string, string> {
 export function requireTenant(user?: AuthUser | null): string {
     if (!user) throw new Error("Unauthorized");
 
-    if (user.role !== "superadmin" && (!user.poolId || typeof user.poolId !== "string" || user.poolId.trim() === "")) {
-        console.error("SECURITY: Missing or empty poolId access attempt", {
+    if (user.role === "superadmin") return "superadmin";
+
+    // Check for ANY valid tenant scope (business → hostel → pool)
+    const tenantId = user.businessId || user.hostelId || user.poolId;
+    if (!tenantId || typeof tenantId !== "string" || tenantId.trim() === "") {
+        console.error("SECURITY: No tenant scope found", {
             userId: user.id || "unknown",
-            providedId: user.poolId
+            role: user.role,
+            poolId: user.poolId, hostelId: user.hostelId, businessId: user.businessId
         });
-        throw new Error("Invalid or missing pool assignment");
+        throw new Error("Invalid or missing tenant assignment");
     }
 
-    return user.poolId || "superadmin";
+    return tenantId;
 }
 
 export function requireBusinessId(user?: AuthUser | null): string {

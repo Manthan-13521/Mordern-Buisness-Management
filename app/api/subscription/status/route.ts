@@ -46,7 +46,7 @@ export async function GET(req: Request) {
 
         await dbConnect();
         const dbUser = await User.findById(user.id)
-            .select("subscription trial role hostelId poolId")
+            .select("subscription trial role hostelId poolId businessId")
             .lean() as any;
 
         if (!dbUser) return NextResponse.json({ error: "User not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
@@ -78,6 +78,8 @@ export async function GET(req: Request) {
                     };
                 }
             }
+            // Business admin — subscription is stored on User model,
+            // no tenant-level fallback needed (handled above via dbUser.subscription)
         }
 
         const liveStatus = computeStatus(sub?.expiryDate, sub?.status);
@@ -89,7 +91,7 @@ export async function GET(req: Request) {
         return NextResponse.json({
             status:     liveStatus,          // "active" | "expired" | "none"
             planType:   sub?.planType || sub?.plan || null,
-            module:     sub?.module || (dbUser.role === "hostel_admin" ? "hostel" : dbUser.role === "admin" ? "pool" : null),
+            module:     sub?.module || (dbUser.role === "hostel_admin" ? "hostel" : dbUser.role === "business_admin" ? "business" : dbUser.role === "admin" ? "pool" : null),
             blocks:     sub?.blocks || null,
             pricePaid:  sub?.pricePaid || null,
             startDate:  sub?.startDate || null,

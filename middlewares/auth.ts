@@ -25,6 +25,7 @@ const SUBSCRIPTION_PROTECTED_APIS = [
 const SUBSCRIPTION_ALWAYS_ALLOW = [
     "/api/auth",
     "/api/subscription",
+    "/api/referral",
     "/api/warmup",
     "/api/health",
     "/api/cron",
@@ -73,17 +74,26 @@ export function withAuthRouting(req: NextRequestWithAuth): NextResponse | undefi
             return res;
         }
 
-        // ── Fast-Fail Pool API Edge Guard ──
-        // Only target Pool APIs (exclude hostel, business, auth)
+        // ── Fast-Fail Tenant API Edge Guard ──
+        // Ensure non-superadmin API users have at least ONE tenant scope.
+        // Pool users need poolId, hostel users need hostelId, business users need businessId.
         if (
             !isAlwaysAllowed &&
             !path.startsWith("/api/hostel") &&
             !path.startsWith("/api/business") &&
             token?.role !== "superadmin" &&
-            !token?.poolId
+            !token?.poolId &&
+            !(token as any)?.hostelId &&
+            !(token as any)?.businessId
         ) {
-             console.error(`[Middleware] SECURITY BLOCK: Missing poolId on ${path}`, { userId: token?.id });
-             const res = NextResponse.json({ error: "Tenant isolated: No poolId assigned to session" }, { status: 401 });
+             console.error(`[Middleware] SECURITY BLOCK: No tenant ID on ${path}`, {
+                 userId: token?.id, role: token?.role,
+                 poolId: token?.poolId, hostelId: (token as any)?.hostelId, businessId: (token as any)?.businessId
+             });
+             const res = NextResponse.json(
+                 { error: "No tenant assigned to session. Please complete registration." },
+                 { status: 401 }
+             );
              applySecurityHeaders(res);
              return res;
         }
