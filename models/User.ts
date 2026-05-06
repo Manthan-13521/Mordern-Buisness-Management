@@ -70,6 +70,13 @@ const userSchema = new Schema<IUser>(
     { timestamps: true }
 );
 
+// ── Pre-save: normalize email to lowercase ──────────────────────────────
+userSchema.pre("save", function () {
+    if (this.isModified("email") && this.email) {
+        this.email = this.email.trim().toLowerCase();
+    }
+});
+
 userSchema.index({ name: 1 });
 userSchema.index({ email: 1, poolId: 1 });
 userSchema.index({ name: 1, poolId: 1 });

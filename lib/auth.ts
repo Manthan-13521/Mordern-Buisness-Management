@@ -132,10 +132,13 @@ export const authOptions: NextAuthOptions = {
                 
                 checkRateLimit(rlKey);
 
+                // Normalize email to lowercase for case-insensitive matching
+                const normalizedUsername = credentials.username.trim().toLowerCase();
+
                 await dbConnect();
 
                 if (credentials.isSuperAdmin === 'true') {
-                    const platformAdmin = await PlatformAdmin.findOne({ email: credentials.username }).lean();
+                    const platformAdmin = await PlatformAdmin.findOne({ email: normalizedUsername }).lean();
                     if (platformAdmin) {
                         const isMatch = await bcrypt.compare(credentials.password, platformAdmin.passwordHash);
                         if (isMatch) {
@@ -173,7 +176,7 @@ export const authOptions: NextAuthOptions = {
                 // SECURITY: Prefer email match (unique). Name match is scoped by poolId when available.
                 const userQuery: any = {
                     $or: [
-                        { email: credentials.username },
+                        { email: normalizedUsername },
                         { name: credentials.username }
                     ]
                 };
@@ -226,7 +229,7 @@ export const authOptions: NextAuthOptions = {
 
                 // Generic login (business, hostel, or unscoped pool admin)
                 // Try email first (unique index guarantees correct match)
-                let user = await UserModel.findOne({ email: credentials.username }).lean() as IUser | null;
+                let user = await UserModel.findOne({ email: normalizedUsername }).lean() as IUser | null;
 
                 // Fallback: try name match, but ONLY if email didn't match
                 // SECURITY: Name-based login without poolSlug is ambiguous — only allow if exactly one match
