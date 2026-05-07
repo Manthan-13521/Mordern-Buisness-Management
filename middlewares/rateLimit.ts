@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { applySecurityHeaders } from "./security";
 import { Redis } from "@upstash/redis";
 import type { NextRequestWithAuth } from "next-auth/middleware";
+import { logger } from "@/lib/logger";
 
 export const redis = (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN)
     ? new Redis({
@@ -107,8 +108,18 @@ export async function checkRateLimit(
     const limit = ENDPOINT_LIMITS[endpointKey] || (userId !== "guest" ? DEFAULT_LIMIT_PER_USER : DEFAULT_LIMIT_PER_IP);
     const burstLimit = Math.ceil(limit * BURST_MULTIPLIER / (WINDOW_SECONDS / BURST_WINDOW_SECONDS));
 
-    // Prefer user ID for auth'd users, fall back to IP
-    const identifier = userId !== "guest" ? `user:${userId}` : `ip:${ip}`;
+    // Prefer user ID for auth'd users, fall back to IP.
+    // For tenant routes, include tenant scope to prevent cross-tenant quota exhaustion.
+    let identifier = userId !== "guest" ? `user:${userId}` : `ip:${ip}`;
+
+    // ── Tenant-aware key isolation ──────────────────────────────────────────
+    // Extract tenant slug from path for business/pool/hostel routes.
+    // This ensures one tenant's heavy usage doesn't starve another tenant's quota.
+    const tenantMatch = path.match(/\/(business|pool|hostel)\/([^/]+)/);
+    if (tenantMatch) {
+        identifier = `${identifier}:t:${tenantMatch[2]}`;
+    }
+
     const mainKey = `rate:${endpointKey}:${identifier}`;
     const burstKey = `rate:burst:${endpointKey}:${identifier}`;
 
@@ -162,7 +173,7 @@ export async function checkRateLimit(
                 retryAfter: 0
             };
         } catch (e) {
-            console.warn("[RateLimit] Redis failed, falling back to memory:", e);
+            logger.warn("[RateLimit] Redis failed, falling back to memory");
         }
     }
 
@@ -188,13 +199,10 @@ export async function checkRateLimit(
     return { allowed: true, limit, remaining: limit - 1, retryAfter: 0 };
 }
 
-// Cleanup stale in-memory rate limit entries every 5 min
-setInterval(() => {
-    const now = Date.now();
-    for (const [key, val] of rateMap.entries()) {
-        if (now > val.resetAt) rateMap.delete(key);
-    }
-}, 5 * 60_000);
+// NOTE: In Vercel serverless, each cold start gets a fresh V8 isolate.
+// The in-memory rateMap is best-effort only — it does NOT persist across invocations.
+// Redis (via UPSTASH_REDIS_REST_URL) is the primary rate limiter.
+// No cleanup interval needed — the Map is garbage-collected with the isolate.
 
 /**
  * Middleware wrapper — called from middleware.ts.

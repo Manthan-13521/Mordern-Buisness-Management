@@ -5,8 +5,17 @@ import { BusinessLabour } from "@/models/BusinessLabour";
 import { BusinessAttendance } from "@/models/BusinessAttendance";
 import { BusinessLabourAdvance } from "@/models/BusinessLabourAdvance";
 import { requireBusinessId } from "@/lib/tenant";
+import { logger } from "@/lib/logger";
+import { z } from "zod";
 
 export const dynamic = "force-dynamic";
+
+const LabourCreateSchema = z.object({
+    name: z.string().min(1, "Name is required").max(100),
+    role: z.string().min(1, "Role is required").max(50),
+    salary: z.number().min(0).max(9999999),
+    phone: z.string().max(15).optional(),
+});
 
 export async function GET(req: Request) {
     try {
@@ -21,16 +30,8 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
         }
 
-        // 🟢 STRUCTURED AUDIT LOGGING
         if (process.env.DEBUG_ANALYTICS === "true") {
-            console.info(JSON.stringify({
-                type: "BUSINESS_LABOUR_LIST",
-                businessId,
-                userId: user.id,
-                route: "/api/business/labour",
-                method: "GET",
-                timestamp: new Date().toISOString()
-            }));
+            logger.debug("Business labour list", { businessId, userId: user.id });
         }
 
         await dbConnect();
@@ -105,7 +106,7 @@ export async function GET(req: Request) {
                 }
             },
             { $sort: { name: 1 } }
-        ]);
+        ]).option({ maxTimeMS: 10_000 });
 
         const labours = Array.isArray(laboursRaw) ? laboursRaw : [];
 
@@ -142,7 +143,15 @@ export async function POST(req: Request) {
         }
 
         const body = await req.json();
-        const { name, role, salary, phone } = body;
+        const parsed = LabourCreateSchema.safeParse(body);
+        if (!parsed.success) {
+            return NextResponse.json(
+                { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
+                { status: 400 }
+            );
+        }
+
+        const { name, role, salary, phone } = parsed.data;
 
         let businessId;
         try {
@@ -151,19 +160,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
         }
 
-        if (!name || !role || salary === undefined) {
-            return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-        }
-
-        // 🟢 STRUCTURED AUDIT LOGGING
-        console.info(JSON.stringify({
-            type: "BUSINESS_LABOUR_CREATE",
-            businessId,
-            userId: user.id,
-            route: "/api/business/labour",
-            method: "POST",
-            timestamp: new Date().toISOString()
-        }));
+        logger.debug("Business labour create", { businessId, userId: user.id });
 
         await dbConnect();
 

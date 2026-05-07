@@ -8,14 +8,34 @@ interface SecureQueryOptions {
 }
 
 /**
+ * Resolves the correct tenant scope filter based on user type.
+ * - superadmin: no filter (sees everything)
+ * - business_admin: scopes by businessId
+ * - hostel_admin: scopes by hostelId
+ * - pool admin/operator: scopes by poolId
+ */
+function getTenantScope(user: AuthUser): Record<string, string> {
+    if (user.role === "superadmin") return {};
+    if (user.businessId) return { businessId: user.businessId };
+    if (user.hostelId) return { hostelId: user.hostelId };
+    if (user.poolId) return { poolId: user.poolId };
+    // Fallback: impossible tenant match to prevent data leaks
+    return { poolId: "__no_tenant__" };
+}
+
+/**
  * Validates cross-tenant access internally for logging purposes.
  * This function handles the advanced security boost: Detect Tampering Attempts.
  */
 export async function auditCrossTenantAccess(model: any, id: string, user: AuthUser) {
     if (user.role === "superadmin") return;
     try {
-        const item = await model.findById(id).select("poolId").lean() as any;
-        if (item && item.poolId !== user.poolId) {
+        const item = await model.findById(id).select("poolId hostelId businessId").lean() as any;
+        if (!item) return;
+        // Check if the item belongs to a different tenant
+        const scope = getTenantScope(user);
+        const scopeKey = Object.keys(scope)[0];
+        if (scopeKey && item[scopeKey] !== scope[scopeKey]) {
             logger.audit({
                 type: "TENANT_ISOLATION_VIOLATION",
                 userId: user.id || "unknown",
@@ -24,7 +44,9 @@ export async function auditCrossTenantAccess(model: any, id: string, user: AuthU
                     message: "CROSS_TENANT_ACCESS_ATTEMPT",
                     targetId: id,
                     targetModel: model.modelName,
-                    targetPoolId: item.poolId,
+                    scopeKey,
+                    userValue: scope[scopeKey],
+                    targetValue: item[scopeKey],
                 }
             });
         }
@@ -34,9 +56,10 @@ export async function auditCrossTenantAccess(model: any, id: string, user: AuthU
 }
 
 export async function secureFindById(model: any, id: string, user: AuthUser, opts: SecureQueryOptions = {}) {
-    let query = user.role === "superadmin" 
-        ? model.findById(id) 
-        : model.findOne({ _id: id, poolId: user.poolId });
+    const scope = getTenantScope(user);
+    let query = Object.keys(scope).length === 0
+        ? model.findById(id)
+        : model.findOne({ _id: id, ...scope });
 
     if (opts.select) query = query.select(opts.select);
     if (opts.populate) query = query.populate(opts.populate);
@@ -52,9 +75,10 @@ export async function secureFindById(model: any, id: string, user: AuthUser, opt
 }
 
 export async function secureUpdateById(model: any, id: string, updateData: any, user: AuthUser, opts: SecureQueryOptions = {}) {
-    let query = user.role === "superadmin" 
-        ? model.findByIdAndUpdate(id, updateData, { returnDocument: 'after' }) 
-        : model.findOneAndUpdate({ _id: id, poolId: user.poolId }, updateData, { returnDocument: 'after' });
+    const scope = getTenantScope(user);
+    let query = Object.keys(scope).length === 0
+        ? model.findByIdAndUpdate(id, updateData, { returnDocument: 'after' })
+        : model.findOneAndUpdate({ _id: id, ...scope }, updateData, { returnDocument: 'after' });
 
     if (opts.select) query = query.select(opts.select);
     if (opts.populate) query = query.populate(opts.populate);
@@ -70,9 +94,10 @@ export async function secureUpdateById(model: any, id: string, updateData: any, 
 }
 
 export async function secureDeleteById(model: any, id: string, user: AuthUser) {
-    let query = user.role === "superadmin" 
-        ? model.findByIdAndDelete(id) 
-        : model.findOneAndDelete({ _id: id, poolId: user.poolId });
+    const scope = getTenantScope(user);
+    let query = Object.keys(scope).length === 0
+        ? model.findByIdAndDelete(id)
+        : model.findOneAndDelete({ _id: id, ...scope });
 
     const result = await query.lean();
 
@@ -82,3 +107,4 @@ export async function secureDeleteById(model: any, id: string, user: AuthUser) {
 
     return result as any;
 }
+

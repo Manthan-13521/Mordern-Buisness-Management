@@ -4,6 +4,7 @@ import { dbConnect } from "@/lib/mongodb";
 import { BusinessLabourPayment } from "@/models/BusinessLabourPayment";
 import { requireBusinessId } from "@/lib/tenant";
 import { SystemLock } from "@/models/SystemLock";
+import { logger } from "@/lib/logger";
 import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
@@ -30,16 +31,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ labourI
             return NextResponse.json({ error: "Invalid payment amount" }, { status: 400 });
         }
 
-        // 🟢 STRUCTURED AUDIT LOGGING
-        console.info(JSON.stringify({
-            type: "BUSINESS_LABOUR_PAYMENT_CREATE",
-            businessId,
-            labourId,
-            userId: user.id,
-            route: `/api/business/labour/${labourId}/payments`,
-            method: "POST",
-            timestamp: new Date().toISOString()
-        }));
+        logger.debug("Business labour payment create", { businessId, labourId, userId: user.id });
 
         await dbConnect();
 
@@ -98,23 +90,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ labourI
                         createdAt: { $lt: ninetyDaysAgo } 
                     });
 
-                    console.info(JSON.stringify({
-                        type: "PAYMENT_CLEANUP_SUCCESS",
+                    logger.debug("Payment cleanup success", {
                         businessId,
                         ownerId: instanceId,
                         deletedCount: result.deletedCount,
-                        route: `/api/business/labour/${labourId}/payments`,
-                        method: "POST",
-                        timestamp: new Date().toISOString()
-                    }));
+                    });
                 } catch (err: any) {
-                    console.error(JSON.stringify({
-                        type: "CLEANUP_FAILED",
+                    logger.error("Payment cleanup failed", {
                         key: "labour_cleanup",
                         ownerId: instanceId,
                         error: err.message,
-                        timestamp: new Date().toISOString()
-                    }));
+                    });
                 }
             })();
         }
@@ -130,7 +116,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ labourI
             headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
         });
     } catch (error: any) {
-        console.error("Payment Error:", error);
+        logger.error("Labour payment error", { error: error?.message });
         return NextResponse.json({ 
             data: null,
             meta: {

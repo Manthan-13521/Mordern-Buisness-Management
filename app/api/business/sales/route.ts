@@ -112,9 +112,8 @@ export async function POST(req: Request) {
             headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
         });
     } catch (error: any) {
-        logger.error("Sale Recording Error Details", {
+        logger.error("Sale recording error", {
             error: error.message,
-            stack: error.stack
         });
         return NextResponse.json({ 
             success: false,

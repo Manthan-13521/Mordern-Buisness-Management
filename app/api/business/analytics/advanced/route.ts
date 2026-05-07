@@ -4,6 +4,7 @@ import { dbConnect } from "@/lib/mongodb";
 import { BusinessTransaction } from "@/models/BusinessTransaction";
 import { BusinessCustomer } from "@/models/BusinessCustomer";
 import { requireBusinessId } from "@/lib/tenant";
+import { logger } from "@/lib/logger";
 import {
     getRevenueForDateRange,
     getReceivables,
@@ -70,21 +71,14 @@ export async function GET(req: Request) {
             cashOut: cashFlowData.cashOut
         };
 
-        // Debug logging
         if (process.env.DEBUG_ANALYTICS === "true") {
-            console.info(JSON.stringify({
-                type: "ADVANCED_ANALYTICS_SUMMARY",
+            logger.debug("Advanced analytics summary", {
                 businessId,
                 timeframe,
-                startDate: startDate.toISOString(),
-                endDate: now.toISOString(),
                 revenue: summary.revenue,
                 expenses: summary.expenses,
                 netProfit,
-                cashIn: cashFlowData.cashIn,
-                cashOut: cashFlowData.cashOut,
-                timestamp: new Date().toISOString()
-            }));
+            });
         }
 
         // ═══════════════════════════════════════════════════════════════════
@@ -108,7 +102,7 @@ export async function GET(req: Request) {
                 }
             },
             { $sort: { _id: 1 } }
-        ]);
+        ]).option({ maxTimeMS: 10_000 });
 
         // ═══════════════════════════════════════════════════════════════════
         // 3. YEARLY REPORT (Jan-Dec) — Same revenue rule
@@ -128,7 +122,7 @@ export async function GET(req: Request) {
                 }
             },
             { $sort: { _id: 1 } }
-        ]);
+        ]).option({ maxTimeMS: 10_000 });
 
         const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         const yearlyReport = months.map((m, i) => {
@@ -177,7 +171,7 @@ export async function GET(req: Request) {
                 }
             },
             { $sort: { totalRevenue: -1 } }
-        ]);
+        ]).option({ maxTimeMS: 10_000 });
 
         const topProducts = productStats.slice(0, 5);
         const leastPerforming = [...productStats].reverse().slice(0, 5);
@@ -193,7 +187,7 @@ export async function GET(req: Request) {
                     total: { $sum: "$amount" }
                 }
             }
-        ]);
+        ]).option({ maxTimeMS: 10_000 });
 
         // ═══════════════════════════════════════════════════════════════════
         // 7. BUSINESS HEALTH
@@ -227,7 +221,7 @@ export async function GET(req: Request) {
             }
         });
     } catch (error: any) {
-        console.error("Advanced Analytics Error:", error);
+        logger.error("Advanced analytics error", { error: error?.message });
         return NextResponse.json({ error: "Failed to fetch analytics" }, { status: 500 });
     }
 }

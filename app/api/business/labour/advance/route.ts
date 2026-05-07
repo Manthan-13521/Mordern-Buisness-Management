@@ -3,6 +3,7 @@ import { resolveUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessLabourAdvance } from "@/models/BusinessLabourAdvance";
 import { requireBusinessId } from "@/lib/tenant";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: Request) {
   try {
@@ -37,7 +38,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, data: advance });
   } catch (error: any) {
-    console.error("Advance API error:", error);
+    logger.error("Advance API error", { error: error?.message });
     return NextResponse.json(
       { error: "Failed to update advance", details: error.message },
       { status: 500 }

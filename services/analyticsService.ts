@@ -30,6 +30,14 @@
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessTransaction } from "@/models/BusinessTransaction";
 import { BusinessCustomer } from "@/models/BusinessCustomer";
+import { logger } from "@/lib/logger";
+
+// ── Constants ────────────────────────────────────────────────────────────────
+
+// Max time for MongoDB aggregation queries (ms).
+// Atlas M0/M2 can spike under load; Vercel functions have 10-60s execution limits.
+// Setting this to 10s ensures we fail fast instead of hitting Vercel's hard timeout.
+const AGGREGATION_TIMEOUT_MS = 10_000;
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -163,7 +171,7 @@ export async function getRevenue(
         count: { $sum: 1 },
       },
     },
-  ]);
+  ]).option({ maxTimeMS: AGGREGATION_TIMEOUT_MS });
 
   const output: RevenueResult = {
     total: result?.total || 0,
@@ -171,20 +179,15 @@ export async function getRevenue(
     dateRange: dateBounds,
   };
 
-  // Debug logging for traceability
   if (process.env.DEBUG_ANALYTICS === "true") {
-    console.info(
-      JSON.stringify({
-        type: "ANALYTICS_REVENUE",
-        businessId,
-        range,
-        startDate: dateBounds.startDate.toISOString(),
-        endDate: dateBounds.endDate.toISOString(),
-        transactionCount: output.transactionCount,
-        total: output.total,
-        timestamp: new Date().toISOString(),
-      })
-    );
+    logger.debug("Analytics revenue", {
+      businessId,
+      range,
+      startDate: dateBounds.startDate.toISOString(),
+      endDate: dateBounds.endDate.toISOString(),
+      transactionCount: output.transactionCount,
+      total: output.total,
+    });
   }
 
   return output;
@@ -220,7 +223,7 @@ export async function getExpenses(
         count: { $sum: 1 },
       },
     },
-  ]);
+  ]).option({ maxTimeMS: AGGREGATION_TIMEOUT_MS });
 
   const output: ExpenseResult = {
     total: result?.total || 0,
@@ -229,18 +232,14 @@ export async function getExpenses(
   };
 
   if (process.env.DEBUG_ANALYTICS === "true") {
-    console.info(
-      JSON.stringify({
-        type: "ANALYTICS_EXPENSES",
-        businessId,
-        range,
-        startDate: dateBounds.startDate.toISOString(),
-        endDate: dateBounds.endDate.toISOString(),
-        transactionCount: output.transactionCount,
-        total: output.total,
-        timestamp: new Date().toISOString(),
-      })
-    );
+    logger.debug("Analytics expenses", {
+      businessId,
+      range,
+      startDate: dateBounds.startDate.toISOString(),
+      endDate: dateBounds.endDate.toISOString(),
+      transactionCount: output.transactionCount,
+      total: output.total,
+    });
   }
 
   return output;
@@ -296,7 +295,7 @@ export async function getReceivables(
         },
       },
     },
-  ]);
+  ]).option({ maxTimeMS: AGGREGATION_TIMEOUT_MS });
 
   return {
     totalReceivables: result?.totalReceivables || 0,
@@ -392,7 +391,7 @@ export async function getCashFlow(
         },
       },
     },
-  ]);
+  ]).option({ maxTimeMS: AGGREGATION_TIMEOUT_MS });
 
   const cf = result || {
     paymentReceived: 0,
@@ -526,7 +525,7 @@ export async function getRevenueForDateRange(
         },
       },
     },
-  ]);
+  ]).option({ maxTimeMS: AGGREGATION_TIMEOUT_MS });
 
   return {
     revenue: result?.revenue || 0,

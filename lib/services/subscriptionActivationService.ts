@@ -1,8 +1,6 @@
 import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { SubscriptionPaymentLog } from "@/models/SubscriptionPaymentLog";
-import { ReferralCode } from "@/models/ReferralCode";
-import { ReferralUsage } from "@/models/ReferralUsage";
 import { Organization } from "@/models/Organization";
 import { getPriceKey, SUBSCRIPTION_PRICES, SubscriptionPlanType, SubscriptionModule } from "@/lib/subscriptionConfig";
 import { redis } from "@/lib/redis";
@@ -84,39 +82,10 @@ export async function activateSubscription(params: {
     // 3. Validate plan
     const priceKey = getPriceKey(planType, module, blocks);
     if (!priceKey) throw new Error("Invalid plan combination");
+    // NOTE: Referral discounts are applied ONLY in create-order (where they affect the
+    // Razorpay order amount). The activation service trusts the charged amount.
+    // This prevents double-discount and double-usage-counting bugs.
     let amountINR = SUBSCRIPTION_PRICES[priceKey];
-
-    let appliedDiscount = 0;
-    
-    // Apply referral code if present
-    if (referralCode && planType !== "trial") {
-        const codeDoc = await ReferralCode.findOne({
-            code: referralCode.toUpperCase().trim(),
-            isActive: true
-        });
-
-        if (codeDoc && (!codeDoc.expiresAt || new Date(codeDoc.expiresAt) > new Date()) && (codeDoc.maxUses === 0 || codeDoc.usedCount < codeDoc.maxUses)) {
-            if (codeDoc.discountType === "percentage") {
-                appliedDiscount = (amountINR * codeDoc.discountValue) / 100;
-            } else {
-                appliedDiscount = codeDoc.discountValue;
-            }
-            amountINR -= appliedDiscount;
-            if (amountINR <= 0) amountINR = 1;
-            amountINR = Math.floor(amountINR);
-
-            // Commit usage
-            codeDoc.usedCount += 1;
-            await codeDoc.save();
-
-            // Create Usage Record
-            await ReferralUsage.create({
-                code: codeDoc.code,
-                orgId: userId, // Mapping to user's _id as org root for SaaS plans
-                discountApplied: appliedDiscount
-            });
-        }
-    }
 
     // 4. Load user
     const user = await User.findById(userId);

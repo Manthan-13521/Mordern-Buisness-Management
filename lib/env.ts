@@ -50,6 +50,16 @@ const envSchema = z.object({
     });
   }
 
+  // SECURITY: Webhook secret is critical in production — without it, forged webhooks can
+  // grant free subscriptions (see webhook/route.ts hard-fail guard)
+  if (process.env.NODE_ENV === "production" && !data.RAZORPAY_WEBHOOK_SECRET) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "RAZORPAY_WEBHOOK_SECRET is required in production to prevent forged webhooks",
+      path: ["RAZORPAY_WEBHOOK_SECRET"],
+    });
+  }
+
   // Warn if RAZORPAY_KEY_ID exists but RAZORPAY_KEY_SECRET is missing
   if (data.RAZORPAY_KEY_ID && !data.RAZORPAY_KEY_SECRET) {
     ctx.addIssue({
@@ -57,6 +67,11 @@ const envSchema = z.object({
       message: "RAZORPAY_KEY_ID is set but RAZORPAY_KEY_SECRET is missing",
       path: ["RAZORPAY_KEY_SECRET"],
     });
+  }
+
+  // Rate limiting requires Redis — in-memory fallback is ineffective in serverless
+  if (!data.UPSTASH_REDIS_REST_URL) {
+    console.warn("[ENV] ⚠️ Rate limiting will use in-memory fallback — UPSTASH_REDIS_REST_URL not set");
   }
 
   // Warn if NEXT_PUBLIC_RAZORPAY_KEY_ID doesn't match RAZORPAY_KEY_ID

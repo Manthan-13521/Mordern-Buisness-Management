@@ -5,6 +5,7 @@ import { BusinessAttendance } from "@/models/BusinessAttendance";
 import { BusinessLabourPayment } from "@/models/BusinessLabourPayment";
 import { BusinessLabour } from "@/models/BusinessLabour";
 import { requireBusinessId } from "@/lib/tenant";
+import { logger } from "@/lib/logger";
 import mongoose from "mongoose";
 
 export const dynamic = "force-dynamic";
@@ -145,7 +146,7 @@ export async function GET(
       }
     );
   } catch (error: any) {
-    console.error("Summary API error:", error);
+    logger.error("Summary API error", { error: error?.message });
     return NextResponse.json(
       {
         error: "Failed to fetch summary",

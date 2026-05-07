@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessTransaction } from "@/models/BusinessTransaction";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -54,8 +55,9 @@ export async function GET(req: Request) {
         }, {
             headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
         });
-    } catch (error) {
-        console.error("Transactions Fetch Error:", error);
+    } catch (error: any) {
+        logger.error("Transactions fetch error", { error: error?.message });
         return NextResponse.json({ error: "Failed to fetch transactions" }, { status: 500 });
     }
 }
+

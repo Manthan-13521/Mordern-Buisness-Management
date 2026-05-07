@@ -4,9 +4,21 @@ import { dbConnect } from "@/lib/mongodb";
 import { BusinessAttendance } from "@/models/BusinessAttendance";
 import { requireBusinessId } from "@/lib/tenant";
 import { SystemLock } from "@/models/SystemLock";
+import { logger } from "@/lib/logger";
+import { z } from "zod";
 import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
+
+const AttendanceRecordSchema = z.object({
+    labourId: z.string().min(1),
+    status: z.enum(["present", "half_day", "absent"]),
+});
+
+const AttendanceSyncSchema = z.object({
+    date: z.string().min(1, "Date is required"),
+    records: z.array(AttendanceRecordSchema).min(1).max(500),
+});
 
 export async function POST(req: Request) {
     try {
@@ -22,21 +34,17 @@ export async function POST(req: Request) {
         }
 
         const body = await req.json();
-        const { date, records } = body;
-
-        if (!date || !records || !Array.isArray(records)) {
-            return NextResponse.json({ error: "Invalid data" }, { status: 400 });
+        const parsed = AttendanceSyncSchema.safeParse(body);
+        if (!parsed.success) {
+            return NextResponse.json(
+                { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
+                { status: 400 }
+            );
         }
 
-        // 🟢 STRUCTURED AUDIT LOGGING
-        console.info(JSON.stringify({
-            type: "BUSINESS_ATTENDANCE_SYNC",
-            businessId,
-            userId: user.id,
-            route: "/api/business/attendance",
-            method: "POST",
-            timestamp: new Date().toISOString()
-        }));
+        const { date, records } = parsed.data;
+
+        logger.debug("Business attendance sync", { businessId, userId: user.id, recordCount: records.length });
 
         await dbConnect();
 
@@ -100,23 +108,17 @@ export async function POST(req: Request) {
                         date: { $lt: ninetyDaysAgo } 
                     });
 
-                    console.info(JSON.stringify({
-                        type: "ATTENDANCE_CLEANUP_SUCCESS",
+                    logger.debug("Attendance cleanup success", {
                         businessId,
                         ownerId: instanceId,
                         deletedCount: result.deletedCount,
-                        route: "/api/business/attendance",
-                        method: "POST",
-                        timestamp: new Date().toISOString()
-                    }));
+                    });
                 } catch (err: any) {
-                    console.error(JSON.stringify({
-                        type: "CLEANUP_FAILED",
+                    logger.error("Attendance cleanup failed", {
                         key: "labour_cleanup",
                         ownerId: instanceId,
                         error: err.message,
-                        timestamp: new Date().toISOString()
-                    }));
+                    });
                 }
             })();
         }
@@ -132,7 +134,7 @@ export async function POST(req: Request) {
             headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
         });
     } catch (error: any) {
-        console.error("Attendance Sync Error:", error);
+        logger.error("Attendance sync error", { error: error.message });
         return NextResponse.json({ 
             data: null,
             meta: {
@@ -157,15 +159,9 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
         }
 
-        // 🟢 STRUCTURED AUDIT LOGGING
-        console.info(JSON.stringify({
-            type: "BUSINESS_ATTENDANCE_LIST",
-            businessId,
-            userId: user.id,
-            route: "/api/business/attendance",
-            method: "GET",
-            timestamp: new Date().toISOString()
-        }));
+        if (process.env.DEBUG_ANALYTICS === "true") {
+            logger.debug("Business attendance list", { businessId, userId: user.id });
+        }
 
         const { searchParams } = new URL(req.url);
         const date = searchParams.get("date");

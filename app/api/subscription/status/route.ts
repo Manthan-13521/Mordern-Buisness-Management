@@ -4,6 +4,7 @@ import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { Hostel } from "@/models/Hostel";
 import { Pool } from "@/models/Pool";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -100,7 +101,7 @@ export async function GET(req: Request) {
             trialUsed:  dbUser.trial?.isUsed || false,
         }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
-        console.error("[GET /api/subscription/status]", error);
+        logger.error("Subscription status error", { error: error?.message });
         return NextResponse.json({ error: "Failed to fetch subscription status" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

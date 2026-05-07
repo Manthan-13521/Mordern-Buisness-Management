@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { uploadToCloudinary } from "@/lib/cloudinary";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: Request) {
     try {
@@ -20,7 +21,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ url: secureUrl });
     } catch (error: any) {
-        console.error("Upload Error:", error);
+        logger.error("Upload error", { error: error?.message });
         return NextResponse.json({ error: "Upload failed", details: error.message }, { status: 500 });
     }
 }

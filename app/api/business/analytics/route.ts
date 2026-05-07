@@ -3,6 +3,7 @@ import { resolveUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessTransaction } from "@/models/BusinessTransaction";
 import { requireBusinessId } from "@/lib/tenant";
+import { logger } from "@/lib/logger";
 import {
     getRevenue,
     getReceivables,
@@ -34,16 +35,13 @@ export async function GET(req: Request) {
             throw new Error("Invalid businessId format");
         }
 
-        // 🟢 STRUCTURED AUDIT LOGGING (ENHANCED)
+        // Structured debug logging via pino
         if (process.env.DEBUG_ANALYTICS === "true") {
-            console.info(JSON.stringify({
-                type: "BUSINESS_ANALYTICS_QUERY",
+            logger.debug("Business analytics query", {
                 businessId,
                 userId: user.id,
                 route: "/api/business/analytics",
-                method: "GET",
-                timestamp: new Date().toISOString()
-            }));
+            });
         }
 
         await dbConnect();
@@ -89,10 +87,9 @@ export async function GET(req: Request) {
 
         const hasNoData = recentSales.length === 0 && recentPayments.length === 0;
 
-        // 📊 PERFORMANCE TRACKING
+        // Performance tracking via structured logger
         if (process.env.DEBUG_ANALYTICS === "true") {
-            console.info(JSON.stringify({
-                type: "ANALYTICS_PERF",
+            logger.debug("Analytics performance", {
                 businessId,
                 duration: Date.now() - start,
                 dailySales: dailyRevenue.total,
@@ -101,8 +98,7 @@ export async function GET(req: Request) {
                 dailyTxCount: dailyRevenue.transactionCount,
                 monthlyTxCount: monthlyRevenue.transactionCount,
                 yearlyTxCount: yearlyRevenue.transactionCount,
-                timestamp: new Date().toISOString()
-            }));
+            });
         }
 
         return NextResponse.json({
@@ -125,7 +121,7 @@ export async function GET(req: Request) {
             headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
         });
     } catch (error: any) {
-        console.error("Analytics Error:", error);
+        logger.error("Analytics error", { error: error.message, duration: Date.now() - start });
         return NextResponse.json({ 
             data: null,
             meta: {

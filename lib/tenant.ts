@@ -67,10 +67,9 @@ export function requireTenant(user?: AuthUser | null): string {
     // Check for ANY valid tenant scope (business → hostel → pool)
     const tenantId = user.businessId || user.hostelId || user.poolId;
     if (!tenantId || typeof tenantId !== "string" || tenantId.trim() === "") {
-        console.error("SECURITY: No tenant scope found", {
+        logger.error("SECURITY: No tenant scope found", {
             userId: user.id || "unknown",
             role: user.role,
-            poolId: user.poolId, hostelId: user.hostelId, businessId: user.businessId
         });
         throw new Error("Invalid or missing tenant assignment");
     }
@@ -85,9 +84,8 @@ export function requireBusinessId(user?: AuthUser | null): string {
 
     if (user.role !== "superadmin") {
         if (!businessId || typeof businessId !== "string" || businessId.trim() === "") {
-            console.error("SECURITY: Missing or invalid businessId access attempt", {
+            logger.error("SECURITY: Missing or invalid businessId access attempt", {
                 userId: user.id || "unknown",
-                providedId: businessId
             });
             throw new Error("Invalid or missing businessId");
         }

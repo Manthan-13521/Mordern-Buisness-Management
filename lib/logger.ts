@@ -54,7 +54,8 @@ export type AuditEventType =
     // ── Subscription ───────────────────────────────────────────
     | "SUBSCRIPTION_ACTIVATED"
     | "SUBSCRIPTION_PAYMENT_FAILED"
-    | "SUBSCRIPTION_WEBHOOK_INVALID_SIG";
+    | "SUBSCRIPTION_WEBHOOK_INVALID_SIG"
+    | "SUBSCRIPTION_AMOUNT_MISMATCH";
 
 interface AuditEvent {
     type: AuditEventType;
