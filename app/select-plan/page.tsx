@@ -209,11 +209,18 @@ export default function SelectPlanPage() {
 
             // Real Razorpay — guard against missing script
             if (typeof window.Razorpay === "undefined") {
-                alert("Payment gateway is still loading. Please wait a moment and try again.");
+                console.error("Razorpay SDK not found on window object");
+                alert("Payment gateway (Razorpay) failed to load. This is usually caused by a slow connection or an ad-blocker/firewall blocking 'checkout.razorpay.com'. Please check your browser console and try again.");
                 setLoading(false);
                 setSelectedPlan(null);
                 return;
             }
+
+            console.log("Initializing Razorpay with order:", {
+                orderId: orderData.orderId,
+                amount: orderData.amount,
+                hasKey: !!(orderData.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID)
+            });
 
             const options = {
                 key: orderData.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
@@ -223,6 +230,7 @@ export default function SelectPlanPage() {
                 description: `${planType.toUpperCase()} Plan - ${module.toUpperCase()}`,
                 order_id: orderData.orderId,
                 handler: async (response: any) => {
+                    console.log("Payment success handler triggered", response);
                     try {
                         const verifyRes = await fetch("/api/subscription/activate", {
                             method: "POST",
@@ -258,6 +266,7 @@ export default function SelectPlanPage() {
                 },
                 modal: {
                     ondismiss: () => {
+                        console.log("Razorpay modal dismissed");
                         setLoading(false);
                         setSelectedPlan(null);
                     },
@@ -272,22 +281,23 @@ export default function SelectPlanPage() {
             try {
                 const rzp = new window.Razorpay(options);
                 rzp.on("payment.failed", (response: any) => {
-                    console.error("Payment failed:", response.error);
-                    alert(response.error?.description || "Payment failed. Please try again.");
+                    console.error("Payment failed event:", response.error);
+                    alert(`Payment failed: ${response.error?.description || "Unknown error"}`);
                     setLoading(false);
                     setSelectedPlan(null);
                 });
+                console.log("Opening Razorpay modal...");
                 rzp.open();
             } catch (rzpErr: any) {
-                console.error("Razorpay constructor error:", rzpErr);
-                alert("Failed to initialize payment gateway. Please refresh and try again.");
+                console.error("Razorpay initialization error:", rzpErr);
+                alert(`Failed to open payment popup: ${rzpErr.message}`);
                 setLoading(false);
                 setSelectedPlan(null);
             }
             return;
-        } catch (error) {
-            console.error("Payment error", error);
-            alert("Something went wrong. Please try again.");
+        } catch (error: any) {
+            console.error("Global payment error:", error);
+            alert(`Error: ${error.message || "Something went wrong"}`);
         } finally {
             setLoading(false);
             setSelectedPlan(null);
