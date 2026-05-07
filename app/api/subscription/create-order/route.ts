@@ -208,6 +208,7 @@ export async function POST(req: Request) {
             orderId:  order.id,
             amount:   amountPaise,
             currency: "INR",
+            keyId:    process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
             isMock:   false,
             planType,
             module,

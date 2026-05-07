@@ -216,7 +216,7 @@ export default function SelectPlanPage() {
             }
 
             const options = {
-                key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+                key: orderData.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
                 amount: orderData.amount,
                 currency: orderData.currency,
                 name: "AquaSync SaaS",
@@ -269,15 +269,21 @@ export default function SelectPlanPage() {
                 theme: { color: "#0ea5e9" },
             };
 
-            const rzp = new window.Razorpay(options);
-            rzp.on("payment.failed", (response: any) => {
-                console.error("Payment failed:", response.error);
-                alert(response.error?.description || "Payment failed. Please try again.");
+            try {
+                const rzp = new window.Razorpay(options);
+                rzp.on("payment.failed", (response: any) => {
+                    console.error("Payment failed:", response.error);
+                    alert(response.error?.description || "Payment failed. Please try again.");
+                    setLoading(false);
+                    setSelectedPlan(null);
+                });
+                rzp.open();
+            } catch (rzpErr: any) {
+                console.error("Razorpay constructor error:", rzpErr);
+                alert("Failed to initialize payment gateway. Please refresh and try again.");
                 setLoading(false);
                 setSelectedPlan(null);
-            });
-            rzp.open();
-            // Don't reset loading here — modal is open, handlers above will reset
+            }
             return;
         } catch (error) {
             console.error("Payment error", error);
@@ -298,8 +304,7 @@ export default function SelectPlanPage() {
 
     return (
         <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-sans selection:bg-sky-500/30 transition-colors duration-300">
-            {/* Razorpay Checkout Script — must use next/script for App Router */}
-            <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
+            {/* Razorpay Checkout Script is loaded in root layout.tsx */}
 
             {/* Background Effects */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">

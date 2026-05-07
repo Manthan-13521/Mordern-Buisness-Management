@@ -19,6 +19,7 @@ const PUBLIC_API_PREFIXES = [
     "/api/hostel/register",
     "/api/business/register",
     "/api/razorpay/create-order",
+    "/api/subscription/create-order",
     "/api/csp-report",
 ];
 
