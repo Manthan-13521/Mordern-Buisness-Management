@@ -5,8 +5,30 @@ import { applySecurityHeaders, applyCORS, withSecurity } from "./middlewares/sec
 import { withRateLimit, getIp } from "./middlewares/rateLimit";
 import { withAbuse } from "./middlewares/abuse";
 import { withAuthRouting } from "./middlewares/auth";
-import { jwtVerify } from "jose";
-import { encode } from "next-auth/jwt";
+
+// ─── PUBLIC PATHS: exempt from session requirement ───────────────────
+const PUBLIC_API_PREFIXES = [
+    "/api/auth",
+    "/api/seed",
+    "/api/razorpay/webhook",
+    "/api/subscription/webhook",
+    "/api/health",
+    "/api/cron",
+    "/api/warmup",
+    "/api/pool/register",
+    "/api/hostel/register",
+    "/api/business/register",
+    "/api/razorpay/create-order",
+];
+
+// ─── PUBLIC PAGE PATHS: accessible without session ───────────────────
+const PUBLIC_PAGE_PATHS = [
+    "/login",
+    "/register",
+    "/select-plan",
+    "/renew-plan",
+    "/subscribe",
+];
 
 export default withAuth(
     async function middleware(req: NextRequestWithAuth) {
@@ -19,7 +41,16 @@ export default withAuth(
 
         // 2. ABUSE & RATELIMIT (API Only)
         let rlHeaders = { limit: '50', remaining: '50' };
-        const isLoadTest = process.env.LOAD_TEST === "true" && req.nextUrl.searchParams.get("test") === "true";
+
+        // ── Load-test bypass: secret header required, never a query param ──
+        const isLoadTest =
+            process.env.LOAD_TEST === "true" &&
+            req.headers.get("x-load-test-secret") === process.env.LOAD_TEST_SECRET;
+
+        // Guard: LOAD_TEST must never be active in production
+        if (process.env.NODE_ENV === "production" && process.env.LOAD_TEST === "true") {
+            console.error("FATAL MISCONFIGURATION: LOAD_TEST is enabled in production");
+        }
 
         if (path.startsWith("/api/") && !isLoadTest) {
             const ip = getIp(req);
@@ -59,7 +90,29 @@ export default withAuth(
     },
     {
         callbacks: {
-            authorized: () => true,
+            // ── FIXED: was `() => true` which bypassed all session checks ──
+            // Public API paths and page paths are whitelisted; everything else requires a valid token.
+            authorized: ({ token, req }) => {
+                const path = req.nextUrl.pathname;
+
+                // Always allow public API paths through without a session
+                if (PUBLIC_API_PREFIXES.some((prefix) => path.startsWith(prefix))) {
+                    return true;
+                }
+
+                // Always allow public page paths through without a session
+                if (PUBLIC_PAGE_PATHS.some((p) => path.startsWith(p))) {
+                    return true;
+                }
+
+                // Allow login sub-routes for tenant admin pages
+                if (path.includes("/login")) {
+                    return true;
+                }
+
+                // All other matched paths require a valid session token
+                return !!token;
+            },
         },
     }
 );

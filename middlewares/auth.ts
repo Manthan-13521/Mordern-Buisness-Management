@@ -36,8 +36,11 @@ const SUBSCRIPTION_ALWAYS_ALLOW = [
 
 export function withAuthRouting(req: NextRequestWithAuth): NextResponse | undefined {
     // ── LOAD TEST BYPASS ──────────────────────────────────────────────────
-    // Skip all auth/subscription/tenant guards for load test requests.
-    if (process.env.LOAD_TEST === "true" && req.nextUrl.searchParams.get("test") === "true") {
+    // Skip all auth/subscription/tenant guards for load test requests (secret header required).
+    if (
+        process.env.LOAD_TEST === "true" &&
+        req.headers.get("x-load-test-secret") === process.env.LOAD_TEST_SECRET
+    ) {
         return undefined; // pass through — resolveUser() handles the synthetic user
     }
 
