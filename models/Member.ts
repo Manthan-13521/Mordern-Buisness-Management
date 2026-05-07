@@ -182,6 +182,7 @@ memberSchema.index({ poolId: 1, createdAt: -1 });
 memberSchema.index({ poolId: 1, isDeleted: 1, isExpired: 1 });
 memberSchema.index({ poolId: 1, isDeleted: 1 });
 memberSchema.index({ poolId: 1, memberType: 1 }); // Fast type filtering without $regex
+memberSchema.index({ poolId: 1, expiryDate: 1 }); // Dashboard expiry queries use $or on planEndDate + expiryDate
 
 // ── Section 2A — additional performance indexes ─────────────────────
 memberSchema.index({ createdAt: -1 });

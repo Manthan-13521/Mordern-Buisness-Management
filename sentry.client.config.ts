@@ -11,8 +11,8 @@ Sentry.init({
 
   // ── Sampling ──────────────────────────────────────────────────────────
   // Capture 100% of errors; sample 20% of transactions for performance.
-  // Tune tracesSampleRate down in high-traffic production.
-  tracesSampleRate: 0.2,
+  // TODO: Reduce to 0.1 after 2 weeks of stable production data
+  tracesSampleRate: 1.0,
 
   // ── Environment ───────────────────────────────────────────────────────
   environment: process.env.NODE_ENV,

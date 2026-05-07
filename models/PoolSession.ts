@@ -23,5 +23,9 @@ const poolSessionSchema = new Schema<IPoolSession>(
     { timestamps: true }
 );
 
+// Compound indexes for occupancy aggregation and cleanup queries
+poolSessionSchema.index({ poolId: 1, status: 1 }); // Occupancy aggregate: { poolId, status: "active" }
+poolSessionSchema.index({ status: 1, expiryTime: 1 }); // Cleanup: find expired active sessions
+
 export const PoolSession: Model<IPoolSession> =
     mongoose.models.PoolSession || mongoose.model<IPoolSession>("PoolSession", poolSessionSchema);

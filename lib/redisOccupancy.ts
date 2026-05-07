@@ -27,7 +27,7 @@ export async function getOccupancy(poolId: string): Promise<number> {
     const result = await PoolSession.aggregate([
         { $match: { poolId, status: "active" } },
         { $group: { _id: null, count: { $sum: "$numPersons" } } } 
-    ]);
+    ]).option({ maxTimeMS: 10000 });
     
     // In AquaSync, normally PoolSession is per member. So $sum: 1
     const count = result.length > 0 ? result[0].count : 0;
@@ -35,7 +35,7 @@ export async function getOccupancy(poolId: string): Promise<number> {
     // Seed Redis to avoid future aggregate calls
     if (redis) {
         try {
-            await redis.set(key, count);
+            await redis.set(key, count, { ex: 300 }); // 5 min TTL — resynced by occupancy-sync cron
         } catch (e) {}
     }
     
@@ -59,7 +59,7 @@ export async function decrOccupancy(poolId: string, amount: number = 1) {
         try {
             const newVal = await redis.decrby(key, amount);
             if (newVal < 0) {
-                await redis.set(key, 0); // Correct desynchronizations
+                await redis.set(key, 0, { ex: 300 }); // Correct desynchronizations
             }
         } catch (e) {
             console.warn("[Occupancy] Redis DECR failed:", e);

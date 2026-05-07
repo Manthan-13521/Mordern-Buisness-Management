@@ -9,13 +9,16 @@ import { Testimonials } from "@/components/marketing/Testimonials";
 import { Footer } from "@/components/marketing/Footer";
 import { FloatingCTA } from "@/components/marketing/FloatingCTA";
 
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://modern-businesses-management.vercel.app";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(appUrl),
   title: "AquaSync SaaS - Pool & Hostel Management Software",
   description: "Manage swimming pools and hostels with one powerful platform. Payments, members, analytics, and automation.",
   openGraph: {
     title: "AquaSync SaaS",
     description: "All-in-one business management platform",
-    url: "https://yourdomain.com",
+    url: appUrl,
     siteName: "AquaSync",
     type: "website",
   },

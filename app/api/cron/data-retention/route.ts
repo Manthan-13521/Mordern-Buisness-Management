@@ -37,7 +37,7 @@ export async function GET(req: Request) {
         await dbConnect();
         
         // --- 1. AWS Backup Safety Check ---
-        const settings = await Settings.findOne();
+        const settings = await Settings.findOne().lean();
         if (!settings || !settings.lastBackupAt) {
             logger.warn("[DataRetention] Backup safety check failed. lastBackupAt is missing.");
             return NextResponse.json({ 

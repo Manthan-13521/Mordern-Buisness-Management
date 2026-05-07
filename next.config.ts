@@ -70,6 +70,29 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" },
         ],
       },
+      {
+        // Content Security Policy — restricts script/resource origins
+        source: "/(.*)",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' checkout.razorpay.com",
+              "connect-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://upstash.io",
+              "img-src 'self' data: res.cloudinary.com",
+              "frame-src checkout.razorpay.com",
+              "media-src 'self' blob:",
+              "style-src 'self' 'unsafe-inline'",
+              "font-src 'self' data:",
+            ].join("; "),
+          },
+          {
+            key: "Permissions-Policy",
+            value: "camera=self, microphone=()",
+          },
+        ],
+      },
     ];
   },
 };

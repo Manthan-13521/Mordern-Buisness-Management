@@ -60,7 +60,7 @@ export async function GET(req: Request) {
                 { "subscription.expiryDate": { $gte: oneDayFromNow, $lte: oneDayEnd } },
                 { "subscription.expiryDate": { $gte: todayStart, $lte: todayEnd } },
             ],
-        }).select("name email phone subscription");
+        }).select("name email phone subscription").lean();
 
         let alertsSent = 0;
         for (const user of usersToAlert) {

@@ -14,7 +14,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
                     queries: {
                         staleTime: PRIVATE_API_STALE_MS,
                         gcTime: 5 * 60 * 1000,
-                        refetchOnWindowFocus: true, // Auto-update if they switch tabs
+                        refetchOnWindowFocus: false, // SaaS dashboards don't need live-feed behavior
                         refetchOnMount: false, // Prevents Strict Mode double fetching
                         refetchOnReconnect: true,
                         retry: 1,

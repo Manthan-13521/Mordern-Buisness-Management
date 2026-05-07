@@ -30,13 +30,13 @@ export async function GET(req: Request) {
             const result = await PoolSession.aggregate([
                 { $match: { poolId, status: "active" } },
                 { $group: { _id: null, count: { $sum: "$numPersons" } } }
-            ]);
+            ]).option({ maxTimeMS: 10000 });
 
             const count = result.length > 0 ? result[0].count : 0;
 
             if (redis) {
                 const key = `pool:${poolId}:count`;
-                await redis.set(key, count);
+                await redis.set(key, count, { ex: 300 }); // 5 min TTL
             }
         }
 

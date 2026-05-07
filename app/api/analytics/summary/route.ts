@@ -47,12 +47,12 @@ export async function GET(req: Request) {
             Payment.aggregate([
                 { $match: { poolId, status: "success", createdAt: { $gte: startOfDayIST } } },
                 { $group: { _id: null, total: { $sum: "$amount" } } }
-            ]).read('secondaryPreferred'),
+            ]).read('secondaryPreferred').option({ maxTimeMS: 10000 }),
             // Monthly revenue
             Payment.aggregate([
                 { $match: { poolId, status: "success", createdAt: { $gte: startOfMonthIST } } },
                 { $group: { _id: null, total: { $sum: "$amount" } } }
-            ]).read('secondaryPreferred'),
+            ]).read('secondaryPreferred').option({ maxTimeMS: 10000 }),
             // Ledger aggregates
             Ledger.aggregate([
                 { $match: { poolId } },
@@ -64,7 +64,7 @@ export async function GET(req: Request) {
                     creditBalance: { $sum: { $cond: [{ $gt: ["$creditBalance", 0] }, "$creditBalance", 0] } },
                     dueCount: { $sum: { $cond: [{ $gt: ["$balance", 0] }, 1, 0] } }
                 }}
-            ]).read('secondaryPreferred'),
+            ]).read('secondaryPreferred').option({ maxTimeMS: 10000 }),
             // Defaulter Count: MongoDB pure pipeline removing JS level .map and .filter logic
             Subscription.aggregate([
                 { $match: { poolId, status: "active", nextDueDate: { $lt: now } } },
@@ -79,7 +79,7 @@ export async function GET(req: Request) {
                 { $unwind: "$ledgerInfo" },
                 { $match: { "ledgerInfo.balance": { $gt: 0 } } },
                 { $count: "total" }
-            ]).read('secondaryPreferred')
+            ]).read('secondaryPreferred').option({ maxTimeMS: 10000 })
         ]);
 
         const defaulterCount = defaulterAgg[0]?.total || 0;

@@ -1,5 +1,17 @@
 {
   "regions": ["bom1"],
+  "functions": {
+    "app/api/cron/hostel-rent-cycle/route.ts":    { "maxDuration": 60 },
+    "app/api/cron/data-retention/route.ts":        { "maxDuration": 60 },
+    "app/api/cron/hostel-data-retention/route.ts": { "maxDuration": 60 },
+    "app/api/notifications/reminders/route.ts":    { "maxDuration": 60 },
+    "app/api/cron/notifications/route.ts":         { "maxDuration": 60 },
+    "app/api/cron/subscription-expiry/route.ts":   { "maxDuration": 30 },
+    "app/api/cron/cleanup/route.ts":               { "maxDuration": 30 },
+    "app/api/cron/hostel-cleanup/route.ts":        { "maxDuration": 30 },
+    "app/api/cron/expiry-alerts/route.ts":         { "maxDuration": 30 },
+    "app/api/cron/next-day-alerts/route.ts":       { "maxDuration": 30 }
+  },
   "crons": [
     {
       "path": "/api/cron/cleanup",
@@ -39,7 +51,7 @@
     },
     {
       "path": "/api/cron/notifications",
-      "schedule": "0 4 * * *"
+      "schedule": "15 4 * * *"
     }
   ]
 }

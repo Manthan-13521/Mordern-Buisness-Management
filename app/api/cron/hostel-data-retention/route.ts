@@ -34,7 +34,7 @@ export async function GET(req: Request) {
     try {
         await dbConnect();
         
-        const allSettings = await HostelSettings.find({});
+        const allSettings = await HostelSettings.find({}).lean();
         const msIn24Hours = 24 * 60 * 60 * 1000;
         const now = new Date();
         const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);

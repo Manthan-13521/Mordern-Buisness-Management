@@ -10,7 +10,7 @@ export async function runOccupancyCleanupInBackground() {
         const expiredSessions = await PoolSession.find({
             status: "active",
             expiryTime: { $lte: now }
-        });
+        }).lean();
 
         const sessionIds = expiredSessions.map(s => s._id);
         const decrPromises = expiredSessions.map(s => 
@@ -36,7 +36,7 @@ export async function syncOccupancyToRedis(poolId: string) {
     try {
         const { getOccupancy } = await import("./redisOccupancy");
         const mongoCount = await getOccupancy(poolId); // Falling back triggers the aggregate
-        await redis.set(`pool:${poolId}:count`, mongoCount);
+        await redis.set(`pool:${poolId}:count`, mongoCount, { ex: 300 }); // 5 min TTL
         console.log(`[Reconciliation] Synced Pool ${poolId}: ${mongoCount}`);
     } catch (e) {
         console.error(`[Reconciliation] Sync failed for ${poolId}:`, e);
