@@ -50,8 +50,7 @@ const nextConfig: NextConfig = {
           // causes false security confidence, and can open XSS vectors in IE.
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
-          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-          { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
         ],
       },
       {
@@ -84,10 +83,10 @@ const nextConfig: NextConfig = {
             value: [
               "default-src 'self'",
               // 'unsafe-inline' needed for Next.js inline scripts; 'unsafe-eval' only in dev for HMR
-              `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV !== "production" ? " 'unsafe-eval'" : ""} checkout.razorpay.com`,
+              `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV !== "production" ? " 'unsafe-eval'" : ""} https://checkout.razorpay.com`,
               `connect-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://upstash.io https://*.sentry.io${process.env.NEXT_PUBLIC_APP_URL ? " " + process.env.NEXT_PUBLIC_APP_URL : ""}`,
               "img-src 'self' data: blob: https://res.cloudinary.com",
-              "frame-src checkout.razorpay.com",
+              "frame-src https://checkout.razorpay.com",
               "frame-ancestors 'none'",
               "media-src 'self' blob:",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
@@ -100,7 +99,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()",
+            value: "camera=(), microphone=(), geolocation=(), payment=(self \"https://checkout.razorpay.com\"), usb=(), interest-cohort=()",
           },
         ],
       },

@@ -7,9 +7,8 @@ export const SECURITY_HEADERS: Record<string, string> = {
     "X-Frame-Options": "DENY",
     // X-XSS-Protection intentionally omitted — deprecated, can open XSS vectors in IE
     "Referrer-Policy": "strict-origin-when-cross-origin",
-    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()",
-    "Cross-Origin-Opener-Policy": "same-origin",
-    "Cross-Origin-Resource-Policy": "same-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(self \"https://checkout.razorpay.com\"), usb=(), interest-cohort=()",
+    "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
 };
 
 const ALLOWED_ORIGINS = new Set(
