@@ -9,7 +9,7 @@ import { Testimonials } from "@/components/marketing/Testimonials";
 import { Footer } from "@/components/marketing/Footer";
 import { FloatingCTA } from "@/components/marketing/FloatingCTA";
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://modern-businesses-management.vercel.app";
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://aquasync.in";
 
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl),

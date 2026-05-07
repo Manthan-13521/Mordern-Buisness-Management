@@ -9,9 +9,34 @@ import { LocalDBInitializer } from "@/components/LocalDBInitializer";
 
 const inter = Inter({ subsets: ["latin"] });
 
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://aquasync.in";
+
 export const metadata: Metadata = {
-  title: "TS Pools Management System",
-  description: "Next Generation Swimming Pool Management",
+  metadataBase: new URL(appUrl),
+  title: {
+    default: "AquaSync — All-in-One Business Management",
+    template: "%s | AquaSync",
+  },
+  description: "Manage swimming pools, hostels, and businesses with one powerful platform. Payments, members, analytics, and automation.",
+  openGraph: {
+    title: "AquaSync SaaS",
+    description: "All-in-one business management platform for pools, hostels & workforce",
+    url: appUrl,
+    siteName: "AquaSync",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AquaSync SaaS",
+    description: "All-in-one business management platform",
+  },
+  alternates: {
+    canonical: appUrl,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({

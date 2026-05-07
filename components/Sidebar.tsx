@@ -21,6 +21,7 @@ import {
     MessageSquare,
     BadgeDollarSign,
 } from "lucide-react";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function Sidebar() {
     const pathname = usePathname();
@@ -138,8 +139,9 @@ export function Sidebar() {
                     );
                 })}
             </nav>
-            <div className="p-4 border-t border-gray-800 text-xs text-gray-500 text-center">
-                v2.0.0 — Production
+            <div className="border-t border-gray-800 p-3 space-y-1">
+                <ThemeToggle />
+                <p className="text-center text-[10px] text-gray-600 pt-1">v2.0.0 — Production</p>
             </div>
         </div>
     );

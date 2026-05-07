@@ -33,6 +33,9 @@ const envSchema = z.object({
   ),
   RAZORPAY_KEY_SECRET: z.string().optional(),
   RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+
+  // Seed endpoint security
+  SEED_SECRET: z.string().optional(),
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_PHONE_NUMBER: z.string().optional(),
@@ -57,6 +60,32 @@ const envSchema = z.object({
       code: z.ZodIssueCode.custom,
       message: "RAZORPAY_WEBHOOK_SECRET is required in production to prevent forged webhooks",
       path: ["RAZORPAY_WEBHOOK_SECRET"],
+    });
+  }
+  if (data.RAZORPAY_WEBHOOK_SECRET && data.RAZORPAY_WEBHOOK_SECRET.length < 20) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "RAZORPAY_WEBHOOK_SECRET must be at least 20 characters",
+      path: ["RAZORPAY_WEBHOOK_SECRET"],
+    });
+  }
+
+  // SECURITY: SEED_SECRET must be at least 32 characters for brute-force resistance
+  if (data.SEED_SECRET && data.SEED_SECRET.length < 32) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "SEED_SECRET must be at least 32 characters long",
+      path: ["SEED_SECRET"],
+    });
+  }
+
+  // SECURITY: LOAD_TEST must NEVER be enabled in production
+  if (process.env.NODE_ENV === "production" && process.env.LOAD_TEST === "true") {
+    console.error("❌ FATAL: LOAD_TEST=true in production — rate limiting is disabled!");
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "LOAD_TEST must not be 'true' in production — it disables all rate limiting",
+      path: [],
     });
   }
 

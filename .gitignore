@@ -72,3 +72,10 @@ invoice.html
 *.log
 next-dev.log
 pw-extract-temp/
+
+# ── Repo hygiene: permanently block debug artifacts ──────────────────
+/*.py
+/test-*.ts
+/test-*.js
+.planning/
+.agent/

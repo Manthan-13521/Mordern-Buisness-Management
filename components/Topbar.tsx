@@ -4,6 +4,7 @@ import { useState } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { LogOut, User as UserIcon, Menu, X } from "lucide-react";
 import { Sidebar } from "./Sidebar";
+import { ThemeToggle } from "./ThemeToggle";
 import { usePathname } from "next/navigation";
 
 const PAGE_TITLES: Record<string, string> = {
@@ -59,6 +60,7 @@ export function Topbar() {
                     </div>
                 </div>
                 <div className="flex items-center gap-x-4 lg:gap-x-6">
+                    <div className="hidden md:block"><ThemeToggle /></div>
                     <div className="flex items-center gap-x-4 lg:gap-x-6">
                         <div className="flex items-center gap-x-2 text-sm font-semibold leading-6 text-gray-900 dark:text-white">
                             <span className="sr-only">Your profile</span>

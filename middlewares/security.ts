@@ -5,9 +5,11 @@ import { verifyCSRFToken } from "@/lib/csrf";
 export const SECURITY_HEADERS: Record<string, string> = {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
-    "X-XSS-Protection": "1; mode=block",
+    // X-XSS-Protection intentionally omitted — deprecated, can open XSS vectors in IE
     "Referrer-Policy": "strict-origin-when-cross-origin",
-    "Permissions-Policy": "camera=(self), microphone=(), geolocation=()",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()",
+    "Cross-Origin-Opener-Policy": "same-origin",
+    "Cross-Origin-Resource-Policy": "same-origin",
 };
 
 const ALLOWED_ORIGINS = new Set(
@@ -50,6 +52,7 @@ const CSRF_EXEMPT = [
     "/api/subscription/webhook",
     "/api/subscription/",
     "/api/business/register",
+    "/api/csp-report",
 ];
 
 export async function withSecurity(req: NextRequestWithAuth): Promise<NextResponse | undefined> {

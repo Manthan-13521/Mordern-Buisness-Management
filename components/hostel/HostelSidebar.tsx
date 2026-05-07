@@ -20,6 +20,7 @@ import {
     BedDouble,
     Activity
 } from "lucide-react";
+import { ThemeToggle } from "../ThemeToggle";
 
 export function HostelSidebar() {
     const pathname = usePathname();
@@ -90,6 +91,7 @@ export function HostelSidebar() {
                 <div className="px-3 py-1">
                     <p className="text-xs text-slate-400 truncate">{session?.user?.email}</p>
                 </div>
+                <ThemeToggle />
                 <button
                     onClick={() => signOut({ callbackUrl: "/login" })}
                     className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-400 hover:bg-red-900/30 hover:text-red-400 transition-colors"

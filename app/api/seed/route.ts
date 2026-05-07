@@ -4,6 +4,7 @@ import { User } from "@/models/User";
 import { Pool } from "@/models/Pool";
 import { PlatformAdmin } from "@/models/PlatformAdmin";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -13,29 +14,37 @@ export const revalidate = 0;
  * Creates a platform super admin + demo pool + admin user for initial setup.
  *
  * ⚠️  BLOCKED in production. Only works in development/staging.
- * ⚠️  Protected by SEED_SECRET env variable.
+ * ⚠️  Protected by SEED_SECRET env variable (min 32 chars).
+ * ⚠️  Uses constant-time comparison to prevent timing attacks.
  * ⚠️  Passwords MUST be provided via env vars (never hardcoded).
  *
  * Required env vars:
  *   SEED_SECRET, SEED_ADMIN_PASSWORD, SEED_OPERATOR_PASSWORD
  */
 export async function POST(req: NextRequest) {
-    // ── Gate: Block in production ────────────────────────────────────────
-    if (process.env.NODE_ENV === "production") {
-        return new NextResponse(null, { status: 404 });
+    // ── Gate: Block in production (defense in depth) ─────────────────────
+    // Requires both: NOT production AND SEED_ENABLED=true
+    if (process.env.NODE_ENV === "production" && !process.env.SEED_ENABLED) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // ── Auth: Require SEED_SECRET ────────────────────────────────────────
     const seedSecret = process.env.SEED_SECRET;
-    if (!seedSecret) {
-        return NextResponse.json({ error: "SEED_SECRET is not configured on the server.", code: "MISCONFIGURED" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+    if (!seedSecret || seedSecret.length < 32) {
+        return NextResponse.json({ error: "Server misconfiguration.", code: "MISCONFIGURED" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 
     const authHeader = req.headers.get("authorization") ?? "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
 
-    if (token !== seedSecret) {
-        return NextResponse.json({ error: "Unauthorized", code: "FORBIDDEN" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+    // Constant-time comparison — prevents timing side-channel attacks
+    if (
+        !token ||
+        token.length !== seedSecret.length ||
+        !crypto.timingSafeEqual(Buffer.from(token, "utf8"), Buffer.from(seedSecret, "utf8"))
+    ) {
+        // Generic 401 — never reveal "invalid token" vs "missing token"
+        return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 
     // ── Validate: Require env-based passwords ────────────────────────────

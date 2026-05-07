@@ -135,6 +135,7 @@ export async function POST(req: Request) {
             planType,
             module,
             blocks: blocks ? parseInt(blocks) : undefined,
+            amountPaid: paidAmountPaise / 100, // Pass actual amount paid
         });
 
         return NextResponse.json({ success: true }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });

@@ -33,7 +33,13 @@ export async function POST(req: Request) {
                 .update(razorpay_order_id + "|" + razorpay_payment_id)
                 .digest("hex");
 
-            if (generated_signature !== razorpay_signature) {
+            // Use timingSafeEqual to prevent timing side-channel attacks
+            const sigBuffer = Buffer.from(razorpay_signature || "", "utf8");
+            const expectedBuffer = Buffer.from(generated_signature, "utf8");
+            if (
+                sigBuffer.length !== expectedBuffer.length ||
+                !crypto.timingSafeEqual(sigBuffer, expectedBuffer)
+            ) {
                 logger.audit({
                     type: "PAYMENT_FAILED",
                     ip: req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown",

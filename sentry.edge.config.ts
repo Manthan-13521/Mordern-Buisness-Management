@@ -9,8 +9,8 @@ Sentry.init({
   dsn: process.env.SENTRY_DSN,
 
   // ── Sampling ──────────────────────────────────────────────────────────
-  // TODO: Reduce to 0.1 after 2 weeks of stable production data
-  tracesSampleRate: 1.0,
+  // 10% sampling in production to avoid Sentry quota exhaustion
+  tracesSampleRate: 0.1,
 
   // ── Environment ───────────────────────────────────────────────────────
   environment: process.env.NODE_ENV,

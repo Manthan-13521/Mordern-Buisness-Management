@@ -6,6 +6,8 @@ import "./lib/env";
 const nextConfig: NextConfig = {
   // Gzip all responses — important for JSON API payloads
   compress: true,
+  // Remove X-Powered-By: Next.js header — prevents server fingerprinting
+  poweredByHeader: false,
   compiler: {
     removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error", "warn"] } : false,
   },
@@ -44,9 +46,12 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
-          { key: "X-XSS-Protection", value: "1; mode=block" },
+          // X-XSS-Protection intentionally omitted — deprecated by all modern browsers,
+          // causes false security confidence, and can open XSS vectors in IE.
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+          { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
         ],
       },
       {
@@ -78,18 +83,24 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' checkout.razorpay.com",
-              "connect-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://upstash.io",
-              "img-src 'self' data: res.cloudinary.com",
+              // 'unsafe-inline' needed for Next.js inline scripts; 'unsafe-eval' only in dev for HMR
+              `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV !== "production" ? " 'unsafe-eval'" : ""} checkout.razorpay.com`,
+              `connect-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://upstash.io https://*.sentry.io${process.env.NEXT_PUBLIC_APP_URL ? " " + process.env.NEXT_PUBLIC_APP_URL : ""}`,
+              "img-src 'self' data: blob: https://res.cloudinary.com",
               "frame-src checkout.razorpay.com",
+              "frame-ancestors 'none'",
               "media-src 'self' blob:",
-              "style-src 'self' 'unsafe-inline'",
-              "font-src 'self' data:",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "font-src 'self' data: https://fonts.gstatic.com",
+              "object-src 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+              "worker-src 'self' blob:",
             ].join("; "),
           },
           {
             key: "Permissions-Policy",
-            value: "camera=self, microphone=()",
+            value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()",
           },
         ],
       },

@@ -97,7 +97,7 @@ export async function GET(req: Request, props: { params: Promise<{ hostelSlug: s
         }
       },
       { $sort: { name: 1 } }
-    ]);
+    ]).option({ maxTimeMS: 5000 });
 
     return NextResponse.json(laboursRaw, { headers: { "Cache-Control": "no-store" } });
   } catch (error: any) {

@@ -82,7 +82,7 @@ export async function GET(req: Request) {
             HostelRoom.aggregate([
                 { $match: roomBase },
                 { $group: { _id: null, total: { $sum: "$capacity" } } },
-            ]),
+            ]).option({ maxTimeMS: 5000 }),
         ]);
         const totalRooms    = roomCount;
         const totalCapacity = roomCapacityAgg[0]?.total || 0;
@@ -126,7 +126,7 @@ export async function GET(req: Request) {
             HostelMember.aggregate([
                 { $match: { ...memberBase, balance: { $lt: 0 }, status: "active", isActive: true } },
                 { $group: { _id: null, total: { $sum: "$balance" } } }
-            ]),
+            ]).option({ maxTimeMS: 5000 }),
         ]);
 
         const totalDue = Math.abs(totalDueAgg[0]?.total || 0);
@@ -146,15 +146,15 @@ export async function GET(req: Request) {
                 HostelAnalytics.aggregate([
                     { $match: { hostelId, yearMonth: { $regex: `^${currentYearMonth}` } } },
                     { $group: { _id: null, total: { $sum: "$totalIncome" } } },
-                ]),
+                ]).option({ maxTimeMS: 5000 }),
                 HostelAnalytics.aggregate([
                     { $match: { hostelId, yearMonth: { $regex: `^${currentYear}` } } },
                     { $group: { _id: null, total: { $sum: "$totalIncome" } } },
-                    ]),
+                    ]).option({ maxTimeMS: 5000 }),
                 HostelAnalytics.aggregate([
                     { $match: { hostelId } },
                     { $group: { _id: null, total: { $sum: "$totalIncome" } } },
-                ]),
+                ]).option({ maxTimeMS: 5000 }),
             ]);
             monthlyIncome = monthlySnap[0]?.total ?? 0;
             yearlyIncome  = yearlySnap[0]?.total ?? 0;
@@ -165,15 +165,15 @@ export async function GET(req: Request) {
                 HostelPayment.aggregate([
                     { $match: { ...paymentBase, createdAt: { $gte: startOfMonth } } },
                     { $group: { _id: null, total: { $sum: "$amount" } } },
-                ]),
+                ]).option({ maxTimeMS: 5000 }),
                 HostelPayment.aggregate([
                     { $match: { ...paymentBase, createdAt: { $gte: startOfYear } } },
                     { $group: { _id: null, total: { $sum: "$amount" } } },
-                ]),
+                ]).option({ maxTimeMS: 5000 }),
                 HostelPayment.aggregate([
                     { $match: paymentBase },
                     { $group: { _id: null, total: { $sum: "$amount" } } },
-                ]),
+                ]).option({ maxTimeMS: 5000 }),
             ]);
             monthlyIncome = monthlyAgg[0]?.total ?? 0;
             yearlyIncome  = yearlyAgg[0]?.total ?? 0;

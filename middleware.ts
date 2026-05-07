@@ -19,6 +19,7 @@ const PUBLIC_API_PREFIXES = [
     "/api/hostel/register",
     "/api/business/register",
     "/api/razorpay/create-order",
+    "/api/csp-report",
 ];
 
 // ─── PUBLIC PAGE PATHS: accessible without session ───────────────────
@@ -42,15 +43,25 @@ export default withAuth(
         // 2. ABUSE & RATELIMIT (API Only)
         let rlHeaders = { limit: '50', remaining: '50' };
 
-        // ── Load-test bypass: secret header required, never a query param ──
-        const isLoadTest =
-            process.env.LOAD_TEST === "true" &&
-            req.headers.get("x-load-test-secret") === process.env.LOAD_TEST_SECRET;
+        // ── Load-test bypass: secret header + IP allowlist required ──────────
+        // LOAD_TEST mode requires ALL of:
+        //   1. LOAD_TEST=true env var
+        //   2. x-load-test-secret header matching LOAD_TEST_SECRET env var
+        //   3. Request IP in LOAD_TEST_ALLOWED_IPS (comma-separated)
+        //   4. NOT in production (blocked at env.ts startup)
+        const isLoadTest = (() => {
+            if (process.env.LOAD_TEST !== "true") return false;
+            if (process.env.NODE_ENV === "production") return false; // Hard block
 
-        // Guard: LOAD_TEST must never be active in production
-        if (process.env.NODE_ENV === "production" && process.env.LOAD_TEST === "true") {
-            console.error("FATAL MISCONFIGURATION: LOAD_TEST is enabled in production");
-        }
+            const secret = process.env.LOAD_TEST_SECRET;
+            const headerSecret = req.headers.get("x-load-test-secret");
+            if (!secret || !headerSecret || secret !== headerSecret) return false;
+
+            const allowedIPs = (process.env.LOAD_TEST_ALLOWED_IPS || "").split(",").map(s => s.trim()).filter(Boolean);
+            if (allowedIPs.length === 0) return false; // No IPs configured = no bypass
+            const clientIp = getIp(req);
+            return allowedIPs.includes(clientIp);
+        })();
 
         if (path.startsWith("/api/") && !isLoadTest) {
             const ip = getIp(req);

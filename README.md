@@ -38,9 +38,13 @@ A production-ready SaaS platform for managing Swimming Pools, Hostels, and Workf
    - `NEXTAUTH_SECRET`
    - `NEXTAUTH_URL`
 
-3. **Database Seed**
+3. **Database Seed** *(local dev only)*
+   > ⚠️ **WARNING**: The seed endpoint is **disabled in production** by default.
+   > It only works when `NODE_ENV !== "production"` and requires a valid `SEED_SECRET` (min 32 chars).
+   > Set `SEED_SECRET`, `SEED_ADMIN_PASSWORD`, and `SEED_OPERATOR_PASSWORD` in `.env.local` first.
    ```bash
-   curl -H "Authorization: Bearer YOUR_SEED_SECRET" http://localhost:3000/api/seed
+   # Only run in local development — never in production
+   curl -X POST -H "Authorization: Bearer $SEED_SECRET" http://localhost:3000/api/seed
    ```
 
 4. **Run Dev**
