@@ -64,7 +64,11 @@ scratch/
 # Debug/fix scripts — never commit these
 script-*.js
 script-*.py
-safe_headers_inject.py
-revert_bad_headers.py
+safe_*.py
+revert_*.py
 invoice.html
 
+# Logs and temp
+*.log
+next-dev.log
+pw-extract-temp/
