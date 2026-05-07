@@ -83,10 +83,10 @@ const nextConfig: NextConfig = {
             value: [
               "default-src 'self'",
               // 'unsafe-inline' needed for Next.js inline scripts; 'unsafe-eval' only in dev for HMR
-              `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV !== "production" ? " 'unsafe-eval'" : ""} https://checkout.razorpay.com`,
-              `connect-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://upstash.io https://*.sentry.io${process.env.NEXT_PUBLIC_APP_URL ? " " + process.env.NEXT_PUBLIC_APP_URL : ""}`,
-              "img-src 'self' data: blob: https://res.cloudinary.com",
-              "frame-src https://checkout.razorpay.com",
+              `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV !== "production" ? " 'unsafe-eval'" : ""} https://checkout.razorpay.com https://*.razorpay.com`,
+              `connect-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://*.razorpay.com https://upstash.io https://*.sentry.io${process.env.NEXT_PUBLIC_APP_URL ? " " + process.env.NEXT_PUBLIC_APP_URL : ""}`,
+              "img-src 'self' data: blob: https://res.cloudinary.com https://cdn.razorpay.com https://*.razorpay.com",
+              "frame-src https://checkout.razorpay.com https://api.razorpay.com",
               "frame-ancestors 'none'",
               "media-src 'self' blob:",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",

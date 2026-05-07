@@ -3,7 +3,6 @@ import { Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
-import RazorpayScript from "@/components/RazorpayScript";
 import { Toaster } from "react-hot-toast";
 import { LocalDBInitializer } from "@/components/LocalDBInitializer";
 
@@ -53,7 +52,6 @@ export default function RootLayout({
           <Toaster position="bottom-right" toastOptions={{ className: 'dark:bg-[#0f172a] dark:text-white dark:border dark:border-white/10' }} />
         </Providers>
         <Analytics />
-        <RazorpayScript />
       </body>
     </html>
   );

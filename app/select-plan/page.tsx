@@ -7,6 +7,8 @@ import Script from "next/script";
 import { Check, Loader2, Sparkles, Zap, Shield, Blocks, Tag, X, Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { SUBSCRIPTION_PRICES, SubscriptionPlanType, SubscriptionModule } from "@/lib/subscriptionConfig";
+import { loadRazorpay } from "@/lib/loadRazorpay";
+import toast from "react-hot-toast";
 
 declare global {
     interface Window {
@@ -173,7 +175,7 @@ export default function SelectPlanPage() {
                 // Show detailed error in development, user-friendly in production
                 const debugInfo = orderData.debug ? `\n\nDebug: ${JSON.stringify(orderData.debug)}` : "";
                 const errorCode = orderData.code ? ` [${orderData.code}]` : "";
-                alert(`${orderData.error}${errorCode}${debugInfo}`);
+                toast.error(`${orderData.error}${errorCode}${debugInfo}`);
                 setLoading(false);
                 setSelectedPlan(null);
                 return;
@@ -196,21 +198,23 @@ export default function SelectPlanPage() {
                 if (verifyData.success) {
                     const isActive = await waitForSubscriptionActive();
                     if (isActive) {
+                        toast.success("Subscription activated successfully!");
                         window.location.href = getRedirectUrl();
                     } else {
-                        alert("Subscription activated but session sync is delayed. Please refresh the page or re-login.");
+                        toast.error("Subscription activated but session sync is delayed. Please refresh the page or re-login.");
                         window.location.href = getRedirectUrl();
                     }
                 } else {
-                    alert(verifyData.error || "Activation failed. Please try again.");
+                    toast.error(verifyData.error || "Activation failed. Please try again.");
                 }
                 return;
             }
 
-            // Real Razorpay — guard against missing script
-            if (typeof window.Razorpay === "undefined") {
-                console.error("Razorpay SDK not found on window object");
-                alert("Payment gateway (Razorpay) failed to load. This is usually caused by a slow connection or an ad-blocker/firewall blocking 'checkout.razorpay.com'. Please check your browser console and try again.");
+            // Real Razorpay — Ensure script is loaded
+            const isLoaded = await loadRazorpay();
+            if (!isLoaded || typeof window.Razorpay === "undefined") {
+                console.error("Razorpay SDK failed to load");
+                toast.error("Payment gateway failed to load. Please check your connection or disable ad-blockers and try again.");
                 setLoading(false);
                 setSelectedPlan(null);
                 return;
@@ -248,17 +252,18 @@ export default function SelectPlanPage() {
                         if (verifyData.success) {
                             const isActive = await waitForSubscriptionActive();
                             if (isActive) {
+                                toast.success("Payment successful!");
                                 window.location.href = getRedirectUrl();
                             } else {
-                                alert("Payment successful! Session sync is delayed. Redirecting...");
+                                toast.error("Payment successful! Session sync is delayed. Redirecting...");
                                 window.location.href = getRedirectUrl();
                             }
                         } else {
-                            alert(verifyData.error || "Payment verification failed. Contact support if amount was deducted.");
+                            toast.error(verifyData.error || "Payment verification failed. Contact support if amount was deducted.");
                         }
                     } catch (err) {
                         console.error("Verification error", err);
-                        alert("Payment received but verification failed. Please contact support.");
+                        toast.error("Payment received but verification failed. Please contact support.");
                     } finally {
                         setLoading(false);
                         setSelectedPlan(null);
@@ -282,7 +287,7 @@ export default function SelectPlanPage() {
                 const rzp = new window.Razorpay(options);
                 rzp.on("payment.failed", (response: any) => {
                     console.error("Payment failed event:", response.error);
-                    alert(`Payment failed: ${response.error?.description || "Unknown error"}`);
+                    toast.error(`Payment failed: ${response.error?.description || "Unknown error"}`);
                     setLoading(false);
                     setSelectedPlan(null);
                 });
@@ -290,14 +295,14 @@ export default function SelectPlanPage() {
                 rzp.open();
             } catch (rzpErr: any) {
                 console.error("Razorpay initialization error:", rzpErr);
-                alert(`Failed to open payment popup: ${rzpErr.message}`);
+                toast.error(`Failed to open payment popup: ${rzpErr.message}`);
                 setLoading(false);
                 setSelectedPlan(null);
             }
             return;
         } catch (error: any) {
             console.error("Global payment error:", error);
-            alert(`Error: ${error.message || "Something went wrong"}`);
+            toast.error(`Error: ${error.message || "Something went wrong"}`);
         } finally {
             setLoading(false);
             setSelectedPlan(null);
@@ -314,8 +319,6 @@ export default function SelectPlanPage() {
 
     return (
         <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-sans selection:bg-sky-500/30 transition-colors duration-300">
-            {/* Razorpay Checkout Script is loaded in root layout.tsx */}
-
             {/* Background Effects */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 bg-sky-600/10 rounded-full blur-[120px] animate-pulse" />
