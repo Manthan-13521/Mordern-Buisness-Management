@@ -23,17 +23,27 @@ export async function GET(req: Request) {
 
         const { searchParams } = new URL(req.url);
         const customerId = searchParams.get("customerId");
+        const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
+        const limit = Math.min(20, Math.max(1, parseInt(searchParams.get("limit") ?? "20")));
+        const skip = (page - 1) * limit;
 
         let query: any = { businessId };
         if (customerId) {
             query.customerId = customerId;
         }
 
-            const sales = await BusinessTransaction.find({ ...query, category: 'SALE' })
-                .populate("customerId", "name")
-                .sort({ date: -1 });
+            const [sales, total] = await Promise.all([
+                BusinessTransaction.find({ ...query, category: 'SALE' })
+                    .populate("customerId", "name")
+                    .select("customerId items amount paidAmount date transactionType receiptUrl transportationCost category createdAt")
+                    .sort({ date: -1 })
+                    .skip(skip)
+                    .limit(limit)
+                    .lean(),
+                BusinessTransaction.countDocuments({ ...query, category: 'SALE' }),
+            ]);
                 
-            return NextResponse.json({ success: true, data: sales }, {
+            return NextResponse.json({ success: true, data: sales, total, page, limit, totalPages: Math.ceil(total / limit) }, {
                 headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
             });
         } catch (error: any) {
@@ -92,7 +102,7 @@ export async function POST(req: Request) {
                 $inc: { 
                     totalPurchase: isReceived ? 0 : totalAmount, 
                     totalPaid: isReceived ? 0 : paidAmount,
-                    currentDue: isReceived ? -totalAmount : (totalAmount - paidAmount)
+                    currentDue: isReceived ? -(totalAmount - paidAmount) : (totalAmount - paidAmount)
                 } 
             }
         );
@@ -102,9 +112,8 @@ export async function POST(req: Request) {
             headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
         });
     } catch (error: any) {
-        logger.error("Sale Recording Error Details", {
+        logger.error("Sale recording error", {
             error: error.message,
-            stack: error.stack
         });
         return NextResponse.json({ 
             success: false,

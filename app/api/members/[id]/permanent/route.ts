@@ -36,6 +36,14 @@ export async function DELETE(req: Request, props: RouteContext) {
             return NextResponse.json({ error: "Not Found or Unauthorized" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
+        // Block deletion if member has pending balance
+        if ((member.balanceAmount || 0) > 0) {
+            return NextResponse.json(
+                { error: "Member has pending balance. Cannot delete." },
+                { status: 400, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }
+            );
+        }
+
         // Cleanup S3 photo if present and not used by anyone else
         if (member.photoUrl) {
             const mCount = await Member.countDocuments({ photoUrl: member.photoUrl, _id: { $ne: member._id } });
@@ -43,6 +51,24 @@ export async function DELETE(req: Request, props: RouteContext) {
             if (mCount === 0 && eCount === 0) {
                 await deleteS3Object(member.photoUrl);
             }
+        }
+
+        // Archive to DeletedMember before permanent delete
+        try {
+            const { DeletedMember } = await import("@/models/DeletedMember");
+            await DeletedMember.create({
+                originalId: member._id,
+                memberId: member.memberId || member._id.toString(),
+                name: member.name || "Unknown",
+                phone: member.phone || "Unknown",
+                poolId: member.poolId?.toString() || "unknown",
+                deletedAt: new Date(),
+                deletionType: "manual",
+                collectionSource: Model === EntertainmentMember ? "entertainment_members" : "members",
+                fullData: member,
+            });
+        } catch (archiveErr) {
+            console.warn("DeletedMember archive failed (non-critical):", archiveErr);
         }
 
         // Permanent explicit delete

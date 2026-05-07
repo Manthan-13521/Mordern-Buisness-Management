@@ -56,14 +56,14 @@ export async function GET(req: Request) {
             createdAt: { $gte: startDate }
         };
 
-        const rawPayments = await Payment.find(matchQuery, "amount createdAt memberId").populate("memberId", "memberId").lean();
+        // Filter by memberCollection instead of regex on memberId
+        if (memberType !== "all") {
+            matchQuery.memberCollection = memberType === "member" ? "members" : "entertainment_members";
+        }
+
+        const rawPayments = await Payment.find(matchQuery, "amount createdAt").lean();
         
         rawPayments.forEach((p: any) => {
-            if (memberType !== "all" && p.memberId && p.memberId.memberId) {
-                const idStr = p.memberId.memberId;
-                if (memberType === "member" && !/^M(?!S)/i.test(idStr)) return;
-                if (memberType === "entertainment" && !/^MS/i.test(idStr)) return;
-            }
             
             const date = new Date(p.createdAt);
             const istDate = new Date(date.getTime() + IST_OFFSET);

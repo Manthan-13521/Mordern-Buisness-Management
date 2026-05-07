@@ -70,6 +70,26 @@ function normalizeRawPayload(raw: Record<string, unknown> | null | undefined): A
  * Returns a strongly-typed AuthUser or null if unauthenticated.
  */
 export async function resolveUser(req: Request): Promise<AuthUser | null> {
+    // ── LOAD TEST BYPASS ──────────────────────────────────────────────────
+    // Only active when LOAD_TEST env var is explicitly "true".
+    // Returns a synthetic admin user so k6 can hit APIs without auth cookies.
+    if (process.env.LOAD_TEST === "true") {
+        try {
+            const url = new URL(req.url, "http://localhost");
+            if (url.searchParams.get("test") === "true") {
+                return {
+                    id: "test-user",
+                    email: "b@1.com",
+                    role: "admin",
+                    businessId: "BIZ001", // used by new logic
+                    poolId: "BIZ001",     // 🔥 required for legacy dashboard APIs
+                };
+            }
+        } catch {
+            // ignore malformed URL — fall through to real auth
+        }
+    }
+
     // 1. Bearer token check
     const authHeader = req.headers.get("authorization");
     if (authHeader?.startsWith("Bearer ")) {

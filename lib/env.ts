@@ -26,9 +26,13 @@ const envSchema = z.object({
   // Sentry
   SENTRY_DSN: z.string().url().optional(),
 
-  // external services
-  RAZORPAY_KEY_ID: z.string().optional(),
+  // external services — with key format validation
+  RAZORPAY_KEY_ID: z.string().optional().refine(
+    (val) => !val || val.startsWith("rzp_test_") || val.startsWith("rzp_live_"),
+    { message: "RAZORPAY_KEY_ID must start with 'rzp_test_' or 'rzp_live_'" }
+  ),
   RAZORPAY_KEY_SECRET: z.string().optional(),
+  RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_PHONE_NUMBER: z.string().optional(),
@@ -44,6 +48,36 @@ const envSchema = z.object({
       message: "CRON_SECRET is required in production",
       path: ["CRON_SECRET"],
     });
+  }
+
+  // SECURITY: Webhook secret is critical in production — without it, forged webhooks can
+  // grant free subscriptions (see webhook/route.ts hard-fail guard)
+  if (process.env.NODE_ENV === "production" && !data.RAZORPAY_WEBHOOK_SECRET) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "RAZORPAY_WEBHOOK_SECRET is required in production to prevent forged webhooks",
+      path: ["RAZORPAY_WEBHOOK_SECRET"],
+    });
+  }
+
+  // Warn if RAZORPAY_KEY_ID exists but RAZORPAY_KEY_SECRET is missing
+  if (data.RAZORPAY_KEY_ID && !data.RAZORPAY_KEY_SECRET) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "RAZORPAY_KEY_ID is set but RAZORPAY_KEY_SECRET is missing",
+      path: ["RAZORPAY_KEY_SECRET"],
+    });
+  }
+
+  // Rate limiting requires Redis — in-memory fallback is ineffective in serverless
+  if (!data.UPSTASH_REDIS_REST_URL) {
+    console.warn("[ENV] ⚠️ Rate limiting will use in-memory fallback — UPSTASH_REDIS_REST_URL not set");
+  }
+
+  // Warn if NEXT_PUBLIC_RAZORPAY_KEY_ID doesn't match RAZORPAY_KEY_ID
+  const publicKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+  if (publicKey && data.RAZORPAY_KEY_ID && publicKey !== data.RAZORPAY_KEY_ID) {
+    console.error("❌ NEXT_PUBLIC_RAZORPAY_KEY_ID does not match RAZORPAY_KEY_ID — frontend will use wrong key!");
   }
 });
 

@@ -25,6 +25,7 @@ const SUBSCRIPTION_PROTECTED_APIS = [
 const SUBSCRIPTION_ALWAYS_ALLOW = [
     "/api/auth",
     "/api/subscription",
+    "/api/referral",
     "/api/warmup",
     "/api/health",
     "/api/cron",
@@ -34,6 +35,12 @@ const SUBSCRIPTION_ALWAYS_ALLOW = [
 ];
 
 export function withAuthRouting(req: NextRequestWithAuth): NextResponse | undefined {
+    // ── LOAD TEST BYPASS ──────────────────────────────────────────────────
+    // Skip all auth/subscription/tenant guards for load test requests.
+    if (process.env.LOAD_TEST === "true" && req.nextUrl.searchParams.get("test") === "true") {
+        return undefined; // pass through — resolveUser() handles the synthetic user
+    }
+
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
 
@@ -41,17 +48,25 @@ export function withAuthRouting(req: NextRequestWithAuth): NextResponse | undefi
     if (path.startsWith("/api/")) {
         const isProtectedApi = SUBSCRIPTION_PROTECTED_APIS.some((p) => path.startsWith(p));
         const isAlwaysAllowed = SUBSCRIPTION_ALWAYS_ALLOW.some((p) => path.startsWith(p));
+        const subStatus = (token as any)?.subscriptionStatus;
 
         if (
             isProtectedApi &&
             !isAlwaysAllowed &&
             token?.role !== "superadmin" &&
-            (token as any)?.subscriptionStatus === "expired"
+            token?.role !== "operator" &&
+            (!subStatus || subStatus === "expired" || subStatus === "none" || subStatus === "suspended" || subStatus === "cancelled")
         ) {
+            console.warn(`[Middleware] API subscription block: ${path}`, {
+                userId: token?.id, status: subStatus, role: token?.role
+            });
+            const errMsg = subStatus === "expired" || subStatus === "suspended"
+                ? "Subscription expired. Please renew to continue."
+                : "No active subscription. Please select a plan.";
             const res = NextResponse.json(
                 {
-                    error: "Subscription expired. Please renew to continue.",
-                    code: "SUBSCRIPTION_EXPIRED",
+                    error: errMsg,
+                    code: subStatus === "expired" ? "SUBSCRIPTION_EXPIRED" : "SUBSCRIPTION_REQUIRED",
                 },
                 { status: 403 }
             );
@@ -59,17 +74,26 @@ export function withAuthRouting(req: NextRequestWithAuth): NextResponse | undefi
             return res;
         }
 
-        // ── Fast-Fail Pool API Edge Guard ──
-        // Only target Pool APIs (exclude hostel, business, auth)
+        // ── Fast-Fail Tenant API Edge Guard ──
+        // Ensure non-superadmin API users have at least ONE tenant scope.
+        // Pool users need poolId, hostel users need hostelId, business users need businessId.
         if (
             !isAlwaysAllowed &&
             !path.startsWith("/api/hostel") &&
             !path.startsWith("/api/business") &&
             token?.role !== "superadmin" &&
-            !token?.poolId
+            !token?.poolId &&
+            !(token as any)?.hostelId &&
+            !(token as any)?.businessId
         ) {
-             console.error(`[Middleware] SECURITY BLOCK: Missing poolId on ${path}`, { userId: token?.id });
-             const res = NextResponse.json({ error: "Tenant isolated: No poolId assigned to session" }, { status: 401 });
+             console.error(`[Middleware] SECURITY BLOCK: No tenant ID on ${path}`, {
+                 userId: token?.id, role: token?.role,
+                 poolId: token?.poolId, hostelId: (token as any)?.hostelId, businessId: (token as any)?.businessId
+             });
+             const res = NextResponse.json(
+                 { error: "No tenant assigned to session. Please complete registration." },
+                 { status: 401 }
+             );
              applySecurityHeaders(res);
              return res;
         }
@@ -92,20 +116,36 @@ export function withAuthRouting(req: NextRequestWithAuth): NextResponse | undefi
         return res;
     }
 
-    // ── Subscription page guard ──
+    // ── Subscription page guard (admin pages) ──
     const isAdminPage = /^\/pool\/[^/]+\/admin(\/|$)/.test(path) || path.startsWith("/hostel/") || path.startsWith("/business/");
     const isPublicPage = ["/select-plan", "/renew-plan", "/login", "/subscribe", "/api"].some(
         (p) => path.startsWith(p)
     );
+    const subStatus = (token as any)?.subscriptionStatus;
     if (
         isAdminPage &&
         !isPublicPage &&
         token?.role !== "superadmin" &&
-        (token as any)?.subscriptionStatus === "expired"
+        token?.role !== "operator"
     ) {
-        const res = NextResponse.redirect(new URL("/renew-plan", req.url));
-        applySecurityHeaders(res);
-        return res;
+        // Expired → renew page
+        if (subStatus === "expired" || subStatus === "suspended") {
+            console.warn(`[Middleware] Page subscription redirect → /renew-plan`, {
+                userId: token?.id, status: subStatus, path
+            });
+            const res = NextResponse.redirect(new URL("/renew-plan", req.url));
+            applySecurityHeaders(res);
+            return res;
+        }
+        // Never subscribed → select plan page
+        if (!subStatus || subStatus === "none" || subStatus === "cancelled") {
+            console.warn(`[Middleware] Page subscription redirect → /select-plan`, {
+                userId: token?.id, status: subStatus, path
+            });
+            const res = NextResponse.redirect(new URL("/select-plan", req.url));
+            applySecurityHeaders(res);
+            return res;
+        }
     }
 
     // ── Hostel Admin protection ──

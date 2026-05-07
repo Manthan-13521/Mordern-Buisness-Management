@@ -3,9 +3,19 @@ import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessLabour } from "@/models/BusinessLabour";
 import { BusinessAttendance } from "@/models/BusinessAttendance";
+import { BusinessLabourAdvance } from "@/models/BusinessLabourAdvance";
 import { requireBusinessId } from "@/lib/tenant";
+import { logger } from "@/lib/logger";
+import { z } from "zod";
 
 export const dynamic = "force-dynamic";
+
+const LabourCreateSchema = z.object({
+    name: z.string().min(1, "Name is required").max(100),
+    role: z.string().min(1, "Role is required").max(50),
+    salary: z.number().min(0).max(9999999),
+    phone: z.string().max(15).optional(),
+});
 
 export async function GET(req: Request) {
     try {
@@ -20,15 +30,9 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
         }
 
-        // 🟢 STRUCTURED AUDIT LOGGING
-        console.info(JSON.stringify({
-            type: "BUSINESS_LABOUR_LIST",
-            businessId,
-            userId: user.id,
-            route: "/api/business/labour",
-            method: "GET",
-            timestamp: new Date().toISOString()
-        }));
+        if (process.env.DEBUG_ANALYTICS === "true") {
+            logger.debug("Business labour list", { businessId, userId: user.id });
+        }
 
         await dbConnect();
 
@@ -36,6 +40,9 @@ export async function GET(req: Request) {
         if (!businessId) {
             throw new Error("Tenant context lost before query execution");
         }
+
+        const now = new Date();
+        const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
         const laboursRaw = await BusinessLabour.aggregate([
             { $match: { businessId, isActive: true } },
@@ -75,8 +82,31 @@ export async function GET(req: Request) {
                     as: "payments"
                 }
             },
+            {
+                $lookup: {
+                    from: "businesslabouradvances",
+                    let: { labId: "$_id", businessId: "$businessId" },
+                    pipeline: [
+                        { $match: { 
+                            $expr: { 
+                                $and: [
+                                    { $eq: ["$labourId", "$$labId"] },
+                                    { $eq: ["$businessId", "$$businessId"] },
+                                    { $eq: ["$month", currentMonthKey] }
+                                ]
+                            } 
+                        }}
+                    ],
+                    as: "advances"
+                }
+            },
+            {
+                $addFields: {
+                    advancePaid: { $ifNull: [{ $arrayElemAt: ["$advances.amount", 0] }, 0] }
+                }
+            },
             { $sort: { name: 1 } }
-        ]);
+        ]).option({ maxTimeMS: 10_000 });
 
         const labours = Array.isArray(laboursRaw) ? laboursRaw : [];
 
@@ -113,7 +143,15 @@ export async function POST(req: Request) {
         }
 
         const body = await req.json();
-        const { name, role, salary, phone } = body;
+        const parsed = LabourCreateSchema.safeParse(body);
+        if (!parsed.success) {
+            return NextResponse.json(
+                { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
+                { status: 400 }
+            );
+        }
+
+        const { name, role, salary, phone } = parsed.data;
 
         let businessId;
         try {
@@ -122,19 +160,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
         }
 
-        if (!name || !role || !salary) {
-            return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-        }
-
-        // 🟢 STRUCTURED AUDIT LOGGING
-        console.info(JSON.stringify({
-            type: "BUSINESS_LABOUR_CREATE",
-            businessId,
-            userId: user.id,
-            route: "/api/business/labour",
-            method: "POST",
-            timestamp: new Date().toISOString()
-        }));
+        logger.debug("Business labour create", { businessId, userId: user.id });
 
         await dbConnect();
 

@@ -26,3 +26,9 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
+
+/* Hero dashboard preview — premium hover effect */
+.hero-dashboard-wrapper:hover {
+  transform: perspective(1200px) rotateX(0deg) rotateY(0deg) scale(1.03) !important;
+  box-shadow: 0 40px 100px rgba(0,0,0,0.6), 0 0 80px rgba(59,130,246,0.3) !important;
+}

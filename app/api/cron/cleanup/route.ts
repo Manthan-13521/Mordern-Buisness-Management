@@ -31,10 +31,10 @@ export async function GET(req: Request) {
         for (const r of expiredRegs) {
             archives.push({
                 originalId: r._id,
-                memberId: r.memberId,
-                name: r.name,
-                phone: r.phone,
-                poolId: r.poolId,
+                memberId: r.memberId || r._id.toString(),
+                name: r.name || "Unknown",
+                phone: r.phone || "Unknown",
+                poolId: r.poolId?.toString() || "unknown",
                 deletionType: "auto",
                 collectionSource: "members",
                 fullData: r
@@ -43,10 +43,10 @@ export async function GET(req: Request) {
         for (const e of expiredEnts) {
             archives.push({
                 originalId: e._id,
-                memberId: e.memberId,
-                name: e.name,
-                phone: e.phone,
-                poolId: e.poolId,
+                memberId: e.memberId || e._id.toString(),
+                name: e.name || "Unknown",
+                phone: e.phone || "Unknown",
+                poolId: e.poolId?.toString() || "unknown",
                 deletionType: "auto",
                 collectionSource: "entertainment_members",
                 fullData: e

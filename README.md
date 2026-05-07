@@ -1,163 +1,59 @@
-# Multi-Business Management System (Workforce + Operations)
+# AquaSync SaaS — All-in-One Business Management
 
-A production-ready Next.js application designed to manage multiple business types using a consistent and scalable interface.
+A production-ready SaaS platform for managing Swimming Pools, Hostels, and Workforce. Built with **Next.js 15**, **React 19**, **MongoDB**, and **TypeScript**.
 
-Currently supports:
-1. Business Workforce Management (Labour)
-2. Swimming Pool Staff Management
-3. Hostel Staff Management
+## 🚀 Key Modules
 
---------------------------------------------------
+- **🏊 Swimming Pool Management**: Complete membership lifecycle, plan creation, QR-based attendance tracking, and revenue analytics.
+- **🏠 Hostel Management**: Room & block allocation, rent cycles, member billing, and vacancy tracking.
+- **💼 Workforce & Business**: Staff attendance, payroll management, advance tracking, and performance analytics.
+- **📊 Unified Dashboard**: Consolidated metrics for income, active members, and system health.
 
-## CORE CONCEPT
+## ✨ Premium Features
 
-One unified experience across different businesses.
+- **🛡️ Secure Auth**: NextAuth.js with role-based access control (SuperAdmin, Admin, Operator).
+- **📱 Smart Entry**: QR Code generation for members and integrated camera scanner for validation.
+- **💬 Automation**: Automated WhatsApp reminders via Twilio for overdue payments and expiry alerts.
+- **💳 Payment Integration**: Support for Cash, UPI, and Razorpay online payments.
+- **📄 Digital Receipts**: Automated PDF generation and Thermal Receipt printing for instant billing.
+- **📷 Photo Capture**: Integrated webcam capture for member registration.
+- **🌓 Modern UI**: Neo-dark 3D glass aesthetics with full dark/light mode support.
 
-Each module uses the SAME UI/UX structure:
-- Clean dark theme
-- Compact staff management layout
-- Inline actions for speed
-- Expandable detailed views
+## 🛠️ Technical Stack
 
-Users feel like they are using the same system, adapted to different business needs.
+- **Frontend**: Next.js 15 (App Router), Tailwind CSS 4, Framer Motion, Lucide Icons.
+- **Backend**: Next.js API Routes, Mongoose (MongoDB Atlas), Upstash Redis (Rate limiting).
+- **DevOps**: Vercel (Deployment), Sentry (Error tracking), GitHub Actions.
 
---------------------------------------------------
+## 🏁 Getting Started
 
-## MODULES
+1. **Clone & Install**
+   ```bash
+   npm install
+   ```
 
-### 1. Business Workforce (Labour)
-- Daily wage staff management
-- Attendance tracking (Present / Half Day / Absent)
-- Earnings calculation based on days worked
-- Advance tracking
-- Payment management
-- Due / Paid status system
+2. **Environment Setup**
+   Copy `.env.example` to `.env.local` and fill in:
+   - `MONGODB_URI`
+   - `NEXTAUTH_SECRET`
+   - `NEXTAUTH_URL`
 
----
+3. **Database Seed**
+   ```bash
+   curl -H "Authorization: Bearer YOUR_SEED_SECRET" http://localhost:3000/api/seed
+   ```
 
-### 2. Swimming Pool Staff
-- Staff types: Trainer, Lifeguard, Cleaner
-- Monthly or session-based salary
-- Same attendance and payment workflow
-- Designed for pool operations without changing UI
+4. **Run Dev**
+   ```bash
+   npm run dev
+   ```
 
----
+## ☁️ Vercel Deployment
 
-### 3. Hostel Staff
-- Staff types: Warden, Cook, Security, Cleaner
-- Monthly salary system
-- Daily attendance tracking
-- Same payroll and due tracking system
-
---------------------------------------------------
-
-## KEY FEATURES
-
-### Workforce Dashboard
-- Total Staff
-- Present Today
-- Total Paid
-- Total Due
+1. Connect your GitHub repository to Vercel.
+2. Add all environment variables from `.env.example`.
+3. Set the build command to `npm run build`.
+4. Ensure `CRON_SECRET` is set to secure the scheduled tasks in `vercel.json`.
 
 ---
-
-### Staff Management UI
-- Compact row-based layout
-- Columns:
-  Name | Rate | Present | Earned | Paid | Due | Status
-
----
-
-### Attendance System
-- One-click actions:
-  ✔ Present
-  ✖ Absent
-- Real-time updates
-
----
-
-### Earnings Calculation
-- Daily / Monthly based logic
-- Automatic due calculation
-
----
-
-### Payment System
-- Inline payment entry
-- No popup complexity
-- Instant updates to due status
-
----
-
-### Advance Tracking
-- Track advance amounts
-- Integrated with salary calculation
-
----
-
-### Expandable Staff View
-- Mark attendance
-- Add payments
-- View last 3 months summary
-
----
-
-### Last 3 Months Summary
-- Month-wise breakdown:
-  Days | Earned | Paid | Status
-
----
-
-### Search & Filtering
-- Search staff instantly
-- Fast UI response
-
---------------------------------------------------
-
-## UI/UX PRINCIPLES
-
-- Same design across all business modules
-- No learning curve between pages
-- Minimal clicks, maximum speed
-- Clean and non-congested interface
-- No unnecessary modals
-
---------------------------------------------------
-
-## TECH STACK
-
-- Next.js (App Router)
-- MongoDB
-- Tailwind CSS
-- TypeScript
-
---------------------------------------------------
-
-## SYSTEM DESIGN APPROACH
-
-- Reuse same UI for multiple domains
-- Only change:
-  - Labels
-  - Roles
-  - API endpoints
-- No unnecessary complexity
-- Fast and maintainable
-
---------------------------------------------------
-
-## FUTURE EXTENSIBILITY
-
-The system can easily expand to:
-- Gym Management
-- School Staff
-- Factory Workforce
-
-Without redesigning the UI.
-
---------------------------------------------------
-
-## GOAL
-
-Build a fast, simple, and scalable business management tool where:
-
-"Same system works for multiple businesses with minimal changes."
+Developed for modern businesses with performance and aesthetics in mind.

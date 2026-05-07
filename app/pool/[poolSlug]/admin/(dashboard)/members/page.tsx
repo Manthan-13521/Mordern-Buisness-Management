@@ -48,8 +48,10 @@ interface Member {
     equipmentTaken: EquipmentItem[];
     createdAt: string;
     cardStatus?: "pending" | "ready";
+    defaulterStatus?: "active" | "warning" | "blocked";
+    overdueDays?: number;
     // Server-computed verdict fields
-    verdict: "ACTIVE" | "EXPIRING" | "EXPIRED" | "DELETED";
+    verdict: "ACTIVE" | "EXPIRING" | "EXPIRED" | "DELETED" | "BLOCKED" | "WARNING";
     daysLeft: number;
     verdictClass: string;
     rowClass: string;
@@ -216,11 +218,11 @@ export default function MembersPage() {
         now.setHours(0, 0, 0, 0);
         const nowMs = now.getTime();
 
-        return members.map((m: any) => {
+        return members.map((m: Member) => {
             const endDate = new Date(m.planEndDate || m.expiryDate || 0);
             const msLeft = endDate.getTime() - nowMs;
             
-            let verdict = "ACTIVE";
+            let verdict: Member["verdict"] = "ACTIVE";
             let verdictClass = "bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-500/10 dark:text-green-400";
             let rowClass = "";
             let daysLeftLabel = "";
@@ -458,7 +460,7 @@ export default function MembersPage() {
                                         <tr><td colSpan={8} className="py-12 text-center text-gray-500">No members found.</td></tr>
                                     ) : processedMembers.map((member) => {
                                         const plan = member.planId as Plan;
-                                        const unreturned = (member.equipmentTaken ?? []).filter(e => !e.isReturned);
+                                        const unreturned = (member.equipmentTaken ?? []).filter((e: EquipmentItem) => !e.isReturned);
                                         const endDate = member._endDate;
 
                                         return (

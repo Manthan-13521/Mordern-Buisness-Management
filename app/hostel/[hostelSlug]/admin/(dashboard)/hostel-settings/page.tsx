@@ -46,7 +46,7 @@ export default function HostelSettingsPage() {
         const data = await res.json();
         setSaving(false);
         if (!res.ok) { 
-            setError(data.error || "Failed to save structure"); 
+            setError(typeof data.error === "string" ? data.error : (data.error?.message || JSON.stringify(data.error) || "Failed to save structure")); 
             return; 
         }
         setSuccess("Structure saved successfully!"); 

@@ -19,7 +19,6 @@ import {
     UserCog,
     Trophy,
     MessageSquare,
-    PieChart,
     BadgeDollarSign,
 } from "lucide-react";
 
@@ -43,7 +42,6 @@ export function Sidebar() {
         { name: "Staff",            href: `${basePath}/staff`,             icon: UserCog,          roles: ["admin"] },
         { name: "Competitions",     href: `${basePath}/competitions`,      icon: Trophy,           roles: ["admin"] },
         { name: "Notifications",    href: `${basePath}/notifications`,     icon: Bell,             roles: ["admin", "operator"] },
-        { name: "Graph Analysis",   href: `${basePath}/graph-analysis`,    icon: PieChart,         roles: ["admin"] },
         { name: "Revenue Analytics", href: `${basePath}/revenue-analytics`,  icon: BadgeDollarSign,  roles: ["admin"] },
         { name: "WhatsApp",         href: `${basePath}/twilio`,            icon: MessageSquare,    roles: ["admin"] },
         { name: "Settings",         href: `${basePath}/settings`,          icon: Settings,         roles: ["admin"] },

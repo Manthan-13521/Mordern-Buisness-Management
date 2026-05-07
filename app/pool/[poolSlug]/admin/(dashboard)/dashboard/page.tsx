@@ -17,8 +17,8 @@ async function DashboardStats({ poolId, isAdmin, memberType }: { poolId: string,
         { name: "Total Members", stat: counts.totalMembers, icon: Users, color: "bg-blue-500" },
         { name: "Active Members", stat: counts.activeMembers, icon: Activity, color: "bg-green-500" },
         { name: "Expired Members", stat: counts.totalMembers - counts.activeMembers, icon: UserX, color: "bg-red-500" },
-        { name: "Today's Members Added", stat: counts.todaysMemberEntries, icon: UserPlus, color: "bg-indigo-500" },
-        { name: "Today's Entertainment Members Added", stat: counts.todaysEntertainmentEntries, icon: Gamepad2, color: "bg-pink-500" },
+        { name: "New Members Today", stat: counts.todaysMemberEntries, icon: UserPlus, color: "bg-indigo-500" },
+        { name: "New Ent. Members Today", stat: counts.todaysEntertainmentEntries, icon: Gamepad2, color: "bg-pink-500" },
     ];
 
     if (isAdmin) {
@@ -38,7 +38,7 @@ async function DashboardStats({ poolId, isAdmin, memberType }: { poolId: string,
                         <div className={`absolute rounded-md ${item.color} p-3`}>
                             <item.icon className="h-6 w-6 text-white" aria-hidden="true" />
                         </div>
-                        <p className="ml-16 truncate text-sm font-medium text-gray-500 dark:text-gray-400">
+                        <p className="ml-16 line-clamp-2 text-sm font-medium leading-tight text-gray-500 dark:text-gray-400">
                             {item.name}
                         </p>
                     </dt>
@@ -292,7 +292,10 @@ async function ExpiryAlerts({ poolId }: { poolId: string }) {
     );
 }
 
-// Main Page (Server Component)
+// FIX 3: Dynamic import for Recharts (defer - lazy load)
+// Using a placeholder as the actual RevenueChart is not yet in this file, but the pattern is established.
+// const RevenueChart = dynamic(() => import('@/components/charts/RevenueChart'), { ssr: false, loading: () => <ChartSkeleton /> });
+
 export default async function DashboardPage(props: { searchParams?: Promise<any> | any }) {
     const session = await getServerSession(authOptions) as any;
     const poolId = session?.user?.role !== "superadmin" ? session?.user?.poolId : "superadmin";
@@ -315,6 +318,7 @@ export default async function DashboardPage(props: { searchParams?: Promise<any>
                 </div>
             </div>
 
+            {/* Priority 1: Member count + quick stats (render immediately / fastest) */}
             <Suspense fallback={
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
                     <ChartSkeleton /><ChartSkeleton /><ChartSkeleton />
@@ -323,18 +327,25 @@ export default async function DashboardPage(props: { searchParams?: Promise<any>
                 <DashboardStats poolId={poolId} isAdmin={isAdmin} memberType={memberType} />
             </Suspense>
 
+            {/* Priority 2: Revenue KPIs */}
             {isAdmin && (
                 <Suspense fallback={<div className="h-24 bg-white/5 rounded-xl animate-pulse" />}>
                     <RevenueKPIs poolId={poolId} />
                 </Suspense>
             )}
 
+            {/* Priority 3: Charts / Recharts components (deferred via dynamic import above) */}
+            {/* {isAdmin && <RevenueChart poolId={poolId} />} */}
+
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+                {/* Priority 4: Defaulters list (deferred) */}
                 {isAdmin && (
                     <Suspense fallback={<div className="h-48 bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg rounded-xl animate-pulse" />}>
                         <TopDefaulters poolId={poolId} />
                     </Suspense>
                 )}
+                
+                {/* Priority 5: Notifications / Alerts panel (deferred) */}
                 <Suspense fallback={<div className="h-48 bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg rounded-xl animate-pulse" />}>
                     <ExpiryAlerts poolId={poolId} />
                 </Suspense>

@@ -23,23 +23,39 @@ export async function GET(req: Request) {
 
         const { searchParams } = new URL(req.url);
         const customerId = searchParams.get("customerId");
+        const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
+        const limit = Math.min(20, Math.max(1, parseInt(searchParams.get("limit") ?? "20")));
+        const skip = (page - 1) * limit;
 
         let query: any = { businessId };
         if (customerId) {
             query.customerId = customerId;
         }
 
-        const payments = await BusinessTransaction.find({ 
-            ...query, 
-            $or: [
-                { category: 'PAYMENT' },
-                { category: 'SALE', paidAmount: { $gt: 0 } }
-            ]
-        })
-        .populate("customerId", "name")
-        .sort({ date: -1 });
+        const [payments, total] = await Promise.all([
+            BusinessTransaction.find({ 
+                ...query, 
+                $or: [
+                    { category: 'PAYMENT' },
+                    { category: 'SALE', paidAmount: { $gt: 0 } }
+                ]
+            })
+                .populate("customerId", "name")
+                .select("customerId category amount paidAmount date transactionType paymentMethod notes receiptUrl fileUrl createdAt")
+                .sort({ date: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+            BusinessTransaction.countDocuments({ 
+                ...query, 
+                $or: [
+                    { category: 'PAYMENT' },
+                    { category: 'SALE', paidAmount: { $gt: 0 } }
+                ]
+            }),
+        ]);
 
-            return NextResponse.json({ success: true, data: payments }, {
+            return NextResponse.json({ success: true, data: payments, total, page, limit, totalPages: Math.ceil(total / limit) }, {
                 headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
             });
         } catch (error: any) {
@@ -110,9 +126,8 @@ export async function POST(req: Request) {
             headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
         });
     } catch (error: any) {
-        logger.error("Payment Recording Error Details", {
+        logger.error("Payment recording error", {
             error: error.message,
-            stack: error.stack
         });
         return NextResponse.json({ 
             success: false,

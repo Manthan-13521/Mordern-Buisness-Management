@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { UserX, Search, RefreshCw, ChevronLeft, ChevronRight, RotateCcw, X } from "lucide-react";
 
-type Member = { _id: string; memberId: string; name: string; phone: string; blockNo: string; floorNo: string; roomNo: string; planId: any; planEndDate: string; totalFee: number; };
+type Member = { _id: string; memberId: string; name: string; phone: string; blockNo: string; floorNo: string; roomNo: string; planId: any; planEndDate: string; totalFee: number; balance: number; };
 type Plan = { _id: string; name: string; durationDays: number; price: number };
 const INPUT = "w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500";
 const LABEL = "block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1";
@@ -35,7 +35,7 @@ export default function CheckoutPage() {
         e.preventDefault(); if (!renewMember) return; setSubmitting(true); setError("");
         const res = await fetch(`/api/hostel/members/${renewMember._id}/renew`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...renewForm, paidAmount: Math.min(Number(renewForm.paidAmount), 9999999999), idempotencyKey: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() }) });
         const data = await res.json();
-        if (!res.ok) { setError(data.error || "Renewal failed"); setSubmitting(false); return; }
+        if (!res.ok) { setError(typeof data.error === "string" ? data.error : (data.error?.message || JSON.stringify(data.error) || "Renewal failed")); setSubmitting(false); return; }
         setRenewMember(null); fetch_(); setSubmitting(false);
     };
 
@@ -71,7 +71,15 @@ export default function CheckoutPage() {
                                     <td className="px-4 py-3">{m.planId?.name || "—"}</td>
                                     <td className="px-4 py-3 text-slate-500">{(m as any).checkInDate ? new Date((m as any).checkInDate).toLocaleDateString("en-IN") : new Date((m as any).createdAt).toLocaleDateString("en-IN")}</td>
                                     <td className="px-4 py-3 text-slate-700 font-semibold">{(m as any).checkoutDate ? new Date((m as any).checkoutDate).toLocaleDateString("en-IN") : "—"}</td>
-                                    <td className="px-4 py-3 font-mono text-emerald-500 font-bold">₹0</td>
+                                    <td className="px-4 py-3 font-mono font-bold">
+                                        {m.balance > 0 ? (
+                                            <span className="text-emerald-500">Advance: ₹{m.balance.toLocaleString()}</span>
+                                        ) : m.balance < 0 ? (
+                                            <span className="text-red-500">Due: ₹{Math.abs(m.balance).toLocaleString()}</span>
+                                        ) : (
+                                            <span className="text-slate-400 font-normal italic">₹0</span>
+                                        )}
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>

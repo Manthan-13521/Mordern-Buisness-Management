@@ -5,12 +5,12 @@ import { HostelPayment } from "@/models/HostelPayment";
 import { HostelBlock } from "@/models/HostelBlock";
 import { getHostelSettings } from "@/models/HostelSettings";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
+import { getCachedDashboard } from "@/lib/dashboardCache";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
     try {
-        const user = await resolveUser(req);
-        await dbConnect();
+        const [user] = await Promise.all([resolveUser(req), dbConnect()]);
 
         if (!user || user.role !== "hostel_admin") {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
@@ -87,24 +87,23 @@ export async function GET(req: Request) {
         const totalRooms    = roomCount;
         const totalCapacity = roomCapacityAgg[0]?.total || 0;
 
-        // ── Enterprise Atomic Initialization (Run Once per Hostel) ────────────────
-        let statsObj = await HostelStats.findOne({ hostelId }).lean();
-        if (!statsObj || !statsObj.isInitialized) {
-            const rawMembers = await HostelMember.countDocuments({ hostelId });
-            statsObj = await HostelStats.findOneAndUpdate(
-                { hostelId },
-                {
-                    $set: {
-                        totalMembers: rawMembers,
-                        totalJoinedThisYear: rawMembers,
-                        isInitialized: true
-                    }
-                },
-                { upsert: true, new: true, returnDocument: 'after' }
-            ) as any;
-        }
-
-        const totalMembers = statsObj?.totalMembers || 0;
+        // ── Immutable Total Members (Current Year) ────────────────
+        const startOfYearDt = new Date(new Date().getFullYear(), 0, 1);
+        const endOfYearDt = new Date(new Date().getFullYear(), 11, 31, 23, 59, 59, 999);
+        const { DeletedHostelMember } = await import("@/models/DeletedHostelMember");
+        
+        const [activeReg, deletedReg] = await Promise.all([
+            HostelMember.countDocuments({
+                hostelId,
+                createdAt: { $gte: startOfYearDt, $lte: endOfYearDt }
+            }),
+            DeletedHostelMember.countDocuments({
+                hostelId,
+                join_date: { $gte: startOfYearDt, $lte: endOfYearDt }
+            })
+        ]);
+        
+        const totalMembers = activeReg + deletedReg;
 
         // ── Member stats (Targeted Native Filters) ──────────────────────
         const [
@@ -115,6 +114,7 @@ export async function GET(req: Request) {
             monthlyJoined,
             yearlyJoined,
             occupiedBeds,
+            totalDueAgg,
         ] = await Promise.all([
             HostelMember.countDocuments({ ...memberBase, status: "active" }),
             HostelMember.countDocuments({ ...memberBase, status: "defaulter" }),
@@ -123,7 +123,13 @@ export async function GET(req: Request) {
             HostelMember.countDocuments({ ...memberBase, createdAt: { $gte: startOfMonth } }),
             HostelMember.countDocuments({ ...memberBase, createdAt: { $gte: startOfYear } }),
             HostelMember.countDocuments({ ...memberBase, status: { $in: ["active", "defaulter"] } }),
+            HostelMember.aggregate([
+                { $match: { ...memberBase, balance: { $lt: 0 }, status: "active", isActive: true } },
+                { $group: { _id: null, total: { $sum: "$balance" } } }
+            ]),
         ]);
+
+        const totalDue = Math.abs(totalDueAgg[0]?.total || 0);
 
         // ── Income stats ───────────────────────────────────────────────────────
         // When block = "all" → use HostelAnalytics snapshots (fast, pre-aggregated)
@@ -144,7 +150,7 @@ export async function GET(req: Request) {
                 HostelAnalytics.aggregate([
                     { $match: { hostelId, yearMonth: { $regex: `^${currentYear}` } } },
                     { $group: { _id: null, total: { $sum: "$totalIncome" } } },
-                ]),
+                    ]),
                 HostelAnalytics.aggregate([
                     { $match: { hostelId } },
                     { $group: { _id: null, total: { $sum: "$totalIncome" } } },
@@ -187,8 +193,6 @@ export async function GET(req: Request) {
             .limit(20)
             .lean();
 
-        console.log(`Dashboard data fetched: Income=${monthlyIncome}/${yearlyIncome}, ActiveMembers=${activeMembers}`);
-
         return NextResponse.json({
             monthlyJoined, yearlyJoined,
             monthlyIncome, yearlyIncome,
@@ -198,7 +202,8 @@ export async function GET(req: Request) {
             totalRevenue, totalRooms,
             totalCapacity, occupiedBeds,
             occupancyRate, expiringList,
-        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            totalDue,
+        }, { headers: { "Cache-Control": "private, max-age=10", "X-Cache": "REDIS" } });
     } catch (error) {
         console.error("[GET /api/hostel/dashboard]", error);
         return NextResponse.json({ error: "Failed to fetch dashboard" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });

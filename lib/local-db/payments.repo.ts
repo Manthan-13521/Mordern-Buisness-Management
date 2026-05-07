@@ -41,6 +41,10 @@ export async function getUnsyncedPaymentsLocal() {
 
 let isSyncingPayments = false;
 
+// Exponential backoff helper: wait 2^retryCount seconds (capped at 60s)
+const getBackoffDelay = (retryCount: number) => Math.min(1000 * Math.pow(2, retryCount), 60000);
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export async function syncUnsyncedPayments() {
   if (isSyncingPayments) return;
   isSyncingPayments = true;
@@ -50,7 +54,12 @@ export async function syncUnsyncedPayments() {
     if (unsynced.length === 0) return;
 
     for (const payment of unsynced) {
-      if ((payment.retryCount || 0) > 5) continue; // CRITICAL ISSUE 2 FIX: Backoff loop
+      // Skip permanently failed items (max 5 retries)
+      if ((payment.retryCount || 0) > 5) continue;
+
+      // Skip items retried too recently (exponential backoff)
+      const backoffDelay = getBackoffDelay(payment.retryCount || 0);
+      if (payment.lastTriedAt && (Date.now() - payment.lastTriedAt) < backoffDelay) continue;
       
       try {
         await db.payments.update(payment.id, { syncing: true, lastTriedAt: Date.now() });
@@ -74,7 +83,7 @@ export async function syncUnsyncedPayments() {
         if (res.ok) {
           let result = null;
           try {
-            result = await res.json(); // CRITICAL ISSUE 1 FIX: JSON safety
+            result = await res.json();
           } catch (e) {
             console.error("Invalid JSON response from server tracking offline payment", e);
             await db.payments.update(payment.id, { syncing: false, retryCount: (payment.retryCount || 0) + 1 });
@@ -95,8 +104,12 @@ export async function syncUnsyncedPayments() {
         console.error("Failed to sync offline payment:", payment.id, err);
         await db.payments.update(payment.id, { syncing: false, retryCount: (payment.retryCount || 0) + 1 });
       }
+
+      // Small delay between items to avoid API hammering
+      await sleep(200);
     }
   } finally {
     isSyncingPayments = false;
   }
 }
+

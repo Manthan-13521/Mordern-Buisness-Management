@@ -51,9 +51,9 @@ export async function GET(req: Request) {
             };
 
             if (memberType === "member") {
-                matchQuery.memberId = { $regex: /^M(?!S)/i };
+                matchQuery.memberType = "regular";
             } else if (memberType === "entertainment") {
-                matchQuery.memberId = { $regex: /^MS/i };
+                matchQuery.memberType = "entertainment";
             }
 
             const { Member } = await import("@/models/Member");

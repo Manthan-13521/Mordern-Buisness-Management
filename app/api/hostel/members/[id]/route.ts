@@ -110,6 +110,13 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
         const member = await HostelMember.findOne({ _id: id, hostelId }).lean() as any;
         if (!member) return NextResponse.json({ error: "Member not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
+        if (member.balance < 0) {
+            return NextResponse.json(
+                { error: `Member has pending dues (₹${Math.abs(member.balance)}). Cannot delete.` },
+                { status: 400 }
+            );
+        }
+
         // 1. Archive before hard deleting
         const { DeletedHostelMember } = await import("@/models/DeletedHostelMember");
         await DeletedHostelMember.create({

@@ -110,7 +110,7 @@ export default function PlansPage() {
             body: JSON.stringify(payload) 
         });
         const data = await res.json();
-        if (!res.ok) { setError(data.error || "Failed"); setSubmitting(false); return; }
+        if (!res.ok) { setError(typeof data.error === "string" ? data.error : (data.error?.message || JSON.stringify(data.error) || "Failed")); setSubmitting(false); return; }
         setShowForm(false); fetchPlans(); setSubmitting(false);
     };
 
@@ -173,11 +173,11 @@ export default function PlansPage() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={()=>setShowForm(false)}/>
                     <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[92vh]">
-                        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
                             <h2 className="text-lg font-semibold text-slate-800 dark:text-white">{editPlan?"Edit Plan":"New Plan"}</h2>
                             <button onClick={()=>setShowForm(false)}><X className="h-5 w-5 text-slate-400"/></button>
                         </div>
-                        <form onSubmit={handleSubmit} className="flex-1 p-6 space-y-4">
+                        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
                             {error && <p className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">{error}</p>}
                             <div><label className={LABEL}>Plan Name</label><input required value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} className={INPUT} placeholder="e.g. Monthly Bed"/></div>
                             <div><label className={LABEL}>Duration (days)</label><input type="number" min="1" required value={form.durationDays} onChange={e=>setForm(p=>({...p,durationDays:e.target.value}))} className={INPUT} placeholder="30"/></div>

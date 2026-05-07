@@ -28,7 +28,9 @@ export async function PUT(
         // Use Zod to validate the update body
         const result = PlanSchema.partial().safeParse(body);
         if (!result.success) {
-            return NextResponse.json({ error: result.error.flatten() }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            const errs = result.error.flatten().fieldErrors;
+            const errMsg = Object.entries(errs).map(([f, m]) => `${f}: ${(m as string[])?.join(", ")}`).join(" | ") || result.error.flatten().formErrors?.join(", ") || "Validation failed";
+            return NextResponse.json({ error: errMsg }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         const data = result.data;

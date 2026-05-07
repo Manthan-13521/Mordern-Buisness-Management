@@ -11,7 +11,6 @@ import {
   Calendar,
   ArrowUpRight,
   ArrowDownRight,
-  TrendingUp,
   Plus,
   Trash2,
   Save,
@@ -285,24 +284,37 @@ export default function CustomerDetailPage() {
         </div>
       </div>
 
-      {/* Profile Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="p-6 rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm relative overflow-hidden group">
-          <p className="text-xs font-bold text-[#9ca3af] uppercase tracking-widest mb-1.5">Lifetime Value</p>
-          <h3 className="text-2xl font-bold text-[#38bdf8]">₹{customer?.totalPurchase?.toLocaleString() || 0}</h3>
-          <TrendingUp className="absolute -bottom-2 -right-2 w-16 h-16 text-[#1f2937] group-hover:text-[#38bdf8]/10 transition-colors" />
+      {/* Financial Metrics */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="p-5 rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm relative overflow-hidden group">
+          <p className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest mb-1.5">Product Sent</p>
+          <h3 className="text-xl font-bold text-[#ef4444]">₹{customer?.financials?.productSent?.toLocaleString() || 0}</h3>
+          <ArrowUpRight className="absolute -bottom-2 -right-2 w-14 h-14 text-[#1f2937] group-hover:text-[#ef4444]/10 transition-colors" />
         </div>
-        <div className="p-6 rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm relative overflow-hidden group">
-          <p className="text-xs font-bold text-[#9ca3af] uppercase tracking-widest mb-1.5">Settled Amount</p>
-          <h3 className="text-2xl font-bold text-[#22c55e]">₹{customer?.totalPaid?.toLocaleString() || 0}</h3>
-          <CreditCard className="absolute -bottom-2 -right-2 w-16 h-16 text-[#1f2937] group-hover:text-[#22c55e]/10 transition-colors" />
+        <div className="p-5 rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm relative overflow-hidden group">
+          <p className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest mb-1.5">Product Received</p>
+          <h3 className="text-xl font-bold text-[#38bdf8]">₹{customer?.financials?.productReceived?.toLocaleString() || 0}</h3>
+          <ArrowDownRight className="absolute -bottom-2 -right-2 w-14 h-14 text-[#1f2937] group-hover:text-[#38bdf8]/10 transition-colors" />
         </div>
-        <div className="p-6 rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm relative overflow-hidden group">
-          <p className="text-xs font-bold text-[#9ca3af] uppercase tracking-widest mb-1.5">Current Balance</p>
-          <h3 className={clsx("text-2xl font-bold", customer?.currentDue > 0 ? "text-[#ef4444]" : "text-[#f9fafb]")}>
-            ₹{customer?.currentDue?.toLocaleString() || 0}
+        <div className="p-5 rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm relative overflow-hidden group">
+          <p className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest mb-1.5">Payment Received</p>
+          <h3 className="text-xl font-bold text-[#22c55e]">₹{customer?.financials?.paymentReceived?.toLocaleString() || 0}</h3>
+          <CreditCard className="absolute -bottom-2 -right-2 w-14 h-14 text-[#1f2937] group-hover:text-[#22c55e]/10 transition-colors" />
+        </div>
+        <div className="p-5 rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm relative overflow-hidden group">
+          <p className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest mb-1.5">Payment Given</p>
+          <h3 className="text-xl font-bold text-[#f59e0b]">₹{customer?.financials?.paymentGiven?.toLocaleString() || 0}</h3>
+          <ArrowUpRight className="absolute -bottom-2 -right-2 w-14 h-14 text-[#1f2937] group-hover:text-[#f59e0b]/10 transition-colors" />
+        </div>
+        <div className="col-span-2 md:col-span-1 p-5 rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm relative overflow-hidden group">
+          <p className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest mb-1.5">Current Balance</p>
+          <h3 className={clsx("text-xl font-bold", 
+            (customer?.financials?.currentBalance || 0) > 0 ? "text-[#ef4444]" : 
+            (customer?.financials?.currentBalance || 0) < 0 ? "text-[#22c55e]" : "text-[#f9fafb]"
+          )}>
+            ₹{customer?.financials?.currentBalance?.toLocaleString() || 0}
           </h3>
-          <IndianRupee className="absolute -bottom-2 -right-2 w-16 h-16 text-[#1f2937] group-hover:text-[#ef4444]/10 transition-colors" />
+          <IndianRupee className="absolute -bottom-2 -right-2 w-14 h-14 text-[#1f2937] group-hover:text-[#8b5cf6]/10 transition-colors" />
         </div>
       </div>
 
@@ -416,6 +428,7 @@ export default function CustomerDetailPage() {
             <thead>
               <tr className="bg-[#0b1220] border-b border-[#1f2937]">
                 <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide">Date</th>
+                <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide">Type</th>
                 <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide">Product Name</th>
                 <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide text-right">Qty</th>
                 <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide text-right">Price</th>
@@ -427,56 +440,118 @@ export default function CustomerDetailPage() {
             <tbody className="divide-y divide-[#1f2937]">
               {history.length > 0 ? history.map((entry: any, i) => {
                 const isSale = entry.category === 'SALE';
+                const isSent = entry.transactionType === 'sent';
+                const items = entry.items || [];
                 return (
                   <Fragment key={i}>
-                    <tr className={clsx(
-                      "transition-colors group border-b border-slate-800 last:border-0",
-                      isSale ? "hover:bg-[#8b5cf6]/5" : "bg-[#00ff00]/35 hover:bg-[#00ff00]/45"
-                    )}>
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-5 h-5 text-[#9ca3af]" />
-                          <p className="text-base font-semibold text-white">{new Date(entry.date).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}</p>
-                        </div>
-                      </td>
-                      {isSale ? (
-                        <>
+                    {isSale ? (
+                      <>
+                        {/* First item row with date, type, transport, total, receipt */}
+                        <tr className={clsx(
+                          "transition-colors group border-b border-slate-800 last:border-0",
+                          isSent ? "hover:bg-[#ef4444]/5" : "hover:bg-[#38bdf8]/5"
+                        )}>
+                          <td className="px-6 py-5" rowSpan={Math.max(items.length, 1)}>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-5 h-5 text-[#9ca3af]" />
+                              <p className="text-base font-semibold text-white">{new Date(entry.date).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}</p>
+                            </div>
+                          </td>
+                          <td className="px-6 py-5" rowSpan={Math.max(items.length, 1)}>
+                            <span className={clsx(
+                              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider border",
+                              isSent 
+                                ? "bg-[#ef4444]/10 text-[#ef4444] border-[#ef4444]/20" 
+                                : "bg-[#38bdf8]/10 text-[#38bdf8] border-[#38bdf8]/20"
+                            )}>
+                              {isSent ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
+                              {isSent ? 'Sent' : 'Received'}
+                            </span>
+                          </td>
+                          {/* First item */}
                           <td className="px-6 py-5">
                             <div className="flex items-center gap-3">
                               <div className={clsx(
-                                "w-12 h-12 rounded-xl flex items-center justify-center transition-all bg-[#020617] border border-[#1f2937]",
-                                "text-[#38bdf8] group-hover:text-[#38bdf8]"
+                                "w-10 h-10 rounded-xl flex items-center justify-center transition-all bg-[#020617] border border-[#1f2937]",
+                                isSent ? "text-[#ef4444]" : "text-[#38bdf8]"
                               )}>
-                                <ShoppingBag className="w-5 h-5" />
+                                <ShoppingBag className="w-4 h-4" />
                               </div>
-                              <div>
-                                <p className="text-base font-semibold text-white">
-                                  {entry.items?.map((it:any)=>it.name).join(', ') || 'Purchase'}
-                                </p>
-                                {entry.transactionType === 'received' && (
-                                  <p className="text-[10px] font-bold text-[#8b5cf6] uppercase tracking-widest mt-0.5">Business Purchase</p>
-                                )}
-                              </div>
+                              <p className="text-base font-semibold text-white">{items[0]?.name || 'Product'}</p>
                             </div>
                           </td>
                           <td className="px-6 py-5 text-right font-medium text-base text-white">
-                            {entry.items?.[0] ? entry.items[0].qty : ''}
+                            {items[0]?.qty || ''}
                           </td>
                           <td className="px-6 py-5 text-right font-medium text-base text-white">
-                            {entry.items?.[0] ? `₹${entry.items[0].price.toLocaleString()}` : ''}
+                            {items[0]?.price ? `₹${items[0].price.toLocaleString()}` : ''}
                           </td>
-                          <td className="px-6 py-5 text-right font-medium text-base text-[#9ca3af]">
+                          <td className="px-6 py-5 text-right font-medium text-base text-[#9ca3af]" rowSpan={Math.max(items.length, 1)}>
                             {entry.transportationCost ? `₹${entry.transportationCost.toLocaleString()}` : '—'}
                           </td>
                           <td className={clsx(
                             "px-6 py-5 text-right font-semibold text-lg",
-                            entry.transactionType !== 'received' ? "text-[#ef4444]" : "text-[#22c55e]"
-                          )}>
-                            {entry.transactionType !== 'received' ? `₹${entry.amount.toLocaleString()}` : ''}
+                            isSent ? "text-[#ef4444]" : "text-[#38bdf8]"
+                          )} rowSpan={Math.max(items.length, 1)}>
+                            ₹{entry.amount.toLocaleString()}
                           </td>
-                        </>
-                      ) : (
-                        <td colSpan={5} className="px-6 py-5 text-center">
+                          <td className="px-6 py-5 text-right" rowSpan={Math.max(items.length, 1)}>
+                            {entry.receiptUrl ? (
+                              <a 
+                                href={entry.receiptUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="p-2 inline-flex items-center justify-center bg-[#111827] border border-[#1f2937] text-[#9ca3af] hover:text-[#8b5cf6] hover:border-[#8b5cf6]/50 rounded-lg transition-all"
+                                title="View Receipt"
+                              >
+                                <Eye className="w-5 h-5" />
+                              </a>
+                            ) : (
+                              <span className="text-[10px] font-bold text-[#1f2937] uppercase tracking-widest">No File</span>
+                            )}
+                          </td>
+                        </tr>
+                        {/* Additional item rows (2nd item onwards) */}
+                        {items.slice(1).map((item: any, j: number) => (
+                          <tr key={`${i}-item-${j}`} className={clsx(
+                            "transition-colors border-b border-slate-800/50 last:border-0",
+                            isSent ? "hover:bg-[#ef4444]/5" : "hover:bg-[#38bdf8]/5"
+                          )}>
+                            <td className="px-6 py-3">
+                              <div className="flex items-center gap-3 pl-[52px]">
+                                <p className="text-base font-semibold text-white">{item.name}</p>
+                              </div>
+                            </td>
+                            <td className="px-6 py-3 text-right font-medium text-base text-white">
+                              {item.qty}
+                            </td>
+                            <td className="px-6 py-3 text-right font-medium text-base text-white">
+                              ₹{item.price.toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </>
+                    ) : (
+                      /* Payment row */
+                      <tr className="bg-[#00ff00]/35 hover:bg-[#00ff00]/45 transition-colors border-b border-slate-800 last:border-0">
+                        <td className="px-6 py-5">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-5 h-5 text-[#9ca3af]" />
+                            <p className="text-base font-semibold text-white">{new Date(entry.date).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}</p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-5">
+                          <span className={clsx(
+                            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider border",
+                            entry.transactionType === 'received'
+                              ? "bg-[#22c55e]/10 text-[#22c55e] border-[#22c55e]/20"
+                              : "bg-[#f59e0b]/10 text-[#f59e0b] border-[#f59e0b]/20"
+                          )}>
+                            <CreditCard className="w-3.5 h-3.5" />
+                            {entry.transactionType === 'received' ? 'Received' : 'Given'}
+                          </span>
+                        </td>
+                        <td colSpan={4} className="px-6 py-5 text-center">
                           <p className="text-lg font-bold text-white uppercase tracking-widest">
                             ₹{entry.amount.toLocaleString()} {entry.transactionType === 'received' ? 'payment received from customer' : 'payment sent to customer'}
                           </p>
@@ -484,34 +559,49 @@ export default function CustomerDetailPage() {
                             <p className="text-xs font-medium text-slate-300 mt-1 opacity-80">{entry.notes}</p>
                           )}
                         </td>
-                      )}
-                      <td className="px-6 py-5 text-right">
-                        {entry.receiptUrl ? (
-                          <a 
-                            href={entry.receiptUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="p-2 inline-flex items-center justify-center bg-[#111827] border border-[#1f2937] text-[#9ca3af] hover:text-[#8b5cf6] hover:border-[#8b5cf6]/50 rounded-lg transition-all"
-                            title="View Receipt"
-                          >
-                            <Eye className="w-5 h-5" />
-                          </a>
-                        ) : (
-                          <span className="text-[10px] font-bold text-[#1f2937] uppercase tracking-widest">No File</span>
-                        )}
-                      </td>
-                    </tr>
+                        <td className="px-6 py-5 text-right">
+                          {entry.receiptUrl ? (
+                            <a 
+                              href={entry.receiptUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="p-2 inline-flex items-center justify-center bg-[#111827] border border-[#1f2937] text-[#9ca3af] hover:text-[#8b5cf6] hover:border-[#8b5cf6]/50 rounded-lg transition-all"
+                              title="View Receipt"
+                            >
+                              <Eye className="w-5 h-5" />
+                            </a>
+                          ) : (
+                            <span className="text-[10px] font-bold text-[#1f2937] uppercase tracking-widest">No File</span>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                    {/* Inline payment during sale */}
                     {isSale && entry.paidAmount > 0 && (
-                      <tr className="transition-colors group border-b border-slate-800 last:border-0 bg-[#00ff00]/35 hover:bg-[#00ff00]/45">
+                      <tr className={clsx(
+                        "transition-colors group border-b border-slate-800 last:border-0",
+                        isSent ? "bg-[#00ff00]/35 hover:bg-[#00ff00]/45" : "bg-[#f59e0b]/20 hover:bg-[#f59e0b]/30"
+                      )}>
                         <td className="px-6 py-5">
                           <div className="flex items-center gap-2">
                             <Calendar className="w-5 h-5 text-[#9ca3af]" />
                             <p className="text-base font-semibold text-white">{new Date(entry.date).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}</p>
                           </div>
                         </td>
-                        <td colSpan={5} className="px-6 py-5 text-center">
+                        <td className="px-6 py-5">
+                          <span className={clsx(
+                            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider border",
+                            isSent 
+                              ? "bg-[#22c55e]/10 text-[#22c55e] border-[#22c55e]/20"
+                              : "bg-[#f59e0b]/10 text-[#f59e0b] border-[#f59e0b]/20"
+                          )}>
+                            <CreditCard className="w-3.5 h-3.5" />
+                            {isSent ? 'Received' : 'Given'}
+                          </span>
+                        </td>
+                        <td colSpan={4} className="px-6 py-5 text-center">
                           <p className="text-lg font-bold text-white uppercase tracking-widest">
-                            ₹{entry.paidAmount.toLocaleString()} payment received during sale
+                            ₹{entry.paidAmount.toLocaleString()} {isSent ? 'payment received during sale' : 'payment given during purchase'}
                           </p>
                         </td>
                         <td className="px-6 py-5 text-right">
@@ -523,7 +613,7 @@ export default function CustomerDetailPage() {
                 );
               }) : (
                 <tr>
-                  <td colSpan={7} className="px-6 py-24 text-center">
+                  <td colSpan={8} className="px-6 py-24 text-center">
                     <p className="text-xs text-[#9ca3af] font-bold uppercase tracking-widest">No transaction history found</p>
                   </td>
                 </tr>
@@ -648,7 +738,9 @@ export default function CustomerDetailPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest block">Paid Amount (₹)</label>
+                  <label className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest block">
+                    {newSale.saleType === "sent" ? "Amount Paid by Customer (₹)" : "Amount Paid to Customer (₹)"}
+                  </label>
                   <div className="relative">
                     <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#22c55e]" />
                     <input 

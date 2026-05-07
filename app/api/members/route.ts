@@ -11,8 +11,14 @@ import { savePhoto } from "@/lib/savePhoto";
 import { signQRToken } from "@/lib/qrSigner";
 import { PRIVATE_API_STALE_MS } from "@/lib/apiCache";
 import { getTenantFilter, requireTenant, resolvePoolId } from "@/lib/tenant";
+import { getCachedDashboard } from "@/lib/dashboardCache";
+import { withQueryTimeout } from "@/lib/queryTimeout";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { secureFindById } from "@/lib/tenantSecurity"; 
+import { withTransaction } from "@/lib/withTransaction";
+import { computeDefaulterStatus } from "@/lib/defaulterEngine";
+import { Subscription } from "@/models/Subscription";
+import { Ledger } from "@/models/Ledger";
 
 export const dynamic = "force-dynamic";
 
@@ -42,8 +48,8 @@ export async function GET(req: Request) {
         const url = new URL(req.url);
         const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1"));
         const limit = Math.min(
-            100,
-            Math.max(1, parseInt(url.searchParams.get("limit") ?? "12"))
+            20,
+            Math.max(1, parseInt(url.searchParams.get("limit") ?? "20"))
         );
         const skip = (page - 1) * limit;
         const search = url.searchParams.get("search") || "";
@@ -51,6 +57,9 @@ export async function GET(req: Request) {
         const statusFilter = url.searchParams.get("status") || "";
         const balanceOnly = url.searchParams.get("balanceOnly") || "";
         const memberType = url.searchParams.get("type") || "all";
+
+        // Determine if this request is cacheable (no search/filter params)
+        const isCacheable = !search && !planFilter && !statusFilter && !balanceOnly && memberType === "all" && !url.searchParams.get("deleted");
 
         // ── Build match filter ───────────────────────────────────────────
         const tenantFilter = getTenantFilter(user);
@@ -69,9 +78,9 @@ export async function GET(req: Request) {
         if (balanceOnly === "true") baseMatch.balanceAmount = { $gt: 0 };
 
         if (memberType === "member") {
-            baseMatch.memberId = { $regex: /^M(?!S)/i };
+            baseMatch.memberType = "regular";
         } else if (memberType === "entertainment") {
-            baseMatch.memberId = { $regex: /^MS/i };
+            baseMatch.memberType = "entertainment";
         }
 
         // ── Check if we should query Members, Entertainment, or both ─────
@@ -126,58 +135,82 @@ export async function GET(req: Request) {
             { $addFields: { planId: { $arrayElemAt: ["$_plan", 0] } } },
             {
                 $project: {
-                    _plan: 0, faceDescriptor: 0,
+                    _plan: 0, faceDescriptor: 0, photoUrl: 0, equipmentTaken: 0, qrCodeUrl: 0, qrToken: 0,
                 },
             }
         );
 
-        const regularBaseCount = includeRegular ? await Member.countDocuments(baseMatch) : 0;
-        const entertainmentBaseCount = includeEntertainment ? await EntertainmentMember.countDocuments(baseMatch) : 0;
+        // ── Fetcher function (shared between cached and uncached paths) ────
+        const fetchMembers = async () => {
+            const [regularBaseCount, entertainmentBaseCount, rawData] = await Promise.all([
+                includeRegular ? Member.countDocuments(baseMatch) : 0,
+                includeEntertainment ? EntertainmentMember.countDocuments(baseMatch) : 0,
+                Member.aggregate(pipeline),
+            ]);
+            const total = regularBaseCount + entertainmentBaseCount;
 
-        // ── Self Healing Fallback Due Generation ────────────────────────────
-        // Trigger natively decoupled in-memory preventing dashboard blocking
-        if (user.poolId) {
-            import("@/lib/billingEngine").then(m => m.processDueGenerations(user.poolId).catch(() => {}));
-        }
+            // ── Batch defaulter resolution: 2 queries for ALL members instead of 2*N ──
+            const regularIds = rawData
+                .filter((m: any) => m._source !== "entertainment" && !m.isDeleted)
+                .map((m: any) => m._id);
 
-        const [rawData] = await Promise.all([
-            Member.aggregate(pipeline)
-        ]);
-        const total = regularBaseCount + entertainmentBaseCount;
+            const [batchSubs, batchLedgers] = regularIds.length > 0
+                ? await Promise.all([
+                    Subscription.find({ memberId: { $in: regularIds }, status: "active", poolId }).lean(),
+                    Ledger.find({ memberId: { $in: regularIds }, poolId }).lean(),
+                ])
+                : [[], []];
 
-        const { resolveDefaulterState } = await import("@/lib/defaulterEngine");
+            const subMap = new Map((batchSubs as any[]).map(s => [s.memberId.toString(), s]));
+            const ledgerMap = new Map((batchLedgers as any[]).map(l => [l.memberId.toString(), l]));
+            const now = new Date();
 
-        const data = await Promise.all(rawData.map(async (m: any) => {
-            // ── STEP 8: Inject Native Defaulter UI Matrix ────────────────────
-            const isEntertainment = !('status' in m) && m._source === "entertainment";
-            let defaulterObj = { isDefaulter: false, overdueDays: 0, defaulterStatus: "active" as ("active"|"warning"|"blocked") };
-            
-            if (!isEntertainment && !m.isDeleted) {
-                defaulterObj = await resolveDefaulterState(m._id, m.poolId);
-            }
-            
-            m.isDefaulter = defaulterObj.isDefaulter;
-            m.defaulterStatus = defaulterObj.defaulterStatus;
-            m.overdueDays = defaulterObj.overdueDays;
+            const data = rawData.map((m: any) => {
+                if (m._source === "entertainment" || m.isDeleted) {
+                    m.isDefaulter = false; m.defaulterStatus = "active"; m.overdueDays = 0;
+                    return m;
+                }
+                const sub = subMap.get(m._id.toString());
+                const ledger = ledgerMap.get(m._id.toString());
+                if (!sub || !ledger || (ledger as any).balance <= 0 || new Date((sub as any).nextDueDate) >= now) {
+                    m.isDefaulter = false; m.defaulterStatus = "active"; m.overdueDays = 0;
+                } else {
+                    const overdueDays = Math.floor((now.getTime() - new Date((sub as any).nextDueDate).getTime()) / 86400000);
+                    m.isDefaulter = true;
+                    m.overdueDays = overdueDays;
+                    m.defaulterStatus = computeDefaulterStatus(overdueDays);
+                }
+                return m;
+            });
 
-            return m;
-        }));
-
-        const response = {
-            success: true,
-            data: Array.isArray(data) ? data : [],
-            meta: {
-                stable: true,
-                total,
-                page,
-                limit,
-                totalPages: Math.ceil(total / limit),
-            }
+            return {
+                success: true,
+                data: Array.isArray(data) ? data : [],
+                meta: {
+                    stable: true,
+                    total,
+                    page,
+                    limit,
+                    totalPages: Math.ceil(total / limit),
+                }
+            };
         };
 
-        const headers: Record<string, string> = process.env.NODE_ENV === "development"
-            ? { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
-            : {};
+        // ── Use Redis cache for default list requests (15s TTL) ────────────
+        let response;
+        if (isCacheable) {
+            const cacheKey = `members:${poolId}:p${page}:l${limit}:t${memberType}`;
+            response = await getCachedDashboard(cacheKey, () => withQueryTimeout(fetchMembers(), 8000), 15);
+        } else {
+            response = await withQueryTimeout(fetchMembers(), 8000);
+        }
+
+        const headers: Record<string, string> = isCacheable
+            ? {
+                "Cache-Control": "public, max-age=0, s-maxage=15, stale-while-revalidate=30",
+                "X-Cache": "MEMBERS",
+              }
+            : { "Cache-Control": "no-store, no-cache, must-revalidate, private" };
 
         return NextResponse.json(response, { headers });
     } catch (error) {
@@ -200,14 +233,15 @@ export async function POST(req: Request) {
         // Rate limiting is now handled globally by middleware
         
         // --- STEP 12 SaaS Gating: Enforce Tenant Limits ---
+        const poolId = resolvePoolId(user, body.poolId);
         try {
             const { enforceMemberCreationLimit } = await import("@/lib/saasGuard");
-            const poolId = resolvePoolId(user, body.poolId);
             await enforceMemberCreationLimit(poolId);
         } catch (e: any) {
             if (e.message === "SaaS_Member_Limit_Reached") {
                 return NextResponse.json({ error: "Organization member limit reached. Please upgrade your SaaS plan." }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
+            throw e; // Bubble up unexpected errors
         }
         // ------------------------------------------------
 
@@ -247,8 +281,6 @@ export async function POST(req: Request) {
         const plan = await secureFindById(Plan, planId, user, { lean: true });
         if (!plan)
             return NextResponse.json({ error: "Invalid Plan" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-
-        const poolId = resolvePoolId(user, body.poolId);
 
         // Atomic ID generation via Counters collection (Section 5)
         const isEntertainment = plan.hasEntertainment ?? false;
@@ -333,29 +365,24 @@ export async function POST(req: Request) {
             cardStatus: "ready",
         });
 
-        const mongoose = (await import("mongoose")).default;
-        const dbSession = await mongoose.startSession();
-        dbSession.startTransaction();
-
-        try {
-            await newMember.save({ session: dbSession });
+        await withTransaction(async (dbSession) => {
+            const saveOpts = dbSession ? { session: dbSession } : undefined;
+            await newMember.save(saveOpts);
 
             // ── Enterprise Rule: Increment immutable counter explicitly within transaction
             const { PoolStats } = await import("@/models/PoolStats");
+            const currentYear = new Date().getFullYear();
+            
+            const statsOpts = dbSession ? { upsert: true, session: dbSession } : { upsert: true };
             await PoolStats.findOneAndUpdate(
-                { poolId },
+                { poolId, year: currentYear },
                 { $inc: isEntertainment ? { totalEntertainmentMembers: 1 } : { totalMembers: 1 } },
-                { upsert: true, session: dbSession }
+                statsOpts
             );
-
-            await dbSession.commitTransaction();
-        } catch (txnError) {
-            await dbSession.abortTransaction();
+        }).catch(txnError => {
             console.error("Atomic transaction failed during member creation:", txnError);
-            return NextResponse.json({ error: "Failed to securely save member records" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        } finally {
-            dbSession.endSession();
-        }
+            throw new Error(`Failed to securely save member records: ${txnError.message || 'Transaction aborted'}`);
+        });
 
         // ── STEP 7B: Automated Subscription & Revenue Ledger Generation ──────────────
         try {
@@ -435,6 +462,9 @@ export async function POST(req: Request) {
             : await secureFindById(Member, newMember._id.toString(), user, { populate: { path: "planId", select: "name hasTokenPrint quickDelete price" } });
 
         // No background job needed since generation is inline
+
+        // Invalidate dashboard cache so new member shows immediately
+        import("@/lib/dashboardCache").then(m => m.invalidateDashboard(poolId)).catch(() => {});
 
         return NextResponse.json(savedMember, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {

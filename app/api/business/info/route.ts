@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { Business } from "@/models/Business";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -30,8 +31,8 @@ export async function GET(req: Request) {
         }, {
             headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
         });
-    } catch (error) {
-        console.error("[GET /api/business/info]", error);
+    } catch (error: any) {
+        logger.error("Business info fetch error", { error: error?.message });
         return NextResponse.json({ error: "Failed to fetch business info" }, { status: 500 });
     }
 }

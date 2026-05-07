@@ -20,8 +20,7 @@ export const dynamic = "force-dynamic";
 // ─── GET: list members (paginated + search + filters) ────────────────────────
 export async function GET(req: Request) {
     try {
-        const user = await resolveUser(req);
-        await dbConnect();
+        const [user] = await Promise.all([resolveUser(req), dbConnect()]);
 
         if (!user || user.role !== "hostel_admin") {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
@@ -58,6 +57,7 @@ export async function GET(req: Request) {
                 .populate("planId", "name durationDays price")
                 .populate("blockId", "name")
                 .populate("roomId", "roomNo")
+                .select("memberId name phone planId blockId roomId bedNo status balance due_date rent_amount checkInDate block_room_no roomNo createdAt")
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit)

@@ -19,7 +19,7 @@ export async function GET(req: Request) {
 
         const { searchParams } = new URL(req.url);
         const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
-        const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50")));
+        const limit = Math.min(20, Math.max(1, parseInt(searchParams.get("limit") || "20")));
         const skip = (page - 1) * limit;
         const memberType = searchParams.get("type") || "all";
 
@@ -43,9 +43,9 @@ export async function GET(req: Request) {
         };
 
         if (memberType === "member") {
-            baseMatch.memberId = { $regex: /^M(?!S)/i };
+            baseMatch.memberType = "regular";
         } else if (memberType === "entertainment") {
-            baseMatch.memberId = { $regex: /^MS/i };
+            baseMatch.memberType = "entertainment";
         }
 
         const includeRegular = memberType === "all" || memberType === "member";
@@ -95,7 +95,7 @@ export async function GET(req: Request) {
                     name: 1,
                     phone: 1,
                     age: 1,
-                    qrToken: 1,
+                    qrToken: 0,
                     planId: {
                         _id: "$planDetails._id",
                         name: "$planDetails.name",
@@ -111,11 +111,11 @@ export async function GET(req: Request) {
             }
         );
 
-        const regularBaseCount = includeRegular ? await Member.countDocuments(baseMatch) : 0;
-        const entertainmentBaseCount = includeEntertainment ? await EntertainmentMember.countDocuments(baseMatch) : 0;
-
-        const [members] = await Promise.all([
-            Member.aggregate(pipeline)
+        // Run counts + aggregate in parallel
+        const [regularBaseCount, entertainmentBaseCount, members] = await Promise.all([
+            includeRegular ? Member.countDocuments(baseMatch) : 0,
+            includeEntertainment ? EntertainmentMember.countDocuments(baseMatch) : 0,
+            Member.aggregate(pipeline),
         ]);
         
         const total = regularBaseCount + entertainmentBaseCount;

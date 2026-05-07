@@ -16,6 +16,7 @@ type DashData = {
     totalMembers: number;
     activeMembers: number;
     defaulterMembers: number;
+    totalDue: number;
     checkoutMembers: number;
     expiringMembers: number;
     occupiedBeds: number;
@@ -144,7 +145,7 @@ export default function HostelDashboardPage() {
                 <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                     <StatCard icon={Users}         label="Total Members"   value={data.totalMembers}   accent="bg-slate-500" />
                     <StatCard icon={Activity}      label="Active Members"  value={data.activeMembers}  accent="bg-emerald-500" />
-                    <StatCard icon={AlertTriangle} label="Defaulters"      value={data.defaulterMembers} accent="bg-orange-600" />
+                    <StatCard icon={AlertTriangle} label="Members with Overdue Rent" value={fmt(data.totalDue || 0)} sub="Total Due" accent="bg-orange-600" />
                     <StatCard icon={UserX}         label="Checkout Members" value={data.checkoutMembers} accent="bg-red-500" />
                     <StatCard icon={AlertTriangle} label="Expiring (3d)"   value={data.expiringMembers} accent="bg-orange-400" />
                 </div>

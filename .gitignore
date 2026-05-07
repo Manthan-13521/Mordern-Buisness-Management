@@ -29,6 +29,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+next-dev.log
 
 # env files (can opt-in for committing if needed)
 .env
@@ -38,6 +39,7 @@ yarn-error.log*
 
 # vercel
 .vercel
+vercel_logs.json
 
 # typescript
 *.tsbuildinfo
@@ -49,8 +51,20 @@ next-env.d.ts
 /public/uploads/
 /public/exports/
 test-*.js
+test-*.ts
 fix-*.js
+fix_*.js
+fix_*.py
 tester.js
+check-*.js
 .gitignore-additions.txt
 .keep
 scratch/
+
+# Debug/fix scripts — never commit these
+script-*.js
+script-*.py
+safe_headers_inject.py
+revert_bad_headers.py
+invoice.html
+

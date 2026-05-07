@@ -73,7 +73,8 @@ export async function PATCH(req: Request, props: RouteContext) {
 
 /**
  * DELETE /api/members/[id]
- * Soft-delete — marks member as deleted.
+ * Hard-delete — permanently removes member after balance check.
+ * Archives to DeletedMember collection for historical count tracking.
  */
 export async function DELETE(req: Request, props: RouteContext) {
     try {
@@ -87,19 +88,51 @@ export async function DELETE(req: Request, props: RouteContext) {
         const { id } = await props.params;
         if (!id) return NextResponse.json({ error: "Missing member ID" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
+        // 1. Fetch member first to validate balance
+        let member: any = await secureFindById(Member, id, user);
+        let isEntertainment = false;
 
-        
-        // 1. Hard Delete
-        let deleted = await secureDeleteById(Member, id, user);
-        if (!deleted) {
-            deleted = await secureDeleteById(EntertainmentMember, id, user);
+        if (!member) {
+            member = await secureFindById(EntertainmentMember, id, user);
+            isEntertainment = true;
         }
 
-        if (!deleted) {
-            // Log intrusion if existed in another pool
+        if (!member) {
             await auditCrossTenantAccess(Member, id, user);
             await auditCrossTenantAccess(EntertainmentMember, id, user);
             return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        }
+
+        // 2. Block deletion if member has pending balance
+        if ((member.balanceAmount || 0) > 0) {
+            return NextResponse.json(
+                { error: "Member has pending balance. Cannot delete." },
+                { status: 400, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }
+            );
+        }
+
+        // 3. Archive to DeletedMember for historical count tracking
+        try {
+            const { DeletedMember } = await import("@/models/DeletedMember");
+            await DeletedMember.create({
+                originalId: member._id,
+                memberId: member.memberId || member._id.toString(),
+                name: member.name || "Unknown",
+                phone: member.phone || "Unknown",
+                poolId: member.poolId?.toString() || "unknown",
+                deletedAt: new Date(),
+                deletionType: "manual",
+                collectionSource: isEntertainment ? "entertainment_members" : "members",
+                fullData: member,
+            });
+        } catch (archiveErr) {
+            console.warn("DeletedMember archive failed (non-critical):", archiveErr);
+        }
+
+        // 4. Hard delete
+        let deleted = await secureDeleteById(Member, id, user);
+        if (!deleted) {
+            deleted = await secureDeleteById(EntertainmentMember, id, user);
         }
 
         return NextResponse.json({ message: "Member deleted successfully." }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });

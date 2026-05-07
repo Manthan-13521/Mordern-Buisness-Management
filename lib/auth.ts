@@ -132,10 +132,13 @@ export const authOptions: NextAuthOptions = {
                 
                 checkRateLimit(rlKey);
 
+                // Normalize email to lowercase for case-insensitive matching
+                const normalizedUsername = credentials.username.trim().toLowerCase();
+
                 await dbConnect();
 
                 if (credentials.isSuperAdmin === 'true') {
-                    const platformAdmin = await PlatformAdmin.findOne({ email: credentials.username }).lean();
+                    const platformAdmin = await PlatformAdmin.findOne({ email: normalizedUsername }).lean();
                     if (platformAdmin) {
                         const isMatch = await bcrypt.compare(credentials.password, platformAdmin.passwordHash);
                         if (isMatch) {
@@ -173,7 +176,7 @@ export const authOptions: NextAuthOptions = {
                 // SECURITY: Prefer email match (unique). Name match is scoped by poolId when available.
                 const userQuery: any = {
                     $or: [
-                        { email: credentials.username },
+                        { email: normalizedUsername },
                         { name: credentials.username }
                     ]
                 };
@@ -226,11 +229,17 @@ export const authOptions: NextAuthOptions = {
 
                 // Generic login (business, hostel, or unscoped pool admin)
                 // Try email first (unique index guarantees correct match)
-                let user = await UserModel.findOne({ email: credentials.username }).lean() as IUser | null;
+                let user = await UserModel.findOne({ email: normalizedUsername }).lean() as IUser | null;
 
                 // Fallback: try name match, but ONLY if email didn't match
+                // SECURITY: Name-based login without poolSlug is ambiguous — only allow if exactly one match
                 if (!user) {
-                    user = await UserModel.findOne({ name: credentials.username }).lean() as IUser | null;
+                    const nameMatches = await UserModel.find({ name: credentials.username }).lean() as IUser[];
+                    if (nameMatches.length === 1) {
+                        user = nameMatches[0];
+                    } else if (nameMatches.length > 1) {
+                        throw new Error("Multiple accounts found with this name. Please login with your email or use pool-specific login URL.");
+                    }
                 }
 
                 if (!user) {
@@ -345,8 +354,37 @@ export const authOptions: NextAuthOptions = {
                 token.subscriptionStatus = user.subscriptionStatus ?? "none";
                 token.subscriptionExpiryDate = user.subscriptionExpiryDate ?? null;
             }
-            if (trigger === "update" && session) {
-                 token = { ...token, ...session };
+            if (trigger === "update") {
+                 // ── Re-fetch subscription from DB to get post-payment state ──
+                 // CRITICAL: Do NOT blindly merge client session data.
+                 // The old code `token = { ...token, ...session }` let the client
+                 // send whatever it wanted, and never actually checked the DB.
+                 try {
+                     await dbConnect();
+                     const freshUser = await UserModel.findById(token.id)
+                         .select("subscription")
+                         .lean() as any;
+                     if (freshUser?.subscription?.expiryDate) {
+                         const expiry = new Date(freshUser.subscription.expiryDate);
+                         const isExpired = new Date() > expiry;
+                         token.subscriptionStatus = isExpired ? "expired" : "active";
+                         token.subscriptionExpiryDate = expiry.toISOString();
+                         logger.info("[Auth] JWT session refreshed from DB", {
+                             userId: token.id,
+                             newStatus: token.subscriptionStatus,
+                             expiry: token.subscriptionExpiryDate,
+                         });
+                     } else {
+                         token.subscriptionStatus = "none";
+                         token.subscriptionExpiryDate = null;
+                     }
+                 } catch (err: any) {
+                     // If DB fetch fails, don't break auth — keep existing token
+                     logger.error("[Auth] JWT refresh failed, keeping existing token", {
+                         userId: token.id,
+                         error: err?.message,
+                     });
+                 }
             }
             return token;
         },

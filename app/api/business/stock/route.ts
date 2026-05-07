@@ -2,8 +2,21 @@ import { NextResponse } from "next/server";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessStock } from "@/models/BusinessStock";
+import { z } from "zod";
 
 export const dynamic = "force-dynamic";
+
+// ── Zod Schemas ──────────────────────────────────────────────────────────
+const StockCreateSchema = z.object({
+    name: z.string().min(1, "Name is required").max(100, "Name too long"),
+    currentQuantity: z.number().min(0).max(999999).default(0),
+    unit: z.string().max(20).optional(),
+});
+
+const StockUpdateSchema = z.object({
+    _id: z.string().min(1, "ID is required"),
+    currentQuantity: z.number().min(0).max(999999),
+});
 
 export async function GET(req: Request) {
     try {
@@ -32,18 +45,22 @@ export async function POST(req: Request) {
         }
 
         const body = await req.json();
-        const { name, currentQuantity, unit } = body;
-
-        if (!name) {
-            return NextResponse.json({ error: "Name is required" }, { status: 400 });
+        const parsed = StockCreateSchema.safeParse(body);
+        if (!parsed.success) {
+            return NextResponse.json(
+                { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
+                { status: 400 }
+            );
         }
+
+        const { name, currentQuantity, unit } = parsed.data;
 
         await dbConnect();
         const businessId = user.businessId;
 
         const stock = new BusinessStock({
             name,
-            currentQuantity: currentQuantity || 0,
+            currentQuantity,
             unit,
             businessId
         });
@@ -69,11 +86,15 @@ export async function PUT(req: Request) {
         }
 
         const body = await req.json();
-        const { _id, currentQuantity } = body;
-
-        if (!_id) {
-            return NextResponse.json({ error: "ID is required" }, { status: 400 });
+        const parsed = StockUpdateSchema.safeParse(body);
+        if (!parsed.success) {
+            return NextResponse.json(
+                { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
+                { status: 400 }
+            );
         }
+
+        const { _id, currentQuantity } = parsed.data;
 
         await dbConnect();
         const businessId = user.businessId;
@@ -95,3 +116,4 @@ export async function PUT(req: Request) {
         return NextResponse.json({ error: "Failed to update stock" }, { status: 500 });
     }
 }
+

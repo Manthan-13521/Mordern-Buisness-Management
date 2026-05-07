@@ -59,6 +59,7 @@ export interface IMember extends Document {
     // ── PROMPT 1.2 Access State (Fast Entry Opt) ──
     accessState: "active" | "blocked"; // Denormalized flag from defaulter engine
     cachedBalance: number;             // Denormalized sum from ledger
+    memberType: "regular" | "entertainment"; // NEVER use $regex on memberId to distinguish types
     // ──────────────────────────────────────────────
     createdAt: Date;
     updatedAt: Date;
@@ -157,6 +158,13 @@ const memberSchema = new Schema<IMember>(
             index: true
         },
         cachedBalance: { type: Number, default: 0 },
+        // ── Member Type (eliminates $regex on memberId) ──
+        memberType: {
+            type: String,
+            enum: ["regular", "entertainment"],
+            default: "regular",
+            index: true
+        },
         // ──────────────────────────────────────────────
     },
     { timestamps: true }
@@ -173,6 +181,7 @@ memberSchema.index({ poolId: 1, balanceAmount: 1 });
 memberSchema.index({ poolId: 1, createdAt: -1 });
 memberSchema.index({ poolId: 1, isDeleted: 1, isExpired: 1 });
 memberSchema.index({ poolId: 1, isDeleted: 1 });
+memberSchema.index({ poolId: 1, memberType: 1 }); // Fast type filtering without $regex
 
 // ── Section 2A — additional performance indexes ─────────────────────
 memberSchema.index({ createdAt: -1 });
@@ -191,7 +200,7 @@ memberSchema.methods.rotateQrToken = async function () {
 };
 
 // ── Dual Write Hook for UnifiedUser (Prompt 3.1) ──────────────
-async function syncToUnifiedUser(doc: any, retries = 3) {
+async function syncToUnifiedUser(doc: any) {
     if (!doc) return;
     try {
         const { UnifiedUser } = await import("./UnifiedUser");
@@ -211,18 +220,13 @@ async function syncToUnifiedUser(doc: any, retries = 3) {
         );
         console.log(`UnifiedUser synced (Pool: ${doc._id})`);
     } catch (e: any) {
-        console.error("Failed to sync UnifiedUser for Member:", e?.message || e);
-        if (retries > 0) {
-            console.log(`Retrying UnifiedUser sync for ${doc._id}... (${retries} left)`);
-            setTimeout(() => syncToUnifiedUser(doc, retries - 1), 2000); // 2sec backoff
-        } else {
-            console.error(`[DLQ] UnifiedUser dual-write exhausted retries for ${doc._id}`);
-            try {
-                const { recordFailedJob } = await import("@/lib/queue");
-                await recordFailedJob("sync" as any, { memberId: doc._id, type: "pool" }, e?.message || "Sync failed", 3);
-            } catch (dlqErr) {
-                console.error("Failed to write to DLQ:", dlqErr);
-            }
+        console.error("Failed to sync UnifiedUser for Member, enqueuing to QStash:", e?.message || e);
+        try {
+            const { enqueueJob } = await import("@/lib/queue");
+            // Forward to QStash for background retries
+            await enqueueJob("sync", { memberId: doc._id, type: "pool", data: doc });
+        } catch (queueErr) {
+            console.error("Failed to enqueue sync job:", queueErr);
         }
     }
 }

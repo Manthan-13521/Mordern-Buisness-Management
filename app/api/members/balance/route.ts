@@ -24,7 +24,7 @@ export async function GET(req: Request) {
 
         const url = new URL(req.url);
         const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1"));
-        const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "20")));
+        const limit = Math.min(20, Math.max(1, parseInt(url.searchParams.get("limit") ?? "20")));
         const memberType = url.searchParams.get("type") || "all";
 
         // ── Tenant isolation guard ───────────────────────────────────────────
@@ -40,23 +40,22 @@ export async function GET(req: Request) {
         };
 
         if (memberType === "member") {
-            query.memberId = { $regex: /^M(?!S)/i };
+            query.memberType = "regular";
         } else if (memberType === "entertainment") {
-            query.memberId = { $regex: /^MS/i };
+            query.memberType = "entertainment";
         }
 
-        const selectFields = "memberId name phone planId planQuantity paidAmount balanceAmount paymentStatus createdAt photoUrl";
+        const selectFields = "memberId name phone planId planQuantity paidAmount balanceAmount paymentStatus createdAt";
         
-        let regularMembers: any[] = [];
-        let entertainmentMembers: any[] = [];
-        
-        if (memberType === "all" || memberType === "member") {
-            regularMembers = await Member.find(query).populate("planId", "name price").select(selectFields).lean() as any[];
-        }
-        
-        if (memberType === "all" || memberType === "entertainment") {
-            entertainmentMembers = await EntertainmentMember.find(query).populate("planId", "name price").select(selectFields).lean() as any[];
-        }
+        // Run both queries in parallel
+        const [regularMembers, entertainmentMembers] = await Promise.all([
+            (memberType === "all" || memberType === "member")
+                ? Member.find(query).populate("planId", "name price").select(selectFields).lean() as Promise<any[]>
+                : Promise.resolve([]),
+            (memberType === "all" || memberType === "entertainment")
+                ? EntertainmentMember.find(query).populate("planId", "name price").select(selectFields).lean() as Promise<any[]>
+                : Promise.resolve([]),
+        ]);
 
         const taggedEntertainment = entertainmentMembers.map((m: any) => ({ ...m, _source: "entertainment" }));
         const allMembers = [...regularMembers, ...taggedEntertainment]

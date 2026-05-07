@@ -23,3 +23,19 @@ try {
 }
 
 export { redis };
+
+/**
+ * Executes a promise with a hard timeout (default 150ms).
+ * Prevents Redis latencies from stalling the main thread.
+ */
+export async function withTimeout<T>(promise: Promise<T>, timeoutMs: number = 150): Promise<T> {
+    let timeoutHandle: NodeJS.Timeout;
+    const timeoutPromise = new Promise<T>((_, reject) => {
+        timeoutHandle = setTimeout(() => reject(new Error("Redis timeout")), timeoutMs);
+    });
+
+    return Promise.race([
+        promise.finally(() => clearTimeout(timeoutHandle)),
+        timeoutPromise
+    ]);
+}

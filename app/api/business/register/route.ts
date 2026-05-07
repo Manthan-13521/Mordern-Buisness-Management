@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { Business } from "@/models/Business";
 import { User } from "@/models/User";
+import { logger } from "@/lib/logger";
 import bcrypt from "bcryptjs";
 
 async function getNextBusinessId() {
@@ -92,7 +93,7 @@ export async function POST(req: Request) {
         }
 
     } catch (error: any) {
-        console.error("Business Registration Error:", error);
+        logger.error("Business registration error", { error: error?.message });
         return NextResponse.json({ error: error.message || "Failed to register business" }, { status: 500 });
     }
 }

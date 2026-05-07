@@ -1,4 +1,4 @@
-import { redis } from "./redis";
+import { redis, withTimeout } from "./redis";
 
 /**
  * Hybrid cache: Upstash Redis (production) with in-memory fallback (dev).
@@ -19,7 +19,7 @@ export async function getCache(key: string): Promise<unknown | null> {
     // Try Redis first
     if (redis) {
         try {
-            const cached = await redis.get(fullKey);
+            const cached = await withTimeout(redis.get(fullKey), 200);
             if (cached) return cached;
         } catch (err) {
             console.warn("[Cache] Redis GET failed, falling back to memory:", err);
@@ -43,7 +43,8 @@ export async function setCache(key: string, data: unknown): Promise<void> {
     // Try Redis
     if (redis) {
         try {
-            await redis.set(fullKey, JSON.stringify(data), { ex: CACHE_TTL });
+            const jitter = Math.floor(Math.random() * 3); // 0-2s jitter
+            await redis.set(fullKey, JSON.stringify(data), { ex: CACHE_TTL + jitter });
             return;
         } catch (err) {
             console.warn("[Cache] Redis SET failed, falling back to memory:", err);
@@ -71,24 +72,35 @@ export async function invalidateCache(poolId?: string): Promise<void> {
         }
     }
 
-    // Clear Redis — scan and delete matching keys
-    if (redis) {
+    // Clear Redis — delete known keys directly (no SCAN)
+    if (redis && poolId) {
         try {
-            const pattern = poolId
-                ? `${CACHE_PREFIX}members-${poolId}*`
-                : `${CACHE_PREFIX}*`;
-
-            // Use scan to find all matching keys
+            // Delete commonly-accessed page keys (pages 1-10 cover 99% of usage)
+            const keysToDelete = [];
+            for (let page = 1; page <= 10; page++) {
+                for (const limit of [12, 20, 50]) {
+                    keysToDelete.push(`${CACHE_PREFIX}members-${poolId}-p${page}-l${limit}`);
+                }
+            }
+            if (keysToDelete.length > 0) {
+                await redis.del(...keysToDelete);
+            }
+        } catch (err) {
+            console.warn("[Cache] Redis invalidation failed:", err);
+        }
+    } else if (redis && !poolId) {
+        // Global invalidation — only done on deploy/reset, acceptable to SCAN here
+        try {
             let cursor = 0;
             do {
-                const [nextCursor, keys] = await redis.scan(cursor, { match: pattern, count: 100 });
+                const [nextCursor, keys] = await redis.scan(cursor, { match: `${CACHE_PREFIX}*`, count: 100 });
                 cursor = Number(nextCursor);
                 if (keys.length > 0) {
                     await redis.del(...keys);
                 }
             } while (cursor !== 0);
         } catch (err) {
-            console.warn("[Cache] Redis invalidation failed:", err);
+            console.warn("[Cache] Redis global invalidation failed:", err);
         }
     }
 }

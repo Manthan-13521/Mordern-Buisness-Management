@@ -66,7 +66,7 @@ export default function BalancePaymentsPage() {
         e.preventDefault(); if (!payMember) return; setSubmitting(true); setError("");
         const res = await fetch("/api/hostel/payments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ memberId: payMember._id, amount: Math.min(Number(payForm.amount), 9999999999), paymentMethod: payForm.paymentMethod, transactionId: payForm.transactionId, notes: payForm.notes, idempotencyKey: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() }) });
         const data = await res.json();
-        if (!res.ok) { setError(data.error || "Payment failed"); setSubmitting(false); return; }
+        if (!res.ok) { setError(typeof data.error === "string" ? data.error : (data.error?.message || JSON.stringify(data.error) || "Payment failed")); setSubmitting(false); return; }
         setPayMember(null); fetch_(); setSubmitting(false);
     };
 

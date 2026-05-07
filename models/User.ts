@@ -7,7 +7,7 @@ export interface IUserSubscription {
     pricePaid: number;
     startDate: Date;
     expiryDate: Date;
-    status: "active" | "expired";
+    status: "active" | "expired" | "trial" | "suspended" | "cancelled";
 }
 
 export interface IUser extends Document {
@@ -39,7 +39,7 @@ const subscriptionSubSchema = new Schema<IUserSubscription>(
         pricePaid: { type: Number, required: true, min: 0 },
         startDate: { type: Date, required: true },
         expiryDate:{ type: Date, required: true },
-        status:    { type: String, enum: ["active", "expired"], default: "active" },
+        status:    { type: String, enum: ["active", "expired", "trial", "suspended", "cancelled"], default: "active" },
     },
     { _id: false }
 );
@@ -69,6 +69,13 @@ const userSchema = new Schema<IUser>(
     },
     { timestamps: true }
 );
+
+// ── Pre-save: normalize email to lowercase ──────────────────────────────
+userSchema.pre("save", function () {
+    if (this.isModified("email") && this.email) {
+        this.email = this.email.trim().toLowerCase();
+    }
+});
 
 userSchema.index({ name: 1 });
 userSchema.index({ email: 1, poolId: 1 });

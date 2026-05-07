@@ -4,6 +4,7 @@ import { SaaSPlan } from "@/models/SaaSPlan";
 import { Member } from "@/models/Member";
 import { Pool } from "@/models/Pool";
 import { redis } from "@/lib/redis";
+import { logger } from "@/lib/logger";
 
 /**
  * ── SaaS Guard: Business Logic Enforcer ────────────────────────────────
@@ -40,7 +41,7 @@ export async function enforceSaaSGuard(poolId: string): Promise<SaaSContext> {
                 orgIdToFetch = cachedOrgId;
             }
         } catch (e) {
-            console.warn("[SaaSGuard] Redis pool lookup failed:", e);
+            logger.warn("[SaaSGuard] Redis pool lookup failed");
         }
     }
 
@@ -53,7 +54,7 @@ export async function enforceSaaSGuard(poolId: string): Promise<SaaSContext> {
                 try {
                     await redis.setex(poolMapKey, 86400, orgIdToFetch); // Cache mapping for 24h
                 } catch (e) {
-                    console.warn("[SaaSGuard] Redis set poolMap failed:", e);
+                    logger.warn("[SaaSGuard] Redis set poolMap failed");
                 }
             }
         } else {
@@ -72,7 +73,7 @@ export async function enforceSaaSGuard(poolId: string): Promise<SaaSContext> {
                 return typeof cached === "string" ? JSON.parse(cached) : cached as SaaSContext;
             }
         } catch (e) {
-            console.warn("[SaaSGuard] Redis lookup failed, falling back to DB:", e);
+            logger.warn("[SaaSGuard] Redis lookup failed, falling back to DB");
         }
     }
 
@@ -125,7 +126,7 @@ export async function enforceSaaSGuard(poolId: string): Promise<SaaSContext> {
         try {
             await redis.setex(cacheKey, 1800, JSON.stringify(context));
         } catch (e) {
-            console.warn("[SaaSGuard] Redis set failed:", e);
+            logger.warn("[SaaSGuard] Redis set failed");
         }
     }
 
@@ -193,3 +194,117 @@ export async function enforceWriteAccess(poolId: string) {
     }
     return true;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BUSINESS SaaS Guard — Uses User.subscription (not Organization model)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export interface BusinessSaaSContext {
+    businessId: string;
+    userId: string;
+    module: "business";
+    planType: string;
+    status: "active" | "trial" | "expired" | "suspended" | "cancelled";
+    expiryDate: Date;
+    isExpired: boolean;
+    isGracePeriod: boolean; // 7-day grace after expiry
+}
+
+/**
+ * Check subscription status for business tenants.
+ * Business tenants store subscription directly on User model (not Organization).
+ * Uses Redis cache with 15min TTL to avoid hitting User collection on every request.
+ */
+export async function enforceBusinessSubscription(
+    userId: string,
+    businessId: string
+): Promise<BusinessSaaSContext> {
+    const cacheKey = `biz:sub:${businessId}`;
+
+    // 1. Try Redis cache
+    if (redis) {
+        try {
+            const cached = await redis.get(cacheKey);
+            if (cached) {
+                const ctx = typeof cached === "string" ? JSON.parse(cached) : cached as BusinessSaaSContext;
+                // Re-check expiry against current time (cache may be up to 15min stale)
+                ctx.isExpired = new Date(ctx.expiryDate).getTime() < Date.now();
+                ctx.isGracePeriod = ctx.isExpired &&
+                    (Date.now() - new Date(ctx.expiryDate).getTime()) < 7 * 24 * 60 * 60 * 1000;
+                return ctx;
+            }
+        } catch (e) {
+            // Non-fatal — fall through to DB
+        }
+    }
+
+    // 2. Load from DB
+    await dbConnect();
+    const { User } = await import("@/models/User");
+    const user = await User.findById(userId).select("subscription businessId").lean() as any;
+
+    if (!user) throw new Error("SaaS_User_Not_Found");
+
+    const sub = user.subscription;
+    if (!sub || sub.module !== "business") {
+        // No active business subscription — allow trial-like access
+        const ctx: BusinessSaaSContext = {
+            businessId,
+            userId,
+            module: "business",
+            planType: "none",
+            status: "expired",
+            expiryDate: new Date(0),
+            isExpired: true,
+            isGracePeriod: false,
+        };
+        return ctx;
+    }
+
+    const expiryDate = new Date(sub.expiryDate);
+    const isExpired = expiryDate.getTime() < Date.now();
+    const gracePeriodMs = 7 * 24 * 60 * 60 * 1000; // 7 days
+    const isGracePeriod = isExpired && (Date.now() - expiryDate.getTime()) < gracePeriodMs;
+
+    const ctx: BusinessSaaSContext = {
+        businessId,
+        userId,
+        module: "business",
+        planType: sub.planType,
+        status: isExpired ? "expired" : (sub.status as any),
+        expiryDate,
+        isExpired,
+        isGracePeriod,
+    };
+
+    // 3. Cache for 15 minutes
+    if (redis) {
+        try {
+            await redis.setex(cacheKey, 900, JSON.stringify(ctx));
+        } catch (e) {
+            // Non-fatal
+        }
+    }
+
+    return ctx;
+}
+
+/**
+ * Enforce write access for business tenants.
+ * Throws if subscription is hard-expired (past 7-day grace period).
+ * Allows reads during grace period but blocks writes.
+ */
+export async function enforceBusinessWriteAccess(
+    userId: string,
+    businessId: string
+): Promise<true> {
+    const ctx = await enforceBusinessSubscription(userId, businessId);
+
+    // Hard expired = past grace period, no writes allowed
+    if (ctx.isExpired && !ctx.isGracePeriod) {
+        throw new Error("SaaS_Business_Subscription_Expired");
+    }
+
+    return true;
+}
+

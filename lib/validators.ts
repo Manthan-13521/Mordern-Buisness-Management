@@ -93,6 +93,7 @@ export const ScanSchema = z.object({
 
 export const RazorpayOrderSchema = z.object({
   planId: z.string().min(1).max(50),
+  memberId: z.string().min(1).max(50).optional(), // For renewals — absent on new registrations
   cartQuantity: z.number().int().min(1).max(100).optional().default(1),
 })
 

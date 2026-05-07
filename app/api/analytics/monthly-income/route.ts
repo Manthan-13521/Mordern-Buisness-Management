@@ -55,14 +55,15 @@ export async function GET(req: Request) {
             };
             
             // Timezone offset for IST grouping is complex, but we can do a simple JS loop grouping after fetching
-            const rawPayments = await Payment.find(matchQuery, "amount createdAt memberId memberCollection").populate("memberId", "memberId").lean();
+            // Filter by memberCollection instead of regex on populated memberId
+            if (memberType !== "all") {
+                matchQuery.memberCollection = memberType === "member" ? "members" : "entertainment_members";
+            }
+            
+            // No need for .populate() — memberCollection already filters at DB level
+            const rawPayments = await Payment.find(matchQuery, "amount createdAt").lean();
             
             rawPayments.forEach((p: any) => {
-                if (memberType !== "all" && p.memberId && p.memberId.memberId) {
-                    const idStr = p.memberId.memberId;
-                    if (memberType === "member" && !/^M(?!S)/i.test(idStr)) return;
-                    if (memberType === "entertainment" && !/^MS/i.test(idStr)) return;
-                }
                 const date = new Date(p.createdAt);
                 // Adjust for IST manually to match snapshot logic exactly
                 const istTime = date.getTime() + (5.5 * 60 * 60 * 1000);

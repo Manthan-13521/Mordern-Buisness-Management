@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
-import { resolveUser, AuthUser } from "@/lib/authHelper";
+import { resolveUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessTransaction } from "@/models/BusinessTransaction";
-import { BusinessCustomer } from "@/models/BusinessCustomer";
 import { requireBusinessId } from "@/lib/tenant";
-import mongoose from "mongoose";
+import { logger } from "@/lib/logger";
+import {
+    getRevenue,
+    getReceivables,
+    type DateRange,
+} from "@/services/analyticsService";
 
 export const dynamic = "force-dynamic";
 
@@ -27,19 +31,18 @@ export async function GET(req: Request) {
         if (!businessId || typeof businessId !== "string") {
             throw new Error("Invalid businessId type or value");
         }
-        if (businessId !== "superadmin" && !mongoose.Types.ObjectId.isValid(businessId)) {
+        if (businessId !== "superadmin" && businessId.trim() === "") {
             throw new Error("Invalid businessId format");
         }
 
-        // 🟢 STRUCTURED AUDIT LOGGING (ENHANCED)
-        console.info(JSON.stringify({
-            type: "BUSINESS_ANALYTICS_QUERY",
-            businessId,
-            userId: user.id,
-            route: "/api/business/analytics",
-            method: "GET",
-            timestamp: new Date().toISOString()
-        }));
+        // Structured debug logging via pino
+        if (process.env.DEBUG_ANALYTICS === "true") {
+            logger.debug("Business analytics query", {
+                businessId,
+                userId: user.id,
+                route: "/api/business/analytics",
+            });
+        }
 
         await dbConnect();
 
@@ -48,70 +51,63 @@ export async function GET(req: Request) {
             throw new Error("Tenant context lost before query execution");
         }
 
-        const now = new Date();
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const yearStart = new Date(now.getFullYear(), 0, 1);
-
+        // ═══════════════════════════════════════════════════════════════════
+        // USE CENTRALIZED ANALYTICS SERVICE — Single Source of Truth
+        // Revenue = SALE + sent ONLY (not all sales!)
+        // ═══════════════════════════════════════════════════════════════════
         const [
-            dailySalesRaw,
-            monthlySalesRaw,
-            yearlySalesRaw,
-            totalDueRaw,
+            dailyRevenue,
+            monthlyRevenue,
+            yearlyRevenue,
+            receivables,
             recentSalesRaw,
             recentPaymentsRaw
         ] = await Promise.all([
-            BusinessTransaction.aggregate([
-                { $match: { businessId, date: { $gte: todayStart }, category: 'SALE' } },
-                { $group: { _id: null, total: { $sum: "$amount" } } }
-            ]),
-            BusinessTransaction.aggregate([
-                { $match: { businessId, date: { $gte: monthStart }, category: 'SALE' } },
-                { $group: { _id: null, total: { $sum: "$amount" } } }
-            ]),
-            BusinessTransaction.aggregate([
-                { $match: { businessId, date: { $gte: yearStart }, category: 'SALE' } },
-                { $group: { _id: null, total: { $sum: "$amount" } } }
-            ]),
-            BusinessCustomer.aggregate([
-                { $match: { businessId } },
-                { $group: { _id: null, total: { $sum: "$currentDue" } } }
-            ]),
-            BusinessTransaction.find({ businessId, category: 'SALE' })
+            getRevenue(businessId, "daily"),
+            getRevenue(businessId, "monthly"),
+            getRevenue(businessId, "yearly"),
+            getReceivables(businessId),
+            BusinessTransaction.find({ businessId, category: 'SALE', transactionType: 'sent' })
                 .populate("customerId", "name")
-                .sort({ date: -1 })
-                .limit(5),
-            BusinessTransaction.find({ businessId, category: 'PAYMENT' })
-                .populate("customerId", "name")
+                .select("customerId amount paidAmount date transactionType items category createdAt")
                 .sort({ date: -1 })
                 .limit(5)
+                .lean(),
+            BusinessTransaction.find({ businessId, category: 'PAYMENT' })
+                .populate("customerId", "name")
+                .select("customerId amount date transactionType paymentMethod category createdAt")
+                .sort({ date: -1 })
+                .limit(5)
+                .lean()
         ]);
 
         // 🟠 AGGREGATION SAFETY: Fallback for Mongo structure quirks
-        const dailySales = Array.isArray(dailySalesRaw) ? dailySalesRaw : [];
-        const monthlySales = Array.isArray(monthlySalesRaw) ? monthlySalesRaw : [];
-        const yearlySales = Array.isArray(yearlySalesRaw) ? yearlySalesRaw : [];
-        const totalDue = Array.isArray(totalDueRaw) ? totalDueRaw : [];
         const recentSales = Array.isArray(recentSalesRaw) ? recentSalesRaw : [];
         const recentPayments = Array.isArray(recentPaymentsRaw) ? recentPaymentsRaw : [];
 
         const hasNoData = recentSales.length === 0 && recentPayments.length === 0;
 
-        // 📊 PERFORMANCE TRACKING
-        console.info(JSON.stringify({
-            type: "ANALYTICS_PERF",
-            businessId,
-            duration: Date.now() - start,
-            timestamp: new Date().toISOString()
-        }));
+        // Performance tracking via structured logger
+        if (process.env.DEBUG_ANALYTICS === "true") {
+            logger.debug("Analytics performance", {
+                businessId,
+                duration: Date.now() - start,
+                dailySales: dailyRevenue.total,
+                monthlySales: monthlyRevenue.total,
+                yearlySales: yearlyRevenue.total,
+                dailyTxCount: dailyRevenue.transactionCount,
+                monthlyTxCount: monthlyRevenue.transactionCount,
+                yearlyTxCount: yearlyRevenue.transactionCount,
+            });
+        }
 
         return NextResponse.json({
             data: {
                 stats: {
-                    dailySales: dailySales[0]?.total || 0,
-                    monthlySales: monthlySales[0]?.total || 0,
-                    yearlySales: yearlySales[0]?.total || 0,
-                    totalDue: totalDue[0]?.total || 0
+                    dailySales: dailyRevenue.total,
+                    monthlySales: monthlyRevenue.total,
+                    yearlySales: yearlyRevenue.total,
+                    totalDue: receivables.totalReceivables
                 },
                 recentSales,
                 recentPayments
@@ -125,7 +121,7 @@ export async function GET(req: Request) {
             headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
         });
     } catch (error: any) {
-        console.error("Analytics Error:", error);
+        logger.error("Analytics error", { error: error.message, duration: Date.now() - start });
         return NextResponse.json({ 
             data: null,
             meta: {

@@ -18,7 +18,7 @@ import {
     ClipboardList,
     LogOut,
     BedDouble,
-    PieChart,
+    Activity
 } from "lucide-react";
 
 export function HostelSidebar() {
@@ -38,7 +38,7 @@ export function HostelSidebar() {
         { name: "Plans",             href: `${base}/plans`,             icon: ClipboardList },
         { name: "Payments",          href: `${base}/payments`,          icon: CreditCard },
         { name: "Staff",             href: `${base}/staff`,             icon: UserCog },
-        { name: "Graph Analysis",    href: `${base}/graph-analysis`,    icon: PieChart },
+        { name: "Analytics",         href: `${base}/analytics`,        icon: Activity },
         { name: "WhatsApp",          href: `${base}/whatsapp`,          icon: MessageSquare },
         { name: "Hostel Settings",   href: `${base}/hostel-settings`,   icon: BedDouble },
         { name: "Settings",          href: `${base}/settings`,          icon: Settings },

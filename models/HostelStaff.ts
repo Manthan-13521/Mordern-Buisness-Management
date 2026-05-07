@@ -5,7 +5,7 @@ export interface IHostelStaff extends Document {
     hostelId: string;
     name: string;
     phone?: string;
-    role: "Worker" | "Staff" | "Cook" | "Guard" | "Cleaner";
+    role: "Worker" | "Staff" | "Cook" | "Guard" | "Cleaner" | "Warden" | "Security" | "Other";
     salary?: number;
     joiningDate?: Date;
     isActive: boolean;
@@ -22,7 +22,7 @@ const hostelStaffSchema = new Schema<IHostelStaff>(
         hostelId:    { type: String, required: true, index: true },
         name:        { type: String, required: true },
         phone:       { type: String },
-        role:        { type: String, enum: ["Worker", "Staff", "Cook", "Guard", "Cleaner"], required: true },
+        role:        { type: String, required: true },
         salary:      { type: Number, default: 0 },
         joiningDate: { type: Date },
         isActive:    { type: Boolean, default: true },

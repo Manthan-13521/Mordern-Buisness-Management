@@ -76,14 +76,15 @@ export async function GET(req: Request) {
         }
 
         // B. Permanently delete Members soft-deleted > 30 days ago (tenant-scoped)
-        async function cleanupMembers(Model: any) {
+        async function cleanupMembers(Model: any, isEntertainment: boolean) {
             const membersToDelete = await Model.find({
                 isDeleted: true,
                 deletedAt: { $lt: thirtyDaysAgo },
                 poolId: { $ne: null }
-            }).select("photoUrl").lean();
+            }).lean();
 
             let deletedS3Count = 0;
+            const archiveDocs = [];
 
             for (const member of membersToDelete) {
                 if (member.photoUrl) {
@@ -96,13 +97,32 @@ export async function GET(req: Request) {
                         if (s3Deleted) deletedS3Count++;
                     }
                 }
+                
+                archiveDocs.push({
+                    originalId: member._id,
+                    memberId: member.memberId || member._id.toString(),
+                    name: member.name || "Unknown",
+                    phone: member.phone || "Unknown",
+                    poolId: member.poolId?.toString() || "unknown",
+                    deletedAt: new Date(),
+                    deletionType: "auto",
+                    collectionSource: isEntertainment ? "entertainment_members" : "members",
+                    fullData: member,
+                });
+                
                 await Model.deleteOne({ _id: member._id });
             }
+            
+            if (archiveDocs.length > 0) {
+                const { DeletedMember } = await import("@/models/DeletedMember");
+                await DeletedMember.insertMany(archiveDocs);
+            }
+            
             return membersToDelete.length;
         }
 
-        const memDelCount = await cleanupMembers(Member);
-        const entDelCount = await cleanupMembers(EntertainmentMember);
+        const memDelCount = await cleanupMembers(Member, false);
+        const entDelCount = await cleanupMembers(EntertainmentMember, true);
         const totalMemberDeletes = memDelCount + entDelCount;
 
         if (totalMemberDeletes > 0) {

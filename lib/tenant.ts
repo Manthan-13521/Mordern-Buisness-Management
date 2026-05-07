@@ -62,15 +62,19 @@ export function getTenantFilter(user: AuthUser): Record<string, string> {
 export function requireTenant(user?: AuthUser | null): string {
     if (!user) throw new Error("Unauthorized");
 
-    if (user.role !== "superadmin" && (!user.poolId || typeof user.poolId !== "string" || user.poolId.trim() === "")) {
-        console.error("SECURITY: Missing or empty poolId access attempt", {
+    if (user.role === "superadmin") return "superadmin";
+
+    // Check for ANY valid tenant scope (business → hostel → pool)
+    const tenantId = user.businessId || user.hostelId || user.poolId;
+    if (!tenantId || typeof tenantId !== "string" || tenantId.trim() === "") {
+        logger.error("SECURITY: No tenant scope found", {
             userId: user.id || "unknown",
-            providedId: user.poolId
+            role: user.role,
         });
-        throw new Error("Invalid or missing pool assignment");
+        throw new Error("Invalid or missing tenant assignment");
     }
 
-    return user.poolId || "superadmin";
+    return tenantId;
 }
 
 export function requireBusinessId(user?: AuthUser | null): string {
@@ -79,10 +83,9 @@ export function requireBusinessId(user?: AuthUser | null): string {
     const businessId = user.businessId;
 
     if (user.role !== "superadmin") {
-        if (!businessId || typeof businessId !== "string" || !mongoose.Types.ObjectId.isValid(businessId)) {
-            console.error("SECURITY: Missing or invalid businessId access attempt", {
+        if (!businessId || typeof businessId !== "string" || businessId.trim() === "") {
+            logger.error("SECURITY: Missing or invalid businessId access attempt", {
                 userId: user.id || "unknown",
-                providedId: businessId
             });
             throw new Error("Invalid or missing businessId");
         }

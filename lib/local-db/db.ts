@@ -37,11 +37,24 @@ export interface SyncMeta {
   value: any;
 }
 
+export interface SyncQueueItem {
+  id?: number;
+  entityType: "member" | "payment" | "entry";
+  entityId: string;
+  operation: "create" | "update" | "delete";
+  payload: any;
+  createdAt: number;
+  retryCount: number;
+  lastTriedAt?: number;
+  status: "pending" | "processing" | "failed_permanent";
+}
+
 export class AppLocalDB extends Dexie {
   // We specify the table and its schema type here
   members!: Table<LocalMember, string>;
   syncMeta!: Table<SyncMeta, string>;
   payments!: Table<LocalPayment, string>;
+  syncQueue!: Table<SyncQueueItem, number>;
 
   constructor() {
     super('appLocalDB');
@@ -68,7 +81,16 @@ export class AppLocalDB extends Dexie {
       syncMeta: 'key',
       payments: 'id, poolId, memberId, updatedAt, synced, clientId, [poolId+synced]'
     });
+
+    // V5: Sync Queue for structured offline operation queuing
+    this.version(5).stores({
+      members: 'id, poolId, name, phone, type, status, updatedAt, synced, isDefaulter, defaulterStatus',
+      syncMeta: 'key',
+      payments: 'id, poolId, memberId, updatedAt, synced, clientId, [poolId+synced]',
+      syncQueue: '++id, entityId, entityType, status, createdAt'
+    });
   }
 }
 
 export const db = new AppLocalDB();
+

@@ -41,7 +41,7 @@ export async function POST(req: Request) {
         // ── C-1 FIX: Non-superadmins can only activate their own org ────────
         if (!isSuperAdmin) {
             const ownerId = org.ownerId?.toString();
-            const userId = user.id || user._id;
+            const userId = user.id;
             if (!ownerId || ownerId !== userId?.toString()) {
                 return NextResponse.json({ error: "Forbidden: you can only manage your own organization" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }

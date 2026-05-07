@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { activateSubscription } from "@/lib/services/subscriptionActivationService";
+import { logger } from "@/lib/logger";
 
 /**
  * POST /api/subscription/activate
@@ -16,7 +17,10 @@ export async function POST(req: Request) {
         }
 
         const body = await req.json();
-        const { razorpayOrderId, razorpayPaymentId, razorpaySignature, isMock, planType, module, blocks } = body;
+        const { razorpayOrderId, razorpayPaymentId, razorpaySignature, isMock: rawMock, planType, module, blocks } = body;
+
+        // SECURITY: isMock must NEVER be honored in production — prevents free subscription exploit
+        const isMock = process.env.NODE_ENV !== "production" && rawMock === true;
 
         if (!planType || !module) {
             return NextResponse.json({ error: "planType and module are required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
@@ -46,7 +50,7 @@ export async function POST(req: Request) {
             message:    "Subscription activated successfully",
         }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
-        console.error("[POST /api/subscription/activate]", error);
+        logger.error("Subscription activation error", { error: error?.message });
         return NextResponse.json({ error: error?.message || "Activation failed" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

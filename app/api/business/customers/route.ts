@@ -3,8 +3,18 @@ import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessCustomer } from "@/models/BusinessCustomer";
 import { requireBusinessId } from "@/lib/tenant";
+import { logger } from "@/lib/logger";
+import { z } from "zod";
 
 export const dynamic = "force-dynamic";
+
+const CustomerCreateSchema = z.object({
+    name: z.string().min(1, "Name is required").max(100),
+    phone: z.string().max(15).optional(),
+    businessName: z.string().max(200).optional(),
+    gstNumber: z.string().max(20).optional(),
+    address: z.string().max(500).optional(),
+});
 
 export async function GET(req: Request) {
     try {
@@ -19,15 +29,9 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
         }
 
-        // 🟢 STRUCTURED AUDIT LOGGING
-        console.info(JSON.stringify({
-            type: "BUSINESS_CUSTOMERS_LIST",
-            businessId,
-            userId: user.id,
-            route: "/api/business/customers",
-            method: "GET",
-            timestamp: new Date().toISOString()
-        }));
+        if (process.env.DEBUG_ANALYTICS === "true") {
+            logger.debug("Business customers list", { businessId, userId: user.id });
+        }
 
         await dbConnect();
 
@@ -129,7 +133,15 @@ export async function POST(req: Request) {
         }
 
         const body = await req.json();
-        const { name, phone, businessName, gstNumber, address } = body;
+        const parsed = CustomerCreateSchema.safeParse(body);
+        if (!parsed.success) {
+            return NextResponse.json(
+                { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
+                { status: 400 }
+            );
+        }
+
+        const { name, phone, businessName, gstNumber, address } = parsed.data;
 
         let businessId;
         try {
@@ -138,19 +150,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
         }
 
-        if (!name) {
-            return NextResponse.json({ error: "Name is required" }, { status: 400 });
-        }
-
-        // 🟢 STRUCTURED AUDIT LOGGING
-        console.info(JSON.stringify({
-            type: "BUSINESS_CUSTOMER_CREATE",
-            businessId,
-            userId: user.id,
-            route: "/api/business/customers",
-            method: "POST",
-            timestamp: new Date().toISOString()
-        }));
+        logger.debug("Business customer create", { businessId, userId: user.id });
 
         await dbConnect();
 

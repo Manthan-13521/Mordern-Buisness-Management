@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     const authHeader = req.headers.get("authorization") ?? "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
 
-    if (!user || token !== seedSecret) {
+    if (token !== seedSecret) {
         return NextResponse.json({ error: "Unauthorized", code: "FORBIDDEN" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 
