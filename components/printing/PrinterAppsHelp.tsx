@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Printer, X, ExternalLink, Smartphone, Monitor } from "lucide-react";
 
 /**
@@ -10,9 +10,22 @@ import { Printer, X, ExternalLink, Smartphone, Monitor } from "lucide-react";
  */
 export function PrinterAppsHelp() {
     const [open, setOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close on outside click
+    useEffect(() => {
+        if (!open) return;
+        const handler = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, [open]);
 
     return (
-        <div className="relative inline-block">
+        <div className="relative inline-block" ref={dropdownRef}>
             <button
                 onClick={() => setOpen(!open)}
                 className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-gray-400 hover:text-teal-400 hover:bg-teal-500/10 border border-transparent hover:border-teal-500/20 transition-all"
@@ -23,20 +36,20 @@ export function PrinterAppsHelp() {
             </button>
 
             {open && (
-                <>
-                    {/* Backdrop */}
-                    <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-                    
-                    {/* Dropdown */}
-                    <div className="absolute right-0 top-full mt-1.5 z-50 w-72 rounded-xl border border-white/10 bg-slate-900 shadow-2xl ring-1 ring-black/20 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+                <div
+                    className="fixed inset-x-0 bottom-0 z-50 sm:absolute sm:inset-auto sm:right-0 sm:bottom-auto sm:top-full sm:mt-1.5 sm:w-72"
+                    style={{ maxHeight: "85vh" }}
+                >
+                    {/* Mobile: full-width bottom sheet / Desktop: positioned dropdown */}
+                    <div className="rounded-t-2xl sm:rounded-xl border border-white/10 bg-slate-900 shadow-2xl ring-1 ring-black/20 overflow-y-auto max-h-[85vh] sm:max-h-none">
                         {/* Header */}
-                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/5 bg-white/5">
+                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/5 bg-white/5 sticky top-0">
                             <span className="text-xs font-bold text-white flex items-center gap-1.5">
                                 <Printer className="h-3.5 w-3.5 text-teal-400" />
                                 Thermal Printer Setup
                             </span>
-                            <button onClick={() => setOpen(false)} className="p-0.5 rounded hover:bg-white/10 text-gray-400 hover:text-white transition">
-                                <X className="h-3.5 w-3.5" />
+                            <button onClick={() => setOpen(false)} className="p-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition">
+                                <X className="h-4 w-4" />
                             </button>
                         </div>
 
@@ -51,7 +64,7 @@ export function PrinterAppsHelp() {
                                     href="https://play.google.com/store/apps/details?id=ru.a402.rawbtprinter"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="flex items-center justify-between w-full rounded-lg bg-teal-500/10 border border-teal-500/20 px-3 py-2 text-xs font-medium text-teal-400 hover:bg-teal-500/20 transition-all group"
+                                    className="flex items-center justify-between w-full rounded-lg bg-teal-500/10 border border-teal-500/20 px-3 py-2.5 text-xs font-medium text-teal-400 hover:bg-teal-500/20 transition-all active:scale-[0.98] group"
                                 >
                                     <span>Download RawBT App</span>
                                     <ExternalLink className="h-3 w-3 opacity-50 group-hover:opacity-100" />
@@ -71,13 +84,13 @@ export function PrinterAppsHelp() {
                                     href="https://apps.apple.com/app/epson-smart-panel/id1192019456"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="flex items-center justify-between w-full rounded-lg bg-blue-500/10 border border-blue-500/20 px-3 py-2 text-xs font-medium text-blue-400 hover:bg-blue-500/20 transition-all group"
+                                    className="flex items-center justify-between w-full rounded-lg bg-blue-500/10 border border-blue-500/20 px-3 py-2.5 text-xs font-medium text-blue-400 hover:bg-blue-500/20 transition-all active:scale-[0.98] group"
                                 >
                                     <span>Download Epson Smart Panel</span>
                                     <ExternalLink className="h-3 w-3 opacity-50 group-hover:opacity-100" />
                                 </a>
                                 <p className="mt-1 text-[10px] text-gray-500 leading-tight">
-                                    Works with AirPrint-compatible and Epson thermal printers.
+                                    Works with AirPrint-compatible and Epson thermal printers. On iOS, use the Share → Print option from Safari.
                                 </p>
                             </div>
 
@@ -100,7 +113,7 @@ export function PrinterAppsHelp() {
                             </div>
                         </div>
                     </div>
-                </>
+                </div>
             )}
         </div>
     );

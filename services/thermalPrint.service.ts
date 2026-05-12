@@ -241,11 +241,60 @@ export function getTestReceiptData(poolName?: string): MemberReceiptData {
 
 /* ---------------- PRINT FUNCTION ---------------- */
 
+/**
+ * Print receipt using a hidden iframe (mobile-safe, no popup blocker issues).
+ * Falls back to window.open() if iframe approach fails.
+ */
 export function printThermalReceipt(data: MemberReceiptData, paperWidth?: PaperWidth): void {
     if (typeof window === "undefined") return;
 
     const html = buildReceiptHTML(data, paperWidth);
 
+    // Remove the auto-print script from HTML — we'll trigger print manually
+    const htmlWithoutAutoprint = html.replace(
+        /<script>[\s\S]*?<\/script>/,
+        ""
+    );
+
+    // Strategy 1: Hidden iframe (works on mobile without popup blocker)
+    try {
+        // Clean up any previous print iframe
+        const existingFrame = document.getElementById("thermal-print-frame");
+        if (existingFrame) existingFrame.remove();
+
+        const iframe = document.createElement("iframe");
+        iframe.id = "thermal-print-frame";
+        iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:none;visibility:hidden;";
+        document.body.appendChild(iframe);
+
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+        if (!iframeDoc) throw new Error("Cannot access iframe document");
+
+        iframeDoc.open();
+        iframeDoc.write(htmlWithoutAutoprint);
+        iframeDoc.close();
+
+        // Wait for content to render, then trigger print
+        setTimeout(() => {
+            try {
+                iframe.contentWindow?.focus();
+                iframe.contentWindow?.print();
+            } catch {
+                // Fallback: open in new window
+                fallbackWindowPrint(html);
+            }
+            // Cleanup after print dialog closes
+            setTimeout(() => {
+                iframe.remove();
+            }, 2000);
+        }, 300);
+    } catch {
+        // Strategy 2: Fallback to window.open (desktop browsers)
+        fallbackWindowPrint(html);
+    }
+}
+
+function fallbackWindowPrint(html: string): void {
     const win = window.open(
         "",
         "_blank",
@@ -253,7 +302,11 @@ export function printThermalReceipt(data: MemberReceiptData, paperWidth?: PaperW
     );
 
     if (!win) {
-        console.warn("[ThermalPrint] Popup blocked.");
+        // Strategy 3: Last resort — open as data URL in same tab
+        const blob = new Blob([html], { type: "text/html" });
+        const url = URL.createObjectURL(blob);
+        window.open(url);
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
         return;
     }
 
