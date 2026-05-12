@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
-import { Search, ChevronDown, Users, X } from "lucide-react";
+import { Search, ChevronDown, Users, X, Truck } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════ */
 /*  NUMBER TO WORDS (Indian system)                   */
@@ -94,6 +94,11 @@ export default function InvoicePage() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  /* ── Vehicle dropdown state ── */
+  const [allVehicles, setAllVehicles] = useState<any[]>([]);
+  const [showVehicleDropdown, setShowVehicleDropdown] = useState(false);
+  const vehicleDropdownRef = useRef<HTMLDivElement>(null);
+
   const filteredCustomers = useMemo(() => {
     if (!customerSearch.trim()) return allCustomers;
     const q = customerSearch.toLowerCase();
@@ -104,6 +109,15 @@ export default function InvoicePage() {
     );
   }, [allCustomers, customerSearch]);
 
+  const filteredVehicles = useMemo(() => {
+    if (!vehicle.trim()) return allVehicles;
+    const q = vehicle.toLowerCase();
+    return allVehicles.filter((v: any) =>
+      v.vehicleNumber?.toLowerCase().includes(q) ||
+      v.ownerName?.toLowerCase().includes(q)
+    );
+  }, [allVehicles, vehicle]);
+
   // 0. Init: today's date + fetch customers for dropdown
   useEffect(() => {
     const today = new Date();
@@ -113,9 +127,20 @@ export default function InvoicePage() {
     setInvdate(`${yyyy}-${mm}-${dd}`);
 
     fetch("/api/business/customers", { cache: "no-store" })
-      .then(res => res.ok ? res.json() : [])
-      .then(data => setAllCustomers(Array.isArray(data) ? data : []))
+      .then(res => res.ok ? res.json() : { data: [] })
+      .then(json => {
+        const list = json?.data ?? json;
+        setAllCustomers(Array.isArray(list) ? list : []);
+      })
       .catch(() => setAllCustomers([]));
+
+    fetch("/api/business/vehicles", { cache: "no-store" })
+      .then(res => res.ok ? res.json() : { data: [] })
+      .then(json => {
+        const list = json?.data ?? json;
+        setAllVehicles(Array.isArray(list) ? list : []);
+      })
+      .catch(() => setAllVehicles([]));
   }, []);
 
   // 1. Fetch real business details from DB on login
@@ -188,11 +213,14 @@ export default function InvoicePage() {
     localStorage.setItem(`inv_${k}_ifsc`, ifsc);
   }, [bizKey, bname, bdesc, bgst, baddr, cgstRate, sgstRate, igstRate, bank, branch, acc, ifsc]);
 
-  // Close dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setShowCustomerDropdown(false);
+      }
+      if (vehicleDropdownRef.current && !vehicleDropdownRef.current.contains(e.target as Node)) {
+        setShowVehicleDropdown(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -460,10 +488,38 @@ export default function InvoicePage() {
                   <input value={orderno} onChange={(e) => setOrderno(e.target.value)} placeholder="e.g. Verbal"
                     className="w-full bg-[#020617] border border-[#1f2937] rounded-xl px-4 py-3 text-sm font-medium text-[#f9fafb] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all placeholder:text-[#374151]" />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1" ref={vehicleDropdownRef}>
                   <label className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest">Vehicle Number</label>
-                  <input value={vehicle} onChange={(e) => setVehicle(e.target.value)} placeholder="e.g. TG08V4944"
-                    className="w-full bg-[#020617] border border-[#1f2937] rounded-xl px-4 py-3 text-sm font-medium text-[#f9fafb] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all placeholder:text-[#374151]" />
+                  <div className="relative">
+                    <Truck className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6b7280] pointer-events-none z-10" />
+                    <input value={vehicle} onChange={(e) => { setVehicle(e.target.value); setShowVehicleDropdown(true); }}
+                      onFocus={() => setShowVehicleDropdown(true)}
+                      placeholder="e.g. TG08V4944"
+                      className="w-full bg-[#020617] border border-[#1f2937] rounded-xl pl-10 pr-10 py-3 text-sm font-medium text-[#f9fafb] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all placeholder:text-[#374151]" />
+                    <ChevronDown className={`absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6b7280] pointer-events-none transition-transform ${showVehicleDropdown ? 'rotate-180' : ''}`} />
+                    {showVehicleDropdown && allVehicles.length > 0 && (
+                      <div className="absolute z-50 w-full mt-1 bg-[#0b1220] border border-[#1f2937] rounded-xl shadow-2xl max-h-48 overflow-y-auto custom-scrollbar">
+                        {filteredVehicles.length > 0 ? filteredVehicles.map((v: any) => (
+                          <button
+                            key={v._id}
+                            type="button"
+                            onClick={() => { setVehicle(v.vehicleNumber); setShowVehicleDropdown(false); }}
+                            className="w-full text-left px-4 py-2.5 flex items-center gap-3 hover:bg-[#8b5cf6]/10 transition-colors border-b border-[#1f2937]/50 last:border-0"
+                          >
+                            <Truck className="w-4 h-4 text-[#8b5cf6] flex-shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-semibold text-[#f9fafb] truncate">{v.vehicleNumber}</p>
+                              <p className="text-[10px] text-[#6b7280] truncate">{v.ownerName}</p>
+                            </div>
+                          </button>
+                        )) : (
+                          <div className="px-4 py-3 text-center">
+                            <p className="text-xs text-[#6b7280] font-medium">No matching vehicles</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest">Way Bill Number</label>

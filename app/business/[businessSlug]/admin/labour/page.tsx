@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { Plus, Search, Loader2, X } from "lucide-react";
+import { Plus, Search, Loader2, X, Truck, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { LabourSummary } from "@/components/admin/labour/LabourSummary";
 import { LabourRow } from "@/components/admin/labour/LabourRow";
@@ -31,6 +31,65 @@ export default function LabourPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [newLabour, setNewLabour] = useState({ name: "", role: "Staff", salary: 0, phone: "" });
   const [customRole, setCustomRole] = useState("");
+
+  // Vehicle management state
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [showVehicleSection, setShowVehicleSection] = useState(false);
+  const [newVehicle, setNewVehicle] = useState({ ownerName: "", vehicleNumber: "" });
+  const [isSavingVehicle, setIsSavingVehicle] = useState(false);
+
+  // Fetch vehicles
+  useEffect(() => {
+    fetchVehicles();
+  }, []);
+
+  const fetchVehicles = async () => {
+    try {
+      const res = await fetch("/api/business/vehicles", { cache: "no-store" });
+      if (res.ok) {
+        const json = await res.json();
+        setVehicles(Array.isArray(json?.data) ? json.data : []);
+      }
+    } catch { /* silent */ }
+  };
+
+  const handleAddVehicle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newVehicle.ownerName.trim() || !newVehicle.vehicleNumber.trim()) {
+      return toast.error("Fill all vehicle fields");
+    }
+    setIsSavingVehicle(true);
+    try {
+      const res = await fetch("/api/business/vehicles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newVehicle),
+      });
+      if (res.status === 409) {
+        toast.error("Vehicle number already exists");
+        return;
+      }
+      if (!res.ok) throw new Error("Failed");
+      toast.success("Vehicle added!");
+      setNewVehicle({ ownerName: "", vehicleNumber: "" });
+      fetchVehicles();
+    } catch {
+      toast.error("Failed to add vehicle");
+    } finally {
+      setIsSavingVehicle(false);
+    }
+  };
+
+  const handleDeleteVehicle = async (vehicleId: string) => {
+    try {
+      const res = await fetch(`/api/business/vehicles?id=${vehicleId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed");
+      toast.success("Vehicle deleted");
+      setVehicles(prev => prev.filter(v => v._id !== vehicleId));
+    } catch {
+      toast.error("Failed to delete vehicle");
+    }
+  };
 
 
 
@@ -317,6 +376,137 @@ export default function LabourPage() {
             No staff found.
           </div>
         )}
+
+        {/* Vehicle Management Section */}
+        <div style={{ marginTop: "32px" }}>
+          <button
+            onClick={() => setShowVehicleSection(!showVehicleSection)}
+            style={{
+              background: "rgba(11, 18, 32, 0.8)",
+              border: "1px solid #1f2937",
+              borderRadius: "14px",
+              padding: "14px 20px",
+              color: "#f9fafb",
+              fontWeight: 700,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              width: "100%",
+              justifyContent: "space-between",
+              transition: "border-color 0.2s ease",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <Truck size={20} color="#8b5cf6" />
+              <span>Vehicle Management</span>
+              <span style={{ fontSize: "12px", color: "#6b7280", fontWeight: 500 }}>({vehicles.length} vehicles)</span>
+            </div>
+            <span style={{ color: "#6b7280", fontSize: "18px", transition: "transform 0.2s", transform: showVehicleSection ? "rotate(180deg)" : "rotate(0)" }}>▾</span>
+          </button>
+
+          {showVehicleSection && (
+            <div style={{
+              marginTop: "12px",
+              background: "rgba(11, 18, 32, 0.8)",
+              border: "1px solid #1f2937",
+              borderRadius: "16px",
+              padding: "20px",
+            }}>
+              {/* Add Vehicle Form */}
+              <form onSubmit={handleAddVehicle} style={{ display: "flex", gap: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
+                <input
+                  required
+                  placeholder="Vehicle Owner / Name"
+                  value={newVehicle.ownerName}
+                  onChange={e => setNewVehicle({ ...newVehicle, ownerName: e.target.value })}
+                  style={{ flex: "1 1 180px", background: "#020617", border: "1px solid #1f2937", padding: "12px", borderRadius: "10px", color: "#fff", outline: "none" }}
+                />
+                <input
+                  required
+                  placeholder="Vehicle Number (e.g. TG08V4944)"
+                  value={newVehicle.vehicleNumber}
+                  onChange={e => setNewVehicle({ ...newVehicle, vehicleNumber: e.target.value })}
+                  style={{ flex: "1 1 180px", background: "#020617", border: "1px solid #1f2937", padding: "12px", borderRadius: "10px", color: "#fff", outline: "none" }}
+                />
+                <button
+                  type="submit"
+                  disabled={isSavingVehicle}
+                  style={{
+                    background: "#8b5cf6",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "10px",
+                    padding: "12px 20px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  <Plus size={16} /> {isSavingVehicle ? "Adding..." : "Add Vehicle"}
+                </button>
+              </form>
+
+              {/* Vehicle List */}
+              {vehicles.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "24px", color: "#6b7280", fontSize: "13px" }}>
+                  No vehicles added yet.
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  {vehicles.map((v: any) => (
+                    <div
+                      key={v._id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        background: "#020617",
+                        border: "1px solid #1f2937",
+                        borderRadius: "12px",
+                        padding: "12px 16px",
+                        transition: "border-color 0.2s ease",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <div style={{
+                          width: "36px", height: "36px", borderRadius: "10px",
+                          background: "#8b5cf615", color: "#8b5cf6",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                        }}>
+                          <Truck size={18} />
+                        </div>
+                        <div>
+                          <p style={{ fontSize: "14px", fontWeight: 700, color: "#f9fafb", margin: 0 }}>{v.vehicleNumber}</p>
+                          <p style={{ fontSize: "11px", color: "#6b7280", margin: "2px 0 0" }}>{v.ownerName}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteVehicle(v._id)}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#6b7280",
+                          cursor: "pointer",
+                          padding: "6px",
+                          borderRadius: "8px",
+                          transition: "color 0.2s, background 0.2s",
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#ef444415'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = '#6b7280'; e.currentTarget.style.background = 'none'; }}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Add Staff Modal */}
