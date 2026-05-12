@@ -7,6 +7,7 @@ import { AddMemberModal } from "./AddMemberModal";
 import { Plus, Search, Download, Printer, ChevronLeft, ChevronRight, RefreshCw, User as UserIcon } from "lucide-react";
 import Image from "next/image";
 import { useThermalPrint } from "@/components/printing/useThermalPrint";
+import { PrinterAppsHelp } from "@/components/printing/PrinterAppsHelp";
 import { PRIVATE_API_STALE_MS, membersListQueryKeyPrefix } from "@/lib/apiCache";
 import { usePoolType } from "@/components/pool/PoolTypeContext";
 import { PoolTypeFilter } from "@/components/pool/PoolTypeFilter";
@@ -414,6 +415,7 @@ export default function MembersPage() {
                 <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
                     <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-red-100 dark:bg-red-950/60 border border-red-200" /> Expired / Deleted</span>
                     <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-amber-100 dark:bg-amber-950/60 border border-amber-200" /> Expiring ≤ 7 days</span>
+                    <PrinterAppsHelp />
                 </div>
                 {pendingSyncCount > 0 && (
                     <div className="flex items-center gap-1.5 text-xs font-semibold text-orange-700 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/40 px-2 py-1.5 rounded-md border border-orange-200 dark:border-orange-800 shadow-sm">

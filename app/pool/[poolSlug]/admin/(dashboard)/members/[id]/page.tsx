@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Printer, Trash2, RotateCcw, Download, Package, PackageCheck } from "lucide-react";
 import { useThermalPrint } from "@/components/printing/useThermalPrint";
+import { PrinterAppsHelp } from "@/components/printing/PrinterAppsHelp";
 
 interface EquipmentItem {
     _id: string;
@@ -229,6 +230,7 @@ export default function MemberDetailPage() {
                                         <Printer className="h-3.5 w-3.5" /> Reprint Token
                                     </button>
                                 )}
+                                <PrinterAppsHelp />
                                 {member.isDeleted ? (
                                     <button onClick={handleRestore}
                                         className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-50 dark:hover:bg-blue-500/100">
