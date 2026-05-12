@@ -53,7 +53,12 @@ export default function SuperAdminDashboard() {
         }
     };
 
-    useEffect(() => { fetchDashboard(); }, []);
+    useEffect(() => {
+        fetchDashboard();
+        // Live data: auto-refresh every 30 seconds
+        const interval = setInterval(fetchDashboard, 30000);
+        return () => clearInterval(interval);
+    }, []);
 
     if (loading && !data) {
         return (
@@ -76,6 +81,10 @@ export default function SuperAdminDashboard() {
 
     const { kpis, orgHealth, referralIntel, billingLogs, dailySignups, alerts } = data;
     const bestCode = referralIntel.length > 0 ? referralIntel[0] : null;
+
+    // Build org name lookup from orgHealth for billing display
+    const orgNameMap: Record<string, string> = {};
+    orgHealth.forEach((o: any) => { if (o._id) orgNameMap[o._id.toString()] = o.name; });
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -362,9 +371,9 @@ export default function SuperAdminDashboard() {
                                 <thead>
                                     <tr className="border-b border-white/5">
                                         <th className="text-left px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-400">Date</th>
-                                        <th className="text-left px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-400">Org ID</th>
+                                        <th className="text-left px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-400">Organization</th>
                                         <th className="text-right px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-400">Amount</th>
-                                        <th className="text-center px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-400">Method</th>
+                                        <th className="text-center px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-400">Payment Mode</th>
                                         <th className="text-left px-6 py-4 text-xs font-bold uppercase tracking-wider text-neutral-400">Period</th>
                                     </tr>
                                 </thead>
@@ -375,7 +384,17 @@ export default function SuperAdminDashboard() {
                                         billingLogs.map((b: any, i: number) => (
                                             <tr key={i} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
                                                 <td className="px-6 py-4 text-neutral-300 font-medium">{new Date(b.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</td>
-                                                <td className="px-6 py-4 text-neutral-400 font-mono text-xs">{b.orgId?.toString().slice(-8) || "—"}</td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-white/10 flex items-center justify-center text-[10px] font-bold text-blue-400">
+                                                            {(orgNameMap[b.orgId?.toString()] || "?").charAt(0)}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-neutral-200 font-medium text-xs">{orgNameMap[b.orgId?.toString()] || "Unknown Org"}</p>
+                                                            <p className="text-neutral-500 font-mono text-[10px]">{b.orgId?.toString().slice(-8) || "—"}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
                                                 <td className="px-6 py-4 text-right font-bold text-emerald-400">₹{b.amount?.toLocaleString("en-IN")}</td>
                                                 <td className="px-6 py-4 text-center">
                                                     <span className={`text-xs font-bold uppercase px-2.5 py-1 rounded-md border ${
@@ -383,9 +402,15 @@ export default function SuperAdminDashboard() {
                                                             ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
                                                             : b.method === "razorpay"
                                                             ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                                                            : b.method === "cash"
+                                                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                                            : b.method === "bank_transfer"
+                                                            ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/20"
+                                                            : b.method === "card"
+                                                            ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
                                                             : "bg-neutral-500/10 text-neutral-400 border-neutral-500/20"
                                                     }`}>
-                                                        {b.method}
+                                                        {b.paymentMode || b.method}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-neutral-400 text-xs">
