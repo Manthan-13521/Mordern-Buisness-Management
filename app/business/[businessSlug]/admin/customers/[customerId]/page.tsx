@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Fragment } from "react";
+import { useEffect, useState, useRef, useCallback, Fragment } from "react";
 import { 
   Clock, 
   ShoppingBag, 
@@ -28,7 +28,12 @@ import { useParams, useRouter } from "next/navigation";
 import clsx from "clsx";
 
 export default function CustomerDetailPage() {
-  const { businessSlug, customerId } = useParams();
+  const params = useParams();
+  // Normalize customerId — useParams can return string | string[] | undefined
+  const rawCustomerId = params.customerId;
+  const customerId = Array.isArray(rawCustomerId) ? rawCustomerId[0] : rawCustomerId;
+  const businessSlug = params.businessSlug;
+
   const [customer, setCustomer] = useState<any>(null);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -64,12 +69,24 @@ export default function CustomerDetailPage() {
 
   const router = useRouter();
 
-  async function fetchData() {
+  // Track fetch generation to prevent stale responses from overwriting fresh data
+  const fetchGenRef = useRef(0);
+
+  const fetchData = useCallback(async (signal?: AbortSignal) => {
+    // Guard: skip fetch if customerId is not available yet (hydration timing)
+    if (!customerId) return;
+
+    const currentGen = ++fetchGenRef.current;
+    setLoading(true);
+
     try {
       const [custRes, transRes] = await Promise.all([
-        fetch(`/api/business/customers/${customerId}`, { cache: "no-store" }),
-        fetch(`/api/business/transactions?customerId=${customerId}`, { cache: "no-store" })
+        fetch(`/api/business/customers/${customerId}`, { cache: "no-store", signal }),
+        fetch(`/api/business/transactions?customerId=${customerId}`, { cache: "no-store", signal })
       ]);
+
+      // Staleness check: if a newer fetch was started, discard this response
+      if (currentGen !== fetchGenRef.current) return;
       
       if (custRes.ok) setCustomer(await custRes.json());
       if (transRes.ok) {
@@ -77,12 +94,18 @@ export default function CustomerDetailPage() {
         // API returns paginated { data: [...], total, page, ... } — extract the array
         setTransactions(Array.isArray(transJson) ? transJson : (transJson.data || []));
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      // Don't log abort errors — they're expected on cleanup
+      if (err?.name !== "AbortError") {
+        console.error(err);
+      }
     } finally {
-      setLoading(false);
+      // Only clear loading if this is still the latest fetch
+      if (currentGen === fetchGenRef.current) {
+        setLoading(false);
+      }
     }
-  }
+  }, [customerId]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'sale' | 'payment') => {
     const file = e.target.files?.[0];
@@ -127,8 +150,15 @@ export default function CustomerDetailPage() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, [customerId]);
+    // Don't fetch until customerId is available
+    if (!customerId) return;
+
+    const controller = new AbortController();
+    fetchData(controller.signal);
+
+    // Cleanup: abort in-flight request if customerId changes or component unmounts
+    return () => controller.abort();
+  }, [customerId, fetchData]);
 
   const addItem = () => {
     setNewSale({
