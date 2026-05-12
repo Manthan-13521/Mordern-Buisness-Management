@@ -127,8 +127,12 @@ export default function CustomerDetailPage() {
         console.error(err);
       }
     } finally {
-      // Only clear loading if this is still the latest fetch
+      // Only update state if this is still the latest fetch
       if (currentGen === fetchGenRef.current) {
+        // CRITICAL: If transactions is still null after all attempts (API failure,
+        // auth timing, network error), set it to [] so the UI never stays stuck
+        // on "Loading ledger history..." forever.
+        setTransactions(prev => prev === null ? [] : prev);
         setLoading(false);
       }
     }
