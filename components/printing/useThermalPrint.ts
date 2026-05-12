@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback } from "react";
-import { printThermalReceipt, MemberReceiptData } from "@/services/thermalPrint.service";
+import { printThermalReceipt, MemberReceiptData, PaperWidth, getSavedPaperWidth } from "@/services/thermalPrint.service";
 
 /**
  * React hook for triggering thermal receipt printing.
+ * Respects saved paper width preference (58mm/80mm).
  * Usage:
  *   const { print, isSupported } = useThermalPrint();
  *   // After successful member creation:
@@ -14,12 +15,12 @@ export function useThermalPrint() {
     const isSupported = typeof window !== "undefined";
 
     const print = useCallback(
-        (data: MemberReceiptData) => {
+        (data: MemberReceiptData, paperWidth?: PaperWidth) => {
             if (!isSupported) {
                 console.warn("[useThermalPrint] Not available in SSR context");
                 return;
             }
-            printThermalReceipt(data);
+            printThermalReceipt(data, paperWidth || getSavedPaperWidth());
         },
         [isSupported]
     );

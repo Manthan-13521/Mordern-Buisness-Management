@@ -3,7 +3,11 @@
  * - Low ink usage
  * - Short height (saves paper)
  * - Stable for all thermal printers
+ * - RawBT compatible (Android Bluetooth thermal printing)
+ * - Supports 58mm and 80mm paper widths
  */
+
+export type PaperWidth = "58mm" | "80mm";
 
 export interface MemberReceiptData {
     poolName: string;
@@ -46,32 +50,75 @@ function formatMoney(n: number): string {
     return `₹${Math.round(n)}`;
 }
 
+/**
+ * Get saved paper width preference. Defaults to 80mm.
+ */
+export function getSavedPaperWidth(): PaperWidth {
+    if (typeof window === "undefined") return "80mm";
+    return (localStorage.getItem("thermalPaperWidth") as PaperWidth) || "80mm";
+}
+
+/**
+ * Save paper width preference.
+ */
+export function savePaperWidth(width: PaperWidth): void {
+    if (typeof window !== "undefined") {
+        localStorage.setItem("thermalPaperWidth", width);
+    }
+}
+
 /* ---------------- HTML BUILDER ---------------- */
 
-function buildReceiptHTML(data: MemberReceiptData): string {
+function buildReceiptHTML(data: MemberReceiptData, paperWidth?: PaperWidth): string {
     const regDT = fmtDateTime(data.registeredAt);
     const tillDT = fmtDateTime(data.validTill);
+    const pw = paperWidth || getSavedPaperWidth();
 
     const balance = data.balance;
     const balanceLabel = balance > 0 ? "Bal" : balance < 0 ? "Adv" : "Bal";
     const balanceValue = Math.abs(balance);
 
+    // Adapt font size and text limits for paper width
+    const fontSize = pw === "58mm" ? "10px" : "11px";
+    const smallFont = pw === "58mm" ? "9px" : "10px";
+    const nameMax = pw === "58mm" ? 16 : 20;
+    const planMax = pw === "58mm" ? 12 : 14;
+    const poolMax = pw === "58mm" ? 20 : 26;
+
     return `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Receipt — ${data.memberId}</title>
 
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 
-@page { size:80mm auto; margin:0; }
+@page { size:${pw} auto; margin:0; }
+
+@media print {
+    html, body {
+        width: ${pw} !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    /* Hide browser chrome for RawBT/mobile */
+    @page { margin: 0; }
+}
 
 body {
-    width:80mm;
-    font-family: monospace;
-    font-size:11px;
+    width:${pw};
+    max-width:${pw};
+    font-family: 'Courier New', Courier, monospace;
+    font-size:${fontSize};
     color:#000;
+    background:#fff;
+    -webkit-text-size-adjust: none;
+    text-size-adjust: none;
+    line-height: 1.2;
 }
 
 .receipt { padding:3px; }
@@ -86,21 +133,26 @@ body {
 .row span:last-child { text-align:right; }
 
 .hr {
-    border-top:1px solid #000;
-    margin:1px 0;
+    border-top:1px dashed #000;
+    margin:2px 0;
 }
 
 .center { text-align:center; }
 .bold { font-weight:bold; }
-.small { font-size:10px; }
+.small { font-size:${smallFont}; }
 
+/* Prevent content cutoff on narrow printers */
+.receipt * {
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
 </style>
 </head>
 
 <body>
 <div class="receipt">
 
-    <div class="center bold">${fitText(data.poolName, 26)}</div>
+    <div class="center bold">${fitText(data.poolName, poolMax)}</div>
     <div class="center small">Receipt</div>
 
     <div class="hr"></div>
@@ -109,14 +161,14 @@ body {
 
     <div class="hr"></div>
 
-    <div>Name:${fitText(data.name, 20)}</div>
+    <div>Name:${fitText(data.name, nameMax)}</div>
     <div>Ph:${data.phone}</div>
 
     <div class="hr"></div>
 
     <div class="row">
         <span>Plan</span>
-        <span>${fitText(data.planName, 14)}</span>
+        <span>${fitText(data.planName, planMax)}</span>
     </div>
 
     <div class="row">
@@ -132,15 +184,22 @@ body {
     </div>
 
     <div class="row">
+        <span>Paid</span>
+        <span>${formatMoney(data.paidAmount)}</span>
+    </div>
+
+    <div class="row">
         <span>${balanceLabel}</span>
         <span>${formatMoney(balanceValue)}</span>
     </div>
 
     <div class="hr"></div>
 
-    <div class="row">
+    <div class="row small">
         <span>${regDT}</span>
-        <span>${tillDT}</span>
+    </div>
+    <div class="row small">
+        <span>Valid: ${tillDT}</span>
     </div>
 
     <div class="hr"></div>
@@ -151,9 +210,9 @@ body {
 
 <script>
 window.onload = function () {
-    setTimeout(() => {
+    setTimeout(function() {
         window.print();
-        setTimeout(() => window.close(), 700);
+        setTimeout(function() { window.close(); }, 700);
     }, 250);
 };
 </script>
@@ -162,12 +221,30 @@ window.onload = function () {
 </html>`;
 }
 
+/* ---------------- TEST RECEIPT DATA ---------------- */
+
+export function getTestReceiptData(poolName?: string): MemberReceiptData {
+    return {
+        poolName: poolName || "AquaSync Demo Pool",
+        memberId: "TEST-001",
+        name: "Test Member",
+        phone: "9876543210",
+        planName: "Monthly Plan",
+        planQty: 1,
+        planPrice: 500,
+        paidAmount: 500,
+        balance: 0,
+        registeredAt: new Date(),
+        validTill: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    };
+}
+
 /* ---------------- PRINT FUNCTION ---------------- */
 
-export function printThermalReceipt(data: MemberReceiptData): void {
+export function printThermalReceipt(data: MemberReceiptData, paperWidth?: PaperWidth): void {
     if (typeof window === "undefined") return;
 
-    const html = buildReceiptHTML(data);
+    const html = buildReceiptHTML(data, paperWidth);
 
     const win = window.open(
         "",

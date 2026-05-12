@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Save, HardDrive, Moon, Sun, Monitor, Download, Users, Activity, Server, Zap, ArrowRight, Sparkles } from "lucide-react";
+import { Save, HardDrive, Moon, Sun, Monitor, Download, Users, Activity, Server, Zap, ArrowRight, Sparkles, Printer, ExternalLink, CheckCircle2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { PaperWidth, getSavedPaperWidth, savePaperWidth, getTestReceiptData, printThermalReceipt } from "@/services/thermalPrint.service";
 
 
 export default function SettingsPage() {
@@ -24,6 +25,9 @@ export default function SettingsPage() {
     const [excelLoading, setExcelLoading] = useState(false);
     const [deletedExcelLoading, setDeletedExcelLoading] = useState(false);
     const [awsBackupLoading, setAwsBackupLoading] = useState(false);
+    const [paperWidth, setPaperWidth] = useState<PaperWidth>("80mm");
+    const [testPrintLoading, setTestPrintLoading] = useState(false);
+    const [testPrintDone, setTestPrintDone] = useState(false);
 
     const applyTheme = (newTheme: "light" | "dark" | "system") => {
         const root = window.document.documentElement;
@@ -38,6 +42,7 @@ export default function SettingsPage() {
     useEffect(() => {
         const savedTheme = localStorage.getItem("theme") as "light" | "dark" | "system" | null;
         if (savedTheme) { setTheme(savedTheme); applyTheme(savedTheme); }
+        setPaperWidth(getSavedPaperWidth());
     }, []);
 
     useEffect(() => {
@@ -239,6 +244,104 @@ export default function SettingsPage() {
                                 ))}
                             </div>
                         </fieldset>
+                    </div>
+                </div>
+            </div>
+
+            <hr className="border-gray-200 dark:border-gray-800" />
+
+            {/* Printing Settings */}
+            <div className="grid grid-cols-1 gap-x-8 gap-y-10 md:grid-cols-3">
+                <div>
+                    <h2 className="text-base font-semibold leading-7 text-gray-900 dark:text-white flex items-center gap-2">
+                        <Printer className="w-5 h-5 text-teal-500" /> Printing Settings
+                    </h2>
+                    <p className="mt-1 text-sm leading-6 text-gray-600 dark:text-gray-400">
+                        Configure thermal printer for receipt printing via RawBT app.
+                    </p>
+                </div>
+                <div className="md:col-span-2">
+                    <div className="rounded-xl border border-teal-500/20 bg-slate-900 p-6 shadow-lg space-y-6">
+                        {/* RawBT Download */}
+                        <div>
+                            <h3 className="text-sm font-semibold text-white mb-2">1. Install RawBT App</h3>
+                            <p className="text-xs text-gray-400 mb-3">
+                                RawBT connects your Android phone/tablet to Bluetooth thermal printers. Install it, then set it as your default print service.
+                            </p>
+                            <a
+                                href="https://play.google.com/store/apps/details?id=ru.a402.rawbtprinter"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 rounded-lg bg-teal-600 hover:bg-teal-500 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-teal-900/20 transition-all active:scale-95"
+                            >
+                                <Download className="w-4 h-4" />
+                                Download RawBT from Play Store
+                                <ExternalLink className="w-3 h-3 opacity-60" />
+                            </a>
+                        </div>
+
+                        <div className="border-t border-white/5 pt-4">
+                            <h3 className="text-sm font-semibold text-white mb-2">2. Setup Instructions</h3>
+                            <ol className="text-xs text-gray-400 space-y-1.5 list-decimal list-inside">
+                                <li>Open <span className="text-teal-400 font-medium">RawBT</span> → pair your Bluetooth thermal printer.</li>
+                                <li>In RawBT settings, enable <span className="text-white font-medium">&quot;Virtual Printer&quot;</span> mode.</li>
+                                <li>Go to your phone&apos;s <span className="text-white font-medium">Settings → Printing</span> → enable RawBT as default print service.</li>
+                                <li>When you print a receipt from AquaSync, Android will route it through RawBT to your thermal printer.</li>
+                            </ol>
+                        </div>
+
+                        {/* Paper Width Selection */}
+                        <div className="border-t border-white/5 pt-4">
+                            <h3 className="text-sm font-semibold text-white mb-2">3. Paper Width</h3>
+                            <p className="text-xs text-gray-400 mb-3">Select your thermal printer&apos;s paper width for optimal alignment.</p>
+                            <div className="grid grid-cols-2 gap-3 max-w-xs">
+                                {(["58mm", "80mm"] as const).map((w) => (
+                                    <button
+                                        key={w}
+                                        onClick={() => { setPaperWidth(w); savePaperWidth(w); }}
+                                        className={`relative flex items-center justify-center rounded-lg border p-3 transition-all ${
+                                            paperWidth === w
+                                                ? "border-teal-500 bg-teal-500/10 ring-1 ring-teal-500 text-teal-400"
+                                                : "border-white/10 bg-white/5 hover:bg-white/10 text-gray-400"
+                                        }`}
+                                    >
+                                        <span className="text-sm font-bold">{w}</span>
+                                        {paperWidth === w && <CheckCircle2 className="absolute top-1.5 right-1.5 w-3.5 h-3.5 text-teal-400" />}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Test Print */}
+                        <div className="border-t border-white/5 pt-4">
+                            <h3 className="text-sm font-semibold text-white mb-2">4. Test Print</h3>
+                            <p className="text-xs text-gray-400 mb-3">Print a test receipt to verify your printer setup and alignment.</p>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => {
+                                        setTestPrintLoading(true);
+                                        setTestPrintDone(false);
+                                        try {
+                                            const testData = getTestReceiptData(poolInfo?.slug ? poolInfo.slug.replace(/-/g, " ").replace(/\b\w/g, l => l.toUpperCase()) : "My Pool");
+                                            printThermalReceipt(testData, paperWidth);
+                                            setTimeout(() => {
+                                                setTestPrintDone(true);
+                                                setTestPrintLoading(false);
+                                                setTimeout(() => setTestPrintDone(false), 3000);
+                                            }, 1000);
+                                        } catch {
+                                            setTestPrintLoading(false);
+                                        }
+                                    }}
+                                    disabled={testPrintLoading}
+                                    className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-teal-900/20 transition-all active:scale-95 disabled:opacity-60"
+                                >
+                                    <Printer className="w-4 h-4" />
+                                    {testPrintLoading ? "Printing..." : `Test Print (${paperWidth})`}
+                                </button>
+                                {testPrintDone && <span className="text-sm text-emerald-400 font-medium flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Sent!</span>}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
