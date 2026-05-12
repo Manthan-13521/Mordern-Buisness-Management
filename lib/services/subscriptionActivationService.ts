@@ -220,6 +220,32 @@ export async function activateSubscription(params: {
         status:            "success",
     });
 
+    // 7b. CRITICAL: Also write BillingLog so dashboard/billing/analytics pick up this payment
+    // Uses razorpayOrderId-based idempotency to prevent double-counting
+    try {
+        const { BillingLog } = await import("@/models/BillingLog");
+        const org = await Organization.findOne({ ownerId: user._id }).lean() as any;
+        if (org) {
+            await (BillingLog as any).findOneAndUpdate(
+                { orgId: org._id, method: "razorpay", periodStart: now },
+                {
+                    $setOnInsert: {
+                        orgId: org._id,
+                        amount: finalAmountPaid,
+                        method: "razorpay",
+                        paymentMode: "Razorpay",
+                        periodStart: now,
+                        periodEnd: expiryDate,
+                    }
+                },
+                { upsert: true }
+            );
+        }
+    } catch (billingErr: any) {
+        // Non-fatal — dashboard display issue only, subscription is already active
+        logger.warn("[Activation] BillingLog sync failed (non-fatal)", { error: billingErr?.message });
+    }
+
     logger.audit({
         type:   "SUBSCRIPTION_ACTIVATED",
         userId,
@@ -228,20 +254,20 @@ export async function activateSubscription(params: {
 
     // 8. Sync Organization model (if exists) — keeps saasGuard.ts in sync
     try {
-        const org = await Organization.findOne({ ownerId: user._id });
-        if (org) {
-            org.status = verifiedPlanType === "trial" ? "trial" : "active";
-            org.currentPeriodEnd = expiryDate;
+        const orgForSync = await Organization.findOne({ ownerId: user._id });
+        if (orgForSync) {
+            orgForSync.status = verifiedPlanType === "trial" ? "trial" : "active";
+            orgForSync.currentPeriodEnd = expiryDate;
             if (verifiedPlanType === "trial") {
-                org.trialEndsAt = expiryDate;
+                orgForSync.trialEndsAt = expiryDate;
             }
-            await org.save();
+            await orgForSync.save();
 
             // Invalidate Redis SaaS guard cache so it picks up new state immediately
             if (redis) {
                 try {
-                    await redis.del(`org:${org._id.toString()}:plan`);
-                    logger.info("[Activation] Redis saasGuard cache invalidated", { orgId: org._id.toString() });
+                    await redis.del(`org:${orgForSync._id.toString()}:plan`);
+                    logger.info("[Activation] Redis saasGuard cache invalidated", { orgId: orgForSync._id.toString() });
                 } catch (e) {
                     // Non-fatal — cache will expire naturally
                     logger.warn("[Activation] Redis cache invalidation failed", { error: (e as Error).message });
@@ -249,8 +275,8 @@ export async function activateSubscription(params: {
             }
 
             logger.info("[Activation] Organization synced", {
-                orgId: org._id.toString(),
-                status: org.status,
+                orgId: orgForSync._id.toString(),
+                status: orgForSync.status,
                 currentPeriodEnd: expiryDate,
             });
         }

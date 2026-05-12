@@ -54,8 +54,9 @@ export async function POST(req: Request) {
 
         const event = JSON.parse(rawBody);
 
-        // Only handle payment.captured events
-        if (event.event !== "payment.captured") {
+        // Handle payment.captured and order.paid events (Razorpay sends both)
+        const supportedEvents = ["payment.captured", "order.paid"];
+        if (!supportedEvents.includes(event.event)) {
             return NextResponse.json({ status: "ignored", event: event.event }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
