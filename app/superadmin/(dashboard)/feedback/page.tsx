@@ -177,16 +177,6 @@ export default function SuperAdminFeedbackPage() {
                                 <div className="flex items-center gap-3">
                                     <select 
                                         className="bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-neutral-300 focus:outline-none focus:border-blue-500"
-                                        value={fb.priority}
-                                        onChange={(e) => handleUpdate(fb._id, { priority: e.target.value })}
-                                    >
-                                        <option value="low">Low Priority</option>
-                                        <option value="medium">Medium Priority</option>
-                                        <option value="high">High Priority</option>
-                                    </select>
-                                    
-                                    <select 
-                                        className="bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-neutral-300 focus:outline-none focus:border-blue-500"
                                         value={fb.status}
                                         onChange={(e) => handleUpdate(fb._id, { status: e.target.value })}
                                     >

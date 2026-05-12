@@ -57,15 +57,28 @@ export async function POST(req: Request) {
             const { ReferralCode } = await import("@/models/ReferralCode");
             const sanitizedCode = String(referralCode).toUpperCase().trim();
 
-            // ── C-2 FIX: Atomic increment — prevents race condition abuse ────
-            // Only increments if code is valid and below maxUses. Returns null if exhausted.
+            // ── Self-referral prevention: check if this org already used a referral code ──
+            if (org.referralCodeUsed) {
+                return NextResponse.json({ error: "This organization has already used a referral code" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+
+            // ── Duplicate abuse prevention: check if this org already exists in ReferralUsage ──
+            const { ReferralUsage } = await import("@/models/ReferralUsage");
+            const existingUsage = await ReferralUsage.findOne({ orgId: org._id }).lean();
+            if (existingUsage) {
+                return NextResponse.json({ error: "This organization has already redeemed a referral code" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+
+            // ── C-2 FIX: Atomic increment with CORRECT field-to-field comparison ────
+            // Previous bug: { usedCount: { $lt: "$maxUses" } } compared against STRING literal
+            // Fix: use $expr for proper field reference comparison
             const atomicCode = await (ReferralCode as any).findOneAndUpdate(
                 {
                     code: sanitizedCode,          // exact match, no regex
                     isActive: true,
                     $or: [
                         { maxUses: 0 },           // 0 = unlimited
-                        { usedCount: { $lt: "$maxUses" } } // still has capacity
+                        { $expr: { $lt: ["$usedCount", "$maxUses"] } } // proper field comparison
                     ]
                 },
                 { $inc: { usedCount: 1 } },
@@ -106,6 +119,11 @@ export async function POST(req: Request) {
         }
 
         if (paymentMethod === "manual_upi") {
+            // Accept specific payment mode from superadmin (defaults to "upi" for backward compat)
+            const manualPaymentMode = (body.manualPaymentMode || "upi").toLowerCase().trim();
+            const validModes = ["cash", "upi", "bank_transfer", "card", "other"];
+            const billingMethod = validModes.includes(manualPaymentMode) ? manualPaymentMode : "upi";
+
             const nextYear = new Date();
             nextYear.setFullYear(nextYear.getFullYear() + 1);
 
@@ -118,7 +136,7 @@ export async function POST(req: Request) {
                         status: "active",
                         startDate: new Date(),
                         nextBillingDate: nextYear,
-                        lastPaymentId: "MANUAL_UPI_" + Date.now(),
+                        lastPaymentId: "MANUAL_" + billingMethod.toUpperCase() + "_" + Date.now(),
                     }
                 },
                 { upsert: true, new: true }
@@ -149,12 +167,13 @@ export async function POST(req: Request) {
                 }
             }
 
-            // Billing log (always write, even if upsert — uniqueness enforced by clientId if needed)
+            // Billing log with correct payment mode
             const { BillingLog } = await import("@/models/BillingLog");
             await BillingLog.create({
                 orgId: org._id,
                 amount: finalPrice,
-                method: "upi",
+                method: billingMethod,
+                paymentMode: billingMethod === "upi" ? "UPI" : billingMethod === "cash" ? "Cash" : billingMethod === "bank_transfer" ? "Bank Transfer" : billingMethod === "card" ? "Card" : "Other",
                 periodStart: new Date(),
                 periodEnd: nextYear,
             });

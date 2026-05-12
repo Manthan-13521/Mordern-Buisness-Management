@@ -44,7 +44,7 @@ export async function GET(req: Request) {
             Pool.countDocuments({}),
             Hostel.countDocuments({}),
             Member.countDocuments({}),
-            BillingLog.find({}).sort({ createdAt: -1 }).limit(50).lean(),
+            BillingLog.find({}).sort({ createdAt: -1 }).limit(500).lean(),
             ReferralCode.find({}).lean(),
             ReferralUsage.find({}).lean(),
             // Total SaaS Revenue (all time)
@@ -189,7 +189,7 @@ export async function GET(req: Request) {
             },
             orgHealth,
             referralIntel,
-            billingLogs: billingLogs.slice(0, 20),
+            billingLogs,
             dailySignups,
             alerts,
         }, {

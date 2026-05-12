@@ -92,9 +92,15 @@ export default function PlatformBillingDashboard() {
                                                 ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
                                                 : b.method === "razorpay"
                                                 ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                                                : b.method === "cash"
+                                                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                                : b.method === "bank_transfer"
+                                                ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/20"
+                                                : b.method === "card"
+                                                ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
                                                 : "bg-neutral-500/10 text-neutral-400 border-neutral-500/20"
                                         }`}>
-                                            {b.method}
+                                            {b.paymentMode || b.method}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-neutral-400 text-xs">

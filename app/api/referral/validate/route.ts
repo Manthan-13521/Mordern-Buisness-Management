@@ -25,7 +25,7 @@ export async function POST(req: Request) {
         const codeDoc = await ReferralCode.findOne({
             code: referralCode.toUpperCase().trim(),
             isActive: true
-        });
+        }).lean() as any;
 
         if (!codeDoc) {
             return NextResponse.json({ error: "Invalid or inactive referral code." }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
@@ -35,7 +35,8 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "This referral code has expired." }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
-        if (codeDoc.maxUses > 0 && codeDoc.usedCount >= codeDoc.maxUses) {
+        // Proper limit check: compare actual numeric values (not string refs)
+        if (codeDoc.maxUses > 0 && (codeDoc.usedCount || 0) >= codeDoc.maxUses) {
             return NextResponse.json({ error: "This referral code has reached its maximum usage limit." }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
@@ -44,6 +45,7 @@ export async function POST(req: Request) {
             code: codeDoc.code,
             discountType: codeDoc.discountType,
             discountValue: codeDoc.discountValue,
+            remainingUses: codeDoc.maxUses > 0 ? codeDoc.maxUses - (codeDoc.usedCount || 0) : null,
         }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
     } catch (error: any) {

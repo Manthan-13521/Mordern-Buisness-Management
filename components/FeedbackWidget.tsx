@@ -44,7 +44,16 @@ export function FeedbackWidget() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "Failed to submit");
 
-            toast.success("Thanks for your feedback!");
+            // Professional acknowledgement with type-specific messaging
+            const typeLabels: Record<string, string> = {
+                bug: "bug report",
+                feature: "feature request",
+                feedback: "feedback",
+            };
+            toast.success(
+                `Thank you for your ${typeLabels[type] || "feedback"}. Our team has received your request and will work to resolve it within the next 12 hours.`,
+                { duration: 6000, style: { maxWidth: "420px" } }
+            );
             setIsOpen(false);
             setMessage("");
             setScreenshot("");

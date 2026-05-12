@@ -160,10 +160,6 @@ export default function MembersPage() {
             const rows = Array.isArray(json) ? json : (json.data ?? []);
             const total = json.total ?? rows.length;
             
-            // Phase 6: Temporary Debug Logging
-            console.log("API response:", rows);
-            console.log("Current poolId:", session?.user?.poolId);
-            
             // --- STEP 5: INCREMENTAL SYNC WITH CONFLICT RESOLUTION ---
             if (session?.user?.poolId) {
                 try {
