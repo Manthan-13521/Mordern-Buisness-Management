@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { Plus, Search, Loader2, X, Truck, Trash2 } from "lucide-react";
+import { Plus, Search, Loader2, X, Truck, Trash2, CheckSquare } from "lucide-react";
 import toast from "react-hot-toast";
 import { LabourSummary } from "@/components/admin/labour/LabourSummary";
 import { LabourRow } from "@/components/admin/labour/LabourRow";
@@ -18,6 +18,10 @@ export default function LabourPage() {
   const [labours, setLabours] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+
+  // Bulk attendance state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkMarking, setBulkMarking] = useState(false);
 
   // Sync server data to local state for optimistic updates
   useEffect(() => {
@@ -307,37 +311,107 @@ export default function LabourPage() {
         {/* Summary */}
         <LabourSummary {...summary} />
 
-        {/* Search */}
-        <div style={{ position: "relative", marginBottom: "20px" }}>
-          <Search style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", color: "#6b7280" }} size={18} />
-          <input 
-            type="text" 
-            placeholder="Search staff..." 
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ 
-              width: "100%", 
-              background: "#0b1220", 
-              border: "1px solid #1f2937", 
-              borderRadius: "14px", 
-              padding: "12px 16px 12px 48px", 
-              color: "#fff", 
-              outline: "none" 
-            }} 
-          />
+        {/* Search + Bulk Action */}
+        <div style={{ display: "flex", gap: "12px", marginBottom: "20px", alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ position: "relative", flex: 1, minWidth: "200px" }}>
+            <Search style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", color: "#6b7280" }} size={18} />
+            <input 
+              type="text" 
+              placeholder="Search staff..." 
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ 
+                width: "100%", 
+                background: "#0b1220", 
+                border: "1px solid #1f2937", 
+                borderRadius: "14px", 
+                padding: "12px 16px 12px 48px", 
+                color: "#fff", 
+                outline: "none" 
+              }} 
+            />
+          </div>
+          {selectedIds.size > 0 && (
+            <button
+              disabled={bulkMarking}
+              onClick={async () => {
+                const today = dateKey(new Date());
+                const ids = Array.from(selectedIds);
+                setBulkMarking(true);
+                // Optimistic update
+                const prev = [...labours];
+                setLabours(l => l.map(s => ids.includes(s._id) ? {
+                  ...s,
+                  recentAttendance: [
+                    ...(s.recentAttendance || []).filter((a: any) => dateKey(new Date(a.date)) !== today),
+                    { date: new Date().toISOString(), status: "present" }
+                  ]
+                } : s));
+                try {
+                  const res = await fetch("/api/business/attendance", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ date: today, records: ids.map(id => ({ labourId: id, status: "present" })) }),
+                  });
+                  if (!res.ok) throw new Error("Failed");
+                  toast.success(`Marked ${ids.length} staff present`);
+                  setSelectedIds(new Set());
+                  fetchData();
+                } catch {
+                  toast.error("Failed to mark attendance");
+                  setLabours(prev);
+                } finally {
+                  setBulkMarking(false);
+                }
+              }}
+              style={{
+                background: "#10b981",
+                color: "#fff",
+                border: "none",
+                borderRadius: "12px",
+                padding: "10px 20px",
+                fontWeight: 700,
+                cursor: bulkMarking ? "not-allowed" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                opacity: bulkMarking ? 0.7 : 1,
+                whiteSpace: "nowrap",
+                transition: "opacity 0.2s",
+              }}
+            >
+              {bulkMarking ? <Loader2 size={16} className="animate-spin" /> : <CheckSquare size={16} />}
+              Mark Attendance ({selectedIds.size})
+            </button>
+          )}
         </div>
 
         {/* List Header */}
         <div style={{ 
           display: "grid", 
-          gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1fr 1fr auto", 
+          gridTemplateColumns: "28px 2fr 1fr 1fr 1fr 1fr 1fr 1fr auto", 
           padding: "0 16px 12px", 
           fontSize: "11px", 
           fontWeight: 700, 
           color: "#6b7280", 
           textTransform: "uppercase", 
-          letterSpacing: "1px" 
+          letterSpacing: "1px",
+          alignItems: "center",
         }}>
+          <div>
+            <input
+              type="checkbox"
+              checked={filtered.length > 0 && filtered.every(s => selectedIds.has(s._id))}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  setSelectedIds(new Set(filtered.map(s => s._id)));
+                } else {
+                  setSelectedIds(new Set());
+                }
+              }}
+              style={{ accentColor: "#8b5cf6", cursor: "pointer", width: "15px", height: "15px" }}
+            />
+          </div>
           <div>Name</div>
           <div>₹/Day</div>
           <div>Present</div>
@@ -356,17 +430,39 @@ export default function LabourPage() {
             const todayStatus = (staff.recentAttendance || []).find((a: any) => dateKey(new Date(a.date)) === today)?.status || null;
 
             return (
-              <LabourRow 
-                key={staff._id}
-                staff={staff}
-                stats={stats}
-                todayStatus={todayStatus}
-                isExpanded={expandedRow === staff._id}
-                onToggle={() => setExpandedRow(expandedRow === staff._id ? null : staff._id)}
-                onMarkAttendance={(status) => markAttendance(staff._id, status)}
-                onPay={(amount) => handlePay(staff._id, amount)}
-                onUpdateAdvance={(amount) => handleAdvance(staff._id, amount)}
-              />
+              <div key={staff._id} style={{ display: "flex", alignItems: "stretch", gap: "0" }}>
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "44px",
+                  flexShrink: 0,
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(staff._id)}
+                    onChange={(e) => {
+                      const next = new Set(selectedIds);
+                      if (e.target.checked) next.add(staff._id);
+                      else next.delete(staff._id);
+                      setSelectedIds(next);
+                    }}
+                    style={{ accentColor: "#8b5cf6", cursor: "pointer", width: "15px", height: "15px" }}
+                  />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <LabourRow 
+                    staff={staff}
+                    stats={stats}
+                    todayStatus={todayStatus}
+                    isExpanded={expandedRow === staff._id}
+                    onToggle={() => setExpandedRow(expandedRow === staff._id ? null : staff._id)}
+                    onMarkAttendance={(status) => markAttendance(staff._id, status)}
+                    onPay={(amount) => handlePay(staff._id, amount)}
+                    onUpdateAdvance={(amount) => handleAdvance(staff._id, amount)}
+                  />
+                </div>
+              </div>
             );
           })}
         </div>
