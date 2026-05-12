@@ -30,7 +30,7 @@ export async function GET(req: Request) {
         const [transactions, total] = await Promise.all([
             BusinessTransaction.find(query)
                 .populate("customerId", "name")
-                .select("customerId category amount paidAmount date transactionType paymentMethod notes receiptUrl fileUrl createdAt")
+                .select("customerId category amount paidAmount date transactionType paymentMethod notes receiptUrl fileUrl items transportationCost createdAt")
                 .sort({ date: -1 })
                 .skip(skip)
                 .limit(limit)

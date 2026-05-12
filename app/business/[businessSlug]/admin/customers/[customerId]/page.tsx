@@ -72,7 +72,11 @@ export default function CustomerDetailPage() {
       ]);
       
       if (custRes.ok) setCustomer(await custRes.json());
-      if (transRes.ok) setTransactions(await transRes.json());
+      if (transRes.ok) {
+        const transJson = await transRes.json();
+        // API returns paginated { data: [...], total, page, ... } — extract the array
+        setTransactions(Array.isArray(transJson) ? transJson : (transJson.data || []));
+      }
     } catch (err) {
       console.error(err);
     } finally {
