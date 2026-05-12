@@ -44,6 +44,12 @@ export async function activateSubscription(params: {
     const { razorpayOrderId, razorpayPaymentId, razorpaySignature, isMock, userId, planType: reqPlanType, module: reqModule, blocks: reqBlocks, referralCode } = params;
     let amountPaid = params.amountPaid;
 
+    // ── Verified values: these are set from the Razorpay order (source of truth) ──
+    // Fall back to request values only for webhook path (already externally verified)
+    let verifiedPlanType: SubscriptionPlanType = reqPlanType;
+    let verifiedModule: SubscriptionModule = reqModule;
+    let verifiedBlocks: number | undefined = reqBlocks;
+
     // 1. Verify Razorpay Order & Signature — skip only in mock mode
     if (!isMock) {
         const secret = process.env.RAZORPAY_KEY_SECRET;
@@ -69,14 +75,22 @@ export async function activateSubscription(params: {
         // ── CRITICAL: Fetch order from Razorpay to verify details ──────────
         // This prevents users from tampering with the activate request to get a better plan
         const { razorpay: rzp } = await import("@/lib/razorpay");
+
+        // SECURITY: If Razorpay SDK unavailable for a frontend request, hard-fail
+        // Never skip verification for frontend-initiated activations
+        if (!rzp && razorpaySignature) {
+            logger.error("[Activation] SECURITY: Razorpay SDK unavailable for frontend activation — blocking");
+            throw new Error("Payment gateway unavailable for verification");
+        }
+
         if (rzp) {
             try {
                 const order = await rzp.orders.fetch(razorpayOrderId) as any;
                 if (!order) throw new Error("Razorpay order not found");
 
                 const notes = order.notes || {};
-                const orderPlan = notes.planType;
-                const orderModule = notes.module;
+                const orderPlan = notes.planType as SubscriptionPlanType;
+                const orderModule = notes.module as SubscriptionModule;
                 const orderBlocks = notes.blocks ? parseInt(notes.blocks) : undefined;
                 
                 // Verify that the requested plan matches what was actually ordered
@@ -92,15 +106,46 @@ export async function activateSubscription(params: {
                     throw new Error("Requested plan does not match the order");
                 }
 
-                // Get actual amount from order if not provided
+                // ── SOURCE OF TRUTH: Use order-derived values, NOT request values ──
+                verifiedPlanType = orderPlan;
+                verifiedModule = orderModule;
+                verifiedBlocks = orderBlocks;
+
+                // Get actual amount from order
                 if (amountPaid === undefined) {
                     amountPaid = order.amount_paid / 100;
                 }
+
+                // ── AMOUNT-TO-BLOCKS REVERSE VALIDATION (hostel plans) ──
+                // Even after notes match, verify the AMOUNT actually corresponds to
+                // the claimed blocks. Prevents any mismatch between order amount and entitlement.
+                if (verifiedModule === "hostel" && verifiedPlanType === "block-based" && verifiedBlocks) {
+                    const expectedPriceKey = getPriceKey("block-based", "hostel", verifiedBlocks);
+                    if (expectedPriceKey) {
+                        const expectedAmountPaise = SUBSCRIPTION_PRICES[expectedPriceKey] * 100;
+                        const orderAmountPaise = order.amount || 0;
+                        // Order amount must be >= ₹1 AND <= expected full price
+                        // (referral discounts can reduce but never below ₹1)
+                        if (orderAmountPaise < 100 || orderAmountPaise > expectedAmountPaise) {
+                            logger.audit({
+                                type: "SUBSCRIPTION_AMOUNT_MISMATCH",
+                                userId,
+                                meta: {
+                                    verifiedBlocks,
+                                    orderAmountPaise,
+                                    expectedAmountPaise,
+                                    razorpayOrderId,
+                                }
+                            });
+                            throw new Error("Payment amount does not match the block entitlement");
+                        }
+                    }
+                }
             } catch (fetchErr: any) {
                 logger.error("[Activation] Failed to verify order with Razorpay", { error: fetchErr.message });
-                // If fetching order fails, we fallback to trusting the params IF it came from the webhook (which is already verified)
-                // If it came from the frontend API, we must fail.
+                // If it came from the frontend API, we MUST fail — never skip verification
                 if (razorpaySignature) throw new Error("Could not verify order with payment gateway");
+                // Webhook path: order notes already verified by webhook handler separately
             }
         }
     }
@@ -122,8 +167,8 @@ export async function activateSubscription(params: {
         };
     }
 
-    // 3. Validate plan
-    const priceKey = getPriceKey(reqPlanType, reqModule, reqBlocks);
+    // 3. Validate plan — using VERIFIED values (from Razorpay order), not request values
+    const priceKey = getPriceKey(verifiedPlanType, verifiedModule, verifiedBlocks);
     if (!priceKey) throw new Error("Invalid plan combination");
     
     // If amountPaid still unknown, fallback to default price (only in mock or webhook fallback)
@@ -134,41 +179,41 @@ export async function activateSubscription(params: {
     if (!user) throw new Error("User not found");
 
     // Trial guard — double-check server-side
-    if (reqPlanType === "trial" && user.trial?.isUsed) {
+    if (verifiedPlanType === "trial" && user.trial?.isUsed) {
         throw new Error("Free trial already used");
     }
 
     // 5. Compute new expiry (renewal-aware)
     const currentExpiry = user.subscription?.expiryDate;
-    const expiryDate = computeExpiryDate(reqPlanType, currentExpiry);
+    const expiryDate = computeExpiryDate(verifiedPlanType, currentExpiry);
     const now = new Date();
 
-    // 6. Write unified subscription sub-doc
+    // 6. Write unified subscription sub-doc — using VERIFIED values only
     (user as any).subscription = {
-        module: reqModule,
-        planType: reqPlanType,
-        blocks: reqBlocks,
+        module: verifiedModule,
+        planType: verifiedPlanType,
+        blocks: verifiedBlocks,
         pricePaid: finalAmountPaid,
         startDate: now,
         expiryDate,
-        status: reqPlanType === "trial" ? "trial" : "active",
+        status: verifiedPlanType === "trial" ? "trial" : "active",
     };
 
-    if (reqPlanType === "trial") {
+    if (verifiedPlanType === "trial") {
         user.trial = { isUsed: true };
     }
 
     await user.save();
 
-    // 7. Record payment log
+    // 7. Record payment log — using VERIFIED values
     await SubscriptionPaymentLog.create({
         userId:            user._id,
         poolId:            user.poolId,
         hostelId:          user.hostelId,
         businessId:        user.businessId,
-        module:            reqModule,
-        planType:          reqPlanType,
-        blocks:            reqBlocks,
+        module:            verifiedModule,
+        planType:          verifiedPlanType,
+        blocks:            verifiedBlocks,
         amount:            finalAmountPaid,
         razorpayOrderId,
         razorpayPaymentId,
@@ -178,16 +223,16 @@ export async function activateSubscription(params: {
     logger.audit({
         type:   "SUBSCRIPTION_ACTIVATED",
         userId,
-        meta:   { planType: reqPlanType, module: reqModule, blocks: reqBlocks, amountINR: finalAmountPaid, expiryDate, razorpayPaymentId },
+        meta:   { planType: verifiedPlanType, module: verifiedModule, blocks: verifiedBlocks, amountINR: finalAmountPaid, expiryDate, razorpayPaymentId },
     });
 
     // 8. Sync Organization model (if exists) — keeps saasGuard.ts in sync
     try {
         const org = await Organization.findOne({ ownerId: user._id });
         if (org) {
-            org.status = reqPlanType === "trial" ? "trial" : "active";
+            org.status = verifiedPlanType === "trial" ? "trial" : "active";
             org.currentPeriodEnd = expiryDate;
-            if (reqPlanType === "trial") {
+            if (verifiedPlanType === "trial") {
                 org.trialEndsAt = expiryDate;
             }
             await org.save();
