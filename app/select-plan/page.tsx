@@ -152,7 +152,7 @@ export default function SelectPlanPage() {
     const getRedirectUrl = () => {
         if (session.user.hostelId) return `/hostel/${session.user.hostelSlug}/admin/dashboard`;
         if (session.user.businessId) return `/business/${session.user.businessSlug}/admin/dashboard`;
-        return `/${session.user.poolSlug}/admin/dashboard`;
+        return `/pool/${session.user.poolSlug}/admin/dashboard`;
     };
 
     const handlePayment = async (planType: SubscriptionPlanType, blocks?: number) => {
