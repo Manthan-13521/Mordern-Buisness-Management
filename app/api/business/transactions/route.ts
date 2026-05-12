@@ -3,6 +3,7 @@ import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessTransaction } from "@/models/BusinessTransaction";
 import { logger } from "@/lib/logger";
+import mongoose from "mongoose";
 
 export const dynamic = "force-dynamic";
 
@@ -15,16 +16,22 @@ export async function GET(req: Request) {
 
         await dbConnect();
         const businessId = user.businessId;
-
         const { searchParams } = new URL(req.url);
         const customerId = searchParams.get("customerId");
+
         const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
         const limit = Math.min(20, Math.max(1, parseInt(searchParams.get("limit") ?? "20")));
         const skip = (page - 1) * limit;
 
         let query: any = { businessId };
         if (customerId) {
-            query.customerId = customerId;
+            // Explicit ObjectId cast — matches customer detail API pattern.
+            // Mongoose auto-casting from string can fail intermittently on cold starts.
+            try {
+                query.customerId = new mongoose.Types.ObjectId(customerId);
+            } catch {
+                return NextResponse.json({ data: [], total: 0, page, limit, totalPages: 0 }, { status: 200 });
+            }
         }
 
         const [transactions, total] = await Promise.all([

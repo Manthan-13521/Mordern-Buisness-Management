@@ -35,7 +35,7 @@ export default function CustomerDetailPage() {
   const businessSlug = params.businessSlug;
 
   const [customer, setCustomer] = useState<any>(null);
-  const [transactions, setTransactions] = useState([]);
+  const [transactions, setTransactions] = useState<any[] | null>(null); // Start as null to distinguish from empty array
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showSaleModal, setShowSaleModal] = useState(false);
@@ -79,20 +79,47 @@ export default function CustomerDetailPage() {
     const currentGen = ++fetchGenRef.current;
     setLoading(true);
 
-    try {
+    const doFetch = async () => {
+      // Cache-bust timestamp prevents any edge/CDN caching
+      const ts = Date.now();
       const [custRes, transRes] = await Promise.all([
-        fetch(`/api/business/customers/${customerId}`, { cache: "no-store", signal }),
-        fetch(`/api/business/transactions?customerId=${customerId}`, { cache: "no-store", signal })
+        fetch(`/api/business/customers/${customerId}?_t=${ts}`, {
+          cache: "no-store",
+          credentials: "include",
+          signal,
+        }),
+        fetch(`/api/business/transactions?customerId=${customerId}&_t=${ts}`, {
+          cache: "no-store",
+          credentials: "include",
+          signal,
+        })
       ]);
 
       // Staleness check: if a newer fetch was started, discard this response
-      if (currentGen !== fetchGenRef.current) return;
-      
-      if (custRes.ok) setCustomer(await custRes.json());
+      if (currentGen !== fetchGenRef.current) return true; 
+
+      if (custRes.ok) {
+        setCustomer(await custRes.json());
+      }
+
       if (transRes.ok) {
         const transJson = await transRes.json();
-        // API returns paginated { data: [...], total, page, ... } — extract the array
-        setTransactions(Array.isArray(transJson) ? transJson : (transJson.data || []));
+        const data = Array.isArray(transJson) ? transJson : (transJson.data || []);
+        setTransactions(data);
+        return true;
+      }
+
+      return false; // signal that transactions fetch failed
+    };
+
+    try {
+      const success = await doFetch();
+      // Retry once after a short delay on failure (handles cold-start / auth timing)
+      if (success === false && currentGen === fetchGenRef.current) {
+        await new Promise(r => setTimeout(r, 1000));
+        if (currentGen === fetchGenRef.current) {
+          await doFetch();
+        }
       }
     } catch (err: any) {
       // Don't log abort errors — they're expected on cleanup
@@ -150,8 +177,8 @@ export default function CustomerDetailPage() {
   };
 
   useEffect(() => {
-    // Don't fetch until customerId is available
-    if (!customerId) return;
+    // Don't fetch until customerId is available and valid
+    if (!customerId || customerId === "undefined") return;
 
     const controller = new AbortController();
     fetchData(controller.signal);
@@ -275,7 +302,7 @@ export default function CustomerDetailPage() {
     setIsEditing(true);
   }
   
-  if (loading) {
+  if (loading && !customer) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 text-[#8b5cf6] animate-spin" />
@@ -283,7 +310,7 @@ export default function CustomerDetailPage() {
     );
   }
 
-  const history = transactions;
+  const history = transactions || [];
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300 max-w-7xl mx-auto">
@@ -472,7 +499,14 @@ export default function CustomerDetailPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#1f2937]">
-              {history.length > 0 ? history.map((entry: any, i) => {
+              {transactions === null ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-24 text-center">
+                    <Loader2 className="w-6 h-6 text-[#8b5cf6] animate-spin mx-auto mb-2" />
+                    <p className="text-xs text-[#9ca3af] font-bold uppercase tracking-widest">Loading ledger history...</p>
+                  </td>
+                </tr>
+              ) : history.length > 0 ? history.map((entry: any, i) => {
                 const isSale = entry.category === 'SALE';
                 const isSent = entry.transactionType === 'sent';
                 const items = entry.items || [];
