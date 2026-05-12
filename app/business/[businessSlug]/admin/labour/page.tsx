@@ -185,11 +185,13 @@ export default function LabourPage() {
     let presentToday = 0;
     let totalPaidMonth = 0;
     let totalDue = 0;
+    let totalAdvance = 0;
     const today = dateKey(new Date());
 
     labours.forEach(staff => {
       const stats = getStats(staff);
       totalDue += stats.due;
+      totalAdvance += (staff.advancePaid || 0);
       
       const hasToday = (staff.recentAttendance || []).find((a: any) => dateKey(new Date(a.date)) === today && a.status === 'present');
       if (hasToday) presentToday++;
@@ -198,7 +200,7 @@ export default function LabourPage() {
       totalPaidMonth += stats.totalPaid; 
     });
 
-    return { totalStaff, presentToday, totalPaid: totalPaidMonth, totalDue };
+    return { totalStaff, presentToday, totalPaid: totalPaidMonth, totalDue, totalAdvance };
   }, [labours]);
 
   const filtered = labours.filter(l => 

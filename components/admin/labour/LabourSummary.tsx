@@ -1,30 +1,33 @@
 import React from 'react';
-import { Users, UserCheck, Wallet, IndianRupee } from 'lucide-react';
+import { Users, UserCheck, Wallet, IndianRupee, ArrowUpRight } from 'lucide-react';
 
 interface LabourSummaryProps {
   totalStaff: number;
   presentToday: number;
   totalPaid: number;
   totalDue: number;
+  totalAdvance?: number;
 }
 
 export const LabourSummary: React.FC<LabourSummaryProps> = ({
   totalStaff,
   presentToday,
   totalPaid,
-  totalDue
+  totalDue,
+  totalAdvance = 0
 }) => {
   const cards = [
     { label: 'Total Staff', value: totalStaff, icon: <Users size={20} />, color: '#8b5cf6', bg: '#8b5cf615' },
     { label: 'Present Today', value: presentToday, icon: <UserCheck size={20} />, color: '#10b981', bg: '#10b98115' },
     { label: 'Total Paid', value: `₹${totalPaid.toLocaleString()}`, icon: <Wallet size={20} />, color: '#3b82f6', bg: '#3b82f615' },
+    { label: 'Total Advance', value: `₹${totalAdvance.toLocaleString()}`, icon: <ArrowUpRight size={20} />, color: '#f59e0b', bg: '#f59e0b15' },
     { label: 'Total Due', value: `₹${totalDue.toLocaleString()}`, icon: <IndianRupee size={20} />, color: '#f43f5e', bg: '#f43f5e15' },
   ];
 
   return (
     <div style={{ 
       display: 'grid', 
-      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+      gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
       gap: '16px', 
       marginBottom: '24px' 
     }}>
