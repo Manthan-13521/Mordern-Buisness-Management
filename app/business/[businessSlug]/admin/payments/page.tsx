@@ -281,9 +281,9 @@ export default function PaymentsPage() {
                         </span>
                       </td>
                       <td className="px-6 py-5 text-right">
-                        {payment.receiptUrl ? (
+                        {(payment.receiptUrl || payment.fileUrl) ? (
                           <a 
-                            href={payment.receiptUrl} 
+                            href={payment.receiptUrl || payment.fileUrl} 
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="p-2 inline-flex items-center justify-center bg-[#111827] border border-[#1f2937] text-[#9ca3af] hover:text-[#8b5cf6] hover:border-[#8b5cf6]/50 rounded-lg transition-all"
@@ -292,7 +292,7 @@ export default function PaymentsPage() {
                             <Eye className="w-5 h-5" />
                           </a>
                         ) : (
-                          <label className="relative cursor-pointer p-2 inline-flex items-center justify-center gap-1.5 bg-[#111827] border border-dashed border-[#374151] text-[#9ca3af] hover:text-[#8b5cf6] hover:border-[#8b5cf6]/50 rounded-lg transition-all group/upload">
+                          <label className="relative cursor-pointer p-2 inline-flex items-center justify-center gap-1.5 bg-[#111827] border border-dashed border-[#8b5cf6]/40 text-[#9ca3af] hover:text-[#8b5cf6] hover:border-[#8b5cf6] rounded-lg transition-all">
                             <input
                               type="file"
                               accept="image/*,.pdf"
