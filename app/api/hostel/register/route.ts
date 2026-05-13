@@ -17,7 +17,7 @@ export async function POST(req: Request) {
         await dbConnect();
         const body = await req.json();
 
-        const { hostelName, city, adminEmail, adminName, password, numberOfBlocks, adminBilling } = body;
+        const { hostelName, city, adminEmail, adminName, password, numberOfBlocks, adminBilling, adminPhone } = body;
 
         if (!hostelName || !city || !adminEmail || !adminName || !password) {
             return NextResponse.json({ error: "Missing required fields" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
@@ -57,42 +57,71 @@ export async function POST(req: Request) {
 
         // Create hostel, admin user, and settings in parallel
         try {
-            const [hostel] = await Promise.all([
-                Hostel.create({
-                    hostelId,
-                    hostelName,
-                    slug,
-                    city,
-                    adminEmail: normalizedEmail,
-                    numberOfBlocks: Math.min(4, Math.max(1, numberOfBlocks || 1)),
-                    status: "ACTIVE",
-                    plan: activePlan,
-                    subscriptionStatus,
-                    ...(subscriptionEndsAt ? { subscriptionEndsAt } : {}),
-                    isTwilioConnected: false,
-                    memberCounter: 0,
-                }),
-                User.create({
-                    name: adminName,
-                    email: normalizedEmail,
-                    passwordHash,
-                    role: "hostel_admin",
-                    hostelId,
-                    isActive: true,
-                }),
-                HostelSettings.create({ hostelId, whatsappEnabled: false }),
-            ]);
+            const hostel = new Hostel({
+                hostelId,
+                hostelName,
+                slug,
+                city,
+                adminEmail: normalizedEmail,
+                adminPhone,
+                numberOfBlocks,
+                status: "ACTIVE",
+                plan: activePlan,
+                subscriptionStatus,
+                subscriptionEndsAt,
+            });
+
+            await hostel.save();
+
+            // Create SaaSPlan lookup for Organization
+            const { SaaSPlan } = await import("@/models/SaaSPlan");
+            const planSearchName = activePlan === "free" ? "Starter" : activePlan === "pro" ? "Pro" : activePlan === "enterprise" ? "Enterprise" : "Starter";
+            const planDoc = await SaaSPlan.findOne({ name: { $regex: new RegExp(planSearchName, "i") } }) || await SaaSPlan.findOne({});
+
+            const admin = new User({
+                name: adminName || "Hostel Administrator",
+                email: normalizedEmail,
+                passwordHash,
+                role: "hostel_admin",
+                phone: adminPhone,
+                hostelId: hostelId,
+                // Add subscription to User for system-wide consistency
+                subscription: adminBilling ? {
+                    module: "hostel",
+                    planType: adminBilling.planType,
+                    blocks: numberOfBlocks as any,
+                    pricePaid: adminBilling.amount,
+                    startDate: new Date(),
+                    expiryDate: subscriptionEndsAt || new Date(),
+                    status: "active"
+                } : undefined
+            });
+
+            await admin.save();
+
+            // Create Organization for SuperAdmin dashboard tracking
+            const { Organization } = await import("@/models/Organization");
+            const newOrg = await Organization.create({
+                name: hostelName,
+                ownerId: admin._id,
+                planId: planDoc?._id || admin._id,
+                hostelIds: [hostelId],
+                status: subscriptionStatus === "active" ? "active" : "trial",
+                currentPeriodEnd: subscriptionEndsAt,
+                trialEndsAt: activePlan === "trial" ? subscriptionEndsAt : undefined
+            });
+
+            await HostelSettings.create({ hostelId, whatsappEnabled: false });
 
             // If admin billing is present, create a BillingLog entry
             if (adminBilling && adminBilling.amount > 0) {
                 try {
                     const { BillingLog } = await import("@/models/BillingLog");
                     const now = new Date();
-                    const days = 365;
-                    const periodEnd = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+                    const periodEnd = subscriptionEndsAt || now;
 
                     await BillingLog.create({
-                        orgId: hostel._id,
+                        orgId: newOrg._id,
                         amount: adminBilling.amount,
                         method: adminBilling.paymentMode === "razorpay" ? "razorpay" : adminBilling.paymentMode === "upi" ? "upi" : adminBilling.paymentMode === "cash" ? "cash" : "manual",
                         paymentMode: `${adminBilling.paymentMode?.toUpperCase()} (Admin: ${adminBilling.payerName || "SuperAdmin"})`,

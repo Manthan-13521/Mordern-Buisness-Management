@@ -6,6 +6,7 @@ export interface IOrganization extends Document {
     planId: mongoose.Types.ObjectId;   // Ref to SaaSPlan
     poolIds: string[];                 // Linked sub-tenants (pools assigned to this org)
     hostelIds: string[];               // Linked sub-tenants (hostels assigned to this org)
+    businessIds: string[];             // Linked sub-tenants (businesses assigned to this org)
     
     status: "trial" | "active" | "expired" | "grace";
     trialEndsAt?: Date;
@@ -28,6 +29,7 @@ const organizationSchema = new Schema<IOrganization>(
         planId: { type: Schema.Types.ObjectId, ref: "SaaSPlan", required: true },
         poolIds: { type: [String], default: [], index: true },
         hostelIds: { type: [String], default: [], index: true },
+        businessIds: { type: [String], default: [], index: true },
         
         status: { 
             type: String, 

@@ -47,45 +47,78 @@ export async function POST(req: Request) {
         }
 
         const passwordHash = await bcrypt.hash(password, 10);
+        const activePlan = adminBilling?.planType || "free";
+
+        const durationDays: Record<string, number> = {
+            quarterly: 90,
+            yearly: 365,
+        };
+        const days = adminBilling ? (durationDays[adminBilling.planType] || 90) : 90;
+        const subscriptionEndsAt = adminBilling ? new Date(Date.now() + days * 24 * 60 * 60 * 1000) : undefined;
 
         try {
             const newBusiness = new Business({
                 businessId,
                 name: businessName,
                 slug,
+                address,
                 phone: adminPhone,
-                address: address,
                 isActive: true,
             });
 
             await newBusiness.save();
 
+            // Create SaaSPlan lookup for Organization
+            const { SaaSPlan } = await import("@/models/SaaSPlan");
+            const planSearchName = activePlan === "yearly" ? "Enterprise" : activePlan === "quarterly" ? "Pro" : "Starter";
+            const planDoc = await SaaSPlan.findOne({ name: { $regex: new RegExp(planSearchName, "i") } }) || await SaaSPlan.findOne({});
+
             const newAdmin = new User({
-                name: adminName || "Business Administrator",
+                name: adminName,
                 email: normalizedEmail,
                 passwordHash,
                 role: "business_admin",
                 phone: adminPhone,
                 businessId: businessId,
                 businessSlug: slug,
+                // Business SaaS guard uses User.subscription
+                subscription: adminBilling ? {
+                    module: "business",
+                    planType: adminBilling.planType,
+                    pricePaid: adminBilling.amount,
+                    startDate: new Date(),
+                    expiryDate: subscriptionEndsAt || new Date(),
+                    status: "active"
+                } : undefined
             });
 
             await newAdmin.save();
+
+            // Link owner back to business
+            newBusiness.ownerId = newAdmin._id;
+            await newBusiness.save();
+
+            // Create Organization for SuperAdmin dashboard tracking
+            const { Organization } = await import("@/models/Organization");
+            const newOrg = await Organization.create({
+                name: businessName,
+                ownerId: newAdmin._id,
+                planId: planDoc?._id || newAdmin._id,
+                businessIds: [businessId],
+                status: adminBilling ? "active" : "trial",
+                currentPeriodEnd: subscriptionEndsAt,
+                trialEndsAt: activePlan === "trial" ? subscriptionEndsAt : undefined
+            });
 
             // If admin billing is present, create a BillingLog entry
             if (adminBilling && adminBilling.amount > 0) {
                 try {
                     const { BillingLog } = await import("@/models/BillingLog");
                     const now = new Date();
-                    const durationDays: Record<string, number> = {
-                        quarterly: 90,
-                        yearly: 365,
-                    };
-                    const days = durationDays[adminBilling.planType] || 90;
-                    const periodEnd = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+                    const periodEnd = subscriptionEndsAt || now;
 
                     await BillingLog.create({
-                        orgId: newBusiness._id,
+                        orgId: newOrg._id, // Point to Organization instead of Business for unified analytics
                         amount: adminBilling.amount,
                         method: adminBilling.paymentMode === "razorpay" ? "razorpay" : adminBilling.paymentMode === "upi" ? "upi" : adminBilling.paymentMode === "cash" ? "cash" : "manual",
                         paymentMode: `${adminBilling.paymentMode?.toUpperCase()} (Admin: ${adminBilling.payerName || "SuperAdmin"})`,

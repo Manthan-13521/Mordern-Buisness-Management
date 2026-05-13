@@ -83,32 +83,52 @@ export async function POST(req: Request) {
 
             await newPool.save();
 
+            // Create SaaSPlan lookup for Organization
+            const { SaaSPlan } = await import("@/models/SaaSPlan");
+            const planSearchName = activePlan === "free" ? "Starter" : activePlan === "pro" ? "Pro" : activePlan === "enterprise" ? "Enterprise" : "Starter";
+            const planDoc = await SaaSPlan.findOne({ name: { $regex: new RegExp(planSearchName, "i") } }) || await SaaSPlan.findOne({});
+
             const newAdmin = new User({
                 name: adminName || "Pool Administrator",
                 email: normalizedEmail,
                 passwordHash,
                 role: "admin",
                 phone: adminPhone,
-                poolId: poolId
+                poolId: poolId,
+                // Add subscription to User for system-wide consistency
+                subscription: adminBilling ? {
+                    module: "pool",
+                    planType: adminBilling.planType,
+                    pricePaid: adminBilling.amount,
+                    startDate: new Date(),
+                    expiryDate: subscriptionEndsAt || new Date(),
+                    status: "active"
+                } : undefined
             });
 
             await newAdmin.save();
+
+            // Create Organization for SuperAdmin dashboard tracking
+            const { Organization } = await import("@/models/Organization");
+            const newOrg = await Organization.create({
+                name: poolName,
+                ownerId: newAdmin._id,
+                planId: planDoc?._id || newAdmin._id, // Fallback if no plan found
+                poolIds: [poolId],
+                status: subscriptionStatus === "active" ? "active" : "trial",
+                currentPeriodEnd: subscriptionEndsAt,
+                trialEndsAt: activePlan === "trial" ? subscriptionEndsAt : undefined
+            });
 
             // If admin billing is present, create a BillingLog entry
             if (adminBilling && adminBilling.amount > 0) {
                 try {
                     const { BillingLog } = await import("@/models/BillingLog");
                     const now = new Date();
-                    const durationDays: Record<string, number> = {
-                        trial: 7,
-                        quarterly: 90,
-                        yearly: 365,
-                    };
-                    const days = durationDays[adminBilling.planType] || 30;
-                    const periodEnd = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+                    const periodEnd = subscriptionEndsAt || now;
 
                     await BillingLog.create({
-                        orgId: newPool._id,
+                        orgId: newOrg._id, // Point to Organization instead of Pool
                         amount: adminBilling.amount,
                         method: adminBilling.paymentMode === "razorpay" ? "razorpay" : adminBilling.paymentMode === "upi" ? "upi" : adminBilling.paymentMode === "cash" ? "cash" : "manual",
                         paymentMode: `${adminBilling.paymentMode?.toUpperCase()} (Admin: ${adminBilling.payerName || "SuperAdmin"})`,
