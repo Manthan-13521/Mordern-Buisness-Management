@@ -3,6 +3,15 @@ import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { logger } from "@/lib/logger";
 
+// Allow up to 8MB request bodies (5MB file → ~6.7MB base64 + JSON overhead)
+export const config = {
+    api: {
+        bodyParser: {
+            sizeLimit: "8mb",
+        },
+    },
+};
+
 export async function POST(req: Request) {
     try {
         const user = await resolveUser(req);

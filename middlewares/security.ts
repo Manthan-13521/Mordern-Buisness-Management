@@ -71,9 +71,13 @@ export async function withSecurity(req: NextRequestWithAuth): Promise<NextRespon
     }
 
     // 2. Payload size check
+    // Upload routes carry base64-encoded files — exempt them from the default 100KB limit.
+    const LARGE_PAYLOAD_PATHS = ["/api/business/upload"];
+    const isLargePayloadRoute = LARGE_PAYLOAD_PATHS.some((p) => path.startsWith(p));
     const contentLength = parseInt(req.headers.get("content-length") || "0", 10);
-    if (contentLength > 100_000) {
-        const res = NextResponse.json({ error: "Payload too large. Maximum allowed size is 100KB." }, { status: 413 });
+    const maxPayload = isLargePayloadRoute ? 8_000_000 : 100_000; // 8MB for uploads, 100KB otherwise
+    if (contentLength > maxPayload) {
+        const res = NextResponse.json({ error: `Payload too large. Maximum allowed size is ${isLargePayloadRoute ? '8MB' : '100KB'}.` }, { status: 413 });
         applySecurityHeaders(res);
         return res;
     }

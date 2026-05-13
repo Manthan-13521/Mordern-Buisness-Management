@@ -68,3 +68,39 @@ export async function GET(req: Request) {
     }
 }
 
+export async function PATCH(req: Request) {
+    try {
+        const user = await resolveUser(req);
+        if (!user || user.role !== "business_admin") {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const body = await req.json();
+        const { transactionId, receiptUrl } = body;
+
+        if (!transactionId || !receiptUrl) {
+            return NextResponse.json({ error: "transactionId and receiptUrl are required" }, { status: 400 });
+        }
+
+        await dbConnect();
+        const businessId = user.businessId;
+
+        // Only allow updating receipt on transactions owned by this business
+        const updated = await BusinessTransaction.findOneAndUpdate(
+            { _id: transactionId, businessId },
+            { $set: { receiptUrl } },
+            { new: true }
+        );
+
+        if (!updated) {
+            return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
+        }
+
+        return NextResponse.json({ success: true, data: updated }, {
+            headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
+        });
+    } catch (error: any) {
+        logger.error("Transaction receipt update error", { error: error?.message });
+        return NextResponse.json({ error: "Failed to update receipt" }, { status: 500 });
+    }
+}

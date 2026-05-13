@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback, Fragment } from "react";
+import { useEffect, useState, useRef, useCallback, Fragment, ChangeEvent } from "react";
 import { 
   Clock, 
   ShoppingBag, 
@@ -20,7 +20,8 @@ import {
   Paperclip,
   FileText,
   Pencil,
-  X
+  X,
+  Upload
 } from "lucide-react";
 import toast from "react-hot-toast";
 import Link from "next/link";
@@ -61,6 +62,7 @@ export default function CustomerDetailPage() {
     receiptUrl: ""
   });
   const [uploading, setUploading] = useState(false);
+  const [uploadingTxnId, setUploadingTxnId] = useState<string | null>(null);
 
   // Edit Customer Details
   const [isEditing, setIsEditing] = useState(false);
@@ -142,9 +144,9 @@ export default function CustomerDetailPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // 1MB limit check
-    if (file.size > 1024 * 1024) {
-      toast.error("File size must be less than 1MB");
+    // 5MB limit check
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File size must be less than 5MB");
       e.target.value = "";
       return;
     }
@@ -177,6 +179,62 @@ export default function CustomerDetailPage() {
       toast.error(err.message || "Upload error", { id: toastId });
     } finally {
       setUploading(false);
+    }
+  };
+
+  // Upload receipt for an existing transaction (post-creation attachment)
+  const handleReceiptUploadForTxn = async (e: ChangeEvent<HTMLInputElement>, txnId: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File size must be less than 5MB");
+      e.target.value = "";
+      return;
+    }
+
+    setUploadingTxnId(txnId);
+    const toastId = toast.loading("Uploading receipt...");
+
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = async () => {
+        const base64 = reader.result;
+        // 1. Upload file to Cloudinary
+        const uploadRes = await fetch("/api/business/upload", {
+          method: "POST",
+          body: JSON.stringify({ file: base64, folder: "receipts" }),
+        });
+
+        if (!uploadRes.ok) {
+          const data = await uploadRes.json();
+          toast.error(data.details || data.error || "Upload failed", { id: toastId });
+          setUploadingTxnId(null);
+          return;
+        }
+
+        const { url } = await uploadRes.json();
+
+        // 2. Attach receipt URL to the existing transaction
+        const patchRes = await fetch("/api/business/transactions", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ transactionId: txnId, receiptUrl: url }),
+        });
+
+        if (patchRes.ok) {
+          toast.success("Receipt attached successfully", { id: toastId });
+          fetchData();
+        } else {
+          const data = await patchRes.json();
+          toast.error(data.error || "Failed to attach receipt", { id: toastId });
+        }
+      };
+    } catch (err: any) {
+      toast.error(err.message || "Upload error", { id: toastId });
+    } finally {
+      setUploadingTxnId(null);
     }
   };
 
@@ -579,7 +637,21 @@ export default function CustomerDetailPage() {
                                 <Eye className="w-5 h-5" />
                               </a>
                             ) : (
-                              <span className="text-[10px] font-bold text-[#1f2937] uppercase tracking-widest">No File</span>
+                              <label className="relative cursor-pointer p-2 inline-flex items-center justify-center gap-1.5 bg-[#111827] border border-dashed border-[#374151] text-[#9ca3af] hover:text-[#8b5cf6] hover:border-[#8b5cf6]/50 rounded-lg transition-all group/upload">
+                                <input
+                                  type="file"
+                                  accept="image/*,.pdf"
+                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                  onChange={(e) => handleReceiptUploadForTxn(e, entry._id)}
+                                  disabled={uploadingTxnId === entry._id}
+                                />
+                                {uploadingTxnId === entry._id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Upload className="w-4 h-4" />
+                                )}
+                                <span className="text-[9px] font-bold uppercase tracking-widest">Attach</span>
+                              </label>
                             )}
                           </td>
                         </tr>
@@ -643,7 +715,21 @@ export default function CustomerDetailPage() {
                               <Eye className="w-5 h-5" />
                             </a>
                           ) : (
-                            <span className="text-[10px] font-bold text-[#1f2937] uppercase tracking-widest">No File</span>
+                            <label className="relative cursor-pointer p-2 inline-flex items-center justify-center gap-1.5 bg-[#111827] border border-dashed border-[#374151] text-[#9ca3af] hover:text-[#8b5cf6] hover:border-[#8b5cf6]/50 rounded-lg transition-all group/upload">
+                              <input
+                                type="file"
+                                accept="image/*,.pdf"
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                onChange={(e) => handleReceiptUploadForTxn(e, entry._id)}
+                                disabled={uploadingTxnId === entry._id}
+                              />
+                              {uploadingTxnId === entry._id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Upload className="w-4 h-4" />
+                              )}
+                              <span className="text-[9px] font-bold uppercase tracking-widest">Attach</span>
+                            </label>
                           )}
                         </td>
                       </tr>
@@ -827,7 +913,7 @@ export default function CustomerDetailPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest block">Receipt / Bill Attachment (Max 1MB)</label>
+                <label className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest block">Receipt / Bill Attachment (Max 5MB)</label>
                 <div className="relative group">
                   <input 
                     type="file"
@@ -961,7 +1047,7 @@ export default function CustomerDetailPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest block">Receipt / Proof (Max 1MB)</label>
+                <label className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest block">Receipt / Proof (Max 5MB)</label>
                 <div className="relative group">
                   <input 
                     type="file"
