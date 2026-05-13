@@ -44,9 +44,7 @@ export default function BalancePaymentsPage() {
             setTotal(d.total || 0); 
             setTotalBalance(d.totalBalance || 0);
         } catch (err: any) {
-            if (err?.name === "AbortError") return; // ← don't clear data on cancel
-            console.error("Hostel balance fetch error:", err);
-            // ── Preserve last valid state on transient errors ──
+            if (err?.name === "AbortError") return; 
         } finally {
             setLoading(false);
         }
@@ -91,40 +89,43 @@ export default function BalancePaymentsPage() {
                 </div>
             </div>
 
-            {/* TOP SUMMARY CARD */}
-            <div className="bg-gradient-to-r from-red-600 to-orange-500 rounded-3xl p-6 shadow-2xl border border-rose-500/20 backdrop-blur-md relative overflow-hidden flex items-center justify-between">
-                <div className="relative z-10">
-                    <h2 className="text-sm font-bold text-white/90 uppercase tracking-widest mb-1">Total Outstanding Balance</h2>
-                    <p className="text-4xl font-extrabold text-white flex items-center gap-1 drop-shadow-md">
-                        <IndianRupee className="h-8 w-8" />
-                        {totalBalance.toLocaleString("en-IN")}
-                    </p>
-                </div>
-                <div className="absolute right-0 top-0 bottom-0 opacity-10 pointer-events-none">
-                    <IndianRupee className="h-32 w-32 -mr-6 mt-[-10px]" />
+            {/* TOP SUMMARY CARD — Subdued dark theme */}
+            <div className="rounded-2xl bg-[#0b1220] border border-[#1f2937] p-6 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-[#8b5cf6]/5 to-rose-500/5 pointer-events-none" />
+                <div className="relative z-10 flex items-center justify-between">
+                    <div>
+                        <h2 className="text-xs font-bold text-[#9ca3af] uppercase tracking-widest mb-2">Total Outstanding Balance</h2>
+                        <p className="text-3xl font-extrabold text-[#f9fafb] flex items-center gap-1">
+                            <IndianRupee className="h-7 w-7 text-rose-400" />
+                            {totalBalance.toLocaleString("en-IN")}
+                        </p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20">
+                        <IndianRupee className="h-8 w-8 text-rose-400/60" />
+                    </div>
                 </div>
             </div>
 
             <div className="rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
-                        <thead className="bg-[#020617] text-xs text-[#6b7280] uppercase tracking-wider">
-                            <tr>{["ID","Name","Room","Plan","Total Fee","Paid","Balance","Action"].map(h=><th key={h} className="text-left px-4 py-3">{h}</th>)}</tr>
+                        <thead className="bg-[#020617] text-xs text-[#9ca3af] uppercase tracking-wider border-b border-[#1f2937]">
+                            <tr>{["ID","Name","Room","Plan","Total Fee","Paid","Balance","Action"].map(h=><th key={h} className="text-left px-4 py-3 font-bold">{h}</th>)}</tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {loading ? Array.from({length:5}).map((_,i)=><tr key={i}>{Array.from({length:8}).map((_,j)=><td key={j} className="px-4 py-3"><div className="h-4 bg-slate-200 rounded animate-pulse"/></td>)}</tr>)
-                            : members.length===0 ? <tr><td colSpan={8} className="px-4 py-12 text-center text-slate-400">No pending balances {selectedBlock !== "all" && `in Block ${selectedBlock}`} 🎉</td></tr>
+                        <tbody className="divide-y divide-[#1f2937]">
+                            {loading ? Array.from({length:5}).map((_,i)=><tr key={i}>{Array.from({length:8}).map((_,j)=><td key={j} className="px-4 py-3"><div className="h-4 bg-[#1f2937] rounded animate-pulse"/></td>)}</tr>)
+                            : members.length===0 ? <tr><td colSpan={8} className="px-4 py-12 text-center text-[#6b7280]">No pending balances {selectedBlock !== "all" && `in Block ${selectedBlock}`} 🎉</td></tr>
                             : members.map(m=>(
-                                <tr key={m._id} className="hover:bg-[#8b5cf6]/5/30">
+                                <tr key={m._id} className="hover:bg-[#8b5cf6]/5 transition-colors">
                                     <td className="px-4 py-3 font-mono text-xs text-[#6b7280]">{m.memberId}</td>
                                     <td className="px-4 py-3 font-medium text-[#f9fafb]">{m.name}</td>
                                     <td className="px-4 py-3 text-[#6b7280]">{m.blockNo}-{m.floorNo}-{m.roomNo}</td>
-                                    <td className="px-4 py-3">{m.planId?.name || "—"}</td>
-                                    <td className="px-4 py-3">₹{m.totalFee?.toLocaleString("en-IN")}</td>
-                                    <td className="px-4 py-3 text-emerald-600">₹{m.totalPaid?.toLocaleString("en-IN")}</td>
+                                    <td className="px-4 py-3 text-[#9ca3af]">{m.planId?.name || "—"}</td>
+                                    <td className="px-4 py-3 text-[#f9fafb]">₹{m.totalFee?.toLocaleString("en-IN")}</td>
+                                    <td className="px-4 py-3 text-emerald-400">₹{m.totalPaid?.toLocaleString("en-IN")}</td>
                                     <td className="px-4 py-3 font-semibold text-rose-400">₹{m.balance?.toLocaleString("en-IN")}</td>
                                     <td className="px-4 py-3">
-                                        <button onClick={()=>{setPayMember(m);setPayForm({amount:"",paymentMethod:"cash",transactionId:"",notes:""});setError("");}} className="flex items-center gap-1.5 text-xs bg-[#8b5cf6] hover:bg-[#7c3aed] border-0  text-white px-3 py-1.5 rounded-lg transition">
+                                        <button onClick={()=>{setPayMember(m);setPayForm({amount:"",paymentMethod:"cash",transactionId:"",notes:""});setError("");}} className="flex items-center gap-1.5 text-xs bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 text-white px-3 py-1.5 rounded-lg transition">
                                             <Plus className="h-3 w-3"/>Pay
                                         </button>
                                     </td>
@@ -133,20 +134,20 @@ export default function BalancePaymentsPage() {
                         </tbody>
                     </table>
                 </div>
-                <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 text-sm text-[#6b7280]">
+                <div className="flex items-center justify-between px-4 py-3 border-t border-[#1f2937] text-sm text-[#6b7280]">
                     <span>Page {page} of {totalPages||1}</span>
                     <div className="flex gap-2">
                         <button 
                             disabled={page <= 1} 
                             onClick={() => setPage(p => p - 1)} 
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#1f2937] bg-[#0b1220] text-[#f9fafb] hover:bg-[#8b5cf6]/5 disabled:bg-[#0b1220] disabled:text-[#6b7280] transition-colors font-medium shadow-sm"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#1f2937] bg-[#020617] text-[#9ca3af] hover:text-[#f9fafb] hover:bg-[#111827] disabled:opacity-30 transition-colors font-medium shadow-sm"
                         >
                             <ChevronLeft className="h-4 w-4"/> Previous
                         </button>
                         <button 
                             disabled={page >= totalPages} 
                             onClick={() => setPage(p => p + 1)} 
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 text-white disabled:bg-[#0b1220] disabled:text-[#6b7280] transition-colors shadow-sm font-medium"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 text-white disabled:opacity-30 transition-colors shadow-sm font-medium"
                         >
                             Next <ChevronRight className="h-4 w-4"/>
                         </button>
@@ -156,9 +157,9 @@ export default function BalancePaymentsPage() {
 
             {payMember && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={()=>setPayMember(null)}/>
-                    <div className="relative bg-[#0b1220] rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
-                        <div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-[#f9fafb]">Record Payment — {payMember.name}</h2><button onClick={()=>setPayMember(null)}><X className="h-5 w-5 text-slate-400"/></button></div>
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={()=>setPayMember(null)}/>
+                    <div className="relative bg-[#0b1220] border border-[#1f2937] rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+                        <div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-[#f9fafb]">Record Payment — {payMember.name}</h2><button onClick={()=>setPayMember(null)}><X className="h-5 w-5 text-[#6b7280]"/></button></div>
                         <p className="text-sm text-[#6b7280]">Pending: <span className="font-bold text-rose-400">₹{payMember.balance.toLocaleString("en-IN")}</span></p>
                         {error && <p className="text-sm text-rose-400">{error}</p>}
                         <form onSubmit={handlePay} className="space-y-4">
@@ -169,7 +170,7 @@ export default function BalancePaymentsPage() {
                                 </select></div>
                             <div><label className={LABEL}>Transaction ID (optional)</label><input type="text" value={payForm.transactionId} onChange={e=>setPayForm(p=>({...p,transactionId:e.target.value}))} className={INPUT}/></div>
                             <div><label className={LABEL}>Notes</label><input type="text" value={payForm.notes} onChange={e=>setPayForm(p=>({...p,notes:e.target.value}))} className={INPUT}/></div>
-                            <button type="submit" disabled={submitting} className="w-full bg-[#8b5cf6] hover:bg-[#7c3aed] border-0  text-white font-semibold py-2.5 rounded-xl transition disabled:opacity-50">{submitting?"Saving…":"Record Payment"}</button>
+                            <button type="submit" disabled={submitting} className="w-full bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 text-white font-semibold py-2.5 rounded-xl transition disabled:opacity-50">{submitting?"Saving…":"Record Payment"}</button>
                         </form>
                     </div>
                 </div>
