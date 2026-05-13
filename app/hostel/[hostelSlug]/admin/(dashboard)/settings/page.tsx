@@ -5,7 +5,7 @@ import { Settings, Save, Download, HardDrive, Server, Sun, Moon, Monitor, Sparkl
 import Link from "next/link";
 
 type HostelInfo = { hostelName: string; slug: string; city: string; adminEmail: string; adminPhone?: string; isTwilioConnected: boolean; };
-const INPUT = "w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-[#0b1220] px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6]";
+const INPUT = "w-full rounded-xl border border-[#1f2937] bg-[#0b1220] px-3 py-2 text-sm text-[#f9fafb] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6]";
 const LABEL = "block text-xs font-medium text-[#9ca3af] mb-1";
 
 export default function SettingsPage() {
@@ -94,17 +94,17 @@ export default function SettingsPage() {
 
     return (
         <div className="space-y-8 max-w-2xl">
-            <div><h1 className="text-2xl font-bold text-[#f9fafb] flex items-center gap-2"><Settings className="h-6 w-6 text-slate-500"/>Settings</h1>
-            <p className="text-sm text-slate-500">Manage your hostel profile and account details</p></div>
+            <div><h1 className="text-2xl font-bold text-[#f9fafb] flex items-center gap-2"><Settings className="h-6 w-6 text-[#6b7280]"/>Settings</h1>
+            <p className="text-sm text-[#6b7280]">Manage your hostel profile and account details</p></div>
 
             {/* Account info (read-only) */}
             <div className="rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm p-6 space-y-4">
                 <h2 className="text-sm font-semibold text-[#9ca3af] uppercase tracking-wider">Account Overview</h2>
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div><p className="text-slate-400 text-xs">Hostel Slug</p><p className="font-mono font-medium text-slate-800 dark:text-slate-100">{info?.slug}</p></div>
-                    <div><p className="text-slate-400 text-xs">Admin Email</p><p className="font-medium text-slate-800 dark:text-slate-100">{info?.adminEmail}</p></div>
+                    <div><p className="text-slate-400 text-xs">Hostel Slug</p><p className="font-mono font-medium text-[#f9fafb]">{info?.slug}</p></div>
+                    <div><p className="text-slate-400 text-xs">Admin Email</p><p className="font-medium text-[#f9fafb]">{info?.adminEmail}</p></div>
                     <div><p className="text-slate-400 text-xs">WhatsApp Status</p>
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${info?.isTwilioConnected ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-500"}`}>{info?.isTwilioConnected ? "Connected" : "Not Connected"}</span></div>
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${info?.isTwilioConnected ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-[#6b7280]"}`}>{info?.isTwilioConnected ? "Connected" : "Not Connected"}</span></div>
                 </div>
             </div>
 
@@ -118,11 +118,11 @@ export default function SettingsPage() {
                 </h2>
                 <div className="grid grid-cols-2 gap-y-6 gap-x-4 text-sm relative z-10">
                     <div>
-                        <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Current Plan</p>
+                        <p className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider">Current Plan</p>
                         <p className="font-bold text-[#f9fafb] mt-1 capitalize text-lg">{subStatus?.planType || "—"}</p>
                     </div>
                     <div>
-                        <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Status</p>
+                        <p className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider">Status</p>
                         <div className="mt-1">
                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${subStatus?.status === "active" ? "bg-emerald-100 text-emerald-600" : "bg-red-500/10 text-red-600"}`}>
                                 {subStatus?.status || "—"}
@@ -130,8 +130,8 @@ export default function SettingsPage() {
                         </div>
                     </div>
                     <div>
-                        <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Expiry Date</p>
-                        <p className="font-medium text-slate-800 dark:text-slate-100 mt-1">
+                        <p className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider">Expiry Date</p>
+                        <p className="font-medium text-[#f9fafb] mt-1">
                             {subStatus?.expiryDate ? (
                                 <>
                                     {new Date(subStatus.expiryDate).toLocaleDateString("en-GB")}
@@ -160,7 +160,7 @@ export default function SettingsPage() {
                     <legend className="sr-only">Theme Preference</legend>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         {(["light", "dark", "system"] as const).map((t) => (
-                            <label key={t} className={`relative flex cursor-pointer rounded-xl border p-4 shadow-sm transition-all ${theme === t ? "border-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500" : "border-[#1f2937] bg-[#0b1220] hover:border-slate-300 dark:hover:border-slate-600"}`}>
+                            <label key={t} className={`relative flex cursor-pointer rounded-xl border p-4 shadow-sm transition-all ${theme === t ? "border-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500" : "border-[#1f2937] bg-[#0b1220] hover:border-[#8b5cf6]/30"}`}>
                                 <input type="radio" className="sr-only" name="theme" value={t} checked={theme === t} onChange={() => handleThemeChange(t)} />
                                 <span className="flex items-center gap-2 text-sm font-medium text-[#f9fafb]">
                                     {t === "light" ? <Sun className="w-4 h-4 text-amber-500" /> : t === "dark" ? <Moon className="w-4 h-4 text-indigo-400" /> : <Monitor className="w-4 h-4 text-slate-400" />}

@@ -16,7 +16,7 @@ interface Member {
     planId: { _id: string; name: string; price: number };
 }
 
-const INPUT = "w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-[#0b1220] px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6]";
+const INPUT = "w-full rounded-xl border border-[#1f2937] bg-[#0b1220] px-3 py-2 text-sm text-[#f9fafb] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6]";
 const LABEL = "block text-xs font-medium text-[#9ca3af] mb-1";
 
 export default function BalancePaymentsPage() {
@@ -108,7 +108,7 @@ export default function BalancePaymentsPage() {
                     <h1 className="text-2xl font-bold text-[#f9fafb] flex items-center gap-2">
                         <IndianRupee className="h-6 w-6 text-pink-500" /> Balance & Payments
                     </h1>
-                    <p className="text-sm text-slate-500">{total} members with pending balance</p>
+                    <p className="text-sm text-[#6b7280]">{total} members with pending balance</p>
                 </div>
                 <div className="flex-shrink-0">
                     <PoolTypeFilter />
@@ -116,7 +116,7 @@ export default function BalancePaymentsPage() {
             </div>
 
             {/* TOP SUMMARY CARD */}
-            <div className="bg-gradient-to-r from-red-600 to-orange-500 dark:from-red-900/80 dark:to-orange-900/80 rounded-3xl p-6 shadow-2xl border border-red-500/20 backdrop-blur-md relative overflow-hidden flex items-center justify-between">
+            <div className="bg-gradient-to-r from-red-600 to-orange-500 rounded-3xl p-6 shadow-2xl border border-red-500/20 backdrop-blur-md relative overflow-hidden flex items-center justify-between">
                 <div className="relative z-10">
                     <h2 className="text-sm font-bold text-white/90 uppercase tracking-widest mb-1">Total Outstanding Balance</h2>
                     <p className="text-4xl font-extrabold text-white flex items-center gap-1 drop-shadow-md">
@@ -132,7 +132,7 @@ export default function BalancePaymentsPage() {
             <div className="rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
-                        <thead className="bg-slate-50/50 text-xs text-slate-500 uppercase tracking-wider">
+                        <thead className="bg-slate-50/50 text-xs text-[#6b7280] uppercase tracking-wider">
                             <tr>
                                 {["ID", "Name", "Phone", "Plan", "Paid", "Balance", "Status", "Action"].map(h => (
                                     <th key={h} className="text-left px-4 py-3">{h}</th>
@@ -156,9 +156,9 @@ export default function BalancePaymentsPage() {
                                 </tr>
                             ) : members.map(m => (
                                 <tr key={m._id} className="hover:bg-[#8b5cf6]/5/30">
-                                    <td className="px-4 py-3 font-mono text-xs text-slate-500">{m.memberId}</td>
-                                    <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">{m.name}</td>
-                                    <td className="px-4 py-3 text-slate-500">{m.phone}</td>
+                                    <td className="px-4 py-3 font-mono text-xs text-[#6b7280]">{m.memberId}</td>
+                                    <td className="px-4 py-3 font-medium text-[#f9fafb]">{m.name}</td>
+                                    <td className="px-4 py-3 text-[#6b7280]">{m.phone}</td>
                                     <td className="px-4 py-3">{m.planId?.name || "—"}</td>
                                     <td className="px-4 py-3 text-emerald-600">₹{(m.paidAmount ?? 0).toLocaleString("en-IN")}</td>
                                     <td className="px-4 py-3 font-semibold text-red-500">₹{(m.balanceAmount ?? 0).toLocaleString("en-IN")}</td>
@@ -189,7 +189,7 @@ export default function BalancePaymentsPage() {
                     </table>
                 </div>
 
-                <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 text-sm text-slate-500">
+                <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 text-sm text-[#6b7280]">
                     <span>Page {page} of {totalPages || 1}</span>
                     <div className="flex gap-2">
                         <button 
@@ -219,7 +219,7 @@ export default function BalancePaymentsPage() {
                             <h2 className="text-lg font-semibold text-[#f9fafb]">Record Payment — {payMember.name}</h2>
                             <button onClick={() => setPayMember(null)}><X className="h-5 w-5 text-slate-400" /></button>
                         </div>
-                        <p className="text-sm text-slate-500">
+                        <p className="text-sm text-[#6b7280]">
                             Pending: <span className="font-bold text-red-500">₹{payMember.balanceAmount.toLocaleString("en-IN")}</span>
                         </p>
                         

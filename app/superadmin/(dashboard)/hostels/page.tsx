@@ -118,7 +118,7 @@ export default function SuperAdminHostelsPage() {
                 <div className="bg-[#0b1220] p-4 border-b border-[#1f2937] flex items-center justify-between">
                     <div className="relative w-full max-w-sm flex items-center gap-2">
                         <div className="relative w-full">
-                            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2"/>
+                            <Search className="w-4 h-4 text-[#6b7280] absolute left-3 top-1/2 -translate-y-1/2"/>
                             <input 
                                 type="text" 
                                 placeholder="Search hostels..." 
@@ -135,7 +135,7 @@ export default function SuperAdminHostelsPage() {
 
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left text-slate-400">
-                        <thead className="text-xs text-slate-500 uppercase bg-slate-950/50">
+                        <thead className="text-xs text-[#6b7280] uppercase bg-slate-950/50">
                             <tr>
                                 <th scope="col" className="px-6 py-4">Hostel Name</th>
                                 <th scope="col" className="px-6 py-4">Domain/Slug</th>
@@ -182,7 +182,7 @@ export default function SuperAdminHostelsPage() {
                                         <div className="mt-3 flex flex-col sm:flex-row flex-wrap gap-2">
                                             <button
                                                 onClick={() => { setResetTarget(h); setNewPassword(""); setShowPass(false); }}
-                                                className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-[#f9fafb] border border-[#1f2937] transition-all shadow-sm w-max"
+                                                className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg bg-[#020617] text-slate-300 hover:bg-slate-700 hover:text-[#f9fafb] border border-[#1f2937] transition-all shadow-sm w-max"
                                             >
                                                 <KeyRound className="w-3.5 h-3.5 text-amber-500" />
                                                 Reset Password
@@ -232,7 +232,7 @@ export default function SuperAdminHostelsPage() {
                     <div className="relative bg-slate-900 border border-[#1f2937] rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
                         <div className="flex items-center justify-between border-b border-[#1f2937] pb-3">
                             <h2 className="text-lg font-bold text-white tracking-tight">Reset Password</h2>
-                            <button onClick={() => setResetTarget(null)} className="text-slate-500 hover:text-[#f9fafb] transition-colors"><X className="h-5 w-5" /></button>
+                            <button onClick={() => setResetTarget(null)} className="text-[#6b7280] hover:text-[#f9fafb] transition-colors"><X className="h-5 w-5" /></button>
                         </div>
                         <p className="text-sm text-[#6b7280]">Setting new password for <span className="font-semibold text-white">{resetTarget.hostelName}</span> ({resetTarget.adminEmail}).</p>
                         <form onSubmit={handleResetPassword} className="space-y-4 pt-2">

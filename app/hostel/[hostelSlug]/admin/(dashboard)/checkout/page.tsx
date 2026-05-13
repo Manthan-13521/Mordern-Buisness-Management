@@ -5,7 +5,7 @@ import { UserX, Search, RefreshCw, ChevronLeft, ChevronRight, RotateCcw, X } fro
 
 type Member = { _id: string; memberId: string; name: string; phone: string; blockNo: string; floorNo: string; roomNo: string; planId: any; planEndDate: string; totalFee: number; balance: number; };
 type Plan = { _id: string; name: string; durationDays: number; price: number };
-const INPUT = "w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-[#0b1220] px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6]";
+const INPUT = "w-full rounded-xl border border-[#1f2937] bg-[#0b1220] px-3 py-2 text-sm text-[#f9fafb] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6]";
 const LABEL = "block text-xs font-medium text-[#9ca3af] mb-1";
 
 export default function CheckoutPage() {
@@ -44,19 +44,19 @@ export default function CheckoutPage() {
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div><h1 className="text-2xl font-bold text-[#f9fafb] flex items-center gap-2"><UserX className="h-6 w-6 text-slate-500" />Checkout Audit</h1>
-                <p className="text-sm text-slate-500">{total} checked out occupants</p></div>
+                <div><h1 className="text-2xl font-bold text-[#f9fafb] flex items-center gap-2"><UserX className="h-6 w-6 text-[#6b7280]" />Checkout Audit</h1>
+                <p className="text-sm text-[#6b7280]">{total} checked out occupants</p></div>
                 <div className="flex items-center gap-2">
                     <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <input className="pl-9 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-[#0b1220] text-sm w-52 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6]" placeholder="Search…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} /></div>
-                    <button onClick={fetch_} className="p-2 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-[#8b5cf6]/5"><RefreshCw className="h-4 w-4 text-slate-500" /></button>
+                        <input className="pl-9 pr-4 py-2 rounded-xl border border-[#1f2937] bg-[#0b1220] text-sm w-52 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6]" placeholder="Search…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} /></div>
+                    <button onClick={fetch_} className="p-2 rounded-xl border border-[#1f2937] hover:bg-[#8b5cf6]/5"><RefreshCw className="h-4 w-4 text-[#6b7280]" /></button>
                 </div>
             </div>
 
             <div className="rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
-                        <thead className="bg-slate-50/50 text-xs text-slate-500 uppercase tracking-wider">
+                        <thead className="bg-slate-50/50 text-xs text-[#6b7280] uppercase tracking-wider">
                             <tr>{["ID","Name","Phone","Room","Plan","Check-in","Checkout","Final Balance"].map(h => <th key={h} className="text-left px-4 py-3">{h}</th>)}</tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -64,12 +64,12 @@ export default function CheckoutPage() {
                             : members.length === 0 ? <tr><td colSpan={8} className="px-4 py-12 text-center text-slate-400">No checkout history available</td></tr>
                             : members.map(m => (
                                 <tr key={m._id} className="hover:bg-[#8b5cf6]/5/30">
-                                    <td className="px-4 py-3 font-mono text-xs text-slate-500">{m.memberId}</td>
-                                    <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">{m.name}</td>
-                                    <td className="px-4 py-3 text-slate-500">{m.phone}</td>
+                                    <td className="px-4 py-3 font-mono text-xs text-[#6b7280]">{m.memberId}</td>
+                                    <td className="px-4 py-3 font-medium text-[#f9fafb]">{m.name}</td>
+                                    <td className="px-4 py-3 text-[#6b7280]">{m.phone}</td>
                                     <td className="px-4 py-3">{m.blockNo}-{m.floorNo}-{m.roomNo}</td>
                                     <td className="px-4 py-3">{m.planId?.name || "—"}</td>
-                                    <td className="px-4 py-3 text-slate-500">{(m as any).checkInDate ? new Date((m as any).checkInDate).toLocaleDateString("en-IN") : new Date((m as any).createdAt).toLocaleDateString("en-IN")}</td>
+                                    <td className="px-4 py-3 text-[#6b7280]">{(m as any).checkInDate ? new Date((m as any).checkInDate).toLocaleDateString("en-IN") : new Date((m as any).createdAt).toLocaleDateString("en-IN")}</td>
                                     <td className="px-4 py-3 text-slate-700 font-semibold">{(m as any).checkoutDate ? new Date((m as any).checkoutDate).toLocaleDateString("en-IN") : "—"}</td>
                                     <td className="px-4 py-3 font-mono font-bold">
                                         {m.balance > 0 ? (
@@ -85,7 +85,7 @@ export default function CheckoutPage() {
                         </tbody>
                     </table>
                 </div>
-                <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 text-sm text-slate-500">
+                <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 text-sm text-[#6b7280]">
                     <span>Page {page} of {totalPages || 1}</span>
                     <div className="flex gap-2">
                         <button 

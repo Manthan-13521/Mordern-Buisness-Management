@@ -322,7 +322,7 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                             <div className="flex flex-col items-center justify-center space-y-3 rounded-lg border-2 border-dashed border-[#1f2937] p-4 border-[#1f2937]">
                                 {photoPreview ? (
                                     <div className="relative">
-                                        <img src={photoPreview} alt="Preview" className="h-36 w-36 rounded-full border-4 border-indigo-500/20 object-cover shadow-sm dark:border-indigo-500/20" />
+                                        <img src={photoPreview} alt="Preview" className="h-36 w-36 rounded-full border-4 border-indigo-500/20 object-cover shadow-sm" />
                                         <button
                                             type="button" onClick={() => setPhotoPreview(null)}
                                             className="absolute bottom-0 right-0 rounded-full bg-[#0b1220] p-2 shadow-md hover:bg-[#020617] bg-[#0b1220] border border-[#1f2937] hover:bg-[#8b5cf6]/10"
@@ -332,7 +332,7 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                                     </div>
                                 ) : isCapturing ? (
                                     <div className="flex flex-col items-center space-y-2">
-                                        <div className="overflow-hidden rounded-full h-36 w-36 border-4 border-indigo-500/20 dark:border-indigo-500/20">
+                                        <div className="overflow-hidden rounded-full h-36 w-36 border-4 border-indigo-500/20">
                                             <Webcam
                                                 audio={false} ref={webcamRef} screenshotFormat="image/jpeg"
                                                 videoConstraints={{ width: 192, height: 192, facingMode: "user" }}

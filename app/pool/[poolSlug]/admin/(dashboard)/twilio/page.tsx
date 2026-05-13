@@ -125,7 +125,7 @@ export default function TwilioSetupPage() {
             <div className={`rounded-2xl border p-6 flex items-center justify-between transition-all
                 ${loading ? "border-[#1f2937] bg-[#020617] bg-[#0b1220]"
                 : status?.isTwilioConnected
-                    ? "border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20"
+                    ? "border-emerald-700 bg-emerald-900/20"
                     : "border-[#1f2937] bg-[#020617] bg-[#0b1220]"
                 }`}>
                 {loading ? (
@@ -136,12 +136,12 @@ export default function TwilioSetupPage() {
                 ) : status?.isTwilioConnected ? (
                     <>
                         <div className="flex items-center gap-3">
-                            <div className="rounded-full bg-emerald-100 dark:bg-emerald-900/50 p-2">
-                                <Wifi className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                            <div className="rounded-full bg-emerald-900/50 p-2">
+                                <Wifi className="h-5 w-5 text-emerald-400" />
                             </div>
                             <div>
-                                <p className="font-semibold text-emerald-800 dark:text-emerald-300 text-sm">Connected</p>
-                                <p className="text-xs text-emerald-600 dark:text-emerald-500 mt-0.5">
+                                <p className="font-semibold text-emerald-300 text-sm">Connected</p>
+                                <p className="text-xs text-emerald-500 mt-0.5">
                                     {status.whatsappNumber} · SID: {status.sid?.slice(0, 12)}…
                                 </p>
                             </div>
@@ -149,7 +149,7 @@ export default function TwilioSetupPage() {
                         <button
                             onClick={handleDisconnect}
                             disabled={disconnecting}
-                            className="flex items-center gap-2 rounded-lg bg-red-500/10/30 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-500/10 dark:hover:bg-red-900/50 transition disabled:opacity-50"
+                            className="flex items-center gap-2 rounded-lg bg-red-500/10 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-500/10 transition disabled:opacity-50"
                         >
                             {disconnecting
                                 ? <Loader2 className="h-4 w-4 animate-spin" />
@@ -212,7 +212,7 @@ export default function TwilioSetupPage() {
                             <button
                                 type="button"
                                 onClick={() => setShowToken(!showToken)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7280] hover:text-[#9ca3af] dark:hover:text-[#9ca3af]"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7280] hover:text-[#9ca3af]"
                             >
                                 {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </button>
@@ -280,11 +280,11 @@ export default function TwilioSetupPage() {
             </div>
 
             {/* ── Info Box ──────────────────────────────────────────────── */}
-            <div className="rounded-xl border border-amber-500/20 dark:border-amber-700/50 bg-amber-500/10 dark:bg-amber-900/10 px-5 py-4">
-                <p className="text-sm font-semibold text-amber-800 mb-2">How it works</p>
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-5 py-4">
+                <p className="text-sm font-semibold text-amber-400 mb-2">How it works</p>
                 <ul className="text-xs text-amber-400/80 space-y-1.5 list-disc list-inside">
                     <li>A test WhatsApp message is sent to verify credentials before saving.</li>
-                    <li><strong>Important:</strong> If using a Twilio Sandbox, you MUST send <code className="bg-amber-500/10 dark:bg-amber-800 px-1 rounded">join &lt;your-sandbox-word&gt;</code> to your Twilio number from your WhatsApp first, otherwise Twilio will drop the message silently!</li>
+                    <li><strong>Important:</strong> If using a Twilio Sandbox, you MUST send <code className="bg-amber-500/10 px-1 rounded">join &lt;your-sandbox-word&gt;</code> to your Twilio number from your WhatsApp first, otherwise Twilio will drop the message silently!</li>
                     <li>If the test fails, credentials are <strong>not saved</strong>.</li>
                     <li>Once connected, the system sends automated messages daily based on plan settings.</li>
                     <li>Enable <strong>WhatsApp Alerts</strong> on individual plans to set custom messages.</li>

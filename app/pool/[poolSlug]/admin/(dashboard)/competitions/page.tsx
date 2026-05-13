@@ -175,7 +175,7 @@ function CompetitionDetail({ comp, onRefresh }: { comp: Competition; onRefresh: 
 
             {/* Record Winners Form — shown only for non-completed competitions */}
             {!comp.isCompleted && (
-                <div className="rounded-xl border border-amber-500/20 bg-amber-50/50 dark:bg-amber-900/10 p-4 space-y-3">
+                <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-amber-600 flex items-center gap-1.5">
                         <Trophy className="h-3.5 w-3.5" /> Record Winners
                     </p>
@@ -293,7 +293,7 @@ export default function CompetitionsPage() {
             <div className="flex gap-1 p-1 bg-[#0b1220] bg-[#0b1220] border border-[#1f2937] rounded-lg w-fit">
                 {(["all", "upcoming", "completed"] as const).map(f => (
                     <button key={f} onClick={() => setFilter(f)}
-                        className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors capitalize ${filter === f ? "bg-[#0b1220] text-[#f9fafb] shadow-sm" : "text-[#9ca3af] hover:text-[#9ca3af] dark:hover:text-[#9ca3af]"}`}>
+                        className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors capitalize ${filter === f ? "bg-[#0b1220] text-[#f9fafb] shadow-sm" : "text-[#9ca3af] hover:text-[#9ca3af]"}`}>
                         {f}
                     </button>
                 ))}
@@ -346,7 +346,7 @@ export default function CompetitionsPage() {
                         <CompetitionDetail comp={selected} onRefresh={refreshSelected} />
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full py-20 text-center">
-                            <Trophy className="h-12 w-12 text-[#9ca3af] dark:text-[#9ca3af] mb-3" />
+                            <Trophy className="h-12 w-12 text-[#9ca3af] mb-3" />
                             <p className="text-[#6b7280] text-sm">Select a competition to manage participants and record results</p>
                         </div>
                     )}

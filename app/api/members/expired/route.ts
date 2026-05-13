@@ -95,7 +95,6 @@ export async function GET(req: Request) {
                     name: 1,
                     phone: 1,
                     age: 1,
-                    qrToken: 0,
                     planId: {
                         _id: "$planDetails._id",
                         name: "$planDetails.name",

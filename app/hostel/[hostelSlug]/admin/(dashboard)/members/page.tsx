@@ -271,7 +271,7 @@ export default function MembersPage() {
                     <h1 className="text-2xl font-bold text-[#f9fafb] flex items-center gap-2">
                         <Users className="h-6 w-6 text-blue-500" />Members
                     </h1>
-                    <p className="text-sm text-slate-500">{total} total members</p>
+                    <p className="text-sm text-[#6b7280]">{total} total members</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <div className="relative">
@@ -283,8 +283,8 @@ export default function MembersPage() {
                             onChange={e => { setSearch(e.target.value); setPage(1); }}
                         />
                     </div>
-                    <button onClick={fetchMembers} className="p-2 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-[#8b5cf6]/5">
-                        <RefreshCw className="h-4 w-4 text-slate-500" />
+                    <button onClick={fetchMembers} className="p-2 rounded-xl border border-[#1f2937] hover:bg-[#8b5cf6]/5">
+                        <RefreshCw className="h-4 w-4 text-[#6b7280]" />
                     </button>
                     <HostelBlockFilter />
                     <button onClick={openAdd} className="flex items-center gap-1.5 bg-[#8b5cf6] hover:bg-[#7c3aed] border-0  text-white text-sm font-semibold px-4 py-2 rounded-xl shadow transition">
@@ -324,14 +324,14 @@ export default function MembersPage() {
                                             )}
                                         </td>
                                         <td className="px-4 py-3">
-                                            <div className="font-semibold text-slate-800 dark:text-slate-100">{m.name}</div>
+                                            <div className="font-semibold text-[#f9fafb]">{m.name}</div>
                                             <div className="text-xs text-slate-400 font-mono">{(m as any).block_room_no || m.roomNo}</div>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-500 font-mono">₹{(m.rent_amount || 0).toLocaleString()}</td>
-                                        <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{m.due_date ? new Date(m.due_date).toLocaleDateString("en-IN") : "—"}</td>
+                                        <td className="px-4 py-3 text-[#6b7280] font-mono">₹{(m.rent_amount || 0).toLocaleString()}</td>
+                                        <td className="px-4 py-3 text-[#6b7280] whitespace-nowrap">{m.due_date ? new Date(m.due_date).toLocaleDateString("en-IN") : "—"}</td>
                                         <td className="px-4 py-3">
                                             {m.balance > 0 ? (
-                                                <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold text-xs">
+                                                <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold text-xs">
                                                     Advance: <IndianRupee className="h-3 w-3" />{m.balance.toLocaleString("en-IN")}
                                                 </span>
                                             ) : m.balance < 0 ? (
@@ -343,16 +343,16 @@ export default function MembersPage() {
                                             )}
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${m.status === "vacated" ? "bg-red-500/10/30 text-red-600" : "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"}`}>
+                                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${m.status === "vacated" ? "bg-red-500/10 text-red-600" : "bg-emerald-100 text-emerald-400"}`}>
                                                 {m.status === "vacated" ? "Vacated" : "Active"}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-1">
-                                                <button onClick={() => openEdit(m)} title="Edit" className="p-1.5 rounded-lg hover:bg-[#8b5cf6]/10 dark:hover:bg-indigo-900/20 text-blue-500 transition"><Pencil className="h-3.5 w-3.5" /></button>
-                                                <button onClick={() => { setRenewMember(m); setRenewForm({ planId: m.planId?._id || "", paidAmount: "", paymentMode: "cash", notes: "" }); setError(""); }} title="Renew" className="p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-500 transition"><RotateCcw className="h-3.5 w-3.5" /></button>
-                                                <button onClick={() => handleCheckout(m)} title="Checkout" className="p-1.5 rounded-lg hover:bg-amber-500/10 dark:hover:bg-amber-900/20 text-amber-500 transition"><LogOut className="h-3.5 w-3.5" /></button>
-                                                <button onClick={() => handleDelete(m._id)} title="Delete" className="p-1.5 rounded-lg hover:bg-red-500/10 dark:hover:bg-red-900/20 text-red-500 transition"><Trash2 className="h-3.5 w-3.5" /></button>
+                                                <button onClick={() => openEdit(m)} title="Edit" className="p-1.5 rounded-lg hover:bg-[#8b5cf6]/10 text-blue-500 transition"><Pencil className="h-3.5 w-3.5" /></button>
+                                                <button onClick={() => { setRenewMember(m); setRenewForm({ planId: m.planId?._id || "", paidAmount: "", paymentMode: "cash", notes: "" }); setError(""); }} title="Renew" className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-emerald-500 transition"><RotateCcw className="h-3.5 w-3.5" /></button>
+                                                <button onClick={() => handleCheckout(m)} title="Checkout" className="p-1.5 rounded-lg hover:bg-amber-500/10 text-amber-500 transition"><LogOut className="h-3.5 w-3.5" /></button>
+                                                <button onClick={() => handleDelete(m._id)} title="Delete" className="p-1.5 rounded-lg hover:bg-red-500/10 text-red-500 transition"><Trash2 className="h-3.5 w-3.5" /></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -362,7 +362,7 @@ export default function MembersPage() {
                     </table>
                 </div>
                 {/* Pagination */}
-                <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 text-sm text-slate-500">
+                <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 text-sm text-[#6b7280]">
                     <span>Page {page} of {totalPages || 1}</span>
                     <div className="flex gap-2">
                         <button 
@@ -457,7 +457,7 @@ export default function MembersPage() {
                                                 {roomDropdownOpen && (
                                                     <div className="absolute z-10 w-full mt-1 bg-[#0b1220] border border-[#1f2937] rounded-xl shadow-lg max-h-60 overflow-y-auto">
                                                         {rooms.length === 0 ? (
-                                                            <div className="px-3 py-2 text-sm text-slate-500">No rooms</div>
+                                                            <div className="px-3 py-2 text-sm text-[#6b7280]">No rooms</div>
                                                         ) : (
                                                             rooms.map(r => (
                                                                 <div
@@ -496,9 +496,9 @@ export default function MembersPage() {
                                                 </div>
 
                                                 {selectedPlan && (
-                                                    <div className="rounded-xl bg-indigo-500/10 dark:bg-indigo-900/20 border border-indigo-200/40 px-4 py-2.5 flex items-center justify-between text-sm">
+                                                    <div className="rounded-xl bg-indigo-500/10 border border-indigo-200/40 px-4 py-2.5 flex items-center justify-between text-sm">
                                                         <span className="text-[#9ca3af]">Next Due Date (calculated)</span>
-                                                        <span className="font-semibold text-indigo-400 dark:text-indigo-300">{expiryDate}</span>
+                                                        <span className="font-semibold text-indigo-400">{expiryDate}</span>
                                                     </div>
                                                 )}
 
@@ -520,9 +520,9 @@ export default function MembersPage() {
 
                                                 {/* Balance — read-only, server also recalculates */}
                                                 {selectedPlan && (
-                                                    <div className={`rounded-xl px-4 py-2.5 text-sm flex items-center justify-between border ${balance > 0 ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800/40" : "bg-orange-500/10 dark:bg-orange-900/20 border-orange-500/20/40"}`}>
+                                                    <div className={`rounded-xl px-4 py-2.5 text-sm flex items-center justify-between border ${balance > 0 ? "bg-emerald-900/20 border-emerald-200/40" : "bg-orange-500/10 border-orange-500/20"}`}>
                                                         <span className="text-[#9ca3af] font-medium">Initial Balance (₹)</span>
-                                                        <span className={`font-bold ${balance > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-orange-600"}`}>
+                                                        <span className={`font-bold ${balance > 0 ? "text-emerald-400" : "text-orange-600"}`}>
                                                             {balance > 0 ? `+${balance}` : balance}
                                                         </span>
                                                     </div>
@@ -541,12 +541,12 @@ export default function MembersPage() {
                                         <p className="text-xs font-bold text-blue-500 uppercase tracking-widest self-start">Member Photo</p>
 
                                         {/* Preview area */}
-                                        <div className="w-full aspect-[3/4] rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 overflow-hidden flex items-center justify-center relative">
+                                        <div className="w-full aspect-[3/4] rounded-2xl border-2 border-dashed border-[#1f2937] bg-slate-50 overflow-hidden flex items-center justify-center relative">
                                             {showCamera ? (
                                                 <div className="absolute inset-0">
                                                     <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
                                                     <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-3">
-                                                        <button type="button" onClick={capturePhoto} className="bg-[#0b1220] text-slate-800 rounded-full px-4 py-1.5 text-xs font-bold shadow-lg">Capture</button>
+                                                        <button type="button" onClick={capturePhoto} className="bg-[#0b1220] text-[#f9fafb] rounded-full px-4 py-1.5 text-xs font-bold shadow-lg">Capture</button>
                                                         <button type="button" onClick={stopCamera} className="bg-red-500 text-white rounded-full px-4 py-1.5 text-xs font-bold shadow-lg">Cancel</button>
                                                     </div>
                                                 </div>
@@ -563,14 +563,14 @@ export default function MembersPage() {
 
                                         {/* Photo actions */}
                                         <div className="flex gap-2 w-full">
-                                            <button type="button" onClick={startCamera} className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium border border-slate-300 dark:border-slate-600 rounded-xl py-2 hover:bg-[#8b5cf6]/5 transition">
+                                            <button type="button" onClick={startCamera} className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium border border-[#1f2937] rounded-xl py-2 hover:bg-[#8b5cf6]/5 transition">
                                                 <Camera className="h-3.5 w-3.5" />Camera
                                             </button>
-                                            <button type="button" onClick={() => fileInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium border border-slate-300 dark:border-slate-600 rounded-xl py-2 hover:bg-[#8b5cf6]/5 transition">
+                                            <button type="button" onClick={() => fileInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium border border-[#1f2937] rounded-xl py-2 hover:bg-[#8b5cf6]/5 transition">
                                                 <Upload className="h-3.5 w-3.5" />Upload
                                             </button>
                                             {photoPreview && (
-                                                <button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview(""); }} className="p-2 rounded-xl text-red-400 hover:bg-red-500/10 dark:hover:bg-red-900/20 transition"><X className="h-4 w-4" /></button>
+                                                <button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview(""); }} className="p-2 rounded-xl text-red-400 hover:bg-red-500/10 transition"><X className="h-4 w-4" /></button>
                                             )}
                                         </div>
                                         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />

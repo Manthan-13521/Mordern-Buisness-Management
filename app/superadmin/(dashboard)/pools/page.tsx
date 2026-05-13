@@ -49,7 +49,7 @@ export default async function PlatformPoolsList() {
                     </div>
                 </div>
                 <table className="w-full text-sm text-left text-slate-400">
-                    <thead className="text-xs text-slate-500 uppercase bg-slate-950/50">
+                    <thead className="text-xs text-[#6b7280] uppercase bg-slate-950/50">
                         <tr>
                             <th scope="col" className="px-6 py-4">Pool Name</th>
                             <th scope="col" className="px-6 py-4">Domain/Slug</th>

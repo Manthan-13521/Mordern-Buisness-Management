@@ -54,7 +54,7 @@ function ExpiryBanner({ member }: { member: Member }) {
                 <span className="text-2xl">🗑️</span>
                 <div>
                     <p className="font-bold text-slate-300">Member Deleted</p>
-                    <p className="text-sm text-slate-500">Reason: {member.deleteReason ?? "manual"} · {member.deletedAt ? new Date(member.deletedAt).toLocaleDateString("en-IN") : ""}</p>
+                    <p className="text-sm text-[#6b7280]">Reason: {member.deleteReason ?? "manual"} · {member.deletedAt ? new Date(member.deletedAt).toLocaleDateString("en-IN") : ""}</p>
                 </div>
             </div>
         );
@@ -196,7 +196,7 @@ export default function MemberDetailPage() {
     return (
         <div className="space-y-6 max-w-4xl mx-auto">
             {/* Back */}
-            <button onClick={() => router.back()} className="inline-flex items-center gap-1.5 text-sm text-[#6b7280] hover:text-[#f9fafb] dark:hover:text-white transition-colors">
+            <button onClick={() => router.back()} className="inline-flex items-center gap-1.5 text-sm text-[#6b7280] hover:text-[#f9fafb] transition-colors">
                 <ArrowLeft className="h-4 w-4" /> Back to Members
             </button>
 
@@ -209,7 +209,7 @@ export default function MemberDetailPage() {
                     {member.photoUrl
                         ? <img src={`/api/members/${member._id}/photo`} alt="" className="h-20 w-20 rounded-xl object-cover ring-1 ring-[#1f2937] shrink-0" />
                         : <div className="h-20 w-20 rounded-xl bg-indigo-500/10 flex items-center justify-center shrink-0">
-                            <span className="text-3xl font-bold text-indigo-400 dark:text-indigo-300">{member.name.charAt(0).toUpperCase()}</span>
+                            <span className="text-3xl font-bold text-indigo-400">{member.name.charAt(0).toUpperCase()}</span>
                           </div>
                     }
                     <div className="flex-1 min-w-0">
@@ -238,7 +238,7 @@ export default function MemberDetailPage() {
                                     </button>
                                 ) : (
                                     <button onClick={handleDelete}
-                                        className="inline-flex items-center gap-1.5 rounded-md bg-[#0b1220] px-3 py-1.5 text-sm font-medium text-red-600 ring-1 ring-red-300 dark:ring-red-800 hover:bg-red-500/10 hover:bg-red-500/10 shadow-sm transition">
+                                        className="inline-flex items-center gap-1.5 rounded-md bg-[#0b1220] px-3 py-1.5 text-sm font-medium text-red-600 ring-1 ring-red-500/30 hover:bg-red-500/10 hover:bg-red-500/10 shadow-sm transition">
                                         <Trash2 className="h-3.5 w-3.5" /> Delete
                                     </button>
                                 )}
@@ -310,14 +310,14 @@ export default function MemberDetailPage() {
                         <p className="text-xs font-semibold uppercase tracking-wide text-[#6b7280] mb-2">Currently Out</p>
                         <div className="space-y-2">
                             {unreturned.map(item => (
-                                <div key={item._id} className="flex items-center justify-between rounded-lg bg-orange-500/10 dark:bg-orange-900/20 border border-orange-500/20/40 px-3 py-2">
+                                <div key={item._id} className="flex items-center justify-between rounded-lg bg-orange-500/10 border border-orange-500/20 px-3 py-2">
                                     <div>
                                         <p className="text-sm font-medium text-[#f9fafb]">{item.itemName}</p>
                                         <p className="text-xs text-[#6b7280]">Issued {new Date(item.issuedDate).toLocaleDateString("en-IN")}</p>
                                     </div>
                                     <button
                                         onClick={() => handleReturnEquipment(item._id)}
-                                        className="inline-flex items-center gap-1 rounded-md bg-[#0b1220] px-2.5 py-1.5 text-xs font-medium text-green-400 ring-1 ring-green-300 hover:bg-green-500/100/10 hover:bg-green-500/100/10 shadow-sm transition"
+                                        className="inline-flex items-center gap-1 rounded-md bg-[#0b1220] px-2.5 py-1.5 text-xs font-medium text-green-400 ring-1 ring-green-300 hover:bg-green-500/10 hover:bg-green-500/10 shadow-sm transition"
                                     >
                                         <PackageCheck className="h-3 w-3" /> Return
                                     </button>
@@ -333,7 +333,7 @@ export default function MemberDetailPage() {
                         <p className="text-xs font-semibold uppercase tracking-wide text-[#6b7280] mb-2">Returned</p>
                         <div className="space-y-1.5">
                             {returned.map(item => (
-                                <div key={item._id} className="flex items-center justify-between rounded-lg bg-[#0b1220] border border-[#1f2937] dark:border-[#1f2937] px-3 py-2 opacity-60">
+                                <div key={item._id} className="flex items-center justify-between rounded-lg bg-[#0b1220] border border-[#1f2937] px-3 py-2 opacity-60">
                                     <p className="text-sm text-[#9ca3af] line-through">{item.itemName}</p>
                                     <p className="text-xs text-[#6b7280]">Returned {item.returnedDate ? new Date(item.returnedDate).toLocaleDateString("en-IN") : "—"}</p>
                                 </div>

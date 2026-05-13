@@ -20,7 +20,7 @@ type Plan = {
     isActive: boolean; 
 };
 
-const INPUT = "w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-[#0b1220] px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition";
+const INPUT = "w-full rounded-xl border border-[#1f2937] bg-[#0b1220] px-3 py-2 text-sm text-[#f9fafb] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition";
 const LABEL = "block text-xs font-bold text-[#9ca3af] mb-1 uppercase tracking-wide";
 
 const DEFAULT_MESSAGES: PlanMessages = {
@@ -124,7 +124,7 @@ export default function PlansPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div><h1 className="text-2xl font-bold text-[#f9fafb] flex items-center gap-2"><ClipboardList className="h-6 w-6 text-violet-500"/>Plans</h1>
-                <p className="text-sm text-slate-500">{plans.length} plans configured</p></div>
+                <p className="text-sm text-[#6b7280]">{plans.length} plans configured</p></div>
                 <button onClick={openAdd} className="flex items-center gap-1.5 bg-[#8b5cf6] hover:bg-[#7c3aed] border-0  text-white text-sm font-medium px-4 py-2 rounded-xl shadow transition"><Plus className="h-4 w-4"/>Add Plan</button>
             </div>
 
@@ -139,7 +139,7 @@ export default function PlansPage() {
                                     <h3 className="font-semibold text-[#f9fafb]">{p.name}</h3>
                                     {p.description && <p className="text-xs text-slate-400 mt-0.5">{p.description}</p>}
                                 </div>
-                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.isActive ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600" : "bg-slate-100 text-slate-400"}`}>
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.isActive ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400"}`}>
                                     {p.isActive ? "Active" : "Inactive"}
                                 </span>
                             </div>
@@ -149,11 +149,11 @@ export default function PlansPage() {
                             </div>
                             {(p.enableWhatsAppAlerts || p.enableWhatsApp) && (
                                 <div className="space-y-1.5 pt-1">
-                                    <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                                    <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
                                         <MessageSquare className="h-3 w-3" /> WhatsApp Alerts Enabled
                                     </div>
                                     {p.messages && (
-                                        <div className="rounded-lg bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800/40 p-2 space-y-1">
+                                        <div className="rounded-lg bg-emerald-500/5 border border-emerald-500/20 p-2 space-y-1">
                                             <p className="text-[10px] text-[#9ca3af] line-clamp-1"><span className="font-semibold">Before 2d:</span> {p.messages.beforeExpiry.text}</p>
                                             <p className="text-[10px] text-[#9ca3af] line-clamp-1"><span className="font-semibold">After:</span> {p.messages.afterExpiry.text}</p>
                                         </div>
@@ -161,8 +161,8 @@ export default function PlansPage() {
                                 </div>
                             )}
                             <div className="flex gap-2 pt-1">
-                                <button onClick={() => openEdit(p)} className="flex-1 flex items-center justify-center gap-1 text-xs border border-slate-200 dark:border-slate-600 rounded-xl py-1.5 hover:bg-[#8b5cf6]/5 text-slate-600 transition"><Pencil className="h-3 w-3"/>Edit</button>
-                                <button onClick={() => handleDelete(p._id)} className="flex items-center justify-center gap-1 text-xs border border-red-500/20 dark:border-red-900/40 rounded-xl px-3 py-1.5 hover:bg-red-500/10 dark:hover:bg-red-900/20 text-red-500 transition"><Trash2 className="h-3 w-3"/></button>
+                                <button onClick={() => openEdit(p)} className="flex-1 flex items-center justify-center gap-1 text-xs border border-[#1f2937] rounded-xl py-1.5 hover:bg-[#8b5cf6]/5 text-slate-600 transition"><Pencil className="h-3 w-3"/>Edit</button>
+                                <button onClick={() => handleDelete(p._id)} className="flex items-center justify-center gap-1 text-xs border border-red-500/20 rounded-xl px-3 py-1.5 hover:bg-red-500/10 text-red-500 transition"><Trash2 className="h-3 w-3"/></button>
                             </div>
                         </div>
                     ))}
@@ -194,10 +194,10 @@ export default function PlansPage() {
                                             setForm(p => ({ ...p, enableWhatsApp: e.target.checked }));
                                             setShowMsgSection(e.target.checked);
                                         }}
-                                        className="mt-1 rounded border-slate-300 text-blue-600 shadow-sm focus:border-[#8b5cf6] focus:ring-[#8b5cf6] dark:border-slate-600"
+                                        className="mt-1 rounded border-[#1f2937] text-blue-600 shadow-sm focus:border-[#8b5cf6] focus:ring-[#8b5cf6]"
                                     />
                                     <div>
-                                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                                        <span className="text-sm font-semibold text-[#f9fafb] flex items-center gap-1.5">
                                             <MessageSquare className="h-4 w-4 text-emerald-500" />
                                             Enable WhatsApp Alerts
                                         </span>
@@ -209,25 +209,25 @@ export default function PlansPage() {
                             </div>
 
                             {form.enableWhatsApp && (
-                                <div className="rounded-xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/50 dark:bg-emerald-900/10 overflow-hidden">
+                                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 overflow-hidden">
                                     <button
                                         type="button"
                                         onClick={() => setShowMsgSection(v => !v)}
-                                        className="w-full flex items-center justify-between px-4 py-3 text-xs font-bold text-emerald-800 dark:text-emerald-400 hover:bg-emerald-100/50 dark:hover:bg-emerald-900/20 transition uppercase tracking-wider"
+                                        className="w-full flex items-center justify-between px-4 py-3 text-xs font-bold text-emerald-400 hover:bg-emerald-500/10 transition uppercase tracking-wider"
                                     >
                                         <span className="flex items-center gap-2"><MessageSquare className="h-3.5 w-3.5" /> Customize Messages</span>
                                         {showMsgSection ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                                     </button>
 
                                     {showMsgSection && (
-                                        <div className="border-t border-emerald-200 dark:border-emerald-800/60 px-4 py-4 space-y-4">
+                                        <div className="border-t border-emerald-500/20 px-4 py-4 space-y-4">
                                             {/* Before Expiry */}
                                             <div className="space-y-2">
                                                 <p className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest flex items-center gap-1.5">
                                                     ⏳ Before Expiry (2 days)
                                                 </p>
                                                 <div>
-                                                    <label className="text-[10px] text-slate-500 mb-1 block">Message Text</label>
+                                                    <label className="text-[10px] text-[#6b7280] mb-1 block">Message Text</label>
                                                     <textarea
                                                         rows={2}
                                                         value={form.messages.beforeExpiry.text}
@@ -239,7 +239,7 @@ export default function PlansPage() {
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="text-[10px] text-slate-500 mb-1 block">Media URL (optional)</label>
+                                                    <label className="text-[10px] text-[#6b7280] mb-1 block">Media URL (optional)</label>
                                                     <input
                                                         type="url"
                                                         value={form.messages.beforeExpiry.mediaUrl}
@@ -259,7 +259,7 @@ export default function PlansPage() {
                                                     ❌ After Expiry
                                                 </p>
                                                 <div>
-                                                    <label className="text-[10px] text-slate-500 mb-1 block">Message Text</label>
+                                                    <label className="text-[10px] text-[#6b7280] mb-1 block">Message Text</label>
                                                     <textarea
                                                         rows={2}
                                                         value={form.messages.afterExpiry.text}
@@ -271,7 +271,7 @@ export default function PlansPage() {
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="text-[10px] text-slate-500 mb-1 block">Media URL (optional)</label>
+                                                    <label className="text-[10px] text-[#6b7280] mb-1 block">Media URL (optional)</label>
                                                     <input
                                                         type="url"
                                                         value={form.messages.afterExpiry.mediaUrl}

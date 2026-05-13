@@ -62,9 +62,9 @@ export default function PaymentsPage() {
 
     const typeColor: Record<string, string> = {
         initial: "bg-indigo-500/10 text-blue-600",
-        renewal: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600",
+        renewal: "bg-emerald-100 text-emerald-600",
         balance: "bg-amber-500/10 text-amber-600",
-        rent: "bg-red-500/10/30 text-red-600",
+        rent: "bg-red-500/10 text-red-600",
     };
 
 
@@ -77,7 +77,7 @@ export default function PaymentsPage() {
                     <h1 className="text-2xl font-bold text-[#f9fafb] flex items-center gap-2">
                         <CreditCard className="h-6 w-6 text-sky-500"/>Payments
                     </h1>
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm text-[#6b7280]">
                         {total} payment records
                         {selectedBlock !== "all" && (
                             <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400">
@@ -88,8 +88,8 @@ export default function PaymentsPage() {
                 </div>
                 <div className="flex items-center gap-3">
                     <HostelBlockFilter />
-                    <button onClick={() => fetchPayments()} className="p-2 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-[#8b5cf6]/5 bg-[#0b1220] shadow-sm">
-                        <RefreshCw className="h-4 w-4 text-slate-500"/>
+                    <button onClick={() => fetchPayments()} className="p-2 rounded-xl border border-[#1f2937] hover:bg-[#8b5cf6]/5 bg-[#0b1220] shadow-sm">
+                        <RefreshCw className="h-4 w-4 text-[#6b7280]"/>
                     </button>
                 </div>
             </div>
@@ -105,18 +105,18 @@ export default function PaymentsPage() {
                             : payments.length===0 ? <tr><td colSpan={6} className="px-4 py-12 text-center text-slate-400">No payments found{selectedBlock !== "all" ? ` for Block ${selectedBlock}` : ""}</td></tr>
                             : payments.map(p=>(
                                 <tr key={p._id} className="hover:bg-[#8b5cf6]/5/30">
-                                    <td className="px-4 py-3"><p className="font-medium text-slate-800 dark:text-slate-100">{p.memberId?.name || "—"}</p><p className="text-xs text-slate-400">{p.memberId?.memberId}</p></td>
-                                    <td className="px-4 py-3 text-slate-500">{p.planId?.name || "—"}</td>
+                                    <td className="px-4 py-3"><p className="font-medium text-[#f9fafb]">{p.memberId?.name || "—"}</p><p className="text-xs text-slate-400">{p.memberId?.memberId}</p></td>
+                                    <td className="px-4 py-3 text-[#6b7280]">{p.planId?.name || "—"}</td>
                                     <td className="px-4 py-3 font-semibold text-emerald-600">₹{p.amount?.toLocaleString("en-IN")}</td>
-                                    <td className="px-4 py-3 capitalize text-slate-500">{p.paymentMethod}</td>
-                                    <td className="px-4 py-3"><span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${typeColor[p.paymentType] || "bg-slate-100 text-slate-500"}`}>{p.paymentType}</span></td>
+                                    <td className="px-4 py-3 capitalize text-[#6b7280]">{p.paymentMethod}</td>
+                                    <td className="px-4 py-3"><span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${typeColor[p.paymentType] || "bg-slate-100 text-[#6b7280]"}`}>{p.paymentType}</span></td>
                                     <td className="px-4 py-3 text-slate-400 text-xs">{new Date(p.createdAt).toLocaleDateString("en-IN")}</td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
-                <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 text-sm text-slate-500">
+                <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 text-sm text-[#6b7280]">
                     <span>Page {page} of {totalPages||1}</span>
                     <div className="flex gap-2">
                         <button

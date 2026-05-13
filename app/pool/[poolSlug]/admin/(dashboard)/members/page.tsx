@@ -542,7 +542,7 @@ export default function MembersPage() {
                                                         )}
                                                         {plan?.hasTokenPrint && (
                                                             <button onClick={() => handleReprint(member)} title="Reprint Token"
-                                                                className="p-1.5 rounded-md text-[#6b7280] hover:text-green-600 hover:bg-green-500/100/10 hover:bg-green-500/100/10 transition-colors">
+                                                                className="p-1.5 rounded-md text-[#6b7280] hover:text-green-600 hover:bg-green-500/10 hover:bg-green-500/10 transition-colors">
                                                                 <Printer className="h-4 w-4" />
                                                             </button>
                                                         )}

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { MessageSquare, Wifi, WifiOff, Unplug, CheckCircle, AlertCircle } from "lucide-react";
 
-const INPUT = "w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-[#0b1220] px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6]";
+const INPUT = "w-full rounded-xl border border-[#1f2937] bg-[#0b1220] px-3 py-2 text-sm text-[#f9fafb] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6]";
 const LABEL = "block text-xs font-medium text-[#9ca3af] mb-1";
 
 export default function WhatsAppPage() {
@@ -41,25 +41,25 @@ export default function WhatsAppPage() {
     return (
         <div className="space-y-8 max-w-2xl">
             <div><h1 className="text-2xl font-bold text-[#f9fafb] flex items-center gap-2"><MessageSquare className="h-6 w-6 text-emerald-500"/>WhatsApp Integration</h1>
-            <p className="text-sm text-slate-500">Connect Twilio to send automated expiry alerts to hostel members</p></div>
+            <p className="text-sm text-[#6b7280]">Connect Twilio to send automated expiry alerts to hostel members</p></div>
 
             {/* Status Card */}
-            <div className={`rounded-2xl border p-6 flex items-center gap-4 ${status?.connected ? "bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800/30" : "bg-slate-50 border-[#1f2937]"}`}>
+            <div className={`rounded-2xl border p-6 flex items-center gap-4 ${status?.connected ? "bg-emerald-500/10 border-emerald-500/20" : "bg-[#0b1220] border-[#1f2937]"}`}>
                 {status?.connected ? <Wifi className="h-8 w-8 text-emerald-500 flex-shrink-0"/> : <WifiOff className="h-8 w-8 text-slate-400 flex-shrink-0"/>}
                 <div className="flex-1">
-                    <p className="font-semibold text-slate-800 dark:text-slate-100">{status?.connected ? "WhatsApp Connected" : "Not Connected"}</p>
-                    {status?.connected && <p className="text-sm text-slate-500 mt-0.5">Number: <span className="font-mono text-emerald-600">{status.whatsappNumber}</span></p>}
-                    {!status?.connected && <p className="text-sm text-slate-500">Fill in the form below to connect your Twilio account</p>}
+                    <p className="font-semibold text-[#f9fafb]">{status?.connected ? "WhatsApp Connected" : "Not Connected"}</p>
+                    {status?.connected && <p className="text-sm text-[#6b7280] mt-0.5">Number: <span className="font-mono text-emerald-600">{status.whatsappNumber}</span></p>}
+                    {!status?.connected && <p className="text-sm text-[#6b7280]">Fill in the form below to connect your Twilio account</p>}
                 </div>
                 {status?.connected && (
-                    <button onClick={handleDisconnect} disabled={disconnecting} className="flex items-center gap-1.5 text-sm border border-red-500/20 dark:border-red-900/40 text-red-500 px-4 py-2 rounded-xl hover:bg-red-500/10 dark:hover:bg-red-900/20 transition disabled:opacity-50">
+                    <button onClick={handleDisconnect} disabled={disconnecting} className="flex items-center gap-1.5 text-sm border border-red-500/20 text-red-500 px-4 py-2 rounded-xl hover:bg-red-500/10 transition disabled:opacity-50">
                         <Unplug className="h-4 w-4"/>{disconnecting ? "Disconnecting…" : "Disconnect"}
                     </button>
                 )}
             </div>
 
             {message && (
-                <div className={`flex items-start gap-3 rounded-xl p-4 border ${message.type === "success" ? "bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 text-emerald-700 dark:text-emerald-400" : "bg-red-500/10/10 border-red-500/20 text-red-400"}`}>
+                <div className={`flex items-start gap-3 rounded-xl p-4 border ${message.type === "success" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-red-500/10 border-red-500/20 text-red-400"}`}>
                     {message.type === "success" ? <CheckCircle className="h-5 w-5 flex-shrink-0"/> : <AlertCircle className="h-5 w-5 flex-shrink-0"/>}
                     <p className="text-sm">{message.text}</p>
                 </div>
@@ -85,7 +85,7 @@ export default function WhatsAppPage() {
             {/* How it works */}
             <div className="rounded-2xl bg-slate-50/50 border border-[#1f2937] p-5">
                 <h3 className="text-sm font-semibold text-slate-600 mb-3">How it works</h3>
-                <ol className="space-y-2 text-sm text-slate-500 list-decimal list-inside">
+                <ol className="space-y-2 text-sm text-[#6b7280] list-decimal list-inside">
                     <li>Connect your Twilio WhatsApp-enabled number above</li>
                     <li>Enable WhatsApp on your hostel plans</li>
                     <li>The system automatically sends expiry reminders 3 days before</li>

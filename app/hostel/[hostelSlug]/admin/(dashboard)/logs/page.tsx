@@ -44,7 +44,7 @@ export default function LogsPage() {
     const totalPages = Math.ceil(total / limit);
 
     const renderPagination = () => (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 text-sm text-slate-500">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 text-sm text-[#6b7280]">
             <div className="flex items-center gap-4">
                 <span>Page {page} of {totalPages || 1}</span>
             </div>
@@ -79,7 +79,7 @@ export default function LogsPage() {
                         <History className="h-6 w-6 text-blue-500"/>
                         Activity Logs
                     </h1>
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm text-[#6b7280]">
                         View detailed audit history of all hostel operations
                         {selectedBlock !== "all" && (
                             <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400">
@@ -90,8 +90,8 @@ export default function LogsPage() {
                 </div>
                 <div className="flex items-center gap-3">
                     <HostelBlockFilter />
-                    <button onClick={fetchLogs} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-[#8b5cf6]/5 text-sm font-medium transition-colors bg-[#0b1220] shadow-sm">
-                        <RefreshCw className={`h-4 w-4 text-slate-500 ${loading ? "animate-spin" : ""}`}/>
+                    <button onClick={fetchLogs} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#1f2937] hover:bg-[#8b5cf6]/5 text-sm font-medium transition-colors bg-[#0b1220] shadow-sm">
+                        <RefreshCw className={`h-4 w-4 text-[#6b7280] ${loading ? "animate-spin" : ""}`}/>
                         Refresh
                     </button>
                 </div>
@@ -101,13 +101,13 @@ export default function LogsPage() {
             <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-2xl w-fit">
                 <button
                     onClick={() => setActiveTab("registrations")}
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all ${activeTab === "registrations" ? "bg-[#0b1220] text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}
+                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all ${activeTab === "registrations" ? "bg-[#0b1220] text-blue-600 shadow-sm" : "text-[#6b7280] hover:text-[#f9fafb]"}`}
                 >
                     <UserPlus className="h-4 w-4"/> Registrations
                 </button>
                 <button
                     onClick={() => setActiveTab("payments")}
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all ${activeTab === "payments" ? "bg-[#0b1220] text-emerald-600 dark:text-emerald-400 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}
+                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all ${activeTab === "payments" ? "bg-[#0b1220] text-emerald-400 shadow-sm" : "text-[#6b7280] hover:text-[#f9fafb]"}`}
                 >
                     <CreditCard className="h-4 w-4"/> Payments
                 </button>
@@ -116,7 +116,7 @@ export default function LogsPage() {
             <div className="rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm whitespace-nowrap">
-                        <thead className="bg-[#020617]/50 text-slate-500 font-medium border-b border-slate-100">
+                        <thead className="bg-[#020617]/50 text-[#6b7280] font-medium border-b border-slate-100">
                             {activeTab === "registrations" ? (
                                 <tr>
                                     <th className="px-6 py-4">Member Name</th>
@@ -153,7 +153,7 @@ export default function LogsPage() {
                                         <td className="px-6 py-4 font-medium text-[#f9fafb]">{log.memberName}</td>
                                         <td className="px-6 py-4 text-slate-600">{log.roomNumber}</td>
                                         <td className="px-6 py-4 text-slate-600">{new Date(log.join_date).toLocaleDateString("en-IN")}</td>
-                                        <td className="px-6 py-4 text-slate-500 text-xs">{log.createdBy}</td>
+                                        <td className="px-6 py-4 text-[#6b7280] text-xs">{log.createdBy}</td>
                                         <td className="px-6 py-4 text-slate-400 text-xs">{new Date(log.createdAt).toLocaleString("en-IN")}</td>
                                     </tr>
                                 ))
@@ -163,18 +163,18 @@ export default function LogsPage() {
                                 ) : paymentLogs.map(log => (
                                     <tr key={log._id} className="hover:bg-[#8b5cf6]/5/50/20 transition-colors">
                                         <td className="px-6 py-4 font-medium text-[#f9fafb]">{log.memberName}</td>
-                                        <td className="px-6 py-4 font-semibold text-emerald-600 dark:text-emerald-400">₹{log.amount}</td>
+                                        <td className="px-6 py-4 font-semibold text-emerald-400">₹{log.amount}</td>
                                         <td className="px-6 py-4">
                                             <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${
                                                 log.paymentType === "refund" ? "bg-red-500/10 text-red-600" :
-                                                log.paymentType === "initial" || log.paymentType === "renewal" ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" :
+                                                log.paymentType === "initial" || log.paymentType === "renewal" ? "bg-emerald-100 text-emerald-600" :
                                                 "bg-blue-500/10 text-blue-600"
                                             }`}>
                                                 {log.paymentType}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-slate-600">{new Date(log.payment_date).toLocaleDateString("en-IN")}</td>
-                                        <td className="px-6 py-4 text-slate-500 text-xs">{log.createdBy}</td>
+                                        <td className="px-6 py-4 text-[#6b7280] text-xs">{log.createdBy}</td>
                                         <td className="px-6 py-4 text-slate-400 text-xs">{new Date(log.createdAt).toLocaleString("en-IN")}</td>
                                     </tr>
                                 ))

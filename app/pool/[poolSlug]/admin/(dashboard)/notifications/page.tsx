@@ -100,7 +100,7 @@ export default function NotificationsPage() {
                         id="filter"
                         value={filterType}
                         onChange={(e) => setFilterType(e.target.value)}
-                        className="block w-full rounded-md border border-[#1f2937] border-[#1f2937] py-1.5 pl-3 pr-10 text-[#f9fafb] focus:ring-2 focus:ring-[#8b5cf6] sm:text-sm sm:leading-6 bg-[#0b1220] shadow-sm dark:text-gray-100"
+                        className="block w-full rounded-md border border-[#1f2937] border-[#1f2937] py-1.5 pl-3 pr-10 text-[#f9fafb] focus:ring-2 focus:ring-[#8b5cf6] sm:text-sm sm:leading-6 bg-[#0b1220] shadow-sm"
                     >
                         <option value="all">All Notifications</option>
                         <option value="expiry_next_day">Next Day Expiry Alerts</option>
@@ -116,7 +116,7 @@ export default function NotificationsPage() {
             <div className="mt-8 flow-root">
                 <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
                     <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-                        <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg dark:ring-white/10">
+                        <div className="overflow-hidden shadow ring-1 ring-[#1f2937] ring-opacity-100 rounded-lg">
                             <table className="min-w-full divide-y divide-gray-300">
                                 <thead className="bg-[#0b1220]">
                                     <tr>
@@ -152,8 +152,8 @@ export default function NotificationsPage() {
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-[#6b7280]">
                                                     <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ring-1 ring-inset ${
                                                         log.module === "hostel" 
-                                                            ? "bg-amber-500/10 text-amber-400 ring-amber-600/20 dark:bg-amber-900/10" 
-                                                            : "bg-blue-500/10 text-blue-400 ring-blue-600/20 dark:bg-blue-900/10"
+                                                            ? "bg-amber-500/10 text-amber-400 ring-amber-600/20" 
+                                                            : "bg-blue-500/10 text-blue-400 ring-blue-600/20"
                                                     }`}>
                                                         {log.module || "pool"}
                                                     </span>
@@ -177,8 +177,8 @@ export default function NotificationsPage() {
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm">
                                                     <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${
                                                         log.status === "sent" 
-                                                            ? "bg-green-500/10 text-green-400 ring-green-600/20 dark:bg-green-900/10" 
-                                                            : "bg-red-500/10 text-red-400 ring-red-600/20 dark:bg-red-900/10"
+                                                            ? "bg-green-500/10 text-green-400 ring-green-600/20" 
+                                                            : "bg-red-500/10 text-red-400 ring-red-600/20"
                                                     }`}>
                                                         {log.status === "failed_permanent" ? "FAILED (PERMANENT)" : log.status === "failed" ? "NOTIFICATION FAILED" : "SENT"}
                                                     </span>

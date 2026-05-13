@@ -489,7 +489,7 @@ export default function EntryPage() {
                         )}
                         {!lookupResult && !lookupError && (
                             <div className="flex flex-col items-center justify-center py-12 text-center">
-                                <Search className="h-10 w-10 text-[#9ca3af] dark:text-[#9ca3af] mb-3" />
+                                <Search className="h-10 w-10 text-[#9ca3af] mb-3" />
                                 <p className="text-sm text-[#6b7280]">Enter a member UID above to see their full details</p>
                             </div>
                         )}

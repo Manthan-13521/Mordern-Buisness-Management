@@ -386,7 +386,7 @@ export default function SettingsPage() {
                                     </div>
                                     <div className="col-span-2 sm:col-span-1 border-t sm:border-t-0 pt-4 sm:pt-0 border-[#1f2937]">
                                         <label className="block text-sm font-medium text-[#9ca3af] mb-1">Occupancy Duration (minutes)</label>
-                                        <p className="text-xs text-slate-500 mb-2">Auto-checkout time for daily/monthly plans</p>
+                                        <p className="text-xs text-[#6b7280] mb-2">Auto-checkout time for daily/monthly plans</p>
                                         <input
                                             type="number"
                                             min={1}

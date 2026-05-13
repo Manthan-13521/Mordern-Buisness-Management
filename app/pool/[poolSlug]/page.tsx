@@ -26,7 +26,7 @@ export default async function PoolLanding({ params }: { params: Promise<{ poolSl
               >
                 Register Now <ArrowRight className="w-4 h-4" />
               </Link>
-              <Link href={`/pool/${poolSlug}/admin/login`} className="text-sm font-semibold leading-6 text-[#f9fafb] dark:text-gray-100 p-2 hover:bg-[#0b1220] hover:bg-[#8b5cf6]/5 rounded-md">
+              <Link href={`/pool/${poolSlug}/admin/login`} className="text-sm font-semibold leading-6 text-[#f9fafb] p-2 hover:bg-[#0b1220] hover:bg-[#8b5cf6]/5 rounded-md">
                 Admin Area <span aria-hidden="true">→</span>
               </Link>
             </div>
