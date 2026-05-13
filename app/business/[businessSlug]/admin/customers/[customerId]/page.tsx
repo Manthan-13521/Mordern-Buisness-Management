@@ -626,9 +626,9 @@ export default function CustomerDetailPage() {
                             ₹{entry.amount.toLocaleString()}
                           </td>
                           <td className="px-6 py-5 text-right" rowSpan={Math.max(items.length, 1)}>
-                            {(entry.receiptUrl || entry.fileUrl) ? (
+                            {entry.receiptUrl ? (
                               <a 
-                                href={entry.receiptUrl || entry.fileUrl} 
+                                href={entry.receiptUrl} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
                                 className="p-2 inline-flex items-center justify-center bg-[#111827] border border-[#1f2937] text-[#9ca3af] hover:text-[#8b5cf6] hover:border-[#8b5cf6]/50 rounded-lg transition-all"
@@ -637,7 +637,7 @@ export default function CustomerDetailPage() {
                                 <Eye className="w-5 h-5" />
                               </a>
                             ) : (
-                              <label className="relative cursor-pointer p-2 inline-flex items-center justify-center gap-1.5 bg-[#111827] border border-dashed border-[#8b5cf6]/40 text-[#9ca3af] hover:text-[#8b5cf6] hover:border-[#8b5cf6] rounded-lg transition-all">
+                              <label className="relative cursor-pointer p-2 inline-flex items-center justify-center gap-1.5 bg-[#111827] border border-dashed border-[#374151] text-[#9ca3af] hover:text-[#8b5cf6] hover:border-[#8b5cf6]/50 rounded-lg transition-all group/upload">
                                 <input
                                   type="file"
                                   accept="image/*,.pdf"
@@ -704,9 +704,9 @@ export default function CustomerDetailPage() {
                           )}
                         </td>
                         <td className="px-6 py-5 text-right">
-                          {(entry.receiptUrl || entry.fileUrl) ? (
+                          {entry.receiptUrl ? (
                             <a 
-                              href={entry.receiptUrl || entry.fileUrl} 
+                              href={entry.receiptUrl} 
                               target="_blank" 
                               rel="noopener noreferrer"
                               className="p-2 inline-flex items-center justify-center bg-[#111827] border border-[#1f2937] text-[#9ca3af] hover:text-[#8b5cf6] hover:border-[#8b5cf6]/50 rounded-lg transition-all"
@@ -715,7 +715,7 @@ export default function CustomerDetailPage() {
                               <Eye className="w-5 h-5" />
                             </a>
                           ) : (
-                            <label className="relative cursor-pointer p-2 inline-flex items-center justify-center gap-1.5 bg-[#111827] border border-dashed border-[#8b5cf6]/40 text-[#9ca3af] hover:text-[#8b5cf6] hover:border-[#8b5cf6] rounded-lg transition-all">
+                            <label className="relative cursor-pointer p-2 inline-flex items-center justify-center gap-1.5 bg-[#111827] border border-dashed border-[#374151] text-[#9ca3af] hover:text-[#8b5cf6] hover:border-[#8b5cf6]/50 rounded-lg transition-all group/upload">
                               <input
                                 type="file"
                                 accept="image/*,.pdf"
