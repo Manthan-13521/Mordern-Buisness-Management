@@ -159,7 +159,7 @@ export default function SuperAdminHostelsPage() {
                                     </td>
                                 </tr>
                             ) : hostels.map(h => (
-                                <tr key={h.hostelId} className="border-b border-neutral-800 hover:bg-neutral-800/30 transition-colors">
+                                <tr key={h.hostelId} className="border-b border-neutral-800 hover:bg-[#0b1220]/30 transition-colors">
                                     <td className="px-6 py-4 font-medium text-white whitespace-nowrap">
                                         {h.hostelName || "Unknown"}
                                         <div className="text-xs text-[#6b7280] font-normal">{h.hostelId}</div>
@@ -217,9 +217,9 @@ export default function SuperAdminHostelsPage() {
                     <div className="flex items-center justify-between px-6 py-4 border-t border-neutral-800 text-sm text-[#6b7280]">
                         <span>{total} hostels</span>
                         <div className="flex gap-2">
-                            <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-white disabled:opacity-40">Previous</button>
+                            <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1 rounded bg-[#0b1220] hover:bg-neutral-700 text-white disabled:opacity-40">Previous</button>
                             <span className="px-3 py-1">Page {page} of {totalPages}</span>
-                            <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="px-3 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-white disabled:opacity-40">Next</button>
+                            <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="px-3 py-1 rounded bg-[#0b1220] hover:bg-neutral-700 text-white disabled:opacity-40">Next</button>
                         </div>
                     </div>
                 )}

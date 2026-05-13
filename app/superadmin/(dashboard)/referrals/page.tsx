@@ -146,7 +146,7 @@ export default function ReferralsAdminPage() {
                                                     Active
                                                 </span>
                                             ) : (
-                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-500/10 text-red-800 border border-red-500/20 dark:border-red-800">
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-500/10 text-red-800 border border-red-500/20">
                                                     Inactive
                                                 </span>
                                             )}

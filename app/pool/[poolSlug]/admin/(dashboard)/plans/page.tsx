@@ -192,7 +192,7 @@ export default function PlansPage() {
 
     const inputCls = "mt-1 block w-full rounded-md border border-[#1f2937] px-3 py-2 text-sm bg-[#0b1220] border border-[#1f2937] border-[#1f2937] text-[#f9fafb] focus:outline-none focus:border-[#8b5cf6] focus:ring-1 focus:ring-[#8b5cf6]";
     const labelCls = "block text-sm font-medium text-[#9ca3af]";
-    const checkCls = "rounded border-[#1f2937] text-blue-600 shadow-sm focus:border-[#8b5cf6] focus:ring-[#8b5cf6] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] dark:ring-offset-gray-900";
+    const checkCls = "rounded border-[#1f2937] text-blue-600 shadow-sm focus:border-[#8b5cf6] focus:ring-[#8b5cf6] border-[#1f2937] bg-[#0b1220] border border-[#1f2937]";
 
     return (
         <div className="space-y-6">
@@ -258,14 +258,14 @@ export default function PlansPage() {
                                     )}
                                     {plan.allowQuantity && <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-400">🔢 Multi-Qty</span>}
                                     {plan.hasEntertainment && <span className="inline-flex items-center rounded-full bg-purple-500/10 px-2 py-0.5 text-xs font-medium text-purple-400">🎭 Entertainment</span>}
-                                    {plan.hasFaceScan && <span className="inline-flex items-center rounded-full bg-sky-50 dark:bg-sky-900/30 px-2 py-0.5 text-xs font-medium text-sky-700 dark:text-sky-400">📷 Face Scan</span>}
+                                    {plan.hasFaceScan && <span className="inline-flex items-center rounded-full bg-sky-500/10 px-2 py-0.5 text-xs font-medium text-sky-400">📷 Face Scan</span>}
                                     {plan.quickDelete && <span className="inline-flex items-center rounded-full bg-orange-500/10 px-2 py-0.5 text-xs font-medium text-orange-400">⚡ Quick Delete</span>}
                                     {plan.hasTokenPrint && <span className="inline-flex items-center rounded-full bg-teal-500/10 px-2 py-0.5 text-xs font-medium text-teal-400">🖨️ Token Print</span>}
                                 </div>
 
                                 {/* WhatsApp message preview */}
                                 {(plan.enableWhatsAppAlerts || plan.whatsAppAlert) && plan.messages && (
-                                    <div className="mt-4 rounded-lg border border-green-100 dark:border-green-900/40 bg-green-50/50 dark:bg-green-900/10 p-3 space-y-2">
+                                    <div className="mt-4 rounded-lg border border-green-500/20 bg-green-500/5 p-3 space-y-2">
                                         <p className="text-xs font-semibold text-green-400 mb-1">📋 Alert Messages</p>
                                         <div>
                                             <span className="text-xs font-medium text-[#9ca3af]">Before expiry: </span>
@@ -284,7 +284,7 @@ export default function PlansPage() {
                                     <button
                                         type="button"
                                         onClick={() => openEdit(plan)}
-                                        className="flex-1 rounded-md bg-indigo-500/10 px-3 py-2 text-sm font-semibold text-blue-600 hover:bg-indigo-500/100/10 dark:hover:bg-indigo-900/50 transition"
+                                        className="flex-1 rounded-md bg-indigo-500/10 px-3 py-2 text-sm font-semibold text-blue-600 hover:bg-indigo-500/10 transition"
                                     >
                                         Edit
                                     </button>
@@ -297,7 +297,7 @@ export default function PlansPage() {
                                                     .catch(console.error);
                                             }
                                         }}
-                                        className="flex-1 rounded-md bg-[#0b1220] px-3 py-2 text-sm font-semibold text-red-600 ring-1 ring-inset ring-red-300 hover:bg-red-500/100/10 bg-[#0b1220] border border-[#1f2937] dark:ring-red-900 hover:bg-[#8b5cf6]/10 transition"
+                                        className="flex-1 rounded-md bg-[#0b1220] px-3 py-2 text-sm font-semibold text-red-600 ring-1 ring-inset ring-red-300 hover:bg-red-500/10 bg-[#0b1220] border border-[#1f2937] hover:bg-[#8b5cf6]/10 transition"
                                     >
                                         <Trash2 className="h-4 w-4 inline mr-1.5" />
                                         Delete
@@ -394,11 +394,11 @@ export default function PlansPage() {
 
                                 {/* ── WhatsApp Message Config (collapsible) ─────────── */}
                                 {formData.enableWhatsAppAlerts && (
-                                    <div className="rounded-xl border border-green-500/20/60 bg-green-50/50 dark:bg-green-900/10 overflow-hidden">
+                                    <div className="rounded-xl border border-green-500/20 bg-green-500/5 overflow-hidden">
                                         <button
                                             type="button"
                                             onClick={() => setShowMsgSection(v => !v)}
-                                            className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-green-800 dark:text-green-300 hover:bg-green-500/100/10/50 dark:hover:bg-green-900/20 transition"
+                                            className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-green-400 hover:bg-green-500/10 transition"
                                         >
                                             <span>💬 Customize Messages</span>
                                             {showMsgSection
@@ -407,7 +407,7 @@ export default function PlansPage() {
                                         </button>
 
                                         {showMsgSection && (
-                                            <div className="border-t border-green-500/20/60 px-4 py-4 space-y-5">
+                                            <div className="border-t border-green-500/20 px-4 py-4 space-y-5">
 
                                                 {/* Before Expiry */}
                                                 <div className="space-y-2">

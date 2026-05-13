@@ -174,7 +174,7 @@ export default function ManageBusinessesPage() {
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-neutral-800/50 text-[#9ca3af] text-xs uppercase tracking-wider font-bold border-b border-neutral-800">
+                            <tr className="bg-[#0b1220]/50 text-[#9ca3af] text-xs uppercase tracking-wider font-bold border-b border-neutral-800">
                                 <th className="px-6 py-4">Business Info</th>
                                 <th className="px-6 py-4">Contact & Admin</th>
                                 <th className="px-6 py-4">Status</th>
@@ -193,7 +193,7 @@ export default function ManageBusinessesPage() {
                             ) : filteredBusinesses.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="px-6 py-20 text-center">
-                                        <div className="bg-neutral-800/50 h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <div className="bg-[#0b1220]/50 h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-4">
                                             <Briefcase className="h-8 w-8 text-neutral-600" />
                                         </div>
                                         <p className="text-[#9ca3af] font-medium">No businesses found</p>
@@ -208,7 +208,7 @@ export default function ManageBusinessesPage() {
                                                 {business.name.charAt(0)}
                                             </div>
                                             <div>
-                                                <div className="font-bold text-neutral-100">{business.name}</div>
+                                                <div className="font-bold text-[#f9fafb]">{business.name}</div>
                                                 <div className="text-xs text-[#6b7280] font-mono">/{business.slug}</div>
                                             </div>
                                         </div>
@@ -249,7 +249,7 @@ export default function ManageBusinessesPage() {
                                             </button>
                                             <button 
                                                 onClick={() => handleResetPassword(business.businessId)}
-                                                className="p-2 hover:bg-neutral-800 rounded-lg text-[#9ca3af] hover:text-[#f9fafb] transition-all shadow-sm"
+                                                className="p-2 hover:bg-[#0b1220] rounded-lg text-[#9ca3af] hover:text-[#f9fafb] transition-all shadow-sm"
                                                 title="Reset Admin Password"
                                                 disabled={isActionLoading}
                                             >
@@ -265,7 +265,7 @@ export default function ManageBusinessesPage() {
                                             </button>
                                             <button 
                                                 onClick={() => setShowDeleteModal(business.businessId)}
-                                                className="p-2 hover:bg-red-500/100/10 rounded-lg text-red-500 hover:text-red-400 transition-all shadow-sm"
+                                                className="p-2 hover:bg-red-500/10 rounded-lg text-red-500 hover:text-red-400 transition-all shadow-sm"
                                                 title="Delete Business"
                                                 disabled={isActionLoading}
                                             >
@@ -308,11 +308,11 @@ export default function ManageBusinessesPage() {
                         
                         <div className="p-8 space-y-8">
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-neutral-800/50 p-6 rounded-2xl border border-[#1f2937]">
+                                <div className="bg-[#0b1220]/50 p-6 rounded-2xl border border-[#1f2937]">
                                     <p className="text-xs font-bold text-[#6b7280] uppercase tracking-widest mb-1">Customers</p>
                                     <p className="text-3xl font-black text-white">{selectedBusiness.stats?.customers || 0}</p>
                                 </div>
-                                <div className="bg-neutral-800/50 p-6 rounded-2xl border border-[#1f2937]">
+                                <div className="bg-[#0b1220]/50 p-6 rounded-2xl border border-[#1f2937]">
                                     <p className="text-xs font-bold text-[#6b7280] uppercase tracking-widest mb-1">Transactions</p>
                                     <p className="text-3xl font-black text-white">{selectedBusiness.stats?.transactions || 0}</p>
                                 </div>
@@ -339,7 +339,7 @@ export default function ManageBusinessesPage() {
 
                             <button 
                                 onClick={() => setSelectedBusiness(null)}
-                                className="w-full py-4 text-sm font-bold bg-neutral-800 hover:bg-neutral-700 text-white rounded-2xl transition-all border border-[#1f2937] shadow-inner"
+                                className="w-full py-4 text-sm font-bold bg-[#0b1220] hover:bg-neutral-700 text-white rounded-2xl transition-all border border-[#1f2937] shadow-inner"
                             >
                                 Close View
                             </button>
@@ -373,7 +373,7 @@ export default function ManageBusinessesPage() {
                         <div className="grid grid-cols-2 gap-3 mt-8">
                             <button 
                                 onClick={() => setShowDeleteModal(null)}
-                                className="py-3.5 text-sm font-bold bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl transition-all"
+                                className="py-3.5 text-sm font-bold bg-[#0b1220] hover:bg-neutral-700 text-white rounded-xl transition-all"
                                 disabled={isActionLoading}
                             >
                                 Cancel

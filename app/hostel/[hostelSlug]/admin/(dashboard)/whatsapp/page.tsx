@@ -52,14 +52,14 @@ export default function WhatsAppPage() {
                     {!status?.connected && <p className="text-sm text-slate-500">Fill in the form below to connect your Twilio account</p>}
                 </div>
                 {status?.connected && (
-                    <button onClick={handleDisconnect} disabled={disconnecting} className="flex items-center gap-1.5 text-sm border border-red-500/20 dark:border-red-900/40 text-red-500 px-4 py-2 rounded-xl hover:bg-red-500/100/10 dark:hover:bg-red-900/20 transition disabled:opacity-50">
+                    <button onClick={handleDisconnect} disabled={disconnecting} className="flex items-center gap-1.5 text-sm border border-red-500/20 dark:border-red-900/40 text-red-500 px-4 py-2 rounded-xl hover:bg-red-500/10 dark:hover:bg-red-900/20 transition disabled:opacity-50">
                         <Unplug className="h-4 w-4"/>{disconnecting ? "Disconnecting…" : "Disconnect"}
                     </button>
                 )}
             </div>
 
             {message && (
-                <div className={`flex items-start gap-3 rounded-xl p-4 border ${message.type === "success" ? "bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 text-emerald-700 dark:text-emerald-400" : "bg-red-500/10 dark:bg-red-900/10 border-red-500/20 text-red-400"}`}>
+                <div className={`flex items-start gap-3 rounded-xl p-4 border ${message.type === "success" ? "bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 text-emerald-700 dark:text-emerald-400" : "bg-red-500/10/10 border-red-500/20 text-red-400"}`}>
                     {message.type === "success" ? <CheckCircle className="h-5 w-5 flex-shrink-0"/> : <AlertCircle className="h-5 w-5 flex-shrink-0"/>}
                     <p className="text-sm">{message.text}</p>
                 </div>

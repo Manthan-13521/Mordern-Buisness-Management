@@ -343,7 +343,7 @@ export default function MembersPage() {
                                             )}
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${m.status === "vacated" ? "bg-red-500/10 dark:bg-red-900/30 text-red-600" : "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"}`}>
+                                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${m.status === "vacated" ? "bg-red-500/10/30 text-red-600" : "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"}`}>
                                                 {m.status === "vacated" ? "Vacated" : "Active"}
                                             </span>
                                         </td>
@@ -352,7 +352,7 @@ export default function MembersPage() {
                                                 <button onClick={() => openEdit(m)} title="Edit" className="p-1.5 rounded-lg hover:bg-[#8b5cf6]/10 dark:hover:bg-indigo-900/20 text-blue-500 transition"><Pencil className="h-3.5 w-3.5" /></button>
                                                 <button onClick={() => { setRenewMember(m); setRenewForm({ planId: m.planId?._id || "", paidAmount: "", paymentMode: "cash", notes: "" }); setError(""); }} title="Renew" className="p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-500 transition"><RotateCcw className="h-3.5 w-3.5" /></button>
                                                 <button onClick={() => handleCheckout(m)} title="Checkout" className="p-1.5 rounded-lg hover:bg-amber-500/10 dark:hover:bg-amber-900/20 text-amber-500 transition"><LogOut className="h-3.5 w-3.5" /></button>
-                                                <button onClick={() => handleDelete(m._id)} title="Delete" className="p-1.5 rounded-lg hover:bg-red-500/100/10 dark:hover:bg-red-900/20 text-red-500 transition"><Trash2 className="h-3.5 w-3.5" /></button>
+                                                <button onClick={() => handleDelete(m._id)} title="Delete" className="p-1.5 rounded-lg hover:bg-red-500/10 dark:hover:bg-red-900/20 text-red-500 transition"><Trash2 className="h-3.5 w-3.5" /></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -402,7 +402,7 @@ export default function MembersPage() {
                             </div>
                         ) : (
                             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-                                {error && <div className="mx-6 mt-4 text-sm text-red-500 bg-red-500/10 dark:bg-red-900/20 rounded-xl px-4 py-2.5">{error}</div>}
+                                {error && <div className="mx-6 mt-4 text-sm text-red-500 bg-red-500/10/20 rounded-xl px-4 py-2.5">{error}</div>}
                                 <div className="grid grid-cols-1 md:grid-cols-5 gap-0 p-6">
                                     {/* ── Left: form fields (3/5) ── */}
                                     <div className="md:col-span-3 md:pr-6 space-y-4 md:border-r border-[#1f2937]">
@@ -570,7 +570,7 @@ export default function MembersPage() {
                                                 <Upload className="h-3.5 w-3.5" />Upload
                                             </button>
                                             {photoPreview && (
-                                                <button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview(""); }} className="p-2 rounded-xl text-red-400 hover:bg-red-500/100/10 dark:hover:bg-red-900/20 transition"><X className="h-4 w-4" /></button>
+                                                <button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview(""); }} className="p-2 rounded-xl text-red-400 hover:bg-red-500/10 dark:hover:bg-red-900/20 transition"><X className="h-4 w-4" /></button>
                                             )}
                                         </div>
                                         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
@@ -604,7 +604,7 @@ export default function MembersPage() {
                             <div className="flex justify-between"><span>Current Balance</span><span className={`font-semibold ${renewMember.balance >= 0 ? "text-emerald-500" : "text-red-500"}`}>₹{renewMember.balance.toLocaleString()}</span></div>
                             <div className="flex justify-between"><span>Next Due</span><span className="font-semibold text-blue-500">{renewMember.due_date ? new Date(renewMember.due_date).toLocaleDateString("en-IN") : "—"}</span></div>
                         </div>
-                        {error && <p className="text-sm text-red-500 bg-red-500/10 dark:bg-red-900/20 rounded-lg px-3 py-2">{error}</p>}
+                        {error && <p className="text-sm text-red-500 bg-red-500/10/20 rounded-lg px-3 py-2">{error}</p>}
                         <form onSubmit={handleRenew} className="space-y-4">
                             <div className="grid grid-cols-2 gap-3">
                                 <div>

@@ -162,7 +162,7 @@ export default function PlansPage() {
                             )}
                             <div className="flex gap-2 pt-1">
                                 <button onClick={() => openEdit(p)} className="flex-1 flex items-center justify-center gap-1 text-xs border border-slate-200 dark:border-slate-600 rounded-xl py-1.5 hover:bg-[#8b5cf6]/5 text-slate-600 transition"><Pencil className="h-3 w-3"/>Edit</button>
-                                <button onClick={() => handleDelete(p._id)} className="flex items-center justify-center gap-1 text-xs border border-red-500/20 dark:border-red-900/40 rounded-xl px-3 py-1.5 hover:bg-red-500/100/10 dark:hover:bg-red-900/20 text-red-500 transition"><Trash2 className="h-3 w-3"/></button>
+                                <button onClick={() => handleDelete(p._id)} className="flex items-center justify-center gap-1 text-xs border border-red-500/20 dark:border-red-900/40 rounded-xl px-3 py-1.5 hover:bg-red-500/10 dark:hover:bg-red-900/20 text-red-500 transition"><Trash2 className="h-3 w-3"/></button>
                             </div>
                         </div>
                     ))}
@@ -178,7 +178,7 @@ export default function PlansPage() {
                             <button onClick={()=>setShowForm(false)}><X className="h-5 w-5 text-slate-400"/></button>
                         </div>
                         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
-                            {error && <p className="text-sm text-red-500 bg-red-500/10 dark:bg-red-900/20 rounded-lg px-3 py-2">{error}</p>}
+                            {error && <p className="text-sm text-red-500 bg-red-500/10/20 rounded-lg px-3 py-2">{error}</p>}
                             <div><label className={LABEL}>Plan Name</label><input required value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} className={INPUT} placeholder="e.g. Monthly Bed"/></div>
                             <div><label className={LABEL}>Duration (days)</label><input type="number" min="1" required value={form.durationDays} onChange={e=>setForm(p=>({...p,durationDays:e.target.value}))} className={INPUT} placeholder="30"/></div>
                             <div><label className={LABEL}>Price (₹)</label><input type="number" min="0" required value={form.price} onChange={e=>setForm(p=>({...p,price:e.target.value}))} className={INPUT} placeholder="5000"/></div>

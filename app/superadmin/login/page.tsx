@@ -46,7 +46,7 @@ export default function SuperAdminLoginPage() {
             </div>
 
             <div className="relative sm:mx-auto sm:w-full sm:max-w-sm">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-500/10 dark:bg-red-900">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-500/10">
                     <ShieldAlert className="h-8 w-8 text-red-600" />
                 </div>
                 <h2 className="mt-6 text-center text-2xl font-bold leading-9 tracking-tight text-[#f9fafb]">

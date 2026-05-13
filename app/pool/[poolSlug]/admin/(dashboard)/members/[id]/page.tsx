@@ -238,7 +238,7 @@ export default function MemberDetailPage() {
                                     </button>
                                 ) : (
                                     <button onClick={handleDelete}
-                                        className="inline-flex items-center gap-1.5 rounded-md bg-[#0b1220] px-3 py-1.5 text-sm font-medium text-red-600 ring-1 ring-red-300 dark:ring-red-800 hover:bg-red-500/100/10 hover:bg-red-500/100/10 shadow-sm transition">
+                                        className="inline-flex items-center gap-1.5 rounded-md bg-[#0b1220] px-3 py-1.5 text-sm font-medium text-red-600 ring-1 ring-red-300 dark:ring-red-800 hover:bg-red-500/10 hover:bg-red-500/10 shadow-sm transition">
                                         <Trash2 className="h-3.5 w-3.5" /> Delete
                                     </button>
                                 )}
@@ -272,7 +272,7 @@ export default function MemberDetailPage() {
 
             {/* Equipment Panel */}
             <div className="rounded-2xl border border-[#1f2937] bg-slate-900 shadow-2xl overflow-hidden">
-                <div className="px-6 py-4 border-b border-[#1f2937] flex items-center justify-between bg-[#0b1220] dark:backdrop-blur-md">
+                <div className="px-6 py-4 border-b border-[#1f2937] flex items-center justify-between bg-[#0b1220]">
                     <h3 className="text-base font-semibold text-[#f9fafb] flex items-center gap-2">
                         <Package className="h-4 w-4 text-blue-500" /> Equipment
                         {unreturned.length > 0 && (

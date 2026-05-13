@@ -35,7 +35,7 @@ export function ResetPasswordButton({ poolId, poolName }: { poolId: string; pool
         <button
             onClick={handleReset}
             disabled={loading}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded bg-neutral-800 text-[#9ca3af] hover:bg-neutral-700 hover:text-white border border-neutral-700 transition"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded bg-[#0b1220] text-[#9ca3af] hover:bg-neutral-700 hover:text-white border border-neutral-700 transition"
         >
             {loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin"/> : <KeyRound className="w-3.5 h-3.5 text-amber-500" />}
             Reset Password

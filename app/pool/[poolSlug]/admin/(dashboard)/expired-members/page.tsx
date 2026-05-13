@@ -121,7 +121,7 @@ export default function ExpiredMembersPage() {
                                             {formatExpiry(m.expiryDate)}
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-800 dark:bg-red-900/30">
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-800">
                                                 {daysSinceExpiry(m.expiryDate)}d ago
                                             </span>
                                         </td>

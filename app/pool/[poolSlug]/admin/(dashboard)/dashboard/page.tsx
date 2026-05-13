@@ -340,13 +340,13 @@ export default async function DashboardPage(props: { searchParams?: Promise<any>
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
                 {/* Priority 4: Defaulters list (deferred) */}
                 {isAdmin && (
-                    <Suspense fallback={<div className="h-48 bg-[#0b1220] dark:backdrop-blur-md dark:border border-[#1f2937] shadow-lg rounded-xl animate-pulse" />}>
+                    <Suspense fallback={<div className="h-48 bg-[#0b1220] rounded-xl animate-pulse" />}>
                         <TopDefaulters poolId={poolId} />
                     </Suspense>
                 )}
                 
                 {/* Priority 5: Notifications / Alerts panel (deferred) */}
-                <Suspense fallback={<div className="h-48 bg-[#0b1220] dark:backdrop-blur-md dark:border border-[#1f2937] shadow-lg rounded-xl animate-pulse" />}>
+                <Suspense fallback={<div className="h-48 bg-[#0b1220] rounded-xl animate-pulse" />}>
                     <ExpiryAlerts poolId={poolId} />
                 </Suspense>
             </div>

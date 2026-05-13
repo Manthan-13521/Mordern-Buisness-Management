@@ -166,7 +166,7 @@ export default function BalancePaymentsPage() {
                                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 font-semibold ${
                                             m.paymentStatus === "partial" 
                                             ? "bg-amber-500/10 text-amber-400" 
-                                            : "bg-red-500/10 text-red-400 dark:bg-red-900/30"
+                                            : "bg-red-500/10 text-red-400"
                                         }`}>
                                             {m.paymentStatus}
                                         </span>
