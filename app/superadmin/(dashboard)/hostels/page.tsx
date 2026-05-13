@@ -13,8 +13,8 @@ type Hostel = {
     isTwilioConnected: boolean; createdAt: string; memberCounter: number;
 };
 
-const INPUT = "bg-slate-950/50 border border-white/10 text-white text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block w-full pl-9 p-2.5 placeholder-slate-500 transition-all";
-const MODAL_INPUT = "w-full rounded-xl border border-white/10 bg-slate-950/50 px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all";
+const INPUT = "bg-slate-950/50 border border-[#1f2937] text-white text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block w-full pl-9 p-2.5 placeholder-slate-500 transition-all";
+const MODAL_INPUT = "w-full rounded-xl border border-[#1f2937] bg-slate-950/50 px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all";
 const LABEL = "block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wider";
 
 export default function SuperAdminHostelsPage() {
@@ -114,8 +114,8 @@ export default function SuperAdminHostelsPage() {
                 </div>
             )}
 
-            <div className="bg-slate-900 border border-white/5 rounded-2xl overflow-hidden mt-8 shadow-2xl">
-                <div className="bg-white/5 p-4 border-b border-white/5 flex items-center justify-between">
+            <div className="bg-slate-900 border border-[#1f2937] rounded-2xl overflow-hidden mt-8 shadow-2xl">
+                <div className="bg-[#0b1220] p-4 border-b border-[#1f2937] flex items-center justify-between">
                     <div className="relative w-full max-w-sm flex items-center gap-2">
                         <div className="relative w-full">
                             <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2"/>
@@ -127,7 +127,7 @@ export default function SuperAdminHostelsPage() {
                                 className={INPUT}
                             />
                         </div>
-                        <button onClick={fetchHostels} className="p-2.5 rounded-xl border border-white/10 hover:bg-white/5 transition-all">
+                        <button onClick={fetchHostels} className="p-2.5 rounded-xl border border-[#1f2937] hover:bg-[#0b1220] transition-all">
                             <RefreshCw className="h-4 w-4 text-slate-400 cursor-pointer" />
                         </button>
                     </div>
@@ -182,7 +182,7 @@ export default function SuperAdminHostelsPage() {
                                         <div className="mt-3 flex flex-col sm:flex-row flex-wrap gap-2">
                                             <button
                                                 onClick={() => { setResetTarget(h); setNewPassword(""); setShowPass(false); }}
-                                                className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-white/10 transition-all shadow-sm w-max"
+                                                className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-[#f9fafb] border border-[#1f2937] transition-all shadow-sm w-max"
                                             >
                                                 <KeyRound className="w-3.5 h-3.5 text-amber-500" />
                                                 Reset Password
@@ -229,10 +229,10 @@ export default function SuperAdminHostelsPage() {
             {resetTarget && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setResetTarget(null)} />
-                    <div className="relative bg-slate-900 border border-white/10 rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
-                        <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                    <div className="relative bg-slate-900 border border-[#1f2937] rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+                        <div className="flex items-center justify-between border-b border-[#1f2937] pb-3">
                             <h2 className="text-lg font-bold text-white tracking-tight">Reset Password</h2>
-                            <button onClick={() => setResetTarget(null)} className="text-slate-500 hover:text-white transition-colors"><X className="h-5 w-5" /></button>
+                            <button onClick={() => setResetTarget(null)} className="text-slate-500 hover:text-[#f9fafb] transition-colors"><X className="h-5 w-5" /></button>
                         </div>
                         <p className="text-sm text-gray-400">Setting new password for <span className="font-semibold text-white">{resetTarget.hostelName}</span> ({resetTarget.adminEmail}).</p>
                         <form onSubmit={handleResetPassword} className="space-y-4 pt-2">
@@ -248,7 +248,7 @@ export default function SuperAdminHostelsPage() {
                                         placeholder="Min 8 characters"
                                         className={MODAL_INPUT}
                                     />
-                                    <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">
+                                    <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#f9fafb]">
                                         <span className="text-xs font-semibold">{showPass ? "HIDE" : "SHOW"}</span>
                                     </button>
                                 </div>

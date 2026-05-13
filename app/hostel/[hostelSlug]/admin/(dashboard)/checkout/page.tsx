@@ -5,8 +5,8 @@ import { UserX, Search, RefreshCw, ChevronLeft, ChevronRight, RotateCcw, X } fro
 
 type Member = { _id: string; memberId: string; name: string; phone: string; blockNo: string; floorNo: string; roomNo: string; planId: any; planEndDate: string; totalFee: number; balance: number; };
 type Plan = { _id: string; name: string; durationDays: number; price: number };
-const INPUT = "w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500";
-const LABEL = "block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1";
+const INPUT = "w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-[#0b1220] px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500";
+const LABEL = "block text-xs font-medium text-[#9ca3af] mb-1";
 
 export default function CheckoutPage() {
     const [members, setMembers] = useState<Member[]>([]);
@@ -44,16 +44,16 @@ export default function CheckoutPage() {
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div><h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2"><UserX className="h-6 w-6 text-slate-500" />Checkout Audit</h1>
+                <div><h1 className="text-2xl font-bold text-[#f9fafb] flex items-center gap-2"><UserX className="h-6 w-6 text-slate-500" />Checkout Audit</h1>
                 <p className="text-sm text-slate-500">{total} checked out occupants</p></div>
                 <div className="flex items-center gap-2">
                     <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <input className="pl-9 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Search…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} /></div>
-                    <button onClick={fetch_} className="p-2 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700"><RefreshCw className="h-4 w-4 text-slate-500" /></button>
+                        <input className="pl-9 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-[#0b1220] text-sm w-52 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Search…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} /></div>
+                    <button onClick={fetch_} className="p-2 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-[#8b5cf6]/5"><RefreshCw className="h-4 w-4 text-slate-500" /></button>
                 </div>
             </div>
 
-            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+            <div className="rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
                         <thead className="bg-slate-50 dark:bg-slate-700/50 text-xs text-slate-500 uppercase tracking-wider">
@@ -91,7 +91,7 @@ export default function CheckoutPage() {
                         <button 
                             disabled={page <= 1} 
                             onClick={() => setPage(p => p - 1)} 
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:bg-slate-50 disabled:text-slate-400 dark:disabled:bg-slate-900/50 dark:disabled:text-slate-600 transition-colors font-medium shadow-sm"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#1f2937] bg-[#0b1220] text-[#f9fafb] hover:bg-slate-50 dark:hover:bg-slate-700 disabled:bg-slate-50 disabled:text-slate-400 dark:disabled:bg-slate-900/50 dark:disabled:text-slate-600 transition-colors font-medium shadow-sm"
                         >
                             <ChevronLeft className="h-4 w-4"/> Previous
                         </button>
@@ -109,8 +109,8 @@ export default function CheckoutPage() {
             {renewMember && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setRenewMember(null)} />
-                    <div className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
-                        <div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-slate-800 dark:text-white">Renew — {renewMember.name}</h2><button onClick={() => setRenewMember(null)}><X className="h-5 w-5 text-slate-400"/></button></div>
+                    <div className="relative bg-[#0b1220] rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+                        <div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-[#f9fafb]">Renew — {renewMember.name}</h2><button onClick={() => setRenewMember(null)}><X className="h-5 w-5 text-slate-400"/></button></div>
                         {error && <p className="text-sm text-red-500">{error}</p>}
                         <form onSubmit={handleRenew} className="space-y-4">
                             <div><label className={LABEL}>Plan</label>

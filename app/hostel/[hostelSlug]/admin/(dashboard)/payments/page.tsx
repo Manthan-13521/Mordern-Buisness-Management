@@ -74,7 +74,7 @@ export default function PaymentsPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <h1 className="text-2xl font-bold text-[#f9fafb] flex items-center gap-2">
                         <CreditCard className="h-6 w-6 text-sky-500"/>Payments
                     </h1>
                     <p className="text-sm text-slate-500">
@@ -88,7 +88,7 @@ export default function PaymentsPage() {
                 </div>
                 <div className="flex items-center gap-3">
                     <HostelBlockFilter />
-                    <button onClick={() => fetchPayments()} className="p-2 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 bg-white dark:bg-slate-800 shadow-sm">
+                    <button onClick={() => fetchPayments()} className="p-2 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-[#8b5cf6]/5 bg-[#0b1220] shadow-sm">
                         <RefreshCw className="h-4 w-4 text-slate-500"/>
                     </button>
                 </div>
@@ -100,7 +100,7 @@ export default function PaymentsPage() {
                         <thead className="bg-slate-950/50 backdrop-blur-md text-xs text-slate-400 uppercase tracking-wider">
                             <tr>{["Member","Plan","Amount","Method","Type","Date"].map(h=><th key={h} className="text-left px-4 py-3 whitespace-nowrap">{h}</th>)}</tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5 bg-background">
+                        <tbody className="divide-y divide-white/5 bg-[#0b1220]">
                             {loading ? Array.from({length:5}).map((_,i)=><tr key={i}>{Array.from({length:6}).map((_,j)=><td key={j} className="px-4 py-3"><div className="h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"/></td>)}</tr>)
                             : payments.length===0 ? <tr><td colSpan={6} className="px-4 py-12 text-center text-slate-400">No payments found{selectedBlock !== "all" ? ` for Block ${selectedBlock}` : ""}</td></tr>
                             : payments.map(p=>(

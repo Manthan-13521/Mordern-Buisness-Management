@@ -52,7 +52,7 @@ export default function LogsPage() {
                 <button
                     disabled={page <= 1}
                     onClick={() => setPage(p => p - 1)}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:bg-slate-50 disabled:text-slate-400 dark:disabled:bg-slate-900/50 dark:disabled:text-slate-600 transition-colors font-medium shadow-sm"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#1f2937] bg-[#0b1220] text-[#f9fafb] hover:bg-slate-50 dark:hover:bg-slate-700 disabled:bg-slate-50 disabled:text-slate-400 dark:disabled:bg-slate-900/50 dark:disabled:text-slate-600 transition-colors font-medium shadow-sm"
                 >
                     <ChevronLeft className="h-4 w-4"/> Previous
                 </button>
@@ -75,7 +75,7 @@ export default function LogsPage() {
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <h1 className="text-2xl font-bold text-[#f9fafb] flex items-center gap-2">
                         <History className="h-6 w-6 text-blue-500"/>
                         Activity Logs
                     </h1>
@@ -90,7 +90,7 @@ export default function LogsPage() {
                 </div>
                 <div className="flex items-center gap-3">
                     <HostelBlockFilter />
-                    <button onClick={fetchLogs} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm font-medium transition-colors bg-white dark:bg-slate-800 shadow-sm">
+                    <button onClick={fetchLogs} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm font-medium transition-colors bg-[#0b1220] shadow-sm">
                         <RefreshCw className={`h-4 w-4 text-slate-500 ${loading ? "animate-spin" : ""}`}/>
                         Refresh
                     </button>
@@ -113,10 +113,10 @@ export default function LogsPage() {
                 </button>
             </div>
 
-            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+            <div className="rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm whitespace-nowrap">
-                        <thead className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 font-medium border-b border-slate-100 dark:border-slate-700">
+                        <thead className="bg-[#020617]/50 text-slate-500 font-medium border-b border-slate-100 dark:border-slate-700">
                             {activeTab === "registrations" ? (
                                 <tr>
                                     <th className="px-6 py-4">Member Name</th>
@@ -150,7 +150,7 @@ export default function LogsPage() {
                                     <tr><td colSpan={5} className="px-6 py-12 text-center text-slate-400">{emptyLabel}</td></tr>
                                 ) : registrationLogs.map(log => (
                                     <tr key={log._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/20 transition-colors">
-                                        <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{log.memberName}</td>
+                                        <td className="px-6 py-4 font-medium text-[#f9fafb]">{log.memberName}</td>
                                         <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{log.roomNumber}</td>
                                         <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{new Date(log.join_date).toLocaleDateString("en-IN")}</td>
                                         <td className="px-6 py-4 text-slate-500 text-xs">{log.createdBy}</td>
@@ -162,7 +162,7 @@ export default function LogsPage() {
                                     <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400">{emptyLabel}</td></tr>
                                 ) : paymentLogs.map(log => (
                                     <tr key={log._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/20 transition-colors">
-                                        <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{log.memberName}</td>
+                                        <td className="px-6 py-4 font-medium text-[#f9fafb]">{log.memberName}</td>
                                         <td className="px-6 py-4 font-semibold text-emerald-600 dark:text-emerald-400">₹{log.amount}</td>
                                         <td className="px-6 py-4">
                                             <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${

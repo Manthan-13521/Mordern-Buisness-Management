@@ -60,11 +60,11 @@ export default function ExpiredMembersPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between flex-wrap gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <h1 className="text-2xl font-bold text-[#f9fafb] flex items-center gap-2">
                         <AlertCircle className="w-6 h-6 text-red-500" />
                         Expired Memberships
                     </h1>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    <p className="mt-1 text-sm text-[#9ca3af]">
                         {total} member{total !== 1 ? "s" : ""} with expired memberships
                     </p>
                 </div>
@@ -95,12 +95,12 @@ export default function ExpiredMembersPage() {
                 </div>
             ) : (
                 <>
-                    <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800 shadow">
-                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800 bg-background">
+                    <div className="overflow-x-auto rounded-xl border border-[#1f2937] shadow">
+                        <table className="min-w-full divide-y divide-[#1f2937] bg-[#0b1220]">
                             <thead className="bg-gray-50 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg">
                                 <tr>
                                     {["Member ID", "Name", "Phone", "Plan", "Expiry Date", "Days Expired", "QR Token (ID)"].map(h => (
-                                        <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{h}</th>
+                                        <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">{h}</th>
                                     ))}
                                 </tr>
                             </thead>
@@ -109,7 +109,7 @@ export default function ExpiredMembersPage() {
                                     <tr key={m._id} className="hover:bg-red-50/50 dark:hover:bg-red-900/10 transition-colors">
                                         <td className="px-4 py-3 text-sm font-mono font-medium text-blue-600 dark:text-blue-400 dark:text-indigo-400">{m.memberId}</td>
                                         <td className="px-4 py-3">
-                                            <div className="text-sm font-medium text-gray-900 dark:text-white">{m.name}</div>
+                                            <div className="text-sm font-medium text-[#f9fafb]">{m.name}</div>
                                             {m.age && <div className="text-xs text-gray-500">Age: {m.age}</div>}
                                         </td>
                                         <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{m.phone}</td>
@@ -142,7 +142,7 @@ export default function ExpiredMembersPage() {
                                 <button
                                     onClick={() => fetchExpired(page - 1)}
                                     disabled={page <= 1}
-                                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:bg-slate-50 disabled:text-slate-400 dark:disabled:bg-slate-900/50 dark:disabled:text-slate-600 transition-colors font-medium shadow-sm"
+                                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#1f2937] bg-[#0b1220] text-[#f9fafb] hover:bg-slate-50 dark:hover:bg-slate-700 disabled:bg-slate-50 disabled:text-slate-400 dark:disabled:bg-slate-900/50 dark:disabled:text-slate-600 transition-colors font-medium shadow-sm"
                                 >
                                     <ChevronLeft className="h-4 w-4" /> Previous
                                 </button>

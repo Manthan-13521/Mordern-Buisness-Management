@@ -90,38 +90,38 @@ export default function SuperAdminFeedbackPage() {
         <div className="flex flex-col gap-8 pb-10">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight text-white mb-2">User Reports & Feedback</h1>
-                <p className="text-neutral-400">Manage incoming bug reports, feature requests, and feedback.</p>
+                <p className="text-[#9ca3af]">Manage incoming bug reports, feature requests, and feedback.</p>
             </div>
 
             {/* Analytics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white/5 backdrop-blur-md border border-white/10 p-6 rounded-2xl">
-                    <p className="text-sm text-neutral-400 font-medium mb-1">Open Bugs</p>
+                <div className="bg-[#0b1220] backdrop-blur-md border border-[#1f2937] p-6 rounded-2xl">
+                    <p className="text-sm text-[#9ca3af] font-medium mb-1">Open Bugs</p>
                     <p className="text-3xl font-bold text-rose-400">{analytics.openBugs}</p>
                 </div>
-                <div className="bg-white/5 backdrop-blur-md border border-white/10 p-6 rounded-2xl">
-                    <p className="text-sm text-neutral-400 font-medium mb-1">Feature Requests</p>
+                <div className="bg-[#0b1220] backdrop-blur-md border border-[#1f2937] p-6 rounded-2xl">
+                    <p className="text-sm text-[#9ca3af] font-medium mb-1">Feature Requests</p>
                     <p className="text-3xl font-bold text-purple-400">{analytics.featureRequests}</p>
                 </div>
-                <div className="bg-white/5 backdrop-blur-md border border-white/10 p-6 rounded-2xl">
-                    <p className="text-sm text-neutral-400 font-medium mb-1">Total Resolved</p>
+                <div className="bg-[#0b1220] backdrop-blur-md border border-[#1f2937] p-6 rounded-2xl">
+                    <p className="text-sm text-[#9ca3af] font-medium mb-1">Total Resolved</p>
                     <p className="text-3xl font-bold text-emerald-400">{analytics.totalResolved}</p>
                 </div>
             </div>
 
             {/* Filters */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col md:flex-row gap-4 justify-between items-center backdrop-blur-md">
+            <div className="bg-[#0b1220] border border-[#1f2937] rounded-2xl p-4 flex flex-col md:flex-row gap-4 justify-between items-center backdrop-blur-md">
                 <input 
                     type="text" 
                     placeholder="Search messages or users..." 
-                    className="w-full md:w-96 bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                    className="w-full md:w-96 bg-black/40 border border-[#1f2937] rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                 />
                 
                 <div className="flex gap-4">
                     <select 
-                        className="bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                        className="bg-black/40 border border-[#1f2937] rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
                         value={filterType}
                         onChange={(e) => setFilterType(e.target.value)}
                     >
@@ -132,7 +132,7 @@ export default function SuperAdminFeedbackPage() {
                     </select>
 
                     <select 
-                        className="bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                        className="bg-black/40 border border-[#1f2937] rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
                         value={filterStatus}
                         onChange={(e) => setFilterStatus(e.target.value)}
                     >
@@ -147,26 +147,26 @@ export default function SuperAdminFeedbackPage() {
             {/* List */}
             <div className="flex flex-col gap-4">
                 {loading ? (
-                    <div className="text-neutral-400 text-center py-10">Loading reports...</div>
+                    <div className="text-[#9ca3af] text-center py-10">Loading reports...</div>
                 ) : filteredFeedbacks.length === 0 ? (
-                    <div className="text-neutral-400 text-center py-10 bg-white/5 border border-white/10 rounded-2xl">No reports found.</div>
+                    <div className="text-[#9ca3af] text-center py-10 bg-[#0b1220] border border-[#1f2937] rounded-2xl">No reports found.</div>
                 ) : (
                     filteredFeedbacks.map((fb) => (
-                        <div key={fb._id} className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 transition-all hover:bg-white/10">
+                        <div key={fb._id} className="bg-[#0b1220] backdrop-blur-md border border-[#1f2937] rounded-2xl p-6 transition-all hover:bg-[#8b5cf6]/10">
                             <div className="flex justify-between items-start mb-4">
                                 <div className="flex gap-3 items-center">
                                     <TypeBadge type={fb.type} />
                                     <h3 className="font-medium text-white">{fb.userName}</h3>
-                                    <span className="text-xs text-neutral-500">{new Date(fb.createdAt).toLocaleString()}</span>
+                                    <span className="text-xs text-[#6b7280]">{new Date(fb.createdAt).toLocaleString()}</span>
                                 </div>
                                 <StatusBadge status={fb.status} />
                             </div>
                             
-                            <p className="text-neutral-300 text-sm mb-4 bg-black/30 p-4 rounded-xl border border-white/5">{fb.message}</p>
+                            <p className="text-[#9ca3af] text-sm mb-4 bg-black/30 p-4 rounded-xl border border-[#1f2937]">{fb.message}</p>
                             
                             <div className="flex justify-between items-center text-sm">
                                 <div className="flex gap-4">
-                                    <span className="text-neutral-500">Page: <span className="text-neutral-300">{fb.page}</span></span>
+                                    <span className="text-[#6b7280]">Page: <span className="text-[#9ca3af]">{fb.page}</span></span>
                                     {fb.screenshot && (
                                         <a href={fb.screenshot} target="_blank" rel="noreferrer" className="text-blue-400 hover:text-blue-300 underline underline-offset-2">
                                             View Screenshot
@@ -176,7 +176,7 @@ export default function SuperAdminFeedbackPage() {
                                 
                                 <div className="flex items-center gap-3">
                                     <select 
-                                        className="bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-neutral-300 focus:outline-none focus:border-blue-500"
+                                        className="bg-black/60 border border-[#1f2937] rounded-lg px-2 py-1 text-xs text-[#9ca3af] focus:outline-none focus:border-blue-500"
                                         value={fb.status}
                                         onChange={(e) => handleUpdate(fb._id, { status: e.target.value })}
                                     >

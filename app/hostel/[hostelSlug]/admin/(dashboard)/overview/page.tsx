@@ -78,7 +78,7 @@ export default function OverviewPage() {
     );
 
     const Breadcrumb = () => (
-        <div className="flex flex-wrap items-center gap-2 text-sm font-bold text-slate-500 mb-6 bg-white dark:bg-slate-800 p-3 rounded-xl border-b-4 border-slate-200 dark:border-slate-700 shadow-sm w-full">
+        <div className="flex flex-wrap items-center gap-2 text-sm font-bold text-slate-500 mb-6 bg-[#0b1220] p-3 rounded-xl border-b-4 border-[#1f2937] shadow-sm w-full">
             <button onClick={() => setViewLevel("blocks")} className={`hover:text-blue-600 dark:text-blue-400 transition-colors flex items-center gap-1.5 ${viewLevel === "blocks" ? "text-blue-600 dark:text-blue-400" : ""}`}>
                 <Building2 className="w-4 h-4" /> Overview
             </button>
@@ -109,17 +109,17 @@ export default function OverviewPage() {
 
     return (
         <div className="max-w-6xl mx-auto space-y-6">
-            <h1 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight uppercase flex items-center gap-2">
+            <h1 className="text-2xl font-black text-[#f9fafb] tracking-tight uppercase flex items-center gap-2">
                 <span className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 p-2 rounded-lg text-white"><Building2 className="w-6 h-6"/></span>
                 Hostel Overview
             </h1>
             
             <Breadcrumb />
 
-            <div className="bg-slate-50 dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl min-h-[500px] flex flex-col p-6 relative overflow-hidden shadow-inner">
+            <div className="bg-[#020617] border-2 border-[#1f2937] rounded-2xl min-h-[500px] flex flex-col p-6 relative overflow-hidden shadow-inner">
                 
                 {viewLevel !== "blocks" && (
-                    <button onClick={goBack} className="absolute top-4 left-4 z-10 flex items-center gap-1.5 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 hover:border-indigo-500 text-slate-700 dark:text-slate-300 font-bold px-4 py-2 rounded-xl transition-all shadow-sm">
+                    <button onClick={goBack} className="absolute top-4 left-4 z-10 flex items-center gap-1.5 bg-[#0b1220] border-2 border-[#1f2937] hover:border-indigo-500 text-[#9ca3af] font-bold px-4 py-2 rounded-xl transition-all shadow-sm">
                         <ArrowLeft className="w-4 h-4" /> Back
                     </button>
                 )}
@@ -176,8 +176,8 @@ export default function OverviewPage() {
                                     </div>
                                     
                                     <div className="mt-6 text-center">
-                                        <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-widest group-hover:text-blue-600 dark:text-blue-400 transition-colors">Block {b.name}</h3>
-                                        <div className="mt-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase flex gap-4">
+                                        <h3 className="text-xl font-black text-[#f9fafb] uppercase tracking-widest group-hover:text-blue-600 dark:text-blue-400 transition-colors">Block {b.name}</h3>
+                                        <div className="mt-2 text-xs font-bold text-[#9ca3af] uppercase flex gap-4">
                                             <div className="flex flex-col"><span className="text-emerald-500 text-lg">{b.occupiedBeds}</span> Occupied</div>
                                             <div className="flex flex-col"><span className="text-rose-500 text-lg">{b.vacantBeds}</span> Vacant</div>
                                         </div>
@@ -201,9 +201,9 @@ export default function OverviewPage() {
                                 <div 
                                     key={f._id} 
                                     onClick={() => { setSelectedFloor(f); setViewLevel("rooms"); }}
-                                    className="w-[280px] sm:w-[360px] h-16 sm:h-20 bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-500 rounded flex justify-between items-center px-6 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-500/10 dark:hover:bg-indigo-900/40 hover:border-indigo-400 group transition-all"
+                                    className="w-[280px] sm:w-[360px] h-16 sm:h-20 bg-[#0b1220] border-2 border-slate-300 dark:border-slate-500 rounded flex justify-between items-center px-6 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-500/10 dark:hover:bg-indigo-900/40 hover:border-indigo-400 group transition-all"
                                 >
-                                    <span className="text-2xl font-black text-slate-800 dark:text-white group-hover:text-blue-600 dark:text-blue-400 transition-colors">{f.floorNo}</span>
+                                    <span className="text-2xl font-black text-[#f9fafb] group-hover:text-blue-600 dark:text-blue-400 transition-colors">{f.floorNo}</span>
                                     <div className="flex gap-4 text-xs font-bold uppercase tracking-wider text-right text-slate-500 group-hover:text-blue-500">
                                         <div className="flex flex-col"><span className="text-emerald-500 text-base">{f.occupiedBeds}</span> Inside</div>
                                         <div className="flex flex-col"><span className="text-rose-500 text-base">{f.vacantBeds}</span> Free</div>
@@ -231,11 +231,11 @@ export default function OverviewPage() {
                                     <div 
                                         key={r._id} 
                                         onClick={() => { setSelectedRoom(r); setViewLevel("beds"); }}
-                                        className={`group cursor-pointer bg-white dark:bg-slate-800 border-4 w-28 h-28 sm:w-32 sm:h-32 flex flex-col items-center justify-center transition-all hover:scale-105 shadow-md
+                                        className={`group cursor-pointer bg-[#0b1220] border-4 w-28 h-28 sm:w-32 sm:h-32 flex flex-col items-center justify-center transition-all hover:scale-105 shadow-md
                                             ${isFull ? 'border-emerald-400' : isEmpty ? 'border-rose-400' : 'border-indigo-400'}
                                         `}
                                     >
-                                        <span className="text-3xl font-black text-slate-800 dark:text-white mb-2">{r.roomNo}</span>
+                                        <span className="text-3xl font-black text-[#f9fafb] mb-2">{r.roomNo}</span>
                                         <div className="flex justify-center gap-1 px-2 flex-wrap">
                                             {Array.from({length: r.capacity}).map((_, i) => (
                                                 <div key={i} className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${i < r.occupiedBeds ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-600 border border-slate-300 dark:border-slate-500'}`}></div>
@@ -254,7 +254,7 @@ export default function OverviewPage() {
                         <p className="text-slate-500 font-bold tracking-widest uppercase mb-6 text-sm text-center w-full">Room {selectedRoom.roomNo} Space</p>
                         
                         {/* Room Boundary Box */}
-                        <div className="bg-white dark:bg-slate-800 border-[6px] border-slate-400 dark:border-slate-600 rounded-xl p-8 sm:p-16 max-w-2xl w-full flex flex-wrap gap-10 items-center justify-center shadow-inner relative min-h-[300px]">
+                        <div className="bg-[#0b1220] border-[6px] border-slate-400 dark:border-slate-600 rounded-xl p-8 sm:p-16 max-w-2xl w-full flex flex-wrap gap-10 items-center justify-center shadow-inner relative min-h-[300px]">
                             {/* A door indicator just for architectural feel */}
                             <div className="absolute bottom-[-6px] left-[50px] w-16 h-[6px] bg-amber-500"></div>
 
@@ -291,14 +291,14 @@ export default function OverviewPage() {
             {showMemberDetails && showMemberDetails.member && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowMemberDetails(null)} />
-                    <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col border-4 border-slate-300 dark:border-slate-600">
-                        <div className="p-4 bg-slate-100 dark:bg-slate-900 flex justify-between items-center border-b-2 border-slate-200 dark:border-slate-700">
-                            <h3 className="font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest text-sm">Bed Profile</h3>
+                    <div className="relative bg-[#0b1220] rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col border-4 border-slate-300 dark:border-slate-600">
+                        <div className="p-4 bg-[#020617] flex justify-between items-center border-b-2 border-[#1f2937]">
+                            <h3 className="font-black text-[#9ca3af] uppercase tracking-widest text-sm">Bed Profile</h3>
                             <button onClick={() => setShowMemberDetails(null)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
                         </div>
                         <div className="p-6 flex flex-col items-center">
                             {/* Enlarged Photo Container */}
-                            <div className="h-32 w-32 sm:h-40 sm:w-40 rounded-2xl border-4 border-indigo-500/20 shadow-xl flex items-center justify-center bg-slate-50 dark:bg-slate-900 overflow-hidden mb-4 relative">
+                            <div className="h-32 w-32 sm:h-40 sm:w-40 rounded-2xl border-4 border-indigo-500/20 shadow-xl flex items-center justify-center bg-[#020617] overflow-hidden mb-4 relative">
                                 {showMemberDetails.member.photoUrl ? (
                                     <img src={showMemberDetails.member.photoUrl} alt="Photo" className="h-full w-full object-cover" />
                                 ) : (
@@ -306,7 +306,7 @@ export default function OverviewPage() {
                                 )}
                             </div>
                             
-                            <p className="font-black text-2xl text-slate-800 dark:text-white uppercase leading-tight text-center">{showMemberDetails.member.name}</p>
+                            <p className="font-black text-2xl text-[#f9fafb] uppercase leading-tight text-center">{showMemberDetails.member.name}</p>
                             <p className="text-sm font-bold text-slate-500 mt-1 mb-6 text-center">{showMemberDetails.member.phone}</p>
                             
                             {/* Balance Indicator Bubble */}
@@ -314,12 +314,12 @@ export default function OverviewPage() {
                                 {showMemberDetails.member.balance < 0 ? `Dues: ₹${Math.abs(showMemberDetails.member.balance)}` : `Advance: ₹${Math.max(0, showMemberDetails.member.balance)}`}
                             </div>
                             
-                            <hr className="w-full border-slate-200 dark:border-slate-700 border-dashed mb-6" />
+                            <hr className="w-full border-[#1f2937] border-dashed mb-6" />
                             
                             <div className="grid grid-cols-2 gap-4 w-full">
-                                <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-center">
+                                <div className="bg-[#020617] p-3 rounded-xl border border-[#1f2937] text-center">
                                     <p className="text-[10px] uppercase font-bold text-slate-400">Join Date</p>
-                                    <p className="font-black text-sm text-slate-700 dark:text-slate-300">
+                                    <p className="font-black text-sm text-[#9ca3af]">
                                         {showMemberDetails.member.checkInDate ? new Date(showMemberDetails.member.checkInDate).toLocaleDateString("en-IN") : "—"}
                                     </p>
                                 </div>

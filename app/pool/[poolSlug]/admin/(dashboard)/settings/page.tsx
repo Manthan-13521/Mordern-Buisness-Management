@@ -130,8 +130,8 @@ export default function SettingsPage() {
     return (
         <div className="space-y-10 max-w-4xl">
             <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                <h1 className="text-2xl font-bold text-[#f9fafb]">Settings</h1>
+                <p className="mt-1 text-sm text-[#9ca3af]">
                     Manage system preferences, pool capacity, and data backups.
                 </p>
             </div>
@@ -139,22 +139,22 @@ export default function SettingsPage() {
             {/* Account Overview */}
             <div className="grid grid-cols-1 gap-x-8 gap-y-10 md:grid-cols-3">
                 <div>
-                    <h2 className="text-base font-semibold leading-7 text-gray-900 dark:text-white">Account Overview</h2>
-                    <p className="mt-1 text-sm leading-6 text-gray-600 dark:text-gray-400">Essential account and system details.</p>
+                    <h2 className="text-base font-semibold leading-7 text-[#f9fafb]">Account Overview</h2>
+                    <p className="mt-1 text-sm leading-6 text-[#9ca3af]">Essential account and system details.</p>
                 </div>
                 <div className="md:col-span-2">
                     <div className="rounded-xl border border-white/10 bg-slate-900 p-6 shadow-lg">
                         <div className="grid grid-cols-2 gap-y-6 gap-x-4 text-sm">
                             <div>
-                                <p className="text-gray-500 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">Pool Slug</p>
+                                <p className="text-[#9ca3af] text-xs font-semibold uppercase tracking-wider">Pool Slug</p>
                                 <p className="font-mono font-medium text-white mt-1">{poolInfo?.slug || "—"}</p>
                             </div>
                             <div>
-                                <p className="text-gray-500 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">Admin Email</p>
+                                <p className="text-[#9ca3af] text-xs font-semibold uppercase tracking-wider">Admin Email</p>
                                 <p className="font-medium text-white mt-1">{poolInfo?.adminEmail || "—"}</p>
                             </div>
                             <div>
-                                <p className="text-gray-500 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">WhatsApp Status</p>
+                                <p className="text-[#9ca3af] text-xs font-semibold uppercase tracking-wider">WhatsApp Status</p>
                                 <div className="mt-1">
                                     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${poolInfo?.isTwilioConnected ? "bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20" : "bg-white/5 text-gray-400 ring-1 ring-white/10"}`}>
                                         {poolInfo?.isTwilioConnected ? "Connected" : "Not Connected"}
@@ -166,15 +166,15 @@ export default function SettingsPage() {
                 </div>
             </div>
 
-            <hr className="border-gray-200 dark:border-gray-800" />
+            <hr className="border-[#1f2937]" />
 
             {/* Subscription Section */}
             <div className="grid grid-cols-1 gap-x-8 gap-y-10 md:grid-cols-3">
                 <div>
-                    <h2 className="text-base font-semibold leading-7 text-gray-900 dark:text-white flex items-center gap-2">
+                    <h2 className="text-base font-semibold leading-7 text-[#f9fafb] flex items-center gap-2">
                         <Sparkles className="w-5 h-5 text-sky-500" /> Subscription
                     </h2>
-                    <p className="mt-1 text-sm leading-6 text-gray-600 dark:text-gray-400">Manage your SaaS licensing and billing.</p>
+                    <p className="mt-1 text-sm leading-6 text-[#9ca3af]">Manage your SaaS licensing and billing.</p>
                 </div>
                 <div className="md:col-span-2">
                     <div className="rounded-xl border border-sky-500/20 bg-slate-900 p-6 shadow-lg relative overflow-hidden">
@@ -183,11 +183,11 @@ export default function SettingsPage() {
                         </div>
                         <div className="grid grid-cols-2 gap-y-6 gap-x-4 text-sm relative z-10">
                             <div>
-                                <p className="text-gray-500 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">Current Plan</p>
+                                <p className="text-[#9ca3af] text-xs font-semibold uppercase tracking-wider">Current Plan</p>
                                 <p className="font-bold text-white mt-1 capitalize text-lg">{subStatus?.planType || "—"}</p>
                             </div>
                             <div>
-                                <p className="text-gray-500 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">Status</p>
+                                <p className="text-[#9ca3af] text-xs font-semibold uppercase tracking-wider">Status</p>
                                 <div className="mt-1">
                                     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold uppercase tracking-wider ${subStatus?.status === "active" ? "bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20" : "bg-red-500/10 text-red-400 ring-1 ring-red-500/20"}`}>
                                         {subStatus?.status || "—"}
@@ -195,7 +195,7 @@ export default function SettingsPage() {
                                 </div>
                             </div>
                             <div>
-                                <p className="text-gray-500 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">Expiry Date</p>
+                                <p className="text-[#9ca3af] text-xs font-semibold uppercase tracking-wider">Expiry Date</p>
                                 <p className="font-medium text-white mt-1">
                                     {subStatus?.expiryDate ? (
                                         <>
@@ -220,18 +220,18 @@ export default function SettingsPage() {
                 </div>
             </div>
 
-            <hr className="border-gray-200 dark:border-gray-800" />
+            <hr className="border-[#1f2937]" />
 
             {/* Appearance */}
             <div className="grid grid-cols-1 gap-x-8 gap-y-10 md:grid-cols-3">
                 <div>
-                    <h2 className="text-base font-semibold leading-7 text-gray-900 dark:text-white">Appearance</h2>
-                    <p className="mt-1 text-sm leading-6 text-gray-600 dark:text-gray-400">Customize how the application looks.</p>
+                    <h2 className="text-base font-semibold leading-7 text-[#f9fafb]">Appearance</h2>
+                    <p className="mt-1 text-sm leading-6 text-[#9ca3af]">Customize how the application looks.</p>
                 </div>
                 <div className="md:col-span-2">
                     <div className="rounded-xl border border-white/10 bg-slate-900 p-6 shadow-lg">
                         <fieldset>
-                            <legend className="text-sm font-semibold leading-6 text-gray-900 dark:text-white">Theme Preference</legend>
+                            <legend className="text-sm font-semibold leading-6 text-[#f9fafb]">Theme Preference</legend>
                             <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 {(["light", "dark", "system"] as const).map((t) => (
                                     <label key={t} className={`relative flex cursor-pointer rounded-lg border p-4 shadow-sm transition-all ${theme === t ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500" : "border-white/10 bg-white/5 hover:bg-white/10"}`}>
@@ -248,15 +248,15 @@ export default function SettingsPage() {
                 </div>
             </div>
 
-            <hr className="border-gray-200 dark:border-gray-800" />
+            <hr className="border-[#1f2937]" />
 
             {/* Printing Settings */}
             <div className="grid grid-cols-1 gap-x-8 gap-y-10 md:grid-cols-3">
                 <div>
-                    <h2 className="text-base font-semibold leading-7 text-gray-900 dark:text-white flex items-center gap-2">
+                    <h2 className="text-base font-semibold leading-7 text-[#f9fafb] flex items-center gap-2">
                         <Printer className="w-5 h-5 text-teal-500" /> Printing Settings
                     </h2>
-                    <p className="mt-1 text-sm leading-6 text-gray-600 dark:text-gray-400">
+                    <p className="mt-1 text-sm leading-6 text-[#9ca3af]">
                         Configure thermal printer for receipt printing via RawBT app.
                     </p>
                 </div>
@@ -346,17 +346,17 @@ export default function SettingsPage() {
                 </div>
             </div>
 
-            <hr className="border-gray-200 dark:border-gray-800" />
+            <hr className="border-[#1f2937]" />
 
             {isAdmin && (
                 <>
                     {/* Pool Capacity */}
                     <div className="grid grid-cols-1 gap-x-8 gap-y-10 md:grid-cols-3">
                         <div>
-                            <h2 className="text-base font-semibold leading-7 text-gray-900 dark:text-white flex items-center gap-2">
+                            <h2 className="text-base font-semibold leading-7 text-[#f9fafb] flex items-center gap-2">
                                 <Users className="w-5 h-5 text-blue-500" /> Pool Capacity
                             </h2>
-                            <p className="mt-1 text-sm leading-6 text-gray-600 dark:text-gray-400">
+                            <p className="mt-1 text-sm leading-6 text-[#9ca3af]">
                                 Set maximum swimmer capacity. Entry will be blocked when the pool is full.
                             </p>
                         </div>
@@ -411,22 +411,22 @@ export default function SettingsPage() {
                         </div>
                     </div>
 
-                    <hr className="border-gray-200 dark:border-gray-800" />
+                    <hr className="border-[#1f2937]" />
 
                     {/* Data Backup */}
                     <div className="grid grid-cols-1 gap-x-8 gap-y-10 md:grid-cols-3">
                         <div>
-                            <h2 className="text-base font-semibold leading-7 text-gray-900 dark:text-white flex items-center gap-2">
+                            <h2 className="text-base font-semibold leading-7 text-[#f9fafb] flex items-center gap-2">
                                 <HardDrive className="w-5 h-5 text-blue-500" /> Data Management
                             </h2>
-                            <p className="mt-1 text-sm leading-6 text-gray-600 dark:text-gray-400">
+                            <p className="mt-1 text-sm leading-6 text-[#9ca3af]">
                                 Export database backups to your local device or directly push securely synchronized data strictly adhering to a 1-year retention window to AWS S3.
                             </p>
                         </div>
                         <div className="md:col-span-2">
                             <div className="rounded-xl border border-white/10 bg-slate-900 p-6 shadow-lg space-y-4">
-                                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Database Backup & Sync</h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 pb-2">
+                                <h3 className="text-sm font-semibold text-[#f9fafb]">Database Backup & Sync</h3>
+                                <p className="text-sm text-[#9ca3af] pb-2">
                                     Local exports download directly to your computer. AWS backups securely sync to your dedicated S3 cloud storage.
                                 </p>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

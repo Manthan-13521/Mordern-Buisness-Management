@@ -34,33 +34,33 @@ function CreateModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-md rounded-2xl bg-background shadow-2xl p-6 border border-gray-100 dark:border-gray-800">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Create Competition</h2>
+            <div className="w-full max-w-md rounded-2xl bg-[#0b1220] shadow-2xl p-6 border border-[#1f2937]">
+                <h2 className="text-lg font-semibold text-[#f9fafb] mb-4">Create Competition</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
                         <input required type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
                             placeholder="e.g. 100m Freestyle Sprint"
-                            className="block w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-background shadow-sm px-3 py-2 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500" />
+                            className="block w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-[#0b1220] shadow-sm px-3 py-2 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500" />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date</label>
                         <input required type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })}
-                            className="block w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-background shadow-sm px-3 py-2 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500" />
+                            className="block w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-[#0b1220] shadow-sm px-3 py-2 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500" />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
                         <input required type="text" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}
                             placeholder="e.g. Junior, Senior, Open"
-                            className="block w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-background shadow-sm px-3 py-2 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500" />
+                            className="block w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-[#0b1220] shadow-sm px-3 py-2 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500" />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes <span className="text-gray-400">(optional)</span></label>
                         <input type="text" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })}
-                            className="block w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-background shadow-sm px-3 py-2 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500" />
+                            className="block w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-[#0b1220] shadow-sm px-3 py-2 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500" />
                     </div>
                     <div className="flex justify-end gap-3 pt-2">
-                        <button type="button" onClick={onClose} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">Cancel</button>
+                        <button type="button" onClick={onClose} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-[#8b5cf6]/5">Cancel</button>
                         <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 px-4 py-2 text-sm font-medium text-white hover:bg-blue-50 dark:hover:bg-blue-500/100 disabled:opacity-60">
                             {saving && <RefreshCw className="h-4 w-4 animate-spin" />} Create
                         </button>
@@ -138,7 +138,7 @@ function CompetitionDetail({ comp, onRefresh }: { comp: Competition; onRefresh: 
         <div className="space-y-4">
             <div className="flex items-start justify-between">
                 <div>
-                    <h3 className="text-base font-semibold text-gray-900 dark:text-white">{comp.name}</h3>
+                    <h3 className="text-base font-semibold text-[#f9fafb]">{comp.name}</h3>
                     <p className="text-sm text-gray-500">{comp.category} · {new Date(comp.date).toLocaleDateString("en-IN")}</p>
                 </div>
                 {!comp.isCompleted && (
@@ -164,7 +164,7 @@ function CompetitionDetail({ comp, onRefresh }: { comp: Competition; onRefresh: 
                                 <span className={`text-lg ${medalColors[w.position - 1] ?? "text-gray-400"}`}>
                                     {w.position === 1 ? "🥇" : w.position === 2 ? "🥈" : w.position === 3 ? "🥉" : `#${w.position}`}
                                 </span>
-                                <p className="flex-1 text-sm font-medium text-gray-900 dark:text-white">{w.name}</p>
+                                <p className="flex-1 text-sm font-medium text-[#f9fafb]">{w.name}</p>
                                 {w.timing && <p className="text-xs text-gray-500">{w.timing}s</p>}
                                 {w.prize && <p className="text-xs text-blue-600 dark:text-blue-400 dark:text-indigo-400 font-medium">{w.prize}</p>}
                             </div>
@@ -185,13 +185,13 @@ function CompetitionDetail({ comp, onRefresh }: { comp: Competition; onRefresh: 
                             <div className="grid grid-cols-3 gap-2">
                                 <input type="text" placeholder="Winner name" value={w.name}
                                     onChange={e => { const arr = [...winners]; arr[i] = { ...arr[i], name: e.target.value }; setWinners(arr); }}
-                                    className="col-span-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg px-2.5 py-1.5 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500" />
+                                    className="col-span-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg px-2.5 py-1.5 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500" />
                                 <input type="number" step="0.01" placeholder="Time (s)" value={w.timing}
                                     onChange={e => { const arr = [...winners]; arr[i] = { ...arr[i], timing: e.target.value }; setWinners(arr); }}
-                                    className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg px-2.5 py-1.5 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500" />
+                                    className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg px-2.5 py-1.5 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500" />
                                 <input type="text" placeholder="Prize (opt)" value={w.prize}
                                     onChange={e => { const arr = [...winners]; arr[i] = { ...arr[i], prize: e.target.value }; setWinners(arr); }}
-                                    className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg px-2.5 py-1.5 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500" />
+                                    className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg px-2.5 py-1.5 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500" />
                             </div>
                         </div>
                     ))}
@@ -227,7 +227,7 @@ function CompetitionDetail({ comp, onRefresh }: { comp: Competition; onRefresh: 
                 <div className="flex gap-2 pt-2">
                     <input type="text" placeholder="Add participant name…" value={newParticipant} onChange={e => setNewParticipant(e.target.value)}
                         onKeyDown={e => e.key === "Enter" && addParticipant()}
-                        className="flex-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500" />
+                        className="flex-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg px-3 py-2 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500" />
                     <button onClick={addParticipant} disabled={adding || !newParticipant.trim()}
                         className="rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 px-4 py-2 text-sm font-medium text-white hover:bg-blue-50 dark:hover:bg-blue-500/100 disabled:opacity-50">
                         {adding ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
@@ -280,8 +280,8 @@ export default function CompetitionsPage() {
             {/* Header */}
             <div className="sm:flex sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Competitions</h1>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{total} event{total !== 1 ? "s" : ""}</p>
+                    <h1 className="text-2xl font-semibold text-[#f9fafb]">Competitions</h1>
+                    <p className="mt-1 text-sm text-[#9ca3af]">{total} event{total !== 1 ? "s" : ""}</p>
                 </div>
                 <button onClick={() => setShowModal(true)}
                     className="mt-4 sm:mt-0 inline-flex items-center gap-1.5 rounded-md bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-50 dark:hover:bg-blue-500/100">
@@ -293,7 +293,7 @@ export default function CompetitionsPage() {
             <div className="flex gap-1 p-1 bg-gray-100 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg rounded-lg w-fit">
                 {(["all", "upcoming", "completed"] as const).map(f => (
                     <button key={f} onClick={() => setFilter(f)}
-                        className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors capitalize ${filter === f ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+                        className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors capitalize ${filter === f ? "bg-white dark:bg-gray-700 text-[#f9fafb] shadow-sm" : "text-[#9ca3af] hover:text-gray-700 dark:hover:text-gray-300"}`}>
                         {f}
                     </button>
                 ))}
@@ -305,16 +305,16 @@ export default function CompetitionsPage() {
                     {loading ? (
                         <div className="text-center py-10"><RefreshCw className="animate-spin h-5 w-5 mx-auto text-blue-500" /></div>
                     ) : competitions.length === 0 ? (
-                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-background py-16 text-center">
+                        <div className="rounded-xl border border-[#1f2937] bg-[#0b1220] py-16 text-center">
                             <Trophy className="h-10 w-10 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
                             <p className="text-gray-500 text-sm">No competitions yet.</p>
                         </div>
                     ) : competitions.map(c => (
                         <div key={c._id} onClick={() => setSelected(c)}
-                            className={`rounded-xl border bg-background p-4 cursor-pointer hover:shadow-md transition-all ${selected?._id === c._id ? "border-indigo-500 ring-1 ring-indigo-500" : "border-gray-200 dark:border-gray-800"}`}>
+                            className={`rounded-xl border bg-[#0b1220] p-4 cursor-pointer hover:shadow-md transition-all ${selected?._id === c._id ? "border-indigo-500 ring-1 ring-indigo-500" : "border-[#1f2937]"}`}>
                             <div className="flex items-start justify-between">
                                 <div className="flex-1 min-w-0">
-                                    <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">{c.name}</p>
+                                    <p className="font-semibold text-[#f9fafb] text-sm truncate">{c.name}</p>
                                     <p className="text-xs text-gray-500 mt-0.5">{c.category}</p>
                                 </div>
                                 {c.isCompleted
@@ -341,7 +341,7 @@ export default function CompetitionsPage() {
                 </div>
 
                 {/* Detail Panel */}
-                <div className="lg:col-span-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-background shadow-sm p-5">
+                <div className="lg:col-span-3 rounded-xl border border-[#1f2937] bg-[#0b1220] shadow-sm p-5">
                     {selected ? (
                         <CompetitionDetail comp={selected} onRefresh={refreshSelected} />
                     ) : (

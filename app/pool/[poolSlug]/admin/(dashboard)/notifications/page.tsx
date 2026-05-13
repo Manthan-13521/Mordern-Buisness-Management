@@ -67,7 +67,7 @@ export default function NotificationsPage() {
         <div className="space-y-6">
             <div className="sm:flex sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Notifications</h1>
+                    <h1 className="text-2xl font-semibold text-[#f9fafb]">Notifications</h1>
                     <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
                         View history of all WhatsApp & SMS reminders sent to members.
                     </p>
@@ -75,7 +75,7 @@ export default function NotificationsPage() {
                 <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none flex space-x-3">
                     <button
                         onClick={fetchLogs}
-                        className="inline-flex items-center rounded-md bg-background px-3 py-2 text-sm font-semibold text-gray-900 dark:text-gray-300 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all font-medium"
+                        className="inline-flex items-center rounded-md bg-[#0b1220] px-3 py-2 text-sm font-semibold text-gray-900 dark:text-gray-300 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all font-medium"
                     >
                         <RefreshCw className="-ml-0.5 mr-1.5 h-4 w-4" />
                         Refresh
@@ -91,7 +91,7 @@ export default function NotificationsPage() {
                 </div>
             </div>
 
-            <div className="mt-6 flex flex-wrap items-center gap-4 bg-background/50 p-4 rounded-xl border border-gray-200 dark:border-gray-800">
+            <div className="mt-6 flex flex-wrap items-center gap-4 bg-[#0b1220]/50 p-4 rounded-xl border border-[#1f2937]">
                 <div className="flex items-center gap-2">
                     <label htmlFor="filter" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                         Filter by Alert Type:
@@ -100,7 +100,7 @@ export default function NotificationsPage() {
                         id="filter"
                         value={filterType}
                         onChange={(e) => setFilterType(e.target.value)}
-                        className="block w-full rounded-md border border-gray-300 dark:border-gray-700 py-1.5 pl-3 pr-10 text-gray-900 focus:ring-2 focus:ring-blue-500 sm:text-sm sm:leading-6 bg-background shadow-sm dark:text-gray-100"
+                        className="block w-full rounded-md border border-gray-300 dark:border-gray-700 py-1.5 pl-3 pr-10 text-gray-900 focus:ring-2 focus:ring-blue-500 sm:text-sm sm:leading-6 bg-[#0b1220] shadow-sm dark:text-gray-100"
                     >
                         <option value="all">All Notifications</option>
                         <option value="expiry_next_day">Next Day Expiry Alerts</option>
@@ -118,18 +118,18 @@ export default function NotificationsPage() {
                     <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
                         <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg dark:ring-white/10">
                             <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-800">
-                                <thead className="bg-background">
+                                <thead className="bg-[#0b1220]">
                                     <tr>
-                                        <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-white sm:pl-6">Date</th>
-                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Member</th>
-                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Phone</th>
-                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Module</th>
-                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Type</th>
-                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white max-w-xs">Message</th>
-                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Status</th>
+                                        <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-[#f9fafb] sm:pl-6">Date</th>
+                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-[#f9fafb]">Member</th>
+                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-[#f9fafb]">Phone</th>
+                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-[#f9fafb]">Module</th>
+                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-[#f9fafb]">Type</th>
+                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-[#f9fafb] max-w-xs">Message</th>
+                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-[#f9fafb]">Status</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-200 bg-background dark:divide-gray-800">
+                                <tbody className="divide-y divide-gray-200 bg-[#0b1220] dark:divide-gray-800">
                                     {loading ? (
                                         <tr><td colSpan={7} className="py-10 text-center text-gray-500">Loading logs...</td></tr>
                                     ) : (filterType === "all" ? logs : logs.filter(l => l.actionType === filterType)).length === 0 ? (
@@ -140,7 +140,7 @@ export default function NotificationsPage() {
                                                 <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-500 sm:pl-6">
                                                     {new Date(log.date).toLocaleString()}
                                                 </td>
-                                                <td className="whitespace-nowrap px-3 py-4 text-sm font-medium text-gray-900 dark:text-white">
+                                                <td className="whitespace-nowrap px-3 py-4 text-sm font-medium text-[#f9fafb]">
                                                     <div className="flex flex-col">
                                                         <span>{log.memberId?.name || "N/A"}</span>
                                                         <span className="text-xs text-gray-500">{log.memberId?.memberId}</span>

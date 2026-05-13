@@ -32,18 +32,18 @@ async function DashboardStats({ poolId, isAdmin, memberType }: { poolId: string,
             {stats.map((item) => (
                 <div
                     key={item.name}
-                    className="relative overflow-hidden rounded-xl bg-background px-4 pb-12 pt-5 shadow-sm sm:px-6 sm:pt-6 border border-gray-200 dark:border-gray-800"
+                    className="relative overflow-hidden rounded-2xl bg-[#0b1220] px-4 pb-12 pt-5 shadow-sm sm:px-6 sm:pt-6 border border-[#1f2937]"
                 >
                     <dt>
                         <div className={`absolute rounded-md ${item.color} p-3`}>
                             <item.icon className="h-6 w-6 text-white" aria-hidden="true" />
                         </div>
-                        <p className="ml-16 line-clamp-2 text-sm font-medium leading-tight text-gray-500 dark:text-gray-400">
+                        <p className="ml-16 line-clamp-2 text-sm font-medium leading-tight text-[#9ca3af]">
                             {item.name}
                         </p>
                     </dt>
                     <dd className="ml-16 flex items-baseline pb-6 sm:pb-7">
-                        <p className="text-2xl font-semibold text-gray-900 dark:text-white">{item.stat}</p>
+                        <p className="text-2xl font-semibold text-[#f9fafb]">{item.stat}</p>
                     </dd>
                 </div>
             ))}
@@ -63,26 +63,26 @@ async function SystemHealth() {
     };
 
     return (
-        <div className="rounded-xl bg-background shadow-sm p-6 border border-gray-200 dark:border-gray-800">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <div className="rounded-2xl bg-[#0b1220] shadow-sm p-6 border border-[#1f2937]">
+            <h2 className="text-lg font-semibold text-[#f9fafb] mb-4 flex items-center gap-2">
                 <Heart className="w-5 h-5 text-rose-500" /> System Health
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
                 <div className="flex flex-col">
-                    <span className="text-gray-500 text-xs uppercase font-medium">DB Status</span>
-                    <span className={`font-semibold mt-1 ${health.database?.status === "connected" ? "text-green-600" : "text-red-500"}`}>{health.database?.status}</span>
+                    <span className="text-[#9ca3af] text-xs uppercase font-medium">DB Status</span>
+                    <span className={`font-semibold mt-1 ${health.database?.status === "connected" ? "text-green-400" : "text-red-400"}`}>{health.database?.status}</span>
                 </div>
                 <div className="flex flex-col">
-                    <span className="text-gray-500 text-xs uppercase font-medium">Uptime</span>
-                    <span className="font-semibold mt-1 text-gray-900 dark:text-white">{health.system?.uptime}</span>
+                    <span className="text-[#9ca3af] text-xs uppercase font-medium">Uptime</span>
+                    <span className="font-semibold mt-1 text-[#f9fafb]">{health.system?.uptime}</span>
                 </div>
                 <div className="flex flex-col">
-                    <span className="text-gray-500 text-xs uppercase font-medium">Heap Memory</span>
-                    <span className="font-semibold mt-1 text-gray-900 dark:text-white">{health.system?.memoryUsedMB} / {health.system?.memoryTotalMB} MB</span>
+                    <span className="text-[#9ca3af] text-xs uppercase font-medium">Heap Memory</span>
+                    <span className="font-semibold mt-1 text-[#f9fafb]">{health.system?.memoryUsedMB} / {health.system?.memoryTotalMB} MB</span>
                 </div>
                 <div className="flex flex-col">
-                    <span className="text-gray-500 text-xs uppercase font-medium">Last Backup</span>
-                    <span className="font-semibold mt-1 text-gray-900 dark:text-white">Active (S3)</span>
+                    <span className="text-[#9ca3af] text-xs uppercase font-medium">Last Backup</span>
+                    <span className="font-semibold mt-1 text-[#f9fafb]">Active (S3)</span>
                 </div>
             </div>
         </div>
@@ -135,11 +135,11 @@ async function RevenueKPIs({ poolId }: { poolId: string }) {
     return (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {kpis.map(k => (
-                <div key={k.label} className="relative overflow-hidden rounded-xl bg-slate-900 border border-white/10 p-5 group hover:border-white/20 transition-all">
+                <div key={k.label} className="relative overflow-hidden rounded-2xl bg-[#0b1220] border border-[#1f2937] p-5 group hover:border-[#8b5cf6]/30 transition-all">
                     <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${k.accent} opacity-10 blur-2xl -mr-8 -mt-8`} />
                     <div className="flex items-center gap-3 mb-2">
                         <k.icon className={`w-5 h-5 ${k.textColor}`} />
-                        <span className="text-xs uppercase tracking-wider text-gray-500 font-medium">{k.label}</span>
+                        <span className="text-xs uppercase tracking-wider text-[#9ca3af] font-medium">{k.label}</span>
                     </div>
                     <p className={`text-2xl font-bold ${k.textColor}`}>{k.value}</p>
                 </div>
@@ -192,7 +192,7 @@ async function TopDefaulters({ poolId }: { poolId: string }) {
     };
 
     return (
-        <div className="rounded-xl bg-slate-900 border border-rose-500/20 shadow-lg p-6 relative overflow-hidden">
+        <div className="rounded-2xl bg-[#0b1220] border border-rose-500/20 shadow-sm p-6 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/5 blur-3xl -mr-16 -mt-16 pointer-events-none" />
             <h2 className="text-lg font-semibold text-rose-400 mb-4 flex items-center gap-2">
                 <ShieldAlert className="w-5 h-5" />
@@ -201,10 +201,10 @@ async function TopDefaulters({ poolId }: { poolId: string }) {
             {list.length > 0 ? (
                 <ul className="space-y-3 max-h-56 overflow-y-auto pr-2">
                     {list.map((m, i) => (
-                        <li key={i} className="flex justify-between items-center text-sm py-2 border-b border-white/5 last:border-0 hover:bg-white/5 px-2 rounded-lg transition-colors">
+                        <li key={i} className="flex justify-between items-center text-sm py-2 border-b border-[#1f2937] last:border-0 hover:bg-[#8b5cf6]/5 px-2 rounded-lg transition-colors">
                             <div className="flex flex-col">
-                                <span className="font-medium text-white">{m.name}</span>
-                                <span className="text-[10px] text-gray-500 font-mono">#{m.memberId}</span>
+                                <span className="font-medium text-[#f9fafb]">{m.name}</span>
+                                <span className="text-[10px] text-[#6b7280] font-mono">#{m.memberId}</span>
                             </div>
                             <div className="text-right flex flex-col items-end gap-1">
                                 <span className="font-bold text-red-400">₹{m.balance.toLocaleString("en-IN")}</span>
@@ -216,7 +216,7 @@ async function TopDefaulters({ poolId }: { poolId: string }) {
                     ))}
                 </ul>
             ) : (
-                <p className="text-sm text-gray-500 font-medium">No defaulters found. 🎉</p>
+                <p className="text-sm text-[#6b7280] font-medium">No defaulters found. 🎉</p>
             )}
         </div>
     );
@@ -260,7 +260,7 @@ async function ExpiryAlerts({ poolId }: { poolId: string }) {
     }));
 
     return (
-        <div className="rounded-xl bg-slate-900 border border-orange-500/20 shadow-lg p-6 relative overflow-hidden group hover:border-orange-500/40 transition-all">
+        <div className="rounded-2xl bg-[#0b1220] border border-orange-500/20 shadow-sm p-6 relative overflow-hidden group hover:border-orange-500/40 transition-all">
             <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 blur-3xl -mr-16 -mt-16 pointer-events-none" />
             <h2 className="text-lg font-semibold text-orange-400 mb-4 flex items-center">
                 <span className="w-2 h-2 bg-orange-500 rounded-full mr-2 animate-pulse shadow-[0_0_8px_rgba(249,115,22,0.8)]"></span>
@@ -269,13 +269,13 @@ async function ExpiryAlerts({ poolId }: { poolId: string }) {
             {alerts.length > 0 ? (
                 <ul className="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                     {alerts.map((m: any) => (
-                        <li key={m.id || m.memberId} className="flex justify-between items-center text-sm py-2 border-b border-white/5 last:border-0 hover:bg-white/5 px-2 rounded-lg transition-colors">
+                        <li key={m.id || m.memberId} className="flex justify-between items-center text-sm py-2 border-b border-[#1f2937] last:border-0 hover:bg-[#8b5cf6]/5 px-2 rounded-lg transition-colors">
                             <div className="flex flex-col">
                                 <div className="flex items-center gap-2">
-                                    <span className="font-medium text-white">{m.name}</span>
-                                    <span className="text-[10px] text-gray-500 font-mono">#{m.memberId}</span>
+                                    <span className="font-medium text-[#f9fafb]">{m.name}</span>
+                                    <span className="text-[10px] text-[#6b7280] font-mono">#{m.memberId}</span>
                                 </div>
-                                <span className="text-xs text-gray-400 mt-1">{m.phone}</span>
+                                <span className="text-xs text-[#9ca3af] mt-1">{m.phone}</span>
                             </div>
                             <div className="text-right flex flex-col items-end">
                                 <span className={`font-semibold text-xs px-2 py-0.5 rounded-full ${m.remainingDays <= 0 ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'}`}>
@@ -286,7 +286,7 @@ async function ExpiryAlerts({ poolId }: { poolId: string }) {
                     ))}
                 </ul>
             ) : (
-                <p className="text-sm text-gray-500 font-medium">No members expiring soon.</p>
+                <p className="text-sm text-[#6b7280] font-medium">No members expiring soon.</p>
             )}
         </div>
     );
@@ -308,8 +308,8 @@ export default async function DashboardPage(props: { searchParams?: Promise<any>
         <div className="space-y-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard Overview</h1>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    <h1 className="text-2xl font-bold text-[#f9fafb]">Dashboard Overview</h1>
+                    <p className="mt-1 text-sm text-[#9ca3af]">
                         Welcome back, {session?.user?.name || "Admin"}. Here's what's happening today.
                     </p>
                 </div>

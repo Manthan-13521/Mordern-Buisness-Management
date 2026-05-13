@@ -9,22 +9,20 @@ import { HostelBlockProvider } from "@/components/hostel/HostelBlockContext";
 export default function HostelDashboardLayout({ children }: { children: React.ReactNode }) {
     return (
         <HostelBlockProvider>
-            <div className="flex h-screen overflow-hidden bg-slate-100 dark:bg-slate-950 flex-col">
+            <div className="flex h-screen bg-[#020617] flex-col">
                 <SubscriptionBanner />
                 <div className="flex flex-1 overflow-hidden">
-                    {/* Sidebar — desktop only */}
-                    <div className="hidden md:flex md:flex-shrink-0">
+                    {/* Desktop Sidebar */}
+                    <aside className="hidden md:flex md:w-52 md:flex-col">
                         <HostelSidebar />
-                    </div>
-        
-                    {/* Main content */}
-                    <div className="flex flex-1 flex-col overflow-hidden">
+                    </aside>
+
+                    {/* Main content area */}
+                    <div className="flex flex-col flex-1 min-w-0">
                         <HostelTopbar />
-                        <main className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950 focus:outline-none">
-                            <div className="py-6">
-                                <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
-                                    {children}
-                                </div>
+                        <main className="flex-1 overflow-y-auto focus:outline-none p-4 sm:p-6 lg:p-8">
+                            <div className="max-w-7xl mx-auto space-y-6">
+                                {children}
                             </div>
                         </main>
                     </div>

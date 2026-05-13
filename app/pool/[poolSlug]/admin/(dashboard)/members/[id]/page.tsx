@@ -207,7 +207,7 @@ export default function MemberDetailPage() {
             <div className="rounded-2xl border border-white/5 bg-slate-900 shadow-2xl overflow-hidden">
                 <div className="flex items-start gap-6 p-6">
                     {member.photoUrl
-                        ? <img src={`/api/members/${member._id}/photo`} alt="" className="h-20 w-20 rounded-xl object-cover ring-1 ring-gray-200 dark:ring-gray-700 shrink-0" />
+                        ? <img src={`/api/members/${member._id}/photo`} alt="" className="h-20 w-20 rounded-xl object-cover ring-1 ring-[#1f2937] shrink-0" />
                         : <div className="h-20 w-20 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center shrink-0">
                             <span className="text-3xl font-bold text-indigo-700 dark:text-indigo-300">{member.name.charAt(0).toUpperCase()}</span>
                           </div>
@@ -215,7 +215,7 @@ export default function MemberDetailPage() {
                     <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-4 flex-wrap">
                             <div>
-                                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{member.name}</h2>
+                                <h2 className="text-xl font-semibold text-[#f9fafb]">{member.name}</h2>
                                 <p className="text-sm text-gray-500 mt-0.5">{member.memberId}{member.age ? ` · ${member.age} yrs` : ""}</p>
                             </div>
                             {/* Action buttons */}
@@ -238,7 +238,7 @@ export default function MemberDetailPage() {
                                     </button>
                                 ) : (
                                     <button onClick={handleDelete}
-                                        className="inline-flex items-center gap-1.5 rounded-md bg-background px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 ring-1 ring-red-300 dark:ring-red-800 hover:bg-red-50 dark:hover:bg-red-900/30 shadow-sm transition">
+                                        className="inline-flex items-center gap-1.5 rounded-md bg-[#0b1220] px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 ring-1 ring-red-300 dark:ring-red-800 hover:bg-red-50 dark:hover:bg-red-900/30 shadow-sm transition">
                                         <Trash2 className="h-3.5 w-3.5" /> Delete
                                     </button>
                                 )}
@@ -273,7 +273,7 @@ export default function MemberDetailPage() {
             {/* Equipment Panel */}
             <div className="rounded-2xl border border-white/5 bg-slate-900 shadow-2xl overflow-hidden">
                 <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between bg-white/5 dark:backdrop-blur-md">
-                    <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <h3 className="text-base font-semibold text-[#f9fafb] flex items-center gap-2">
                         <Package className="h-4 w-4 text-blue-500" /> Equipment
                         {unreturned.length > 0 && (
                             <span className="ml-1 inline-flex items-center rounded-full bg-orange-100 dark:bg-orange-900/30 px-2 py-0.5 text-xs font-medium text-orange-700 dark:text-orange-400">
@@ -284,7 +284,7 @@ export default function MemberDetailPage() {
                 </div>
 
                 {/* Issue form */}
-                <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50 bg-background/50">
+                <div className="px-6 py-4 border-b border-[#1f2937] bg-gray-50 bg-[#0b1220]/50">
                     <div className="flex gap-2">
                         <input
                             type="text"
@@ -292,7 +292,7 @@ export default function MemberDetailPage() {
                             value={newItem}
                             onChange={e => setNewItem(e.target.value)}
                             onKeyDown={e => e.key === "Enter" && handleIssueEquipment()}
-                            className="flex-1 rounded-md border border-gray-300 dark:border-gray-700 bg-background shadow-sm px-3 py-2 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500"
+                            className="flex-1 rounded-md border border-gray-300 dark:border-gray-700 bg-[#0b1220] shadow-sm px-3 py-2 text-sm text-[#f9fafb] placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500"
                         />
                         <button
                             onClick={handleIssueEquipment}
@@ -312,12 +312,12 @@ export default function MemberDetailPage() {
                             {unreturned.map(item => (
                                 <div key={item._id} className="flex items-center justify-between rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/40 px-3 py-2">
                                     <div>
-                                        <p className="text-sm font-medium text-gray-900 dark:text-white">{item.itemName}</p>
+                                        <p className="text-sm font-medium text-[#f9fafb]">{item.itemName}</p>
                                         <p className="text-xs text-gray-500">Issued {new Date(item.issuedDate).toLocaleDateString("en-IN")}</p>
                                     </div>
                                     <button
                                         onClick={() => handleReturnEquipment(item._id)}
-                                        className="inline-flex items-center gap-1 rounded-md bg-background px-2.5 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 ring-1 ring-green-300 dark:ring-green-800 hover:bg-green-50 dark:hover:bg-green-900/30 shadow-sm transition"
+                                        className="inline-flex items-center gap-1 rounded-md bg-[#0b1220] px-2.5 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 ring-1 ring-green-300 dark:ring-green-800 hover:bg-green-50 dark:hover:bg-green-900/30 shadow-sm transition"
                                     >
                                         <PackageCheck className="h-3 w-3" /> Return
                                     </button>
@@ -333,7 +333,7 @@ export default function MemberDetailPage() {
                         <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Returned</p>
                         <div className="space-y-1.5">
                             {returned.map(item => (
-                                <div key={item._id} className="flex items-center justify-between rounded-lg bg-background border border-gray-100 dark:border-white/5 px-3 py-2 opacity-60">
+                                <div key={item._id} className="flex items-center justify-between rounded-lg bg-[#0b1220] border border-gray-100 dark:border-white/5 px-3 py-2 opacity-60">
                                     <p className="text-sm text-gray-700 dark:text-gray-300 line-through">{item.itemName}</p>
                                     <p className="text-xs text-gray-400">Returned {item.returnedDate ? new Date(item.returnedDate).toLocaleDateString("en-IN") : "—"}</p>
                                 </div>

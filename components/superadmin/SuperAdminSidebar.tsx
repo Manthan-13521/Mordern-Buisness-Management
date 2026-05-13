@@ -2,46 +2,30 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
 import clsx from "clsx";
 import {
     LayoutDashboard,
-    Users,
-    CreditCard,
-    Settings,
-    UserX,
-    IndianRupee,
-    UserCog,
-    MessageSquare,
+    Droplets,
     Building2,
-    ClipboardList,
+    Briefcase,
+    MessageSquare,
+    CreditCard,
+    Gift,
     LogOut,
-    BedDouble,
-    Activity
+    Shield,
 } from "lucide-react";
-import { ThemeToggle } from "../ThemeToggle";
 
-export function HostelSidebar() {
+export function SuperAdminSidebar() {
     const pathname = usePathname();
-    const { data: session } = useSession();
-
-    const match = pathname.match(/^\/hostel\/([^/]+)\/admin/);
-    const hostelSlug = match?.[1] ?? "";
-    const base = `/hostel/${hostelSlug}/admin`;
 
     const links = [
-        { name: "Dashboard",         href: `${base}/dashboard`,        icon: LayoutDashboard },
-        { name: "Hostel Overview",   href: `${base}/overview`,          icon: Building2 },
-        { name: "Members",           href: `${base}/members`,           icon: Users },
-        { name: "Checkout",          href: `${base}/checkout`,          icon: UserX },
-        { name: "Balance Payments",  href: `${base}/balance-payments`,  icon: IndianRupee },
-        { name: "Plans",             href: `${base}/plans`,             icon: ClipboardList },
-        { name: "Payments",          href: `${base}/payments`,          icon: CreditCard },
-        { name: "Staff",             href: `${base}/staff`,             icon: UserCog },
-        { name: "Analytics",         href: `${base}/analytics`,        icon: Activity },
-        { name: "WhatsApp",          href: `${base}/whatsapp`,          icon: MessageSquare },
-        { name: "Hostel Settings",   href: `${base}/hostel-settings`,   icon: BedDouble },
-        { name: "Settings",          href: `${base}/settings`,          icon: Settings },
+        { name: "Dashboard",    href: "/superadmin",            icon: LayoutDashboard },
+        { name: "Manage Pools", href: "/superadmin/pools",      icon: Droplets },
+        { name: "Manage Hostels", href: "/superadmin/hostels",  icon: Building2 },
+        { name: "Manage Businesses", href: "/superadmin/businesses", icon: Briefcase },
+        { name: "Feedback",     href: "/superadmin/feedback",   icon: MessageSquare },
+        { name: "Billing",      href: "/superadmin/billing",    icon: CreditCard },
+        { name: "Referrals",    href: "/superadmin/referrals",  icon: Gift },
     ];
 
     return (
@@ -49,20 +33,20 @@ export function HostelSidebar() {
             {/* Logo area */}
             <div className="flex h-16 items-center px-4 gap-3 border-b border-[#1f2937]">
                 <div className="w-8 h-8 rounded-xl bg-[#0b1220] flex items-center justify-center border border-[#1f2937]">
-                    <Building2 className="w-4 h-4 text-[#8b5cf6]" />
+                    <Shield className="w-4 h-4 text-[#8b5cf6]" />
                 </div>
                 <div className="overflow-hidden">
-                    <h1 className="text-sm font-bold truncate text-[#f9fafb]">
-                        {(session?.user as any)?.hostelName || "Hostel"}
-                    </h1>
-                    <p className="text-[10px] text-[#9ca3af] font-semibold tracking-wide uppercase">Management</p>
+                    <h1 className="text-sm font-bold truncate text-[#f9fafb]">AquaSync</h1>
+                    <p className="text-[10px] text-[#9ca3af] font-semibold tracking-wide uppercase">Platform Control</p>
                 </div>
             </div>
 
             {/* Navigation */}
             <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto custom-scrollbar">
                 {links.map((item) => {
-                    const isActive = pathname.startsWith(item.href);
+                    const isActive = item.href === "/superadmin"
+                        ? pathname === "/superadmin"
+                        : pathname.startsWith(item.href);
                     return (
                         <Link
                             key={item.name}
@@ -90,22 +74,19 @@ export function HostelSidebar() {
             <div className="p-3 border-t border-[#1f2937] bg-[#020617]">
                 <div className="flex items-center gap-2 px-2 py-1.5 mb-2">
                     <div className="w-7 h-7 rounded-full bg-[#0b1220] flex items-center justify-center border border-[#1f2937]">
-                        <span className="text-[10px] font-bold text-[#f9fafb]">
-                            {session?.user?.name?.[0]?.toUpperCase() ?? "U"}
-                        </span>
+                        <span className="text-[10px] font-bold text-[#f9fafb]">S</span>
                     </div>
                     <div className="overflow-hidden">
-                        <p className="text-[10px] font-bold truncate text-[#f9fafb]">{session?.user?.name}</p>
-                        <p className="text-[9px] text-[#9ca3af] truncate">{session?.user?.email}</p>
+                        <p className="text-[10px] font-bold truncate text-[#f9fafb]">Super Admin</p>
+                        <p className="text-[9px] text-[#9ca3af] truncate">Platform Owner</p>
                     </div>
                 </div>
-                <ThemeToggle />
                 <button
-                    onClick={() => signOut({ callbackUrl: "/login" })}
+                    onClick={() => { window.location.href = "/superadmin/login"; }}
                     className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-[#9ca3af] hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
                 >
                     <LogOut className="w-4 h-4" />
-                    <span>Sign Out</span>
+                    <span>Log Out</span>
                 </button>
             </div>
         </div>

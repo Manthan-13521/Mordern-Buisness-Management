@@ -20,8 +20,8 @@ type Plan = {
     isActive: boolean; 
 };
 
-const INPUT = "w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition";
-const LABEL = "block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide";
+const INPUT = "w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-[#0b1220] px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition";
+const LABEL = "block text-xs font-bold text-[#9ca3af] mb-1 uppercase tracking-wide";
 
 const DEFAULT_MESSAGES: PlanMessages = {
     beforeExpiry: {
@@ -123,7 +123,7 @@ export default function PlansPage() {
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
-                <div><h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2"><ClipboardList className="h-6 w-6 text-violet-500"/>Plans</h1>
+                <div><h1 className="text-2xl font-bold text-[#f9fafb] flex items-center gap-2"><ClipboardList className="h-6 w-6 text-violet-500"/>Plans</h1>
                 <p className="text-sm text-slate-500">{plans.length} plans configured</p></div>
                 <button onClick={openAdd} className="flex items-center gap-1.5 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 hover:bg-blue-50 dark:hover:bg-blue-500/100 text-white text-sm font-medium px-4 py-2 rounded-xl shadow transition"><Plus className="h-4 w-4"/>Add Plan</button>
             </div>
@@ -133,10 +133,10 @@ export default function PlansPage() {
             : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {plans.map(p => (
-                        <div key={p._id} className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm p-5 flex flex-col gap-3">
+                        <div key={p._id} className="rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm p-5 flex flex-col gap-3">
                             <div className="flex items-start justify-between">
                                 <div>
-                                    <h3 className="font-semibold text-slate-800 dark:text-white">{p.name}</h3>
+                                    <h3 className="font-semibold text-[#f9fafb]">{p.name}</h3>
                                     {p.description && <p className="text-xs text-slate-400 mt-0.5">{p.description}</p>}
                                 </div>
                                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.isActive ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600" : "bg-slate-100 dark:bg-slate-700 text-slate-400"}`}>
@@ -154,8 +154,8 @@ export default function PlansPage() {
                                     </div>
                                     {p.messages && (
                                         <div className="rounded-lg bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800/40 p-2 space-y-1">
-                                            <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1"><span className="font-semibold">Before 2d:</span> {p.messages.beforeExpiry.text}</p>
-                                            <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1"><span className="font-semibold">After:</span> {p.messages.afterExpiry.text}</p>
+                                            <p className="text-[10px] text-[#9ca3af] line-clamp-1"><span className="font-semibold">Before 2d:</span> {p.messages.beforeExpiry.text}</p>
+                                            <p className="text-[10px] text-[#9ca3af] line-clamp-1"><span className="font-semibold">After:</span> {p.messages.afterExpiry.text}</p>
                                         </div>
                                     )}
                                 </div>
@@ -172,9 +172,9 @@ export default function PlansPage() {
             {showForm && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={()=>setShowForm(false)}/>
-                    <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[92vh]">
-                        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
-                            <h2 className="text-lg font-semibold text-slate-800 dark:text-white">{editPlan?"Edit Plan":"New Plan"}</h2>
+                    <div className="relative w-full max-w-md bg-[#0b1220] rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[92vh]">
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-[#1f2937] flex-shrink-0">
+                            <h2 className="text-lg font-semibold text-[#f9fafb]">{editPlan?"Edit Plan":"New Plan"}</h2>
                             <button onClick={()=>setShowForm(false)}><X className="h-5 w-5 text-slate-400"/></button>
                         </div>
                         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
@@ -186,7 +186,7 @@ export default function PlansPage() {
                             
                             {/* WhatsApp section */}
                             <div className="pt-1">
-                                <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-slate-200 dark:border-slate-700 p-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                                <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-[#1f2937] p-3 hover:bg-[#8b5cf6]/5 transition">
                                     <input
                                         type="checkbox"
                                         checked={form.enableWhatsApp}
@@ -201,7 +201,7 @@ export default function PlansPage() {
                                             <MessageSquare className="h-4 w-4 text-emerald-500" />
                                             Enable WhatsApp Alerts
                                         </span>
-                                        <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-0.5">
+                                        <span className="text-[10px] text-[#9ca3af] block mt-0.5">
                                             Auto-send messages before expiry and when expired.
                                         </span>
                                     </div>
@@ -223,7 +223,7 @@ export default function PlansPage() {
                                         <div className="border-t border-emerald-200 dark:border-emerald-800/60 px-4 py-4 space-y-4">
                                             {/* Before Expiry */}
                                             <div className="space-y-2">
-                                                <p className="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest flex items-center gap-1.5">
+                                                <p className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest flex items-center gap-1.5">
                                                     ⏳ Before Expiry (2 days)
                                                 </p>
                                                 <div>
@@ -255,7 +255,7 @@ export default function PlansPage() {
 
                                             {/* After Expiry */}
                                             <div className="space-y-2">
-                                                <p className="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest flex items-center gap-1.5">
+                                                <p className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest flex items-center gap-1.5">
                                                     ❌ After Expiry
                                                 </p>
                                                 <div>

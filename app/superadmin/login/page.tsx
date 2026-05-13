@@ -58,7 +58,7 @@ export default function SuperAdminLoginPage() {
             </div>
 
             <div className="relative mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-                <div className="bg-slate-950/40 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl p-8 ring-1 ring-white/5">
+                <div className="bg-slate-950/40 backdrop-blur-2xl border border-[#1f2937] rounded-2xl shadow-2xl p-8 ring-1 ring-white/5">
                     <form className="space-y-6" onSubmit={handleSubmit}>
                         {error && (
                             <div className="rounded-xl bg-red-500/10 border border-red-500/30 px-4 py-3">
@@ -82,7 +82,7 @@ export default function SuperAdminLoginPage() {
                                     required
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
-                                    className="block w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent disabled:opacity-50 transition"
+                                    className="block w-full rounded-xl border border-[#1f2937] bg-[#0b1220] px-4 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent disabled:opacity-50 transition"
                                     disabled={loading}
                                 />
                             </div>
@@ -106,7 +106,7 @@ export default function SuperAdminLoginPage() {
                                     required
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="block w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent disabled:opacity-50 transition"
+                                    className="block w-full rounded-xl border border-[#1f2937] bg-[#0b1220] px-4 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent disabled:opacity-50 transition"
                                     disabled={loading}
                                 />
                             </div>

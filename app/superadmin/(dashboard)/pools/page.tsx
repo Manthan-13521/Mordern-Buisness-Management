@@ -36,15 +36,15 @@ export default async function PlatformPoolsList() {
                 </Link>
             </div>
 
-            <div className="bg-slate-900 border border-white/5 rounded-2xl overflow-hidden mt-8 shadow-2xl">
-                <div className="bg-white/5 p-4 border-b border-white/5 flex items-center justify-between">
+            <div className="bg-slate-900 border border-[#1f2937] rounded-2xl overflow-hidden mt-8 shadow-2xl">
+                <div className="bg-[#0b1220] p-4 border-b border-[#1f2937] flex items-center justify-between">
                     <div className="relative">
                         <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"/>
                         <input 
                             type="text" 
                             disabled
                             placeholder="Search pools..." 
-                            className="bg-slate-950/50 border border-white/10 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-9 p-2 placeholder-gray-500"
+                            className="bg-slate-950/50 border border-[#1f2937] text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-9 p-2 placeholder-gray-500"
                         />
                     </div>
                 </div>
@@ -61,7 +61,7 @@ export default async function PlatformPoolsList() {
                     </thead>
                     <tbody>
                         {pools.map((pool: any) => (
-                            <tr key={pool._id.toString()} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                            <tr key={pool._id.toString()} className="border-b border-[#1f2937] hover:bg-[#0b1220] transition-colors">
                                 <td className="px-6 py-4 font-medium text-white whitespace-nowrap">
                                     {pool.poolName || "Unknown"}
                                     <div className="text-xs text-gray-500 font-normal">{pool.poolId}</div>

@@ -274,8 +274,8 @@ export default function EntryPage() {
             {/* Status Bar */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">QR Entry Scanner</h1>
-                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Scan a member's QR code or look up by UID.</p>
+                    <h1 className="text-3xl font-bold tracking-tight text-[#f9fafb]">QR Entry Scanner</h1>
+                    <p className="mt-1 text-sm text-[#9ca3af]">Scan a member's QR code or look up by UID.</p>
                 </div>
                 <div className="flex flex-col items-end gap-2">
                     <div className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full ${isOnline ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>
@@ -292,15 +292,15 @@ export default function EntryPage() {
 
             {/* Pool Occupancy Bar */}
             {occupancy && (
-                <div className="rounded-xl bg-background border border-gray-200 dark:border-gray-800 shadow-sm p-4">
+                <div className="rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm p-4">
                     <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                             <Users className="w-4 h-4" />
                             Pool Occupancy
                         </div>
-                        <span className="text-sm font-bold text-gray-900 dark:text-white">
+                        <span className="text-sm font-bold text-[#f9fafb]">
                             {occupancy.current} / {occupancy.capacity}
-                            <span className="text-gray-500 dark:text-gray-400 font-normal ml-1">
+                            <span className="text-[#9ca3af] font-normal ml-1">
                                 ({occupancy.capacity - occupancy.current} available)
                             </span>
                         </span>
@@ -320,9 +320,9 @@ export default function EntryPage() {
             {/* Two-column layout: QR Scanner | UID Lookup */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* LEFT: QR Scanner */}
-                <div className="overflow-hidden rounded-2xl bg-background border border-gray-200 dark:border-gray-800 shadow-sm">
+                <div className="overflow-hidden rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm">
                     <div className="p-6 sm:p-8 flex flex-col items-center">
-                        <div className="w-full max-w-sm mb-6 relative rounded-xl overflow-hidden shadow-lg border-4 border-gray-100 dark:border-gray-800 bg-black aspect-square flex items-center justify-center">
+                        <div className="w-full max-w-sm mb-6 relative rounded-xl overflow-hidden shadow-lg border-4 border-[#1f2937] bg-black aspect-square flex items-center justify-center">
                             {cameraActive && isScanning ? (
                                 <Scanner
                                     onScan={(result) => handleScan(result[0].rawValue)}
@@ -373,13 +373,13 @@ export default function EntryPage() {
                 </div>
 
                 {/* RIGHT: UID Lookup */}
-                <div className="rounded-2xl bg-background border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col">
-                    <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <div className="rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm flex flex-col">
+                    <div className="px-6 py-4 border-b border-[#1f2937]">
+                        <h2 className="text-lg font-semibold text-[#f9fafb] flex items-center gap-2">
                             <Search className="h-5 w-5 text-blue-500" />
                             UID Lookup
                         </h2>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Enter a member ID (e.g. M0001, MS0001) to view details</p>
+                        <p className="text-xs text-[#9ca3af] mt-0.5">Enter a member ID (e.g. M0001, MS0001) to view details</p>
                     </div>
                     <div className="px-6 py-4">
                         <div className="flex gap-2">
@@ -394,7 +394,7 @@ export default function EntryPage() {
                                     }
                                 }}
                                 placeholder="M0001 or MS0001"
-                                className="flex-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-sm px-3 py-2 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                className="flex-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-sm px-3 py-2 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                             />
                             <button onClick={() => handleUidLookup()} disabled={lookupLoading || !uid.trim()}
                                 className="rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-50 dark:hover:bg-blue-500/100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
@@ -416,7 +416,7 @@ export default function EntryPage() {
                             </div>
                         )}
                         {lookupResult && (
-                            <div className="rounded-xl border border-gray-200 dark:border-gray-700 shadow-md fade-in bg-background relative">
+                            <div className="rounded-xl border border-[#1f2937] shadow-md fade-in bg-[#0b1220] relative">
                                 {/* Header */}
                                 <div className={`px-4 py-2 flex justify-between items-center text-white shrink-0 ${
                                     lookupResult.isDeleted ? "bg-gray-600" :
@@ -440,7 +440,7 @@ export default function EntryPage() {
                                     {/* Photo Area */}
                                     <div className="flex-shrink-0">
                                         {lookupResult.photoUrl ? (
-                                            <img src={`/api/members/${lookupResult._id}/photo`} alt="" className="h-56 w-48 object-cover border-4 border-gray-100 dark:border-gray-800 rounded-lg shadow-sm" />
+                                            <img src={`/api/members/${lookupResult._id}/photo`} alt="" className="h-56 w-48 object-cover border-4 border-[#1f2937] rounded-lg shadow-sm" />
                                         ) : (
                                             <div className="h-56 w-48 bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg border-4 border-gray-50 flex items-center justify-center rounded-lg shadow-sm">
                                                 <UserCheck className="h-16 w-16 text-gray-400" />
@@ -450,7 +450,7 @@ export default function EntryPage() {
                                     
                                     {/* Details Area */}
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="text-xl font-bold text-gray-900 dark:text-white truncate">
+                                        <h3 className="text-xl font-bold text-[#f9fafb] truncate">
                                             {lookupResult.name.toUpperCase()}
                                         </h3>
                                         <p className="text-sm font-bold text-blue-600 dark:text-blue-400 dark:text-indigo-400 mt-1">
@@ -458,15 +458,15 @@ export default function EntryPage() {
                                         </p>
                                         
                                         <div className="mt-3 space-y-1">
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                Phone: <span className="font-semibold text-gray-900 dark:text-white">{lookupResult.phone}</span>
+                                            <p className="text-xs text-[#9ca3af]">
+                                                Phone: <span className="font-semibold text-[#f9fafb]">{lookupResult.phone}</span>
                                             </p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                Plan: <span className="font-semibold text-gray-900 dark:text-white">{lookupResult.planId?.name ?? "N/A"}</span>
+                                            <p className="text-xs text-[#9ca3af]">
+                                                Plan: <span className="font-semibold text-[#f9fafb]">{lookupResult.planId?.name ?? "N/A"}</span>
                                             </p>
                                             {lookupResult.planQuantity && lookupResult.planQuantity > 1 && (
-                                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                    Group: <span className="font-semibold text-gray-900 dark:text-white">{lookupResult.planQuantity}</span>
+                                                <p className="text-xs text-[#9ca3af]">
+                                                    Group: <span className="font-semibold text-[#f9fafb]">{lookupResult.planQuantity}</span>
                                                 </p>
                                             )}
                                             {(lookupResult.balanceAmount ?? 0) > 0 && (
@@ -479,7 +479,7 @@ export default function EntryPage() {
                                 </div>
 
                                 {/* Footer / Expiry */}
-                                <div className="bg-white/5 dark:dark:backdrop-blur-md dark:border-white/10 shadow-lg px-5 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                                <div className="bg-white/5 dark:dark:backdrop-blur-md dark:border-white/10 shadow-lg px-5 py-3 border-t border-[#1f2937] flex justify-between items-center">
                                     <span className="text-xs text-gray-500 font-medium">Valid Till: {new Date(lookupResult.planEndDate || lookupResult.expiryDate || "").toLocaleDateString()}</span>
                                     <span className={`text-xs font-bold ${lookupResult.isExpired ? "text-red-600" : "text-blue-600 dark:text-blue-400 dark:text-indigo-400"}`}>
                                         {lookupResult.isExpired ? "Expired" : `⏱ ${getRemainingTimeText(lookupResult.planEndDate || lookupResult.expiryDate || "")}`}

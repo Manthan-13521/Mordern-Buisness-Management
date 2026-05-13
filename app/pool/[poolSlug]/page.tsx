@@ -5,7 +5,7 @@ export default async function PoolLanding({ params }: { params: Promise<{ poolSl
   const pSlug = await params;
   const poolSlug = pSlug.poolSlug;
   return (
-    <div className="bg-background">
+    <div className="bg-[#0b1220]">
 
       <div className="relative isolate px-6 pt-14 lg:px-8 overflow-hidden">
         {/* Decorative Grid BG */}
@@ -35,43 +35,43 @@ export default async function PoolLanding({ params }: { params: Promise<{ poolSl
       </div>
 
       {/* Feature Section */}
-      <div className="py-24 sm:py-32 bg-background/50">
+      <div className="py-24 sm:py-32 bg-[#0b1220]/50">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="mx-auto max-w-2xl lg:text-center">
             <h2 className="text-base font-semibold leading-7 text-blue-600 dark:text-blue-400 dark:text-indigo-400">Streamlined Process</h2>
             <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl dark:text-white">Everything required to hit the water</p>
-            <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-400">
+            <p className="mt-6 text-lg leading-8 text-[#9ca3af]">
               Our newly upgraded portal ensures your access passes are ready before you even step through the doors.
             </p>
           </div>
           <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-4xl">
             <dl className="grid max-w-xl grid-cols-1 gap-x-8 gap-y-10 lg:max-w-none lg:grid-cols-3 lg:gap-y-16">
               <div className="relative pl-16">
-                <dt className="text-base font-semibold leading-7 text-gray-900 dark:text-white">
+                <dt className="text-base font-semibold leading-7 text-[#f9fafb]">
                   <div className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0">
                     <UserPlus className="h-6 w-6 text-white" aria-hidden="true" />
                   </div>
                   Online Registration
                 </dt>
-                <dd className="mt-2 text-base leading-7 text-gray-600 dark:text-gray-400">Skip the queue. Select a membership plan, capture your photo, and proceed to interactive checkout.</dd>
+                <dd className="mt-2 text-base leading-7 text-[#9ca3af]">Skip the queue. Select a membership plan, capture your photo, and proceed to interactive checkout.</dd>
               </div>
               <div className="relative pl-16">
-                <dt className="text-base font-semibold leading-7 text-gray-900 dark:text-white">
+                <dt className="text-base font-semibold leading-7 text-[#f9fafb]">
                   <div className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0">
                     <Clock className="h-6 w-6 text-white" aria-hidden="true" />
                   </div>
                   Instant QR ID
                 </dt>
-                <dd className="mt-2 text-base leading-7 text-gray-600 dark:text-gray-400">Immediately upon verification, your unique CR80 formatted ID card with a high-fidelity QR core will be rendered.</dd>
+                <dd className="mt-2 text-base leading-7 text-[#9ca3af]">Immediately upon verification, your unique CR80 formatted ID card with a high-fidelity QR core will be rendered.</dd>
               </div>
               <div className="relative pl-16">
-                <dt className="text-base font-semibold leading-7 text-gray-900 dark:text-white">
+                <dt className="text-base font-semibold leading-7 text-[#f9fafb]">
                   <div className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0">
                     <ShieldCheck className="h-6 w-6 text-white" aria-hidden="true" />
                   </div>
                   Secure Entry
                 </dt>
-                <dd className="mt-2 text-base leading-7 text-gray-600 dark:text-gray-400">Flash your digital or printed card at the scanner desk and the physical logs will autonomously verify your membership parameters.</dd>
+                <dd className="mt-2 text-base leading-7 text-[#9ca3af]">Flash your digital or printed card at the scanner desk and the physical logs will autonomously verify your membership parameters.</dd>
               </div>
             </dl>
           </div>

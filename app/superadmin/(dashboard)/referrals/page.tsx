@@ -132,7 +132,7 @@ export default function ReferralsAdminPage() {
                                 {loading && <tr><td colSpan={5} className="text-center py-8">Loading...</td></tr>}
                                 {!loading && data?.codes?.length === 0 && <tr><td colSpan={5} className="text-center py-8 text-gray-500">No active referral codes.</td></tr>}
                                 {!loading && data?.codes?.map(c => (
-                                    <tr key={c._id} className="border-b last:border-0 border-gray-100 dark:border-gray-800/60 hover:bg-gray-50/50 dark:hover:bg-white/[0.02]">
+                                    <tr key={c._id} className="border-b last:border-0 border-gray-100 dark:border-gray-800/60 hover:bg-gray-50/50 dark:hover:bg-[#8b5cf6]/5">
                                         <td className="px-6 py-4 font-bold tracking-wider text-gray-900 dark:text-gray-100">{c.code}</td>
                                         <td className="px-6 py-4">
                                             <span className="font-semibold text-blue-600 dark:text-blue-400">{c.actualUses}</span> 

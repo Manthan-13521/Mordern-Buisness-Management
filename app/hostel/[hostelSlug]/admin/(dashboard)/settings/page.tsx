@@ -5,8 +5,8 @@ import { Settings, Save, Download, HardDrive, Server, Sun, Moon, Monitor, Sparkl
 import Link from "next/link";
 
 type HostelInfo = { hostelName: string; slug: string; city: string; adminEmail: string; adminPhone?: string; isTwilioConnected: boolean; };
-const INPUT = "w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500";
-const LABEL = "block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1";
+const INPUT = "w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-[#0b1220] px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500";
+const LABEL = "block text-xs font-medium text-[#9ca3af] mb-1";
 
 export default function SettingsPage() {
     const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
@@ -94,12 +94,12 @@ export default function SettingsPage() {
 
     return (
         <div className="space-y-8 max-w-2xl">
-            <div><h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2"><Settings className="h-6 w-6 text-slate-500"/>Settings</h1>
+            <div><h1 className="text-2xl font-bold text-[#f9fafb] flex items-center gap-2"><Settings className="h-6 w-6 text-slate-500"/>Settings</h1>
             <p className="text-sm text-slate-500">Manage your hostel profile and account details</p></div>
 
             {/* Account info (read-only) */}
-            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm p-6 space-y-4">
-                <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Account Overview</h2>
+            <div className="rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm p-6 space-y-4">
+                <h2 className="text-sm font-semibold text-[#9ca3af] uppercase tracking-wider">Account Overview</h2>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                     <div><p className="text-slate-400 text-xs">Hostel Slug</p><p className="font-mono font-medium text-slate-800 dark:text-slate-100">{info?.slug}</p></div>
                     <div><p className="text-slate-400 text-xs">Admin Email</p><p className="font-medium text-slate-800 dark:text-slate-100">{info?.adminEmail}</p></div>
@@ -109,17 +109,17 @@ export default function SettingsPage() {
             </div>
 
             {/* Subscription Section */}
-            <div className="rounded-2xl border border-sky-500/20 bg-white dark:bg-slate-800 shadow-sm p-6 relative overflow-hidden">
+            <div className="rounded-2xl border border-sky-500/20 bg-[#0b1220] shadow-sm p-6 relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-5">
                     <Zap className="w-16 h-16 text-sky-500" />
                 </div>
-                <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2 mb-6">
+                <h2 className="text-sm font-semibold text-[#9ca3af] uppercase tracking-wider flex items-center gap-2 mb-6">
                     <Sparkles className="h-4 w-4 text-sky-500" /> Subscription Details
                 </h2>
                 <div className="grid grid-cols-2 gap-y-6 gap-x-4 text-sm relative z-10">
                     <div>
                         <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Current Plan</p>
-                        <p className="font-bold text-slate-900 dark:text-white mt-1 capitalize text-lg">{subStatus?.planType || "—"}</p>
+                        <p className="font-bold text-[#f9fafb] mt-1 capitalize text-lg">{subStatus?.planType || "—"}</p>
                     </div>
                     <div>
                         <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Status</p>
@@ -154,15 +154,15 @@ export default function SettingsPage() {
             </div>
 
             {/* Appearance */}
-            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm p-6">
-                <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-4">Appearance</h2>
+            <div className="rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm p-6">
+                <h2 className="text-sm font-semibold text-[#9ca3af] uppercase tracking-wider mb-4">Appearance</h2>
                 <fieldset>
                     <legend className="sr-only">Theme Preference</legend>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         {(["light", "dark", "system"] as const).map((t) => (
-                            <label key={t} className={`relative flex cursor-pointer rounded-xl border p-4 shadow-sm transition-all ${theme === t ? "border-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500" : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600"}`}>
+                            <label key={t} className={`relative flex cursor-pointer rounded-xl border p-4 shadow-sm transition-all ${theme === t ? "border-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500" : "border-[#1f2937] bg-[#0b1220] hover:border-slate-300 dark:hover:border-slate-600"}`}>
                                 <input type="radio" className="sr-only" name="theme" value={t} checked={theme === t} onChange={() => handleThemeChange(t)} />
-                                <span className="flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-white">
+                                <span className="flex items-center gap-2 text-sm font-medium text-[#f9fafb]">
                                     {t === "light" ? <Sun className="w-4 h-4 text-amber-500" /> : t === "dark" ? <Moon className="w-4 h-4 text-indigo-400" /> : <Monitor className="w-4 h-4 text-slate-400" />}
                                     {t.charAt(0).toUpperCase() + t.slice(1)}
                                 </span>
@@ -173,12 +173,12 @@ export default function SettingsPage() {
             </div>
 
             {/* Data Management */}
-            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm p-6 space-y-4">
+            <div className="rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm p-6 space-y-4">
                 <div className="flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-700">
                     <HardDrive className="h-5 w-5 text-blue-500"/>
-                    <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Data Management</h2>
+                    <h2 className="text-sm font-semibold text-[#9ca3af] uppercase tracking-wider">Data Management</h2>
                 </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400 pb-2">
+                <p className="text-sm text-[#9ca3af] pb-2">
                     Export database backups directly, or push synchronized backups strictly to your AWS S3 bucket covering the last 365 days of active, vacated, and archived data.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

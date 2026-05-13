@@ -2,26 +2,26 @@
 
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Building2, Menu, X, Layers } from "lucide-react";
+import { Building2, Menu, X, Bell, Search, Settings as SettingsIcon } from "lucide-react";
 import { useState } from "react";
 import { HostelSidebar } from "./HostelSidebar";
 
 const PAGE_TITLES: Record<string, string> = {
-    "/dashboard":        "Dashboard",
-    "/members":          "Members",
+    "/dashboard":        "Intelligence Dashboard",
+    "/overview":         "Hostel Overview",
+    "/members":          "Resident Management",
+    "/checkout":         "Checkout Management",
     "/expired-members":  "Expired Members",
-    "/balance-payments": "Balance & Payments",
-    "/plans":            "Plans",
-    "/payments":         "Payments",
-    "/staff":            "Staff",
+    "/balance-payments": "Balance Payments",
+    "/plans":            "Subscription Plans",
+    "/payments":         "Financial Ledger",
+    "/staff":            "Staff Management",
+    "/analytics":        "Revenue Analytics",
     "/logs":             "Activity Logs",
-    "/whatsapp":         "WhatsApp",
+    "/whatsapp":         "WhatsApp Integration",
     "/hostel-settings":  "Hostel Settings",
-    "/settings":         "Settings",
+    "/settings":         "System Settings",
 };
-
-// Pages where the block filter should NOT appear
-const NO_FILTER_PAGES = ["/hostel-settings", "/settings", "/whatsapp", "/plans"];
 
 export function HostelTopbar() {
     const pathname = usePathname();
@@ -36,42 +36,75 @@ export function HostelTopbar() {
             {/* Mobile overlay sidebar */}
             {mobileOpen && (
                 <div className="fixed inset-0 z-40 flex md:hidden">
-                    <div className="relative flex w-64 flex-col">
+                    <div className="relative flex w-52 flex-col shadow-2xl">
                         <HostelSidebar />
                     </div>
                     <div
-                        className="flex-1 bg-black/60 backdrop-blur-sm"
+                        className="flex-1 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
                         onClick={() => setMobileOpen(false)}
                     />
                 </div>
             )}
 
-            <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 backdrop-blur px-4 shadow-sm gap-3">
-                {/* Left: hamburger + title */}
-                <div className="flex items-center gap-3 min-w-0">
+            <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[#1f2937] bg-[#020617] px-4 sm:px-8 gap-5">
+                {/* Left: Mobile Toggle + Breadcrumb/Title */}
+                <div className="flex items-center gap-4 min-w-0">
                     <button
-                        className="md:hidden rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 flex-shrink-0"
+                        className="md:hidden rounded-xl p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-[#9ca3af] hover:text-[#f9fafb] hover:bg-[#111827] transition-all"
                         onClick={() => setMobileOpen(!mobileOpen)}
                         aria-label="Toggle menu"
                     >
-                        {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                        {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                     </button>
-                    <div className="flex items-center gap-2 min-w-0">
-                        <Building2 className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                        <h1 className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{title}</h1>
+                    
+                    <div className="hidden sm:flex items-center gap-2 text-[#8b5cf6]">
+                        <Building2 className="h-5 w-5" />
+                        <span className="text-xs font-bold uppercase tracking-widest opacity-50">Portal</span>
+                        <span className="text-[#1f2937]">/</span>
                     </div>
+                    
+                    <h1 className="text-base font-bold text-[#f9fafb] truncate tracking-tight">{title}</h1>
                 </div>
 
-                {/* Centre / Right: User */}
-                <div className="flex items-center gap-3 flex-shrink-0">
-                    {/* User avatar */}
-                    <div className="flex items-center gap-2">
-                        <div className="h-7 w-7 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                            {session?.user?.name?.[0]?.toUpperCase() ?? "H"}
+                {/* Center: Search */}
+                <div className="hidden lg:flex flex-1 max-w-lg relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Search className="h-5 w-5 text-[#6b7280]" />
+                    </div>
+                    <input
+                        type="text"
+                        placeholder="Search residents, payments, rooms..."
+                        className="block w-full pl-12 pr-4 py-3 border border-[#1f2937] rounded-xl bg-[#0b1220] text-base text-[#f9fafb] placeholder:text-[#6b7280] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
+                    />
+                </div>
+
+                {/* Right: Actions + User */}
+                <div className="flex items-center gap-4">
+                    <button className="p-2 text-[#9ca3af] hover:text-[#8b5cf6] hover:bg-[#8b5cf6]/10 rounded-xl transition-all relative">
+                        <Bell className="h-6 w-6" />
+                        <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#8b5cf6] rounded-full border-2 border-[#020617]"></span>
+                    </button>
+                    
+                    <button className="hidden sm:flex p-2 text-[#9ca3af] hover:text-[#f9fafb] hover:bg-[#111827] rounded-xl transition-all">
+                        <SettingsIcon className="h-6 w-6" />
+                    </button>
+                    
+                    <div className="h-10 w-px bg-[#1f2937] mx-1 hidden sm:block" />
+
+                    <div className="flex items-center gap-3 pl-1">
+                        <div className="text-right hidden sm:block">
+                            <p className="text-sm font-bold text-[#f9fafb] leading-none mb-1">
+                                {session?.user?.name || "Administrator"}
+                            </p>
+                            <p className="text-xs font-medium text-[#9ca3af] uppercase tracking-wide">
+                                Hostel Admin
+                            </p>
                         </div>
-                        <span className="hidden sm:block text-xs text-slate-500 dark:text-slate-400">
-                            {session?.user?.name || "Admin"}
-                        </span>
+                        <div className="h-11 w-11 rounded-xl bg-[#0b1220] flex items-center justify-center border border-[#1f2937]">
+                            <span className="text-sm font-bold text-[#8b5cf6] uppercase">
+                                {session?.user?.name?.[0] ?? "A"}
+                            </span>
+                        </div>
                     </div>
                 </div>
             </header>

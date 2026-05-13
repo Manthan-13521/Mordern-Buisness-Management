@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { MessageSquare, Wifi, WifiOff, Unplug, CheckCircle, AlertCircle } from "lucide-react";
 
-const INPUT = "w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500";
-const LABEL = "block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1";
+const INPUT = "w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-[#0b1220] px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500";
+const LABEL = "block text-xs font-medium text-[#9ca3af] mb-1";
 
 export default function WhatsAppPage() {
     const [status, setStatus] = useState<{ connected: boolean; whatsappNumber: string | null; sid: string | null } | null>(null);
@@ -40,11 +40,11 @@ export default function WhatsAppPage() {
 
     return (
         <div className="space-y-8 max-w-2xl">
-            <div><h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2"><MessageSquare className="h-6 w-6 text-emerald-500"/>WhatsApp Integration</h1>
+            <div><h1 className="text-2xl font-bold text-[#f9fafb] flex items-center gap-2"><MessageSquare className="h-6 w-6 text-emerald-500"/>WhatsApp Integration</h1>
             <p className="text-sm text-slate-500">Connect Twilio to send automated expiry alerts to hostel members</p></div>
 
             {/* Status Card */}
-            <div className={`rounded-2xl border p-6 flex items-center gap-4 ${status?.connected ? "bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800/30" : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"}`}>
+            <div className={`rounded-2xl border p-6 flex items-center gap-4 ${status?.connected ? "bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800/30" : "bg-slate-50 dark:bg-slate-800 border-[#1f2937]"}`}>
                 {status?.connected ? <Wifi className="h-8 w-8 text-emerald-500 flex-shrink-0"/> : <WifiOff className="h-8 w-8 text-slate-400 flex-shrink-0"/>}
                 <div className="flex-1">
                     <p className="font-semibold text-slate-800 dark:text-slate-100">{status?.connected ? "WhatsApp Connected" : "Not Connected"}</p>
@@ -67,8 +67,8 @@ export default function WhatsAppPage() {
 
             {/* Connection Form */}
             {!status?.connected && (
-                <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm p-6">
-                    <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-4">Connect Twilio Account</h2>
+                <div className="rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm p-6">
+                    <h2 className="text-sm font-semibold text-[#9ca3af] uppercase tracking-wider mb-4">Connect Twilio Account</h2>
                     <form onSubmit={handleConnect} className="space-y-4">
                         <div><label className={LABEL}>Twilio Account SID</label><input required value={form.sid} onChange={e=>setForm(p=>({...p,sid:e.target.value}))} placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" className={INPUT}/></div>
                         <div><label className={LABEL}>Auth Token</label><input required type="password" value={form.authToken} onChange={e=>setForm(p=>({...p,authToken:e.target.value}))} className={INPUT}/></div>
@@ -83,7 +83,7 @@ export default function WhatsAppPage() {
             )}
 
             {/* How it works */}
-            <div className="rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 p-5">
+            <div className="rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-[#1f2937] p-5">
                 <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-3">How it works</h3>
                 <ol className="space-y-2 text-sm text-slate-500 list-decimal list-inside">
                     <li>Connect your Twilio WhatsApp-enabled number above</li>

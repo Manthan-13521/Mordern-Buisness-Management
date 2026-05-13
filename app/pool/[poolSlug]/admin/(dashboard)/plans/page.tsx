@@ -198,8 +198,8 @@ export default function PlansPage() {
         <div className="space-y-6">
             <div className="sm:flex sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Plans Management</h1>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    <h1 className="text-2xl font-semibold text-[#f9fafb]">Plans Management</h1>
+                    <p className="mt-1 text-sm text-[#9ca3af]">
                         Create and manage membership plans with WhatsApp alert messages.
                     </p>
                 </div>
@@ -225,13 +225,13 @@ export default function PlansPage() {
                     plans.map((plan: any) => (
                         <div
                             key={plan._id}
-                            className="relative flex flex-col justify-between rounded-2xl border border-gray-200 p-6 shadow-sm dark:border-gray-800 bg-background"
+                            className="relative flex flex-col justify-between rounded-2xl border border-gray-200 p-6 shadow-sm dark:border-gray-800 bg-[#0b1220]"
                         >
                             <div>
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{plan.name}</h3>
+                                <h3 className="text-lg font-semibold text-[#f9fafb]">{plan.name}</h3>
                                 <p className="mt-3 flex items-baseline gap-x-2">
-                                    <span className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">₹{plan.price}</span>
-                                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                                    <span className="text-3xl font-bold tracking-tight text-[#f9fafb]">₹{plan.price}</span>
+                                    <span className="text-sm text-[#9ca3af]">
                                         /{plan.durationSeconds ? `${plan.durationSeconds}s`
                                           : plan.durationMinutes ? `${plan.durationMinutes}m`
                                           : plan.durationHours ? `${plan.durationHours}h`
@@ -268,11 +268,11 @@ export default function PlansPage() {
                                     <div className="mt-4 rounded-lg border border-green-100 dark:border-green-900/40 bg-green-50/50 dark:bg-green-900/10 p-3 space-y-2">
                                         <p className="text-xs font-semibold text-green-700 dark:text-green-400 mb-1">📋 Alert Messages</p>
                                         <div>
-                                            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Before expiry: </span>
+                                            <span className="text-xs font-medium text-[#9ca3af]">Before expiry: </span>
                                             <span className="text-xs text-gray-600 dark:text-gray-300 line-clamp-2">{plan.messages.beforeExpiry?.text}</span>
                                         </div>
                                         <div>
-                                            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">After expiry: </span>
+                                            <span className="text-xs font-medium text-[#9ca3af]">After expiry: </span>
                                             <span className="text-xs text-gray-600 dark:text-gray-300 line-clamp-2">{plan.messages.afterExpiry?.text}</span>
                                         </div>
                                     </div>
@@ -312,10 +312,10 @@ export default function PlansPage() {
             {/* ── Modal ──────────────────────────────────────────────────── */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                    <div className="w-full max-w-lg rounded-2xl bg-background shadow-2xl flex flex-col max-h-[90vh]">
+                    <div className="w-full max-w-lg rounded-2xl bg-[#0b1220] shadow-2xl flex flex-col max-h-[90vh]">
 
                         {/* Modal Header */}
-                        <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800">
+                        <div className="px-6 py-5 border-b border-[#1f2937]">
                             <h2 className="text-xl font-semibold dark:text-white">
                                 {editPlanId ? "Edit Plan" : "Create Plan"}
                             </h2>
@@ -373,7 +373,7 @@ export default function PlansPage() {
 
                                 {/* ── WhatsApp Alerts Toggle ────────────────────────── */}
                                 <div className="pt-1">
-                                    <label className="flex items-start gap-3 cursor-pointer rounded-lg border border-gray-200 dark:border-gray-700 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                                    <label className="flex items-start gap-3 cursor-pointer rounded-lg border border-[#1f2937] p-3 hover:bg-[#8b5cf6]/5 transition">
                                         <input
                                             type="checkbox"
                                             checked={formData.enableWhatsAppAlerts}
@@ -385,7 +385,7 @@ export default function PlansPage() {
                                                 <MessageSquare className="h-4 w-4 text-green-500" />
                                                 Enable WhatsApp Alerts
                                             </span>
-                                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                                            <span className="text-xs text-[#9ca3af]">
                                                 Auto-send messages 2 days before expiry and when expired.
                                             </span>
                                         </div>
@@ -413,7 +413,7 @@ export default function PlansPage() {
                                                 <div className="space-y-2">
                                                     <p className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">⏳ Before Expiry (2 days)</p>
                                                     <div>
-                                                        <label className="text-xs text-gray-600 dark:text-gray-400 mb-1 block">Message Text</label>
+                                                        <label className="text-xs text-[#9ca3af] mb-1 block">Message Text</label>
                                                         <textarea
                                                             rows={3}
                                                             value={formData.messages.beforeExpiry.text}
@@ -429,7 +429,7 @@ export default function PlansPage() {
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="text-xs text-gray-600 dark:text-gray-400 mb-1 block">Media URL <span className="text-gray-400">(optional — image/video link)</span></label>
+                                                        <label className="text-xs text-[#9ca3af] mb-1 block">Media URL <span className="text-gray-400">(optional — image/video link)</span></label>
                                                         <input
                                                             type="url"
                                                             value={formData.messages.beforeExpiry.mediaUrl}
@@ -450,7 +450,7 @@ export default function PlansPage() {
                                                 <div className="space-y-2">
                                                     <p className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">❌ After Expiry</p>
                                                     <div>
-                                                        <label className="text-xs text-gray-600 dark:text-gray-400 mb-1 block">Message Text</label>
+                                                        <label className="text-xs text-[#9ca3af] mb-1 block">Message Text</label>
                                                         <textarea
                                                             rows={3}
                                                             value={formData.messages.afterExpiry.text}
@@ -466,7 +466,7 @@ export default function PlansPage() {
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="text-xs text-gray-600 dark:text-gray-400 mb-1 block">Media URL <span className="text-gray-400">(optional)</span></label>
+                                                        <label className="text-xs text-[#9ca3af] mb-1 block">Media URL <span className="text-gray-400">(optional)</span></label>
                                                         <input
                                                             type="url"
                                                             value={formData.messages.afterExpiry.mediaUrl}
@@ -506,8 +506,8 @@ export default function PlansPage() {
                                 </div>
 
                                 {/* Advanced */}
-                                <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
-                                    <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-3">Advanced Features</p>
+                                <div className="pt-3 border-t border-[#1f2937]">
+                                    <p className="text-xs font-semibold text-[#9ca3af] uppercase tracking-wide mb-3">Advanced Features</p>
                                     <div className="space-y-2">
                                         {[
                                             { key: "hasEntertainment", label: "🎭 Entertainment Member — uses MS-series ID" },
@@ -530,11 +530,11 @@ export default function PlansPage() {
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-3">
+                        <div className="px-6 py-4 border-t border-[#1f2937] flex justify-end gap-3">
                             <button
                                 type="button"
                                 onClick={() => { setIsModalOpen(false); setEditPlanId(null); }}
-                                className="px-4 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+                                className="px-4 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-[#8b5cf6]/5 transition"
                             >
                                 Cancel
                             </button>

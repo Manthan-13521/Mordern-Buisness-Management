@@ -191,7 +191,7 @@ export default function PaymentsPage() {
         <div className="space-y-6">
             <div className="sm:flex sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Payments</h1>
+                    <h1 className="text-2xl font-semibold text-[#f9fafb]">Payments</h1>
                     <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
                         A list of all payments received from members.
                     </p>
@@ -222,15 +222,15 @@ export default function PaymentsPage() {
                             <table className="min-w-full divide-y divide-white/5">
                                 <thead className="bg-slate-900/50 backdrop-blur-md">
                                     <tr>
-                                        <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-white sm:pl-6">Date</th>
-                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Member</th>
-                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Plan</th>
-                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Amount</th>
-                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Method</th>
-                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">Status</th>
+                                        <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-[#f9fafb] sm:pl-6">Date</th>
+                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-[#f9fafb]">Member</th>
+                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-[#f9fafb]">Plan</th>
+                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-[#f9fafb]">Amount</th>
+                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-[#f9fafb]">Method</th>
+                                        <th className="px-3 py-3.5 text-left text-sm font-semibold text-[#f9fafb]">Status</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-white/5 bg-background">
+                                <tbody className="divide-y divide-white/5 bg-[#0b1220]">
                                     {loading ? (
                                         <tr><td colSpan={6} className="py-10 text-center text-gray-500">Loading...</td></tr>
                                     ) : payments.length === 0 ? (
@@ -241,16 +241,16 @@ export default function PaymentsPage() {
                                                 <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-900 dark:text-gray-300 sm:pl-6">
                                                     {new Date(payment.date).toLocaleString()}
                                                 </td>
-                                                <td className="whitespace-nowrap px-3 py-4 text-sm font-medium text-gray-900 dark:text-white">
+                                                <td className="whitespace-nowrap px-3 py-4 text-sm font-medium text-[#f9fafb]">
                                                     <div className="flex flex-col">
                                                         <span>{payment.memberId?.name || "N/A"}</span>
                                                         <span className="text-xs text-gray-500">{payment.memberId?.memberId}</span>
                                                     </div>
                                                 </td>
-                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-[#9ca3af]">
                                                     {payment.planId?.name || "N/A"}
                                                 </td>
-                                                <td className="whitespace-nowrap px-3 py-4 text-sm font-medium text-gray-900 dark:text-white">
+                                                <td className="whitespace-nowrap px-3 py-4 text-sm font-medium text-[#f9fafb]">
                                                     ₹{payment.amount}
                                                 </td>
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
@@ -290,14 +290,14 @@ export default function PaymentsPage() {
             {/* Pagination */}
             {total > LIMIT && (
                 <div className="flex items-center justify-between pt-2">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <p className="text-sm text-[#9ca3af]">
                         Page {page} of {totalPages}
                     </p>
                     <div className="flex gap-2">
                         <button 
                             disabled={page === 1 || loading} 
                             onClick={() => setPage(p => Math.max(1, p - 1))} 
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-background text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:bg-slate-50 disabled:text-slate-400 dark:disabled:bg-slate-900/50 dark:disabled:text-slate-600 transition-colors font-medium shadow-sm"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#1f2937] bg-[#0b1220] text-[#f9fafb] hover:bg-slate-50 dark:hover:bg-slate-700 disabled:bg-slate-50 disabled:text-slate-400 dark:disabled:bg-slate-900/50 dark:disabled:text-slate-600 transition-colors font-medium shadow-sm"
                         >
                             <ChevronLeft className="h-4 w-4" /> Previous
                         </button>
@@ -328,7 +328,7 @@ export default function PaymentsPage() {
 
                             <div>
                                 <label className="block text-sm font-medium dark:text-gray-300">Plan</label>
-                                <select required value={formData.planId} onChange={e => handlePlanChange(e.target.value)} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 bg-background shadow-sm dark:text-white dark:border-gray-700">
+                                <select required value={formData.planId} onChange={e => handlePlanChange(e.target.value)} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 bg-[#0b1220] shadow-sm dark:text-white dark:border-gray-700">
                                     <option value="">Select Plan</option>
                                     {plans.map(p => <option key={p._id} value={p._id}>{p.name} - ₹{p.price}</option>)}
                                 </select>
@@ -359,7 +359,7 @@ export default function PaymentsPage() {
                             {formData.paymentMethod === "upi" && (
                                 <div>
                                     <label className="block text-sm font-medium dark:text-gray-300">Transaction ID</label>
-                                    <input required type="text" value={formData.transactionId} onChange={e => setFormData({ ...formData, transactionId: e.target.value })} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 bg-background shadow-sm dark:text-white dark:border-gray-700" placeholder="e.g. UPI Ref No" />
+                                    <input required type="text" value={formData.transactionId} onChange={e => setFormData({ ...formData, transactionId: e.target.value })} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 bg-[#0b1220] shadow-sm dark:text-white dark:border-gray-700" placeholder="e.g. UPI Ref No" />
                                 </div>
                             )}
 

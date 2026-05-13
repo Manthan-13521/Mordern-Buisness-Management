@@ -370,8 +370,8 @@ export default function MembersPage() {
             {/* Header */}
             <div className="sm:flex sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Members</h1>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    <h1 className="text-2xl font-semibold text-[#f9fafb]">Members</h1>
+                    <p className="mt-1 text-sm text-[#9ca3af]">
                         {total.toLocaleString()} total members found
                     </p>
                 </div>
@@ -408,7 +408,7 @@ export default function MembersPage() {
 
             {/* Legend & Status */}
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                <div className="flex items-center gap-4 text-xs text-[#9ca3af]">
                     <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-red-100 dark:bg-red-950/60 border border-red-200" /> Expired / Deleted</span>
                     <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-amber-100 dark:bg-amber-950/60 border border-amber-200" /> Expiring ≤ 7 days</span>
                     <PrinterAppsHelp />
@@ -443,13 +443,13 @@ export default function MembersPage() {
                                 <thead className="bg-slate-900/50 backdrop-blur-md">
                                     <tr>
                                         {["Member", "Phone", "Plan / Qty", "Equipment", "Balance", "Valid Till", "Status", ""].map((h) => (
-                                            <th key={h} className="px-3 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 first:pl-6">
+                                            <th key={h} className="px-3 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-[#9ca3af] first:pl-6">
                                                 {h}
                                             </th>
                                         ))}
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-white/5 bg-background">
+                                <tbody className="divide-y divide-white/5 bg-[#0b1220]">
                                     {loading ? (
                                         <tr><td colSpan={8} className="py-12 text-center">
                                             <RefreshCw className="animate-spin h-5 w-5 mx-auto text-blue-500" />
@@ -472,7 +472,7 @@ export default function MembersPage() {
                                                                 alt={member.name} 
                                                                 width={36} 
                                                                 height={36} 
-                                                                className="h-9 w-9 rounded-full object-cover ring-1 ring-gray-200 dark:ring-gray-700"
+                                                                className="h-9 w-9 rounded-full object-cover ring-1 ring-[#1f2937]"
                                                                 loading="lazy"
                                                                 quality={40}
                                                               />
@@ -481,7 +481,7 @@ export default function MembersPage() {
                                                               </div>
                                                         }
                                                         <div>
-                                                            <p className="font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:text-blue-400 dark:group-hover:text-indigo-400">{member.name}</p>
+                                                            <p className="font-medium text-[#f9fafb] group-hover:text-blue-600 dark:text-blue-400 dark:group-hover:text-indigo-400">{member.name}</p>
                                                             <p className="text-xs text-gray-400">
                                                                 {member.memberId}{member.age ? ` · ${member.age} yrs` : ""}
                                                                 {(member as any)._source === "entertainment" && (
@@ -496,7 +496,7 @@ export default function MembersPage() {
                                                     </a>
                                                 </td>
                                                 {/* Phone */}
-                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-600 dark:text-gray-400">{member.phone}</td>
+                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-[#9ca3af]">{member.phone}</td>
                                                 {/* Plan / Qty */}
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm">
                                                     <p className="text-gray-800 dark:text-gray-200">{plan?.name ?? "N/A"}</p>
@@ -519,7 +519,7 @@ export default function MembersPage() {
                                                     }
                                                 </td>
                                                 {/* Valid Till */}
-                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-600 dark:text-gray-400">
+                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-[#9ca3af]">
                                                     <p>{endDate.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</p>
                                                     <p className="text-xs text-gray-400">{member.daysLeftLabel}</p>
                                                 </td>
@@ -565,19 +565,19 @@ export default function MembersPage() {
             </div>
 
             {/* Pagination */}
-            <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-800 pt-4">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+            <div className="flex items-center justify-between border-t border-[#1f2937] pt-4">
+                <p className="text-sm text-[#9ca3af]">
                     Showing <span className="font-medium">{(page - 1) * LIMIT + 1}</span>–<span className="font-medium">{Math.min(page * LIMIT, total)}</span> of <span className="font-medium">{total}</span>
                 </p>
                 <div className="flex gap-2">
                     <button
                         disabled={page <= 1 || loading}
                         onClick={() => setPage((p) => Math.max(1, p - 1))}
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-background text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:bg-slate-50 disabled:text-slate-400 dark:disabled:bg-slate-900/50 dark:disabled:text-slate-600 transition-colors font-medium shadow-sm"
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#1f2937] bg-[#0b1220] text-[#f9fafb] hover:bg-slate-50 dark:hover:bg-slate-700 disabled:bg-slate-50 disabled:text-slate-400 dark:disabled:bg-slate-900/50 dark:disabled:text-slate-600 transition-colors font-medium shadow-sm"
                     >
                         <ChevronLeft className="h-4 w-4" /> Previous
                     </button>
-                    <span className="inline-flex items-center px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
+                    <span className="inline-flex items-center px-3 py-2 text-sm text-[#9ca3af]">
                         Page {page} / {totalPages}
                     </span>
                     <button

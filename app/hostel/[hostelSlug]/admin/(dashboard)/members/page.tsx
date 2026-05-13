@@ -268,7 +268,7 @@ export default function MembersPage() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <h1 className="text-2xl font-bold text-[#f9fafb] flex items-center gap-2">
                         <Users className="h-6 w-6 text-blue-500" />Members
                     </h1>
                     <p className="text-sm text-slate-500">{total} total members</p>
@@ -283,7 +283,7 @@ export default function MembersPage() {
                             onChange={e => { setSearch(e.target.value); setPage(1); }}
                         />
                     </div>
-                    <button onClick={fetchMembers} className="p-2 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700">
+                    <button onClick={fetchMembers} className="p-2 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-[#8b5cf6]/5">
                         <RefreshCw className="h-4 w-4 text-slate-500" />
                     </button>
                     <HostelBlockFilter />
@@ -304,7 +304,7 @@ export default function MembersPage() {
                                 ))}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5 bg-background">
+                        <tbody className="divide-y divide-white/5 bg-[#0b1220]">
                             {loading ? Array.from({ length: 5 }).map((_, i) => (
                                 <tr key={i}>{Array.from({ length: 7 }).map((_, j) => (
                                     <td key={j} className="px-4 py-3"><div className="h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /></td>
@@ -389,15 +389,15 @@ export default function MembersPage() {
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setShowForm(false); stopCamera(); }} />
                     <div className="relative w-full max-w-3xl bg-slate-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] border border-white/10">
                         {/* Modal header */}
-                        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
-                            <h2 className="text-lg font-bold text-slate-800 dark:text-white">{editMember ? "Edit Member" : "Add New Member"}</h2>
-                            <button onClick={() => { setShowForm(false); stopCamera(); }} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition"><X className="h-5 w-5 text-slate-400" /></button>
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-[#1f2937] flex-shrink-0">
+                            <h2 className="text-lg font-bold text-[#f9fafb]">{editMember ? "Edit Member" : "Add New Member"}</h2>
+                            <button onClick={() => { setShowForm(false); stopCamera(); }} className="p-1.5 rounded-lg hover:bg-[#8b5cf6]/5 transition"><X className="h-5 w-5 text-slate-400" /></button>
                         </div>
 
                         {/* Modal body — two columns */}
                         {blocks.length === 0 ? (
                             <div className="p-12 text-center flex flex-col items-center">
-                                <p className="text-slate-500 dark:text-slate-400 mb-4">No hostel structure found. You must configure blocks, floors, and rooms first.</p>
+                                <p className="text-[#9ca3af] mb-4">No hostel structure found. You must configure blocks, floors, and rooms first.</p>
                                 <a href="hostel-settings" className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-50 dark:hover:bg-blue-500/100">Go to Settings</a>
                             </div>
                         ) : (
@@ -405,7 +405,7 @@ export default function MembersPage() {
                                 {error && <div className="mx-6 mt-4 text-sm text-red-500 bg-red-50 dark:bg-red-900/20 rounded-xl px-4 py-2.5">{error}</div>}
                                 <div className="grid grid-cols-1 md:grid-cols-5 gap-0 p-6">
                                     {/* ── Left: form fields (3/5) ── */}
-                                    <div className="md:col-span-3 md:pr-6 space-y-4 md:border-r border-slate-200 dark:border-slate-700">
+                                    <div className="md:col-span-3 md:pr-6 space-y-4 md:border-r border-[#1f2937]">
                                         <p className="text-xs font-bold text-blue-500 uppercase tracking-widest">Member Details</p>
 
                                         <div className="grid grid-cols-2 gap-4">
@@ -455,7 +455,7 @@ export default function MembersPage() {
                                                 </div>
                                                 
                                                 {roomDropdownOpen && (
-                                                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                                                    <div className="absolute z-10 w-full mt-1 bg-[#0b1220] border border-[#1f2937] rounded-xl shadow-lg max-h-60 overflow-y-auto">
                                                         {rooms.length === 0 ? (
                                                             <div className="px-3 py-2 text-sm text-slate-500">No rooms</div>
                                                         ) : (
@@ -468,7 +468,7 @@ export default function MembersPage() {
                                                                             setRoomDropdownOpen(false);
                                                                         }
                                                                     }}
-                                                                    className={`px-3 py-2 text-sm flex justify-between border-b border-slate-100 dark:border-slate-700/50 last:border-0 ${r.isOccupied ? 'bg-slate-50 dark:bg-slate-900/50 text-slate-400 cursor-not-allowed' : 'hover:bg-blue-50 dark:hover:bg-blue-500/10 dark:hover:bg-indigo-900/30 cursor-pointer text-slate-700 dark:text-slate-200'}`}
+                                                                    className={`px-3 py-2 text-sm flex justify-between border-b border-slate-100 dark:border-slate-700/50 last:border-0 ${r.isOccupied ? 'bg-[#020617]/50 text-slate-400 cursor-not-allowed' : 'hover:bg-blue-50 dark:hover:bg-blue-500/10 dark:hover:bg-indigo-900/30 cursor-pointer text-[#f9fafb]'}`}
                                                                 >
                                                                     <span className="font-medium">{r.roomNo}</span>
                                                                     <span className="text-xs">
@@ -497,7 +497,7 @@ export default function MembersPage() {
 
                                                 {selectedPlan && (
                                                     <div className="rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800/40 px-4 py-2.5 flex items-center justify-between text-sm">
-                                                        <span className="text-slate-500 dark:text-slate-400">Next Due Date (calculated)</span>
+                                                        <span className="text-[#9ca3af]">Next Due Date (calculated)</span>
                                                         <span className="font-semibold text-indigo-700 dark:text-indigo-300">{expiryDate}</span>
                                                     </div>
                                                 )}
@@ -521,7 +521,7 @@ export default function MembersPage() {
                                                 {/* Balance — read-only, server also recalculates */}
                                                 {selectedPlan && (
                                                     <div className={`rounded-xl px-4 py-2.5 text-sm flex items-center justify-between border ${balance > 0 ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800/40" : "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800/40"}`}>
-                                                        <span className="text-slate-500 dark:text-slate-400 font-medium">Initial Balance (₹)</span>
+                                                        <span className="text-[#9ca3af] font-medium">Initial Balance (₹)</span>
                                                         <span className={`font-bold ${balance > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-orange-600 dark:text-orange-400"}`}>
                                                             {balance > 0 ? `+${balance}` : balance}
                                                         </span>
@@ -563,10 +563,10 @@ export default function MembersPage() {
 
                                         {/* Photo actions */}
                                         <div className="flex gap-2 w-full">
-                                            <button type="button" onClick={startCamera} className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium border border-slate-300 dark:border-slate-600 rounded-xl py-2 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                                            <button type="button" onClick={startCamera} className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium border border-slate-300 dark:border-slate-600 rounded-xl py-2 hover:bg-[#8b5cf6]/5 transition">
                                                 <Camera className="h-3.5 w-3.5" />Camera
                                             </button>
-                                            <button type="button" onClick={() => fileInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium border border-slate-300 dark:border-slate-600 rounded-xl py-2 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                                            <button type="button" onClick={() => fileInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium border border-slate-300 dark:border-slate-600 rounded-xl py-2 hover:bg-[#8b5cf6]/5 transition">
                                                 <Upload className="h-3.5 w-3.5" />Upload
                                             </button>
                                             {photoPreview && (
@@ -600,7 +600,7 @@ export default function MembersPage() {
                             <button onClick={() => setRenewMember(null)} className="p-1.5 rounded-lg hover:bg-white/10 transition"><X className="h-5 w-5 text-slate-400" /></button>
                         </div>
                         <div className="rounded-xl bg-white/5 border border-white/5 px-4 py-3 text-xs space-y-1 text-slate-400">
-                            <div className="flex justify-between"><span>Room</span><span className="font-semibold text-slate-700 dark:text-slate-200">{(renewMember as any).block_room_no || renewMember.roomNo}</span></div>
+                            <div className="flex justify-between"><span>Room</span><span className="font-semibold text-[#f9fafb]">{(renewMember as any).block_room_no || renewMember.roomNo}</span></div>
                             <div className="flex justify-between"><span>Current Balance</span><span className={`font-semibold ${renewMember.balance >= 0 ? "text-emerald-500" : "text-red-500"}`}>₹{renewMember.balance.toLocaleString()}</span></div>
                             <div className="flex justify-between"><span>Next Due</span><span className="font-semibold text-blue-500">{renewMember.due_date ? new Date(renewMember.due_date).toLocaleDateString("en-IN") : "—"}</span></div>
                         </div>
