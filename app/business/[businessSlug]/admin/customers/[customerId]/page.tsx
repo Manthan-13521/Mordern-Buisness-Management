@@ -695,7 +695,7 @@ export default function CustomerDetailPage() {
                             {entry.transactionType === 'received' ? 'Received' : 'Given'}
                           </span>
                         </td>
-                        <td colSpan={4} className="px-6 py-5 text-center">
+                        <td colSpan={5} className="px-6 py-5 text-center">
                           <p className="text-lg font-bold text-white uppercase tracking-widest">
                             ₹{entry.amount.toLocaleString()} {entry.transactionType === 'received' ? 'payment received from customer' : 'payment sent to customer'}
                           </p>
@@ -757,7 +757,7 @@ export default function CustomerDetailPage() {
                             {isSent ? 'Received' : 'Given'}
                           </span>
                         </td>
-                        <td colSpan={4} className="px-6 py-5 text-center">
+                        <td colSpan={5} className="px-6 py-5 text-center">
                           <p className="text-lg font-bold text-white uppercase tracking-widest">
                             ₹{entry.paidAmount.toLocaleString()} {isSent ? 'payment received during sale' : 'payment given during purchase'}
                           </p>
