@@ -23,7 +23,6 @@ import {
     LogOut,
     Droplets,
 } from "lucide-react";
-import { ThemeToggle } from "./ThemeToggle";
 
 export function Sidebar() {
     const pathname = usePathname();
@@ -44,7 +43,6 @@ export function Sidebar() {
         { name: "Balance Payments", href: `${basePath}/balance-payments`,  icon: IndianRupee,      roles: ["admin"] },
         { name: "Staff",            href: `${basePath}/staff`,             icon: UserCog,          roles: ["admin"] },
         { name: "Competitions",     href: `${basePath}/competitions`,      icon: Trophy,           roles: ["admin"] },
-        { name: "Notifications",    href: `${basePath}/notifications`,     icon: Bell,             roles: ["admin", "operator"] },
         { name: "Analytics",        href: `${basePath}/revenue-analytics`,  icon: BadgeDollarSign,  roles: ["admin"] },
         { name: "WhatsApp",         href: `${basePath}/twilio`,            icon: MessageSquare,    roles: ["admin"] },
         { name: "Settings",         href: `${basePath}/settings`,          icon: Settings,         roles: ["admin"] },
@@ -167,7 +165,7 @@ export function Sidebar() {
                         <p className="text-[9px] text-[#9ca3af] truncate">{session?.user?.role}</p>
                     </div>
                 </div>
-                <ThemeToggle />
+                
                 <button
                     onClick={() => signOut({ callbackUrl: "/login" })}
                     className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-[#9ca3af] hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"

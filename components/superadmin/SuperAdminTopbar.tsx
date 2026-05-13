@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Shield, Menu, X, Bell, Search, Settings as SettingsIcon } from "lucide-react";
+import { Shield, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { SuperAdminSidebar } from "./SuperAdminSidebar";
 
@@ -56,29 +56,8 @@ export function SuperAdminTopbar() {
                     <h1 className="text-base font-bold text-[#f9fafb] truncate tracking-tight">{title}</h1>
                 </div>
 
-                {/* Center: Search */}
-                <div className="hidden lg:flex flex-1 max-w-lg relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Search className="h-5 w-5 text-[#6b7280]" />
-                    </div>
-                    <input
-                        type="text"
-                        placeholder="Search organizations, billing, referrals..."
-                        className="block w-full pl-12 pr-4 py-3 border border-[#1f2937] rounded-xl bg-[#0b1220] text-base text-[#f9fafb] placeholder:text-[#6b7280] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
-                    />
-                </div>
-
                 {/* Right: Actions */}
                 <div className="flex items-center gap-4">
-                    <button className="p-2 text-[#9ca3af] hover:text-[#8b5cf6] hover:bg-[#8b5cf6]/10 rounded-xl transition-all relative">
-                        <Bell className="h-6 w-6" />
-                        <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#8b5cf6] rounded-full border-2 border-[#020617]"></span>
-                    </button>
-                    
-                    <button className="hidden sm:flex p-2 text-[#9ca3af] hover:text-[#f9fafb] hover:bg-[#111827] rounded-xl transition-all">
-                        <SettingsIcon className="h-6 w-6" />
-                    </button>
-                    
                     <div className="h-10 w-px bg-[#1f2937] mx-1 hidden sm:block" />
 
                     <div className="flex items-center gap-3 pl-1">
