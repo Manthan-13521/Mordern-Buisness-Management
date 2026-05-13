@@ -7,7 +7,7 @@ import { UserCheck, UserX, ScanFace, WifiOff, Wifi, Users, Search, ScanLine, X }
 
 const Scanner = dynamic(
     () => import("@yudiel/react-qr-scanner").then((mod) => mod.Scanner),
-    { ssr: false, loading: () => <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">Loading scanner…</div> }
+    { ssr: false, loading: () => <div className="w-full h-full flex items-center justify-center text-[#6b7280] text-sm">Loading scanner…</div> }
 );
 
 
@@ -278,12 +278,12 @@ export default function EntryPage() {
                     <p className="mt-1 text-sm text-[#9ca3af]">Scan a member's QR code or look up by UID.</p>
                 </div>
                 <div className="flex flex-col items-end gap-2">
-                    <div className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full ${isOnline ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>
+                    <div className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full ${isOnline ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400 dark:bg-red-900/30"}`}>
                         {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
                         {isOnline ? "Online" : "Offline"}
                     </div>
                     {pendingScans.length > 0 && (
-                        <div className="text-xs bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 px-2 py-1 rounded-full font-medium">
+                        <div className="text-xs bg-orange-500/10 text-orange-400 px-2 py-1 rounded-full font-medium">
                             {pendingScans.length} scan{pendingScans.length > 1 ? "s" : ""} pending sync
                         </div>
                     )}
@@ -305,14 +305,14 @@ export default function EntryPage() {
                             </span>
                         </span>
                     </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                    <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                         <div
                             className={`h-3 rounded-full transition-all duration-500 ${occupancyColor}`}
                             style={{ width: `${occupancyPercent}%` }}
                         />
                     </div>
                     {occupancyPercent >= 90 && (
-                        <p className="mt-1.5 text-xs text-red-600 dark:text-red-400 font-medium">⚠ Pool is nearly full</p>
+                        <p className="mt-1.5 text-xs text-red-600 font-medium">⚠ Pool is nearly full</p>
                     )}
                 </div>
             )}
@@ -330,19 +330,19 @@ export default function EntryPage() {
                                     sound={false}
                                 />
                             ) : scanResult ? (
-                                <div className={`w-full h-full flex flex-col justify-center items-center p-6 ${scanResult.success ? "bg-green-100 dark:bg-green-900" : "bg-red-100 dark:bg-red-900"}`}>
+                                <div className={`w-full h-full flex flex-col justify-center items-center p-6 ${scanResult.success ? "bg-green-500/10 dark:bg-green-900" : "bg-red-500/10 dark:bg-red-900"}`}>
                                     {scanResult.success ? (
-                                        <UserCheck className="w-20 h-20 text-green-600 dark:text-green-400 mb-4" />
+                                        <UserCheck className="w-20 h-20 text-green-600 mb-4" />
                                     ) : (
-                                        <UserX className="w-20 h-20 text-red-600 dark:text-red-400 mb-4" />
+                                        <UserX className="w-20 h-20 text-red-600 mb-4" />
                                     )}
                                     <h2 className={`text-2xl font-bold text-center ${scanResult.success ? "text-green-800 dark:text-green-200" : "text-red-800 dark:text-red-200"}`}>
                                         {scanResult.message}
                                     </h2>
                                 </div>
                             ) : (
-                                <div className="flex flex-col items-center text-gray-500 gap-4">
-                                    <ScanLine className="w-16 h-16 text-gray-300 dark:text-gray-600" />
+                                <div className="flex flex-col items-center text-[#6b7280] gap-4">
+                                    <ScanLine className="w-16 h-16 text-[#9ca3af]" />
                                     <p className="text-sm text-center px-6">Click <strong>"Start Scan"</strong> below to activate the camera</p>
                                 </div>
                             )}
@@ -363,7 +363,7 @@ export default function EntryPage() {
                                 </button>
                             ) : (
                                 <button onClick={stopScanning}
-                                    className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-500 transition-colors">
+                                    className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-500/100 transition-colors">
                                     <X className="h-4 w-4" />
                                     Stop Scan
                                 </button>
@@ -394,14 +394,14 @@ export default function EntryPage() {
                                     }
                                 }}
                                 placeholder="M0001 or MS0001"
-                                className="flex-1 rounded-lg border border-[#1f2937] bg-[#0b1220] dark:backdrop-blur-md dark:border border-[#1f2937] shadow-sm px-3 py-2 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                className="flex-1 rounded-lg border border-[#1f2937] bg-[#0b1220] dark:backdrop-blur-md dark:border border-[#1f2937] shadow-sm px-3 py-2 text-sm text-[#f9fafb] focus:ring-2 focus:ring-[#8b5cf6] focus:border-[#8b5cf6]"
                             />
                             <button onClick={() => handleUidLookup()} disabled={lookupLoading || !uid.trim()}
                                 className="rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 px-4 py-2 text-sm font-semibold text-white  disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                                 {lookupLoading ? "..." : "Search"}
                             </button>
                             <button onClick={() => { handleUidLookup(); handleScan(uid.trim(), true); }} disabled={lookupLoading || !uid.trim() || isScanning}
-                                className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-500/100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                                 {lookupLoading ? "..." : "Record Entry"}
                             </button>
                         </div>
@@ -410,9 +410,9 @@ export default function EntryPage() {
                     {/* Lookup Result */}
                     <div className="flex-1 px-6 pb-6">
                         {lookupError && (
-                            <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 text-center">
+                            <div className="rounded-lg bg-red-500/10 dark:bg-red-900/20 border border-red-500/20 dark:border-red-800 p-4 text-center">
                                 <UserX className="h-8 w-8 text-red-400 mx-auto mb-2" />
-                                <p className="text-sm font-medium text-red-700 dark:text-red-400">{lookupError}</p>
+                                <p className="text-sm font-medium text-red-400">{lookupError}</p>
                             </div>
                         )}
                         {lookupResult && (
@@ -442,8 +442,8 @@ export default function EntryPage() {
                                         {lookupResult.photoUrl ? (
                                             <img src={`/api/members/${lookupResult._id}/photo`} alt="" className="h-56 w-48 object-cover border-4 border-[#1f2937] rounded-lg shadow-sm" />
                                         ) : (
-                                            <div className="h-56 w-48 bg-white/5 dark:backdrop-blur-md dark:border border-[#1f2937] shadow-lg border-4 border-gray-50 flex items-center justify-center rounded-lg shadow-sm">
-                                                <UserCheck className="h-16 w-16 text-gray-400" />
+                                            <div className="h-56 w-48 bg-[#0b1220] dark:backdrop-blur-md dark:border border-[#1f2937] shadow-lg border-4 border-gray-50 flex items-center justify-center rounded-lg shadow-sm">
+                                                <UserCheck className="h-16 w-16 text-[#6b7280]" />
                                             </div>
                                         )}
                                     </div>
@@ -453,7 +453,7 @@ export default function EntryPage() {
                                         <h3 className="text-xl font-bold text-[#f9fafb] truncate">
                                             {lookupResult.name.toUpperCase()}
                                         </h3>
-                                        <p className="text-sm font-bold text-blue-600 dark:text-blue-400 dark:text-indigo-400 mt-1">
+                                        <p className="text-sm font-bold text-blue-600 mt-1">
                                             {lookupResult.memberId}
                                         </p>
                                         
@@ -479,9 +479,9 @@ export default function EntryPage() {
                                 </div>
 
                                 {/* Footer / Expiry */}
-                                <div className="bg-white/5 dark:dark:backdrop-blur-md border-[#1f2937] shadow-lg px-5 py-3 border-t border-[#1f2937] flex justify-between items-center">
-                                    <span className="text-xs text-gray-500 font-medium">Valid Till: {new Date(lookupResult.planEndDate || lookupResult.expiryDate || "").toLocaleDateString()}</span>
-                                    <span className={`text-xs font-bold ${lookupResult.isExpired ? "text-red-600" : "text-blue-600 dark:text-blue-400 dark:text-indigo-400"}`}>
+                                <div className="bg-[#0b1220]/5 dark:dark:backdrop-blur-md border-[#1f2937] shadow-lg px-5 py-3 border-t border-[#1f2937] flex justify-between items-center">
+                                    <span className="text-xs text-[#6b7280] font-medium">Valid Till: {new Date(lookupResult.planEndDate || lookupResult.expiryDate || "").toLocaleDateString()}</span>
+                                    <span className={`text-xs font-bold ${lookupResult.isExpired ? "text-red-600" : "text-blue-600"}`}>
                                         {lookupResult.isExpired ? "Expired" : `⏱ ${getRemainingTimeText(lookupResult.planEndDate || lookupResult.expiryDate || "")}`}
                                     </span>
                                 </div>
@@ -489,8 +489,8 @@ export default function EntryPage() {
                         )}
                         {!lookupResult && !lookupError && (
                             <div className="flex flex-col items-center justify-center py-12 text-center">
-                                <Search className="h-10 w-10 text-gray-300 dark:text-gray-700 mb-3" />
-                                <p className="text-sm text-gray-500">Enter a member UID above to see their full details</p>
+                                <Search className="h-10 w-10 text-[#9ca3af] dark:text-[#9ca3af] mb-3" />
+                                <p className="text-sm text-[#6b7280]">Enter a member UID above to see their full details</p>
                             </div>
                         )}
                     </div>

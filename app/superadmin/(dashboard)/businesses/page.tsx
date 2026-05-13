@@ -164,7 +164,7 @@ export default function ManageBusinessesPage() {
                         placeholder="Search by name, slug or email..." 
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="bg-[#0b1220] border border-neutral-800 rounded-xl pl-10 pr-4 py-2.5 w-full md:w-80 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                        className="bg-[#0b1220] border border-neutral-800 rounded-xl pl-10 pr-4 py-2.5 w-full md:w-80 text-sm focus:ring-2 focus:ring-[#8b5cf6] focus:outline-none transition-all"
                     />
                 </div>
             </div>
@@ -265,7 +265,7 @@ export default function ManageBusinessesPage() {
                                             </button>
                                             <button 
                                                 onClick={() => setShowDeleteModal(business.businessId)}
-                                                className="p-2 hover:bg-red-500/10 rounded-lg text-red-500 hover:text-red-400 transition-all shadow-sm"
+                                                className="p-2 hover:bg-red-500/100/10 rounded-lg text-red-500 hover:text-red-400 transition-all shadow-sm"
                                                 title="Delete Business"
                                                 disabled={isActionLoading}
                                             >
@@ -380,7 +380,7 @@ export default function ManageBusinessesPage() {
                             </button>
                             <button 
                                 onClick={() => deleteBusiness(showDeleteModal)}
-                                className="py-3.5 text-sm font-bold bg-red-600 hover:bg-red-500 text-white rounded-xl transition-all shadow-lg shadow-red-900/20 flex items-center justify-center gap-2 disabled:opacity-50"
+                                className="py-3.5 text-sm font-bold bg-red-600 hover:bg-red-500/100 text-white rounded-xl transition-all shadow-lg shadow-red-900/20 flex items-center justify-center gap-2 disabled:opacity-50"
                                 disabled={isActionLoading}
                             >
                                 {isActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete System"}
@@ -406,20 +406,20 @@ export default function ManageBusinessesPage() {
                             <div className="space-y-4">
                                 <div>
                                     <label className="text-xs font-bold text-[#6b7280] uppercase tracking-widest">Admin Email</label>
-                                    <div className="mt-1 p-3 bg-neutral-950 border border-neutral-800 rounded-lg text-white font-mono text-sm break-all">
+                                    <div className="mt-1 p-3 bg-[#020617] border border-neutral-800 rounded-lg text-white font-mono text-sm break-all">
                                         {resetCreds.email}
                                     </div>
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold text-[#6b7280] uppercase tracking-widest">New Password</label>
-                                    <div className="mt-1 p-3 bg-neutral-950 border border-neutral-800 rounded-lg text-green-400 font-mono text-xl tracking-wider text-center font-bold">
+                                    <div className="mt-1 p-3 bg-[#020617] border border-neutral-800 rounded-lg text-green-400 font-mono text-xl tracking-wider text-center font-bold">
                                         {resetCreds.pass}
                                     </div>
                                 </div>
                             </div>
                             <button 
                                 onClick={() => setResetCreds(null)}
-                                className="w-full py-4 text-sm font-bold bg-green-600 hover:bg-green-500 text-white rounded-2xl transition-all shadow-lg"
+                                className="w-full py-4 text-sm font-bold bg-green-600 hover:bg-green-500/100 text-white rounded-2xl transition-all shadow-lg"
                             >
                                 I Have Copied It
                             </button>

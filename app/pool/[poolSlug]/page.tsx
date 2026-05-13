@@ -13,10 +13,10 @@ export default async function PoolLanding({ params }: { params: Promise<{ poolSl
 
         <div className="mx-auto max-w-2xl py-24 sm:py-32 lg:py-40">
           <div className="text-center">
-            <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl dark:text-white">
+            <h1 className="text-4xl font-bold tracking-tight text-[#f9fafb] sm:text-6xl">
               {poolSlug ? `${poolSlug.replace('-', ' ').toUpperCase()} Registration` : 'Swimming Pool Management'}
             </h1>
-            <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300">
+            <p className="mt-6 text-lg leading-8 text-[#9ca3af]">
               Register online instantly, secure your membership, and get your digital QR ID card generated electronically within seconds.
             </p>
             <div className="mt-10 flex items-center justify-center gap-x-6">
@@ -26,7 +26,7 @@ export default async function PoolLanding({ params }: { params: Promise<{ poolSl
               >
                 Register Now <ArrowRight className="w-4 h-4" />
               </Link>
-              <Link href={`/pool/${poolSlug}/admin/login`} className="text-sm font-semibold leading-6 text-gray-900 dark:text-gray-100 p-2 hover:bg-gray-100 hover:bg-[#8b5cf6]/5 rounded-md">
+              <Link href={`/pool/${poolSlug}/admin/login`} className="text-sm font-semibold leading-6 text-[#f9fafb] dark:text-gray-100 p-2 hover:bg-[#0b1220] hover:bg-[#8b5cf6]/5 rounded-md">
                 Admin Area <span aria-hidden="true">→</span>
               </Link>
             </div>
@@ -38,8 +38,8 @@ export default async function PoolLanding({ params }: { params: Promise<{ poolSl
       <div className="py-24 sm:py-32 bg-[#0b1220]/50">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="mx-auto max-w-2xl lg:text-center">
-            <h2 className="text-base font-semibold leading-7 text-blue-600 dark:text-blue-400 dark:text-indigo-400">Streamlined Process</h2>
-            <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl dark:text-white">Everything required to hit the water</p>
+            <h2 className="text-base font-semibold leading-7 text-blue-600">Streamlined Process</h2>
+            <p className="mt-2 text-3xl font-bold tracking-tight text-[#f9fafb] sm:text-4xl">Everything required to hit the water</p>
             <p className="mt-6 text-lg leading-8 text-[#9ca3af]">
               Our newly upgraded portal ensures your access passes are ready before you even step through the doors.
             </p>

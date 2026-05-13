@@ -5,7 +5,7 @@ import { Settings, Save, Download, HardDrive, Server, Sun, Moon, Monitor, Sparkl
 import Link from "next/link";
 
 type HostelInfo = { hostelName: string; slug: string; city: string; adminEmail: string; adminPhone?: string; isTwilioConnected: boolean; };
-const INPUT = "w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-[#0b1220] px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500";
+const INPUT = "w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-[#0b1220] px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6]";
 const LABEL = "block text-xs font-medium text-[#9ca3af] mb-1";
 
 export default function SettingsPage() {
@@ -124,7 +124,7 @@ export default function SettingsPage() {
                     <div>
                         <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Status</p>
                         <div className="mt-1">
-                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${subStatus?.status === "active" ? "bg-emerald-100 text-emerald-600" : "bg-red-100 text-red-600"}`}>
+                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${subStatus?.status === "active" ? "bg-emerald-100 text-emerald-600" : "bg-red-500/10 text-red-600"}`}>
                                 {subStatus?.status || "—"}
                             </span>
                         </div>
@@ -174,7 +174,7 @@ export default function SettingsPage() {
 
             {/* Data Management */}
             <div className="rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm p-6 space-y-4">
-                <div className="flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-700">
+                <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
                     <HardDrive className="h-5 w-5 text-blue-500"/>
                     <h2 className="text-sm font-semibold text-[#9ca3af] uppercase tracking-wider">Data Management</h2>
                 </div>
@@ -188,7 +188,7 @@ export default function SettingsPage() {
                     <button onClick={handleJsonBackup} className="inline-flex w-full justify-center items-center gap-2 rounded-xl bg-slate-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-600 transition-colors">
                         <HardDrive className="w-4 h-4"/>Export JSON Backup
                     </button>
-                    <button onClick={handleAwsJsonBackup} disabled={awsBackupLoading} className="inline-flex w-full justify-center items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-60 transition-colors">
+                    <button onClick={handleAwsJsonBackup} disabled={awsBackupLoading} className="inline-flex w-full justify-center items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500/100 disabled:opacity-60 transition-colors">
                         <Server className="w-4 h-4"/>{awsBackupLoading ? "Uploading..." : "AWS JSON Backup (Last 1 Year)"}
                     </button>
                     <button onClick={handleAwsExcelBackup} disabled={awsBackupLoading} className="inline-flex w-full justify-center items-center gap-2 rounded-xl bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 px-4 py-2.5 text-sm font-semibold text-white shadow-sm  disabled:opacity-60 transition-colors">

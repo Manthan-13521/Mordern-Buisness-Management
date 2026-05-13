@@ -494,7 +494,7 @@ function QuickAction({ icon, label, href, variant }: { icon: React.ReactNode; la
     const cls = variant === "primary"
         ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white border-0 shadow-lg shadow-blue-500/20"
         : variant === "danger"
-        ? "bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20"
+        ? "bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/100/20"
         : "bg-[#0b1220] text-[#9ca3af] border-[#1f2937] hover:bg-[#8b5cf6]/10 hover:text-[#f9fafb]";
 
     return (

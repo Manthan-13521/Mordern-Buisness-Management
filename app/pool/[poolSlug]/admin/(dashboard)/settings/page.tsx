@@ -143,7 +143,7 @@ export default function SettingsPage() {
                     <p className="mt-1 text-sm leading-6 text-[#9ca3af]">Essential account and system details.</p>
                 </div>
                 <div className="md:col-span-2">
-                    <div className="rounded-xl border border-white/10 bg-slate-900 p-6 shadow-lg">
+                    <div className="rounded-xl border border-[#1f2937] bg-slate-900 p-6 shadow-lg">
                         <div className="grid grid-cols-2 gap-y-6 gap-x-4 text-sm">
                             <div>
                                 <p className="text-[#9ca3af] text-xs font-semibold uppercase tracking-wider">Pool Slug</p>
@@ -156,7 +156,7 @@ export default function SettingsPage() {
                             <div>
                                 <p className="text-[#9ca3af] text-xs font-semibold uppercase tracking-wider">WhatsApp Status</p>
                                 <div className="mt-1">
-                                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${poolInfo?.isTwilioConnected ? "bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20" : "bg-white/5 text-gray-400 ring-1 ring-white/10"}`}>
+                                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${poolInfo?.isTwilioConnected ? "bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20" : "bg-[#0b1220]/5 text-[#6b7280] ring-1 ring-white/10"}`}>
                                         {poolInfo?.isTwilioConnected ? "Connected" : "Not Connected"}
                                     </span>
                                 </div>
@@ -229,15 +229,15 @@ export default function SettingsPage() {
                     <p className="mt-1 text-sm leading-6 text-[#9ca3af]">Customize how the application looks.</p>
                 </div>
                 <div className="md:col-span-2">
-                    <div className="rounded-xl border border-white/10 bg-slate-900 p-6 shadow-lg">
+                    <div className="rounded-xl border border-[#1f2937] bg-slate-900 p-6 shadow-lg">
                         <fieldset>
                             <legend className="text-sm font-semibold leading-6 text-[#f9fafb]">Theme Preference</legend>
                             <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 {(["light", "dark", "system"] as const).map((t) => (
-                                    <label key={t} className={`relative flex cursor-pointer rounded-lg border p-4 shadow-sm transition-all ${theme === t ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500" : "border-white/10 bg-white/5 hover:bg-white/10"}`}>
+                                    <label key={t} className={`relative flex cursor-pointer rounded-lg border p-4 shadow-sm transition-all ${theme === t ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500" : "border-[#1f2937] bg-[#0b1220] hover:bg-white/10"}`}>
                                         <input type="radio" className="sr-only" name="theme" value={t} checked={theme === t} onChange={() => handleThemeChange(t)} />
                                         <span className="flex items-center gap-2 text-sm font-medium text-white">
-                                            {t === "light" ? <Sun className="w-5 h-5 text-yellow-500" /> : t === "dark" ? <Moon className="w-5 h-5 text-indigo-400" /> : <Monitor className="w-5 h-5 text-gray-400" />}
+                                            {t === "light" ? <Sun className="w-5 h-5 text-yellow-500" /> : t === "dark" ? <Moon className="w-5 h-5 text-indigo-400" /> : <Monitor className="w-5 h-5 text-[#6b7280]" />}
                                             {t.charAt(0).toUpperCase() + t.slice(1)}
                                         </span>
                                     </label>
@@ -265,7 +265,7 @@ export default function SettingsPage() {
                         {/* RawBT Download */}
                         <div>
                             <h3 className="text-sm font-semibold text-white mb-2">1. Install RawBT App</h3>
-                            <p className="text-xs text-gray-400 mb-3">
+                            <p className="text-xs text-[#6b7280] mb-3">
                                 RawBT connects your Android phone/tablet to Bluetooth thermal printers. Install it, then set it as your default print service.
                             </p>
                             <a
@@ -280,9 +280,9 @@ export default function SettingsPage() {
                             </a>
                         </div>
 
-                        <div className="border-t border-white/5 pt-4">
+                        <div className="border-t border-[#1f2937] pt-4">
                             <h3 className="text-sm font-semibold text-white mb-2">2. Setup Instructions</h3>
-                            <ol className="text-xs text-gray-400 space-y-1.5 list-decimal list-inside">
+                            <ol className="text-xs text-[#6b7280] space-y-1.5 list-decimal list-inside">
                                 <li>Open <span className="text-teal-400 font-medium">RawBT</span> → pair your Bluetooth thermal printer.</li>
                                 <li>In RawBT settings, enable <span className="text-white font-medium">&quot;Virtual Printer&quot;</span> mode.</li>
                                 <li>Go to your phone&apos;s <span className="text-white font-medium">Settings → Printing</span> → enable RawBT as default print service.</li>
@@ -291,9 +291,9 @@ export default function SettingsPage() {
                         </div>
 
                         {/* Paper Width Selection */}
-                        <div className="border-t border-white/5 pt-4">
+                        <div className="border-t border-[#1f2937] pt-4">
                             <h3 className="text-sm font-semibold text-white mb-2">3. Paper Width</h3>
-                            <p className="text-xs text-gray-400 mb-3">Select your thermal printer&apos;s paper width for optimal alignment.</p>
+                            <p className="text-xs text-[#6b7280] mb-3">Select your thermal printer&apos;s paper width for optimal alignment.</p>
                             <div className="grid grid-cols-2 gap-3 max-w-xs">
                                 {(["58mm", "80mm"] as const).map((w) => (
                                     <button
@@ -302,7 +302,7 @@ export default function SettingsPage() {
                                         className={`relative flex items-center justify-center rounded-lg border p-3 transition-all ${
                                             paperWidth === w
                                                 ? "border-teal-500 bg-teal-500/10 ring-1 ring-teal-500 text-teal-400"
-                                                : "border-white/10 bg-white/5 hover:bg-white/10 text-gray-400"
+                                                : "border-[#1f2937] bg-[#0b1220] hover:bg-white/10 text-[#6b7280]"
                                         }`}
                                     >
                                         <span className="text-sm font-bold">{w}</span>
@@ -313,9 +313,9 @@ export default function SettingsPage() {
                         </div>
 
                         {/* Test Print */}
-                        <div className="border-t border-white/5 pt-4">
+                        <div className="border-t border-[#1f2937] pt-4">
                             <h3 className="text-sm font-semibold text-white mb-2">4. Test Print</h3>
-                            <p className="text-xs text-gray-400 mb-3">Print a test receipt to verify your printer setup and alignment.</p>
+                            <p className="text-xs text-[#6b7280] mb-3">Print a test receipt to verify your printer setup and alignment.</p>
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={() => {
@@ -361,38 +361,38 @@ export default function SettingsPage() {
                             </p>
                         </div>
                         <div className="md:col-span-2">
-                            <div className="rounded-xl border border-white/10 bg-slate-900 p-6 shadow-lg space-y-4">
+                            <div className="rounded-xl border border-[#1f2937] bg-slate-900 p-6 shadow-lg space-y-4">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-1">Maximum Capacity</label>
+                                        <label className="block text-sm font-medium text-[#9ca3af] mb-1">Maximum Capacity</label>
                                         <input
                                             type="number"
                                             min={1}
                                             max={1000}
                                             value={poolCapacity}
                                             onChange={(e) => setPoolCapacity(parseInt(e.target.value) || 50)}
-                                            className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                                            className="w-full rounded-md border border-[#1f2937] bg-[#0b1220] px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-1">Current Occupancy (manual reset)</label>
+                                        <label className="block text-sm font-medium text-[#9ca3af] mb-1">Current Occupancy (manual reset)</label>
                                         <input
                                             type="number"
                                             min={0}
                                             value={currentOccupancy}
                                             onChange={(e) => setCurrentOccupancy(parseInt(e.target.value) || 0)}
-                                            className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                                            className="w-full rounded-md border border-[#1f2937] bg-[#0b1220] px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition"
                                         />
                                     </div>
-                                    <div className="col-span-2 sm:col-span-1 border-t sm:border-t-0 pt-4 sm:pt-0 border-white/5">
-                                        <label className="block text-sm font-medium text-gray-300 mb-1">Occupancy Duration (minutes)</label>
+                                    <div className="col-span-2 sm:col-span-1 border-t sm:border-t-0 pt-4 sm:pt-0 border-[#1f2937]">
+                                        <label className="block text-sm font-medium text-[#9ca3af] mb-1">Occupancy Duration (minutes)</label>
                                         <p className="text-xs text-slate-500 mb-2">Auto-checkout time for daily/monthly plans</p>
                                         <input
                                             type="number"
                                             min={1}
                                             value={occupancyDurationMinutes}
                                             onChange={(e) => setOccupancyDurationMinutes(parseInt(e.target.value) || 60)}
-                                            className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                                            className="w-full rounded-md border border-[#1f2937] bg-[#0b1220] px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition"
                                         />
                                     </div>
                                 </div>
@@ -405,7 +405,7 @@ export default function SettingsPage() {
                                         <Save className="w-4 h-4" />
                                         {capacityLoading ? "Saving..." : "Save Capacity"}
                                     </button>
-                                    {capacitySaved && <span className="text-sm text-green-600 dark:text-green-400 font-medium">✓ Saved!</span>}
+                                    {capacitySaved && <span className="text-sm text-green-600 font-medium">✓ Saved!</span>}
                                 </div>
                             </div>
                         </div>
@@ -424,7 +424,7 @@ export default function SettingsPage() {
                             </p>
                         </div>
                         <div className="md:col-span-2">
-                            <div className="rounded-xl border border-white/10 bg-slate-900 p-6 shadow-lg space-y-4">
+                            <div className="rounded-xl border border-[#1f2937] bg-slate-900 p-6 shadow-lg space-y-4">
                                 <h3 className="text-sm font-semibold text-[#f9fafb]">Database Backup & Sync</h3>
                                 <p className="text-sm text-[#9ca3af] pb-2">
                                     Local exports download directly to your computer. AWS backups securely sync to your dedicated S3 cloud storage.
@@ -433,7 +433,7 @@ export default function SettingsPage() {
                                     <button
                                         onClick={handleExcelBackup}
                                         disabled={excelLoading}
-                                        className="inline-flex w-full justify-center items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 disabled:opacity-60 transition-colors"
+                                        className="inline-flex w-full justify-center items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500/100 disabled:opacity-60 transition-colors"
                                     >
                                         <Download className="w-4 h-4" />
                                         {excelLoading ? "Generating..." : "Export Excel Backup (.xlsx)"}
@@ -448,7 +448,7 @@ export default function SettingsPage() {
                                     <button
                                         onClick={handleAwsJsonBackup}
                                         disabled={awsBackupLoading}
-                                        className="inline-flex w-full justify-center items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-60 transition-colors"
+                                        className="inline-flex w-full justify-center items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500/100 disabled:opacity-60 transition-colors"
                                     >
                                         <Server className="w-4 h-4" />
                                         {awsBackupLoading ? "Uploading..." : "AWS JSON Backup (Last 1 Year)"}

@@ -192,7 +192,7 @@ export default function PaymentsPage() {
             <div className="sm:flex sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-semibold text-[#f9fafb]">Payments</h1>
-                    <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                    <p className="mt-2 text-sm text-[#9ca3af]">
                         A list of all payments received from members.
                     </p>
                 </div>
@@ -200,9 +200,9 @@ export default function PaymentsPage() {
                     <PoolTypeFilter />
                     <button
                         onClick={handleExport}
-                        className="inline-flex items-center rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm font-semibold text-gray-300 shadow-sm hover:bg-white/10 transition-colors"
+                        className="inline-flex items-center rounded-md bg-[#0b1220] border border-[#1f2937] px-3 py-2 text-sm font-semibold text-[#9ca3af] shadow-sm hover:bg-white/10 transition-colors"
                     >
-                        <Download className="-ml-0.5 mr-1.5 h-5 w-5 text-gray-400" />
+                        <Download className="-ml-0.5 mr-1.5 h-5 w-5 text-[#6b7280]" />
                         Export Excel
                     </button>
                     <button
@@ -232,19 +232,19 @@ export default function PaymentsPage() {
                                 </thead>
                                 <tbody className="divide-y divide-[#1f2937] bg-[#0b1220]">
                                     {loading ? (
-                                        <tr><td colSpan={6} className="py-10 text-center text-gray-500">Loading...</td></tr>
+                                        <tr><td colSpan={6} className="py-10 text-center text-[#6b7280]">Loading...</td></tr>
                                     ) : payments.length === 0 ? (
-                                        <tr><td colSpan={6} className="py-10 text-center text-gray-500">No payments found.</td></tr>
+                                        <tr><td colSpan={6} className="py-10 text-center text-[#6b7280]">No payments found.</td></tr>
                                     ) : (
                                         payments.map((payment) => (
                                             <tr key={payment._id}>
-                                                <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-900 dark:text-gray-300 sm:pl-6">
+                                                <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-[#f9fafb] sm:pl-6">
                                                     {new Date(payment.date).toLocaleString()}
                                                 </td>
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm font-medium text-[#f9fafb]">
                                                     <div className="flex flex-col">
                                                         <span>{payment.memberId?.name || "N/A"}</span>
-                                                        <span className="text-xs text-gray-500">{payment.memberId?.memberId}</span>
+                                                        <span className="text-xs text-[#6b7280]">{payment.memberId?.memberId}</span>
                                                     </div>
                                                 </td>
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-[#9ca3af]">
@@ -253,22 +253,22 @@ export default function PaymentsPage() {
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm font-medium text-[#f9fafb]">
                                                     ₹{payment.amount}
                                                 </td>
-                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                                    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${payment.paymentMethod === "upi" ? "bg-purple-50 text-purple-700 ring-purple-600/20" : "bg-green-50 text-green-700 ring-green-600/20"
+                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-[#6b7280]">
+                                                    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${payment.paymentMethod === "upi" ? "bg-purple-500/10 text-purple-400 ring-purple-600/20" : "bg-green-500/10 text-green-400 ring-green-600/20"
                                                         }`}>
                                                         {payment.paymentMethod.toUpperCase()}
                                                     </span>
                                                     {payment.transactionId && (
-                                                        <div className="text-xs text-gray-400 mt-1">Tx: {payment.transactionId}</div>
+                                                        <div className="text-xs text-[#6b7280] mt-1">Tx: {payment.transactionId}</div>
                                                     )}
                                                 </td>
-                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-[#6b7280]">
                                                     {(payment as any).synced === false ? (
-                                                        <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400">
+                                                        <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-amber-500/10 text-amber-400 ring-amber-600/20">
                                                             🟡 Pending
                                                         </span>
                                                     ) : payment.status === "failed" ? (
-                                                        <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-500/10 dark:text-red-400">
+                                                        <span className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-red-500/10 text-red-400 ring-red-600/20">
                                                             🔴 Failed
                                                         </span>
                                                     ) : (
@@ -297,14 +297,14 @@ export default function PaymentsPage() {
                         <button 
                             disabled={page === 1 || loading} 
                             onClick={() => setPage(p => Math.max(1, p - 1))} 
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#1f2937] bg-[#0b1220] text-[#f9fafb] hover:bg-slate-50 dark:hover:bg-slate-700 disabled:bg-slate-50 disabled:text-slate-400 dark:disabled:bg-slate-900/50 dark:disabled:text-slate-600 transition-colors font-medium shadow-sm"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#1f2937] bg-[#0b1220] text-[#f9fafb] hover:bg-[#8b5cf6]/5 disabled:bg-[#0b1220] disabled:text-[#6b7280] transition-colors font-medium shadow-sm"
                         >
                             <ChevronLeft className="h-4 w-4" /> Previous
                         </button>
                         <button 
                             disabled={page >= totalPages || loading} 
                             onClick={() => setPage(p => Math.min(totalPages, p + 1))} 
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 text-white disabled:bg-slate-100 disabled:text-slate-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-600 transition-colors shadow-sm font-medium"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 text-white disabled:bg-[#0b1220] disabled:text-[#6b7280] transition-colors shadow-sm font-medium"
                         >
                             Next <ChevronRight className="h-4 w-4" />
                         </button>
@@ -315,20 +315,20 @@ export default function PaymentsPage() {
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
-                    <div className="relative w-full max-w-md rounded-xl bg-slate-900 border border-white/10 p-6 shadow-2xl">
-                        <h2 className="text-xl font-semibold dark:text-white mb-4">Record Payment</h2>
+                    <div className="relative w-full max-w-md rounded-xl bg-slate-900 border border-[#1f2937] p-6 shadow-2xl">
+                        <h2 className="text-xl font-semibold mb-4">Record Payment</h2>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium dark:text-gray-300">Member</label>
-                                <select required value={formData.memberId} onChange={e => setFormData({ ...formData, memberId: e.target.value })} className="mt-1 block w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                                <label className="block text-sm font-medium">Member</label>
+                                <select required value={formData.memberId} onChange={e => setFormData({ ...formData, memberId: e.target.value })} className="mt-1 block w-full rounded-md border border-[#1f2937] bg-[#0b1220] px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition">
                                     <option value="" className="bg-slate-900">Select Member</option>
                                     {members.map(m => <option key={m._id} value={m._id} className="bg-slate-900">{m.name} ({m.memberId})</option>)}
                                 </select>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium dark:text-gray-300">Plan</label>
-                                <select required value={formData.planId} onChange={e => handlePlanChange(e.target.value)} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 bg-[#0b1220] shadow-sm dark:text-white border-[#1f2937]">
+                                <label className="block text-sm font-medium">Plan</label>
+                                <select required value={formData.planId} onChange={e => handlePlanChange(e.target.value)} className="mt-1 block w-full rounded-md border border-[#1f2937] px-3 py-2 bg-[#0b1220] shadow-sm border-[#1f2937]">
                                     <option value="">Select Plan</option>
                                     {plans.map(p => <option key={p._id} value={p._id}>{p.name} - ₹{p.price}</option>)}
                                 </select>
@@ -336,7 +336,7 @@ export default function PaymentsPage() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium dark:text-gray-300">Amount (₹)</label>
+                                    <label className="block text-sm font-medium">Amount (₹)</label>
                                     <input
                                         required type="number" min="1" max="9999999999" step="1"
                                         value={formData.amount}
@@ -345,11 +345,11 @@ export default function PaymentsPage() {
                                             if (Number.isFinite(val)) setFormData({ ...formData, amount: val });
                                         }}
                                         placeholder="Max ₹9,999,999,999"
-                                        className="mt-1 block w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition" />
+                                        className="mt-1 block w-full rounded-md border border-[#1f2937] bg-[#0b1220] px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium dark:text-gray-300">Method</label>
-                                    <select required value={formData.paymentMethod} onChange={e => setFormData({ ...formData, paymentMethod: e.target.value })} className="mt-1 block w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                                    <label className="block text-sm font-medium">Method</label>
+                                    <select required value={formData.paymentMethod} onChange={e => setFormData({ ...formData, paymentMethod: e.target.value })} className="mt-1 block w-full rounded-md border border-[#1f2937] bg-[#0b1220] px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition">
                                         <option value="cash" className="bg-slate-900">Cash</option>
                                         <option value="upi" className="bg-slate-900">UPI</option>
                                     </select>
@@ -358,13 +358,13 @@ export default function PaymentsPage() {
 
                             {formData.paymentMethod === "upi" && (
                                 <div>
-                                    <label className="block text-sm font-medium dark:text-gray-300">Transaction ID</label>
-                                    <input required type="text" value={formData.transactionId} onChange={e => setFormData({ ...formData, transactionId: e.target.value })} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 bg-[#0b1220] shadow-sm dark:text-white border-[#1f2937]" placeholder="e.g. UPI Ref No" />
+                                    <label className="block text-sm font-medium">Transaction ID</label>
+                                    <input required type="text" value={formData.transactionId} onChange={e => setFormData({ ...formData, transactionId: e.target.value })} className="mt-1 block w-full rounded-md border border-[#1f2937] px-3 py-2 bg-[#0b1220] shadow-sm border-[#1f2937]" placeholder="e.g. UPI Ref No" />
                                 </div>
                             )}
 
                             <div className="flex justify-end space-x-3 mt-6">
-                                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm rounded-md border border-[#1f2937] dark:text-gray-300">Cancel</button>
+                                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm rounded-md border border-[#1f2937]">Cancel</button>
                                 <button type="submit" className="px-4 py-2 text-sm rounded-md bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 text-white ">Record</button>
                             </div>
                         </form>

@@ -61,10 +61,10 @@ export default function PaymentsPage() {
     const totalPages = Math.ceil(total / limit);
 
     const typeColor: Record<string, string> = {
-        initial: "bg-indigo-100 dark:bg-indigo-900/30 text-blue-600 dark:text-blue-400",
+        initial: "bg-indigo-500/10 text-blue-600",
         renewal: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600",
-        balance: "bg-amber-100 dark:bg-amber-900/30 text-amber-600",
-        rent: "bg-red-100 dark:bg-red-900/30 text-red-600",
+        balance: "bg-amber-500/10 text-amber-600",
+        rent: "bg-red-500/10 dark:bg-red-900/30 text-red-600",
     };
 
 
@@ -80,7 +80,7 @@ export default function PaymentsPage() {
                     <p className="text-sm text-slate-500">
                         {total} payment records
                         {selectedBlock !== "all" && (
-                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400">
                                 Block {selectedBlock}
                             </span>
                         )}
@@ -101,35 +101,35 @@ export default function PaymentsPage() {
                             <tr>{["Member","Plan","Amount","Method","Type","Date"].map(h=><th key={h} className="text-left px-4 py-3 whitespace-nowrap">{h}</th>)}</tr>
                         </thead>
                         <tbody className="divide-y divide-[#1f2937] bg-[#0b1220]">
-                            {loading ? Array.from({length:5}).map((_,i)=><tr key={i}>{Array.from({length:6}).map((_,j)=><td key={j} className="px-4 py-3"><div className="h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"/></td>)}</tr>)
+                            {loading ? Array.from({length:5}).map((_,i)=><tr key={i}>{Array.from({length:6}).map((_,j)=><td key={j} className="px-4 py-3"><div className="h-4 bg-slate-200 rounded animate-pulse"/></td>)}</tr>)
                             : payments.length===0 ? <tr><td colSpan={6} className="px-4 py-12 text-center text-slate-400">No payments found{selectedBlock !== "all" ? ` for Block ${selectedBlock}` : ""}</td></tr>
                             : payments.map(p=>(
-                                <tr key={p._id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                                <tr key={p._id} className="hover:bg-[#8b5cf6]/5/30">
                                     <td className="px-4 py-3"><p className="font-medium text-slate-800 dark:text-slate-100">{p.memberId?.name || "—"}</p><p className="text-xs text-slate-400">{p.memberId?.memberId}</p></td>
                                     <td className="px-4 py-3 text-slate-500">{p.planId?.name || "—"}</td>
                                     <td className="px-4 py-3 font-semibold text-emerald-600">₹{p.amount?.toLocaleString("en-IN")}</td>
                                     <td className="px-4 py-3 capitalize text-slate-500">{p.paymentMethod}</td>
-                                    <td className="px-4 py-3"><span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${typeColor[p.paymentType] || "bg-slate-100 dark:bg-slate-800 text-slate-500"}`}>{p.paymentType}</span></td>
+                                    <td className="px-4 py-3"><span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${typeColor[p.paymentType] || "bg-slate-100 text-slate-500"}`}>{p.paymentType}</span></td>
                                     <td className="px-4 py-3 text-slate-400 text-xs">{new Date(p.createdAt).toLocaleDateString("en-IN")}</td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
-                <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-slate-700 text-sm text-slate-500">
+                <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 text-sm text-slate-500">
                     <span>Page {page} of {totalPages||1}</span>
                     <div className="flex gap-2">
                         <button
                             disabled={page <= 1}
                             onClick={() => setPage(p => p - 1)}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors font-medium shadow-sm"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#1f2937] bg-[#0b1220] text-slate-300 hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors font-medium shadow-sm"
                         >
                             <ChevronLeft className="h-4 w-4"/> Previous
                         </button>
                         <button
                             disabled={page >= totalPages}
                             onClick={() => setPage(p => p + 1)}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 text-white disabled:bg-slate-100 disabled:text-slate-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-600 transition-colors shadow-sm font-medium"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 text-white disabled:bg-[#0b1220] disabled:text-[#6b7280] transition-colors shadow-sm font-medium"
                         >
                             Next <ChevronRight className="h-4 w-4"/>
                         </button>

@@ -13,8 +13,8 @@ type Hostel = {
     isTwilioConnected: boolean; createdAt: string; memberCounter: number;
 };
 
-const INPUT = "bg-slate-950/50 border border-[#1f2937] text-white text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block w-full pl-9 p-2.5 placeholder-slate-500 transition-all";
-const MODAL_INPUT = "w-full rounded-xl border border-[#1f2937] bg-slate-950/50 px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all";
+const INPUT = "bg-slate-950/50 border border-[#1f2937] text-white text-sm rounded-xl focus:ring-[#8b5cf6] focus:border-blue-500 block w-full pl-9 p-2.5 placeholder-slate-500 transition-all";
+const MODAL_INPUT = "w-full rounded-xl border border-[#1f2937] bg-slate-950/50 px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all";
 const LABEL = "block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wider";
 
 export default function SuperAdminHostelsPage() {
@@ -99,7 +99,7 @@ export default function SuperAdminHostelsPage() {
             <div className="flex items-center justify-between flex-wrap gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Manage Tenants</h1>
-                    <p className="text-gray-400">View, monitor, and provision hostels across the platform.</p>
+                    <p className="text-[#6b7280]">View, monitor, and provision hostels across the platform.</p>
                 </div>
                 <a href="/hostel/register" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 text-white px-4 py-2 font-bold rounded-xl shadow-lg transition flex items-center gap-2">
                     <Plus className="w-5 h-5"/> Add Hostel manually
@@ -149,12 +149,12 @@ export default function SuperAdminHostelsPage() {
                             {loading ? (
                                 <tr>
                                     <td colSpan={6} className="px-6 py-8 text-center">
-                                        <RefreshCw className="w-6 h-6 animate-spin text-gray-500 mx-auto" />
+                                        <RefreshCw className="w-6 h-6 animate-spin text-[#6b7280] mx-auto" />
                                     </td>
                                 </tr>
                             ) : hostels.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                                    <td colSpan={6} className="px-6 py-8 text-center text-[#6b7280]">
                                         No hostels registered yet.
                                     </td>
                                 </tr>
@@ -162,7 +162,7 @@ export default function SuperAdminHostelsPage() {
                                 <tr key={h.hostelId} className="border-b border-neutral-800 hover:bg-neutral-800/30 transition-colors">
                                     <td className="px-6 py-4 font-medium text-white whitespace-nowrap">
                                         {h.hostelName || "Unknown"}
-                                        <div className="text-xs text-gray-500 font-normal">{h.hostelId}</div>
+                                        <div className="text-xs text-[#6b7280] font-normal">{h.hostelId}</div>
                                     </td>
                                     <td className="px-6 py-4 font-mono text-xs text-indigo-400">{h.slug}</td>
                                     <td className="px-6 py-4">
@@ -171,12 +171,12 @@ export default function SuperAdminHostelsPage() {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-xs">
-                                        <div className="text-gray-300"><b>Email:</b> {h.adminEmail}</div>
+                                        <div className="text-[#9ca3af]"><b>Email:</b> {h.adminEmail}</div>
                                         {h.adminPhone && (
-                                            <div className="text-gray-300 mt-0.5"><b>Phone:</b> {h.adminPhone}</div>
+                                            <div className="text-[#9ca3af] mt-0.5"><b>Phone:</b> {h.adminPhone}</div>
                                         )}
-                                        <div className="text-gray-500 mt-1 flex items-center gap-1.5 font-medium italic">
-                                            <ShieldCheck className="w-3.5 h-3.5 text-gray-400" />
+                                        <div className="text-[#6b7280] mt-1 flex items-center gap-1.5 font-medium italic">
+                                            <ShieldCheck className="w-3.5 h-3.5 text-[#6b7280]" />
                                             Secure (Not Viewable)
                                         </div>
                                         <div className="mt-3 flex flex-col sm:flex-row flex-wrap gap-2">
@@ -202,7 +202,7 @@ export default function SuperAdminHostelsPage() {
                                     <td className="px-6 py-4">
                                         <button
                                             onClick={() => handleDelete(h)}
-                                            className="inline-flex max-w-max items-center gap-1.5 py-1.5 px-3 border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-md text-xs font-semibold transition"
+                                            className="inline-flex max-w-max items-center gap-1.5 py-1.5 px-3 border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/100/20 rounded-md text-xs font-semibold transition"
                                         >
                                             <Trash2 className="w-3.5 h-3.5" /> Delete Hostel
                                         </button>
@@ -214,7 +214,7 @@ export default function SuperAdminHostelsPage() {
                 </div>
 
                 {totalPages > 1 && (
-                    <div className="flex items-center justify-between px-6 py-4 border-t border-neutral-800 text-sm text-gray-500">
+                    <div className="flex items-center justify-between px-6 py-4 border-t border-neutral-800 text-sm text-[#6b7280]">
                         <span>{total} hostels</span>
                         <div className="flex gap-2">
                             <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-white disabled:opacity-40">Previous</button>
@@ -234,7 +234,7 @@ export default function SuperAdminHostelsPage() {
                             <h2 className="text-lg font-bold text-white tracking-tight">Reset Password</h2>
                             <button onClick={() => setResetTarget(null)} className="text-slate-500 hover:text-[#f9fafb] transition-colors"><X className="h-5 w-5" /></button>
                         </div>
-                        <p className="text-sm text-gray-400">Setting new password for <span className="font-semibold text-white">{resetTarget.hostelName}</span> ({resetTarget.adminEmail}).</p>
+                        <p className="text-sm text-[#6b7280]">Setting new password for <span className="font-semibold text-white">{resetTarget.hostelName}</span> ({resetTarget.adminEmail}).</p>
                         <form onSubmit={handleResetPassword} className="space-y-4 pt-2">
                             <div>
                                 <label className={LABEL}>New Password</label>
@@ -248,7 +248,7 @@ export default function SuperAdminHostelsPage() {
                                         placeholder="Min 8 characters"
                                         className={MODAL_INPUT}
                                     />
-                                    <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#f9fafb]">
+                                    <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7280] hover:text-[#f9fafb]">
                                         <span className="text-xs font-semibold">{showPass ? "HIDE" : "SHOW"}</span>
                                     </button>
                                 </div>

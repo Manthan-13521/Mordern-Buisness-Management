@@ -88,8 +88,8 @@ export default function ExpiredMembersPage() {
             ) : error ? (
                 <div className="text-center py-16 text-red-500">{error}</div>
             ) : members.length === 0 ? (
-                <div className="text-center py-16 flex flex-col items-center gap-3 text-gray-500">
-                    <Users className="w-12 h-12 text-gray-300" />
+                <div className="text-center py-16 flex flex-col items-center gap-3 text-[#6b7280]">
+                    <Users className="w-12 h-12 text-[#9ca3af]" />
                     <p className="font-medium">No expired members found.</p>
                     <p className="text-sm">All memberships are active!</p>
                 </div>
@@ -104,28 +104,28 @@ export default function ExpiredMembersPage() {
                                     ))}
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                            <tbody className="divide-y divide-[#1f2937]">
                                 {members.map((m) => (
-                                    <tr key={m._id} className="hover:bg-red-50/50 dark:hover:bg-red-900/10 transition-colors">
-                                        <td className="px-4 py-3 text-sm font-mono font-medium text-blue-600 dark:text-blue-400 dark:text-indigo-400">{m.memberId}</td>
+                                    <tr key={m._id} className="hover:bg-red-500/10/50 dark:hover:bg-red-900/10 transition-colors">
+                                        <td className="px-4 py-3 text-sm font-mono font-medium text-blue-600">{m.memberId}</td>
                                         <td className="px-4 py-3">
                                             <div className="text-sm font-medium text-[#f9fafb]">{m.name}</div>
-                                            {m.age && <div className="text-xs text-gray-500">Age: {m.age}</div>}
+                                            {m.age && <div className="text-xs text-[#6b7280]">Age: {m.age}</div>}
                                         </td>
                                         <td className="px-4 py-3 text-sm text-[#9ca3af]">{m.phone}</td>
                                         <td className="px-4 py-3 text-sm text-[#9ca3af]">
-                                            {m.planId?.name || <span className="text-gray-400 italic">No plan</span>}
-                                            {m.planId?.price && <div className="text-xs text-gray-400">₹{m.planId.price}</div>}
+                                            {m.planId?.name || <span className="text-[#6b7280] italic">No plan</span>}
+                                            {m.planId?.price && <div className="text-xs text-[#6b7280]">₹{m.planId.price}</div>}
                                         </td>
-                                        <td className="px-4 py-3 text-sm text-red-600 dark:text-red-400 font-medium">
+                                        <td className="px-4 py-3 text-sm text-red-600 font-medium">
                                             {formatExpiry(m.expiryDate)}
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-800 dark:bg-red-900/30">
                                                 {daysSinceExpiry(m.expiryDate)}d ago
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-xs font-mono text-gray-400 dark:text-gray-600 max-w-[140px] truncate" title={m.qrToken}>
+                                        <td className="px-4 py-3 text-xs font-mono text-[#6b7280] max-w-[140px] truncate" title={m.qrToken}>
                                             {m.qrToken?.slice(0, 16)}…
                                         </td>
                                     </tr>
@@ -137,19 +137,19 @@ export default function ExpiredMembersPage() {
                     {/* Pagination */}
                     {totalPages > 1 && (
                         <div className="flex items-center justify-between">
-                            <p className="text-sm text-gray-500">Page {page} of {totalPages}</p>
+                            <p className="text-sm text-[#6b7280]">Page {page} of {totalPages}</p>
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => fetchExpired(page - 1)}
                                     disabled={page <= 1}
-                                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#1f2937] bg-[#0b1220] text-[#f9fafb] hover:bg-slate-50 dark:hover:bg-slate-700 disabled:bg-slate-50 disabled:text-slate-400 dark:disabled:bg-slate-900/50 dark:disabled:text-slate-600 transition-colors font-medium shadow-sm"
+                                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#1f2937] bg-[#0b1220] text-[#f9fafb] hover:bg-[#8b5cf6]/5 disabled:bg-[#0b1220] disabled:text-[#6b7280] transition-colors font-medium shadow-sm"
                                 >
                                     <ChevronLeft className="h-4 w-4" /> Previous
                                 </button>
                                 <button
                                     onClick={() => fetchExpired(page + 1)}
                                     disabled={page >= totalPages}
-                                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 text-white disabled:bg-slate-100 disabled:text-slate-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-600 transition-colors shadow-sm font-medium"
+                                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 text-white disabled:bg-[#0b1220] disabled:text-[#6b7280] transition-colors shadow-sm font-medium"
                                 >
                                     Next <ChevronRight className="h-4 w-4" />
                                 </button>

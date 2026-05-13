@@ -88,16 +88,16 @@ export default function RevenueAnalyticsPage() {
         <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in zoom-in duration-500">
             <div>
                 <h1 className="text-2xl font-bold text-gray-100 sm:text-3xl tracking-tight">Revenue & Analytics</h1>
-                <p className="text-sm text-gray-400 mt-1">Actionable business intelligence from your Ledger system</p>
+                <p className="text-sm text-[#6b7280] mt-1">Actionable business intelligence from your Ledger system</p>
             </div>
 
             {/* KPI Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                 {kpiCards.map(k => (
-                    <div key={k.label} className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${k.bg} border border-white/10 p-5 group hover:border-white/20 transition-all`}>
+                    <div key={k.label} className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${k.bg} border border-[#1f2937] p-5 group hover:border-white/20 transition-all`}>
                         <div className="flex items-center gap-2 mb-2">
                             <k.icon className={`w-4 h-4 ${k.color}`} />
-                            <span className="text-[10px] uppercase tracking-wider text-gray-500 font-medium">{k.label}</span>
+                            <span className="text-[10px] uppercase tracking-wider text-[#6b7280] font-medium">{k.label}</span>
                         </div>
                         <p className={`text-xl font-bold ${k.color}`}>{k.value}</p>
                     </div>
@@ -181,7 +181,7 @@ export default function RevenueAnalyticsPage() {
                                 </PieChart>
                             </ResponsiveContainer>
                         ) : (
-                            <p className="text-gray-500 text-sm font-medium">No defaulters found. 🎉</p>
+                            <p className="text-[#6b7280] text-sm font-medium">No defaulters found. 🎉</p>
                         )}
                     </div>
                 </div>
@@ -209,7 +209,7 @@ export default function RevenueAnalyticsPage() {
                                 </BarChart>
                             </ResponsiveContainer>
                         ) : (
-                            <p className="text-gray-500 text-sm font-medium">No plan revenue data yet.</p>
+                            <p className="text-[#6b7280] text-sm font-medium">No plan revenue data yet.</p>
                         )}
                     </div>
                 </div>
@@ -226,7 +226,7 @@ export default function RevenueAnalyticsPage() {
                         {defaulters && defaulters.members.length > 0 ? (
                             <table className="w-full text-sm">
                                 <thead className="sticky top-0 bg-gray-900">
-                                    <tr className="text-left text-gray-500 text-xs uppercase">
+                                    <tr className="text-left text-[#6b7280] text-xs uppercase">
                                         <th className="pb-3 pr-4">Member</th>
                                         <th className="pb-3 pr-4 text-right">Balance</th>
                                         <th className="pb-3 pr-4 text-right">Overdue</th>
@@ -235,13 +235,13 @@ export default function RevenueAnalyticsPage() {
                                 </thead>
                                 <tbody>
                                     {defaulters.members.slice(0, 15).map((m: any, i: number) => (
-                                        <tr key={i} className="border-t border-white/5 hover:bg-white/5 transition-colors">
+                                        <tr key={i} className="border-t border-[#1f2937] hover:bg-[#0b1220] transition-colors">
                                             <td className="py-3 pr-4">
                                                 <div className="font-medium text-white">{m.name}</div>
-                                                <div className="text-[10px] text-gray-500 font-mono">#{m.memberId}</div>
+                                                <div className="text-[10px] text-[#6b7280] font-mono">#{m.memberId}</div>
                                             </td>
                                             <td className="py-3 pr-4 text-right font-bold text-red-400">{fmt(m.balance)}</td>
-                                            <td className="py-3 pr-4 text-right text-gray-400">{m.overdueDays}d</td>
+                                            <td className="py-3 pr-4 text-right text-[#6b7280]">{m.overdueDays}d</td>
                                             <td className="py-3 text-center">
                                                 <span className={`text-[10px] px-2 py-1 rounded-full border ${statusBadge[m.status]}`}>
                                                     {m.status.toUpperCase()}
@@ -252,7 +252,7 @@ export default function RevenueAnalyticsPage() {
                                 </tbody>
                             </table>
                         ) : (
-                            <p className="text-gray-500 text-sm font-medium text-center py-8">No defaulters found. 🎉</p>
+                            <p className="text-[#6b7280] text-sm font-medium text-center py-8">No defaulters found. 🎉</p>
                         )}
                     </div>
                 </div>

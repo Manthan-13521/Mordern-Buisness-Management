@@ -123,13 +123,13 @@ export default function TwilioSetupPage() {
 
             {/* ── Status Card ───────────────────────────────────────────── */}
             <div className={`rounded-2xl border p-6 flex items-center justify-between transition-all
-                ${loading ? "border-[#1f2937] bg-gray-50 bg-[#0b1220]"
+                ${loading ? "border-[#1f2937] bg-[#020617] bg-[#0b1220]"
                 : status?.isTwilioConnected
                     ? "border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20"
-                    : "border-[#1f2937] bg-gray-50 bg-[#0b1220]"
+                    : "border-[#1f2937] bg-[#020617] bg-[#0b1220]"
                 }`}>
                 {loading ? (
-                    <div className="flex items-center gap-3 text-gray-500">
+                    <div className="flex items-center gap-3 text-[#6b7280]">
                         <Loader2 className="h-5 w-5 animate-spin" />
                         <span className="text-sm">Checking connection...</span>
                     </div>
@@ -149,7 +149,7 @@ export default function TwilioSetupPage() {
                         <button
                             onClick={handleDisconnect}
                             disabled={disconnecting}
-                            className="flex items-center gap-2 rounded-lg bg-red-50 dark:bg-red-900/30 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 transition disabled:opacity-50"
+                            className="flex items-center gap-2 rounded-lg bg-red-500/10 dark:bg-red-900/30 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-500/100/10 dark:hover:bg-red-900/50 transition disabled:opacity-50"
                         >
                             {disconnecting
                                 ? <Loader2 className="h-4 w-4 animate-spin" />
@@ -159,12 +159,12 @@ export default function TwilioSetupPage() {
                     </>
                 ) : (
                     <div className="flex items-center gap-3">
-                        <div className="rounded-full bg-gray-200 dark:bg-gray-700 p-2">
+                        <div className="rounded-full bg-gray-200 p-2">
                             <WifiOff className="h-5 w-5 text-[#9ca3af]" />
                         </div>
                         <div>
-                            <p className="font-semibold text-gray-700 dark:text-gray-300 text-sm">Not Connected</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">Fill the form below to connect your Twilio account</p>
+                            <p className="font-semibold text-[#9ca3af] text-sm">Not Connected</p>
+                            <p className="text-xs text-[#6b7280] mt-0.5">Fill the form below to connect your Twilio account</p>
                         </div>
                     </div>
                 )}
@@ -182,7 +182,7 @@ export default function TwilioSetupPage() {
                 <form onSubmit={handleConnect} className="space-y-5">
                     {/* SID */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                        <label className="block text-sm font-medium text-[#9ca3af] mb-1.5">
                             Account SID
                         </label>
                         <input
@@ -191,13 +191,13 @@ export default function TwilioSetupPage() {
                             placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                             value={form.sid}
                             onChange={e => setForm({ ...form, sid: e.target.value })}
-                            className="w-full rounded-lg border border-gray-300 border-[#1f2937] bg-[#0b1220] shadow-sm px-4 py-2.5 text-sm text-[#f9fafb] placeholder-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition"
+                            className="w-full rounded-lg border border-[#1f2937] border-[#1f2937] bg-[#0b1220] shadow-sm px-4 py-2.5 text-sm text-[#f9fafb] placeholder-gray-400 focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/20 outline-none transition"
                         />
                     </div>
 
                     {/* Auth Token */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                        <label className="block text-sm font-medium text-[#9ca3af] mb-1.5">
                             Auth Token
                         </label>
                         <div className="relative">
@@ -207,12 +207,12 @@ export default function TwilioSetupPage() {
                                 placeholder="Your Twilio auth token"
                                 value={form.authToken}
                                 onChange={e => setForm({ ...form, authToken: e.target.value })}
-                                className="w-full rounded-lg border border-gray-300 border-[#1f2937] bg-[#0b1220] shadow-sm px-4 py-2.5 pr-11 text-sm text-[#f9fafb] placeholder-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition"
+                                className="w-full rounded-lg border border-[#1f2937] border-[#1f2937] bg-[#0b1220] shadow-sm px-4 py-2.5 pr-11 text-sm text-[#f9fafb] placeholder-gray-400 focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/20 outline-none transition"
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowToken(!showToken)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7280] hover:text-[#9ca3af] dark:hover:text-[#9ca3af]"
                             >
                                 {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </button>
@@ -225,7 +225,7 @@ export default function TwilioSetupPage() {
 
                     {/* WhatsApp Number */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                        <label className="block text-sm font-medium text-[#9ca3af] mb-1.5">
                             WhatsApp From Number
                         </label>
                         <input
@@ -234,25 +234,25 @@ export default function TwilioSetupPage() {
                             placeholder="whatsapp:+14155238886"
                             value={form.whatsappNumber}
                             onChange={e => setForm({ ...form, whatsappNumber: e.target.value })}
-                            className="w-full rounded-lg border border-gray-300 border-[#1f2937] bg-[#0b1220] shadow-sm px-4 py-2.5 text-sm text-[#f9fafb] placeholder-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition"
+                            className="w-full rounded-lg border border-[#1f2937] border-[#1f2937] bg-[#0b1220] shadow-sm px-4 py-2.5 text-sm text-[#f9fafb] placeholder-gray-400 focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/20 outline-none transition"
                         />
-                        <p className="mt-1 text-xs text-gray-400">Format: <code className="bg-[#0b1220] border border-gray-200 border-[#1f2937] shadow-sm px-1 rounded">whatsapp:+14155238886</code> or just <code className="bg-[#0b1220] border border-gray-200 border-[#1f2937] shadow-sm px-1 rounded">+14155238886</code></p>
+                        <p className="mt-1 text-xs text-[#6b7280]">Format: <code className="bg-[#0b1220] border border-[#1f2937] border-[#1f2937] shadow-sm px-1 rounded">whatsapp:+14155238886</code> or just <code className="bg-[#0b1220] border border-[#1f2937] border-[#1f2937] shadow-sm px-1 rounded">+14155238886</code></p>
                     </div>
 
                     {/* Test Phone */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                            Test Phone Number <span className="text-gray-400 font-normal">(receives the verification message)</span>
+                        <label className="block text-sm font-medium text-[#9ca3af] mb-1.5">
+                            Test Phone Number <span className="text-[#6b7280] font-normal">(receives the verification message)</span>
                         </label>
                         <div className="relative">
-                            <PhoneCall className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <PhoneCall className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6b7280]" />
                             <input
                                 id="twilio-test-phone"
                                 type="tel"
                                 placeholder="9876543210"
                                 value={form.testPhone}
                                 onChange={e => setForm({ ...form, testPhone: e.target.value })}
-                                className="w-full rounded-lg border border-gray-300 border-[#1f2937] bg-[#0b1220] shadow-sm pl-10 pr-4 py-2.5 text-sm text-[#f9fafb] placeholder-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition"
+                                className="w-full rounded-lg border border-[#1f2937] border-[#1f2937] bg-[#0b1220] shadow-sm pl-10 pr-4 py-2.5 text-sm text-[#f9fafb] placeholder-gray-400 focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/20 outline-none transition"
                             />
                         </div>
                     </div>
@@ -280,11 +280,11 @@ export default function TwilioSetupPage() {
             </div>
 
             {/* ── Info Box ──────────────────────────────────────────────── */}
-            <div className="rounded-xl border border-amber-200 dark:border-amber-700/50 bg-amber-50 dark:bg-amber-900/10 px-5 py-4">
-                <p className="text-sm font-semibold text-amber-800 dark:text-amber-400 mb-2">How it works</p>
-                <ul className="text-xs text-amber-700 dark:text-amber-400/80 space-y-1.5 list-disc list-inside">
+            <div className="rounded-xl border border-amber-500/20 dark:border-amber-700/50 bg-amber-500/10 dark:bg-amber-900/10 px-5 py-4">
+                <p className="text-sm font-semibold text-amber-800 mb-2">How it works</p>
+                <ul className="text-xs text-amber-400/80 space-y-1.5 list-disc list-inside">
                     <li>A test WhatsApp message is sent to verify credentials before saving.</li>
-                    <li><strong>Important:</strong> If using a Twilio Sandbox, you MUST send <code className="bg-amber-100 dark:bg-amber-800 px-1 rounded">join &lt;your-sandbox-word&gt;</code> to your Twilio number from your WhatsApp first, otherwise Twilio will drop the message silently!</li>
+                    <li><strong>Important:</strong> If using a Twilio Sandbox, you MUST send <code className="bg-amber-500/10 dark:bg-amber-800 px-1 rounded">join &lt;your-sandbox-word&gt;</code> to your Twilio number from your WhatsApp first, otherwise Twilio will drop the message silently!</li>
                     <li>If the test fails, credentials are <strong>not saved</strong>.</li>
                     <li>Once connected, the system sends automated messages daily based on plan settings.</li>
                     <li>Enable <strong>WhatsApp Alerts</strong> on individual plans to set custom messages.</li>

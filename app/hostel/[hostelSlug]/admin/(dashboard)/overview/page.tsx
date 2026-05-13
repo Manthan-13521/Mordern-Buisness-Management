@@ -79,13 +79,13 @@ export default function OverviewPage() {
 
     const Breadcrumb = () => (
         <div className="flex flex-wrap items-center gap-2 text-sm font-bold text-slate-500 mb-6 bg-[#0b1220] p-3 rounded-xl border-b-4 border-[#1f2937] shadow-sm w-full">
-            <button onClick={() => setViewLevel("blocks")} className={`hover:text-blue-600 dark:text-blue-400 transition-colors flex items-center gap-1.5 ${viewLevel === "blocks" ? "text-blue-600 dark:text-blue-400" : ""}`}>
+            <button onClick={() => setViewLevel("blocks")} className={`hover:text-blue-600 transition-colors flex items-center gap-1.5 ${viewLevel === "blocks" ? "text-blue-600" : ""}`}>
                 <Building2 className="w-4 h-4" /> Overview
             </button>
             {selectedBlock && viewLevel !== "blocks" && (
                 <>
                     <ChevronRight className="w-4 h-4 opacity-40" />
-                    <button onClick={() => setViewLevel("floors")} className={`hover:text-blue-600 dark:text-blue-400 transition-colors flex items-center gap-1 text-sm ${viewLevel === "floors" ? "text-blue-600 dark:text-blue-400" : ""}`}>
+                    <button onClick={() => setViewLevel("floors")} className={`hover:text-blue-600 transition-colors flex items-center gap-1 text-sm ${viewLevel === "floors" ? "text-blue-600" : ""}`}>
                         <Layers className="w-3.5 h-3.5"/> Block {selectedBlock.name}
                     </button>
                 </>
@@ -93,7 +93,7 @@ export default function OverviewPage() {
             {selectedFloor && (viewLevel === "rooms" || viewLevel === "beds") && (
                 <>
                     <ChevronRight className="w-4 h-4 opacity-40" />
-                    <button onClick={() => setViewLevel("rooms")} className={`hover:text-blue-600 dark:text-blue-400 transition-colors flex items-center gap-1 text-sm ${viewLevel === "rooms" ? "text-blue-600 dark:text-blue-400" : ""}`}>
+                    <button onClick={() => setViewLevel("rooms")} className={`hover:text-blue-600 transition-colors flex items-center gap-1 text-sm ${viewLevel === "rooms" ? "text-blue-600" : ""}`}>
                         <Grid className="w-3.5 h-3.5"/> Floor {selectedFloor.floorNo}
                     </button>
                 </>
@@ -101,7 +101,7 @@ export default function OverviewPage() {
             {selectedRoom && viewLevel === "beds" && (
                 <>
                     <ChevronRight className="w-4 h-4 opacity-40" />
-                    <span className="text-blue-600 dark:text-blue-400 flex items-center gap-1 text-sm"><BedDouble className="w-3.5 h-3.5"/> Room {selectedRoom.roomNo}</span>
+                    <span className="text-blue-600 flex items-center gap-1 text-sm"><BedDouble className="w-3.5 h-3.5"/> Room {selectedRoom.roomNo}</span>
                 </>
             )}
         </div>
@@ -143,13 +143,13 @@ export default function OverviewPage() {
                                         <div className="w-32 h-6 bg-slate-300 dark:bg-slate-500 rounded-t-sm group- transition-colors shadow-sm z-10"></div>
                                         
                                         {/* Building Body */}
-                                        <div className="w-40 min-h-[220px] bg-slate-100 dark:bg-slate-800 border-x border-t border-slate-300 dark:border-slate-700 flex flex-col-reverse p-3 shadow-2xl group-hover:border-indigo-400 group-hover:shadow-indigo-500/20 transition-all rounded-b-md border-b-[8px] border-b-slate-400 dark:border-b-slate-900">
+                                        <div className="w-40 min-h-[220px] bg-slate-100 border-x border-t border-slate-300 flex flex-col-reverse p-3 shadow-2xl group-hover:border-indigo-400 group-hover:shadow-indigo-500/20 transition-all rounded-b-md border-b-[8px] border-b-slate-400 dark:border-b-slate-900">
                                             
                                             {/* Entrance Door */}
                                             <div className="w-full flex justify-center pt-2 relative z-10">
                                                 <div className="w-16 h-12 bg-slate-800 dark:bg-slate-950 rounded-t-lg flex border-4 border-slate-400 dark:border-slate-600 overflow-hidden shadow-inner relative group-hover:border-indigo-400/50">
                                                     {/* Double doors */}
-                                                    <div className="flex-1 border-r border-slate-600 dark:border-slate-800 relative">
+                                                    <div className="flex-1 border-r border-slate-600 relative">
                                                         <div className="absolute right-1 top-1/2 w-1 h-3 bg-slate-400 rounded-full"></div>
                                                     </div>
                                                     <div className="flex-1 relative">
@@ -165,9 +165,9 @@ export default function OverviewPage() {
                                                 {b.floors.map((_, i) => (
                                                     <div key={i} className="w-full flex justify-around px-1">
                                                         {/* 3 Windows per floor */}
-                                                        <div className="w-6 h-8 bg-sky-200 dark:bg-sky-900/60 border-b-4 border-slate-300 dark:border-slate-700 rounded-t-sm shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] group-hover:bg-indigo-100 dark:group-hover:bg-indigo-800/40 transition-colors relative"><div className="absolute top-0 right-1 w-1 h-4 bg-white/40 rotate-[20deg] rounded-full"></div></div>
-                                                        <div className="w-6 h-8 bg-sky-200 dark:bg-sky-900/60 border-b-4 border-slate-300 dark:border-slate-700 rounded-t-sm shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] group-hover:bg-indigo-100 dark:group-hover:bg-indigo-800/40 transition-colors relative"><div className="absolute top-0 right-1 w-1 h-4 bg-white/40 rotate-[20deg] rounded-full"></div></div>
-                                                        <div className="w-6 h-8 bg-sky-200 dark:bg-sky-900/60 border-b-4 border-slate-300 dark:border-slate-700 rounded-t-sm shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] group-hover:bg-indigo-100 dark:group-hover:bg-indigo-800/40 transition-colors relative"><div className="absolute top-0 right-1 w-1 h-4 bg-white/40 rotate-[20deg] rounded-full"></div></div>
+                                                        <div className="w-6 h-8 bg-sky-200 dark:bg-sky-900/60 border-b-4 border-slate-300 rounded-t-sm shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] group-hover:bg-indigo-500/100/10 dark:group-hover:bg-indigo-800/40 transition-colors relative"><div className="absolute top-0 right-1 w-1 h-4 bg-white/40 rotate-[20deg] rounded-full"></div></div>
+                                                        <div className="w-6 h-8 bg-sky-200 dark:bg-sky-900/60 border-b-4 border-slate-300 rounded-t-sm shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] group-hover:bg-indigo-500/100/10 dark:group-hover:bg-indigo-800/40 transition-colors relative"><div className="absolute top-0 right-1 w-1 h-4 bg-white/40 rotate-[20deg] rounded-full"></div></div>
+                                                        <div className="w-6 h-8 bg-sky-200 dark:bg-sky-900/60 border-b-4 border-slate-300 rounded-t-sm shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] group-hover:bg-indigo-500/100/10 dark:group-hover:bg-indigo-800/40 transition-colors relative"><div className="absolute top-0 right-1 w-1 h-4 bg-white/40 rotate-[20deg] rounded-full"></div></div>
                                                     </div>
                                                 ))}
                                                 {b.floors.length === 0 && <div className="text-center text-[9px] text-slate-400 font-bold py-6 uppercase tracking-widest leading-tight">Under<br/>Construction</div>}
@@ -176,7 +176,7 @@ export default function OverviewPage() {
                                     </div>
                                     
                                     <div className="mt-6 text-center">
-                                        <h3 className="text-xl font-black text-[#f9fafb] uppercase tracking-widest group-hover:text-blue-600 dark:text-blue-400 transition-colors">Block {b.name}</h3>
+                                        <h3 className="text-xl font-black text-[#f9fafb] uppercase tracking-widest group-hover:text-blue-600 transition-colors">Block {b.name}</h3>
                                         <div className="mt-2 text-xs font-bold text-[#9ca3af] uppercase flex gap-4">
                                             <div className="flex flex-col"><span className="text-emerald-500 text-lg">{b.occupiedBeds}</span> Occupied</div>
                                             <div className="flex flex-col"><span className="text-rose-500 text-lg">{b.vacantBeds}</span> Vacant</div>
@@ -193,7 +193,7 @@ export default function OverviewPage() {
                     <div className="flex-1 flex flex-col items-center justify-center pt-8">
                         <p className="text-slate-500 font-bold tracking-widest uppercase mb-8 text-sm text-center w-full">Block {selectedBlock.name} - Select a floor</p>
                         
-                        <div className="flex flex-col-reverse justify-end items-center gap-1 bg-slate-100 dark:bg-slate-800/50 p-6 rounded-t-xl border-x-4 border-t-4 border-slate-300 dark:border-slate-600 min-w-[320px] shadow-2xl relative">
+                        <div className="flex flex-col-reverse justify-end items-center gap-1 bg-slate-100/50 p-6 rounded-t-xl border-x-4 border-t-4 border-slate-300 dark:border-slate-600 min-w-[320px] shadow-2xl relative">
                             {/* Small symbolic roof */}
                             <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-[calc(100%+16px)] h-6 bg-slate-300 dark:bg-slate-600 rounded-t-lg"></div>
 
@@ -203,7 +203,7 @@ export default function OverviewPage() {
                                     onClick={() => { setSelectedFloor(f); setViewLevel("rooms"); }}
                                     className="w-[280px] sm:w-[360px] h-16 sm:h-20 bg-[#0b1220] border-2 border-slate-300 dark:border-slate-500 rounded flex justify-between items-center px-6 cursor-pointer hover:bg-[#8b5cf6]/10 dark:hover:bg-indigo-900/40 hover:border-indigo-400 group transition-all"
                                 >
-                                    <span className="text-2xl font-black text-[#f9fafb] group-hover:text-blue-600 dark:text-blue-400 transition-colors">{f.floorNo}</span>
+                                    <span className="text-2xl font-black text-[#f9fafb] group-hover:text-blue-600 transition-colors">{f.floorNo}</span>
                                     <div className="flex gap-4 text-xs font-bold uppercase tracking-wider text-right text-slate-500 group-hover:text-blue-500">
                                         <div className="flex flex-col"><span className="text-emerald-500 text-base">{f.occupiedBeds}</span> Inside</div>
                                         <div className="flex flex-col"><span className="text-rose-500 text-base">{f.vacantBeds}</span> Free</div>
@@ -222,7 +222,7 @@ export default function OverviewPage() {
                         <p className="text-slate-500 font-bold tracking-widest uppercase mb-6 text-sm text-center w-full">Floor {selectedFloor.floorNo} - Layout Map</p>
                         
                         {/* Floor Boundary Box */}
-                        <div className="bg-slate-200 dark:bg-slate-700/80 p-6 sm:p-10 border-[6px] border-slate-400 dark:border-slate-600 rounded-xl max-w-4xl w-full flex flex-wrap gap-4 sm:gap-6 justify-center shadow-inner relative">
+                        <div className="bg-slate-200/80 p-6 sm:p-10 border-[6px] border-slate-400 dark:border-slate-600 rounded-xl max-w-4xl w-full flex flex-wrap gap-4 sm:gap-6 justify-center shadow-inner relative">
                             {selectedFloor.rooms.map((r) => {
                                 const isFull = r.vacantBeds === 0;
                                 const isEmpty = r.occupiedBeds === 0;
@@ -265,13 +265,13 @@ export default function OverviewPage() {
                                     className={`relative w-20 h-32 sm:w-24 sm:h-40 rounded-lg flex flex-col items-center justify-start pt-6 border-4 shadow-md cursor-pointer hover:scale-110 transition-transform
                                         ${bed.isOccupied 
                                             ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-500' 
-                                            : 'bg-rose-50 dark:bg-rose-900/30 border-rose-400 border-dashed'}
+                                            : 'bg-rose-500/10 dark:bg-rose-900/30 border-rose-400 border-dashed'}
                                     `}
                                 >
                                     {/* Pillow shape layout */}
-                                    <div className="w-12 h-6 sm:w-16 sm:h-8 rounded-full bg-[#0b1220] dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 mb-auto"></div>
+                                    <div className="w-12 h-6 sm:w-16 sm:h-8 rounded-full bg-[#0b1220] border-2 border-slate-200 dark:border-slate-600 mb-auto"></div>
                                     
-                                    <span className={`text-2xl font-black absolute top-1/2 -translate-y-1/2 ${bed.isOccupied ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>
+                                    <span className={`text-2xl font-black absolute top-1/2 -translate-y-1/2 ${bed.isOccupied ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-500'}`}>
                                         {bed.bedNo}
                                     </span>
 
@@ -310,7 +310,7 @@ export default function OverviewPage() {
                             <p className="text-sm font-bold text-slate-500 mt-1 mb-6 text-center">{showMemberDetails.member.phone}</p>
                             
                             {/* Balance Indicator Bubble */}
-                            <div className={`mb-6 px-6 py-2 rounded-full border-2 text-sm font-black tracking-widest uppercase shadow-sm ${showMemberDetails.member.balance < 0 ? 'bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-900/30 dark:border-rose-900' : 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:border-emerald-900'}`}>
+                            <div className={`mb-6 px-6 py-2 rounded-full border-2 text-sm font-black tracking-widest uppercase shadow-sm ${showMemberDetails.member.balance < 0 ? 'bg-rose-500/10 text-rose-600 border-rose-500/20 dark:bg-rose-900/30 dark:border-rose-900' : 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:border-emerald-900'}`}>
                                 {showMemberDetails.member.balance < 0 ? `Dues: ₹${Math.abs(showMemberDetails.member.balance)}` : `Advance: ₹${Math.max(0, showMemberDetails.member.balance)}`}
                             </div>
                             
@@ -323,9 +323,9 @@ export default function OverviewPage() {
                                         {showMemberDetails.member.checkInDate ? new Date(showMemberDetails.member.checkInDate).toLocaleDateString("en-IN") : "—"}
                                     </p>
                                 </div>
-                                <div className="bg-rose-50 dark:bg-rose-900/30 p-3 rounded-xl border border-rose-200 dark:border-rose-900/50 text-center">
+                                <div className="bg-rose-500/10 dark:bg-rose-900/30 p-3 rounded-xl border border-rose-500/20 dark:border-rose-900/50 text-center">
                                     <p className="text-[10px] uppercase font-bold text-rose-400">Next Rent Due</p>
-                                    <p className="font-black text-sm text-rose-600 dark:text-rose-400">
+                                    <p className="font-black text-sm text-rose-600">
                                         {showMemberDetails.member.due_date ? new Date(showMemberDetails.member.due_date).toLocaleDateString("en-IN") : "—"}
                                     </p>
                                 </div>

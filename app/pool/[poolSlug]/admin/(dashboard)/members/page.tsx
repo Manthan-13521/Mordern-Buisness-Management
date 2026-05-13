@@ -220,30 +220,30 @@ export default function MembersPage() {
             const msLeft = endDate.getTime() - nowMs;
             
             let verdict: Member["verdict"] = "ACTIVE";
-            let verdictClass = "bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-500/10 dark:text-green-400";
+            let verdictClass = "bg-green-500/10 text-green-400 ring-green-600/20";
             let rowClass = "";
             let daysLeftLabel = "";
             let daysLeft = 0;
 
             if (m.isDeleted) {
                 verdict = "DELETED";
-                verdictClass = "bg-[#0b1220] text-gray-600 ring-gray-500/20 bg-[#0b1220] border border-[#1f2937] text-[#9ca3af]";
-                rowClass = "bg-red-50 dark:bg-red-950/30";
+                verdictClass = "bg-[#0b1220] text-[#9ca3af] ring-gray-500/20 bg-[#0b1220] border border-[#1f2937] text-[#9ca3af]";
+                rowClass = "bg-red-50";
                 daysLeftLabel = "Deleted";
             } else if (m.defaulterStatus === "blocked") {
                 verdict = "BLOCKED";
                 verdictClass = "bg-red-600 text-white ring-red-600/30 shadow animate-pulse";
-                rowClass = "bg-red-50/80 dark:bg-red-900/40 border-l-4 border-red-500";
+                rowClass = "bg-red-500/10 border-l-4 border-red-500";
                 daysLeftLabel = `Blocked: ${m.overdueDays}d overdue`;
             } else if (m.defaulterStatus === "warning") {
                 verdict = "WARNING";
-                verdictClass = "bg-rose-50 text-rose-700 ring-rose-600/30 dark:bg-rose-500/20 dark:text-rose-400 font-bold border border-rose-200 dark:border-rose-800";
-                rowClass = "bg-rose-50/50 dark:bg-rose-950/20 border-l-4 border-rose-400";
+                verdictClass = "bg-rose-500/10 text-rose-400 ring-rose-600/30 font-bold border border-rose-500/20";
+                rowClass = "bg-rose-500/5 border-l-4 border-rose-400";
                 daysLeftLabel = `Warning: ${m.overdueDays}d overdue`;
             } else if (m.isExpired || msLeft <= 0) {
                 verdict = "EXPIRED";
-                verdictClass = "bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-500/10 dark:text-red-400";
-                rowClass = "bg-red-50 dark:bg-red-950/30";
+                verdictClass = "bg-red-500/10 text-red-400 ring-red-600/20";
+                rowClass = "bg-red-50";
                 daysLeftLabel = "Expired";
             } else {
                 daysLeft = Math.ceil(msLeft / 86400000);
@@ -254,8 +254,8 @@ export default function MembersPage() {
                 }
                 if (daysLeft <= 7) {
                     verdict = "EXPIRING";
-                    verdictClass = "bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400";
-                    rowClass = "bg-amber-50 dark:bg-amber-950/30";
+                    verdictClass = "bg-amber-500/10 text-amber-400 ring-amber-600/20";
+                    rowClass = "bg-amber-50";
                 }
             }
 
@@ -379,9 +379,9 @@ export default function MembersPage() {
                     <PoolTypeFilter />
                     <a
                         href={`/api/export/members?type=${selectedType}`}
-                        className="inline-flex items-center rounded-md bg-white/5 border border-white/10 px-3 py-2 text-sm font-semibold text-gray-300 shadow-sm hover:bg-white/10 transition-colors"
+                        className="inline-flex items-center rounded-md bg-[#0b1220] border border-[#1f2937] px-3 py-2 text-sm font-semibold text-[#9ca3af] shadow-sm hover:bg-white/10 transition-colors"
                     >
-                        <Download className="-ml-0.5 mr-1.5 h-4 w-4 text-gray-400" />
+                        <Download className="-ml-0.5 mr-1.5 h-4 w-4 text-[#6b7280]" />
                         Export
                     </a>
                     <button
@@ -396,10 +396,10 @@ export default function MembersPage() {
 
             {/* Search */}
             <div className="relative max-w-sm">
-                <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6b7280]" />
                 <input
                     type="text"
-                    className="block w-full rounded-md border border-white/10 bg-white/5 py-2 pl-9 pr-3 text-sm text-white placeholder-white/40 focus:ring-2 focus:ring-[#8b5cf6] transition shadow-sm"
+                    className="block w-full rounded-md border border-[#1f2937] bg-[#0b1220] py-2 pl-9 pr-3 text-sm text-white placeholder-white/40 focus:ring-2 focus:ring-[#8b5cf6] transition shadow-sm"
                     placeholder="Search name, ID, phone…"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -409,19 +409,19 @@ export default function MembersPage() {
             {/* Legend & Status */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4 text-xs text-[#9ca3af]">
-                    <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-red-100 dark:bg-red-950/60 border border-red-200" /> Expired / Deleted</span>
-                    <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-amber-100 dark:bg-amber-950/60 border border-amber-200" /> Expiring ≤ 7 days</span>
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-red-500/10 border border-red-500/20" /> Expired / Deleted</span>
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-amber-500/10 border border-amber-500/20" /> Expiring ≤ 7 days</span>
                     <PrinterAppsHelp />
                 </div>
                 {pendingSyncCount > 0 && (
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-orange-700 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/40 px-2 py-1.5 rounded-md border border-orange-200 dark:border-orange-800 shadow-sm">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-orange-400 bg-orange-500/10 px-2 py-1.5 rounded-md border border-orange-500/20 shadow-sm">
                         <RefreshCw className="h-3.5 w-3.5 animate-spin duration-3000" />
                         <span>Sync pending ({pendingSyncCount})</span>
                         <span className="opacity-80 hidden sm:inline">— Offline changes not uploaded</span>
                     </div>
                 )}
                 {isUsingLocal && pendingSyncCount === 0 && (
-                    <div className="flex items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-1.5 rounded-md border border-amber-200 dark:border-amber-800 shadow-sm">
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-amber-600 bg-amber-500/10 px-2 py-1.5 rounded-md border border-amber-500/20 shadow-sm">
                         <RefreshCw className="h-3 w-3 animate-spin duration-3000" />
                         <span>Showing Offline Data</span>
                     </div>
@@ -429,7 +429,7 @@ export default function MembersPage() {
             </div>
 
             {error && (
-                <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+                <p className="text-sm text-red-600" role="alert">
                     {(error as Error).message || "Could not load members."}
                 </p>
             )}
@@ -455,7 +455,7 @@ export default function MembersPage() {
                                             <RefreshCw className="animate-spin h-5 w-5 mx-auto text-blue-500" />
                                         </td></tr>
                                     ) : processedMembers.length === 0 ? (
-                                        <tr><td colSpan={8} className="py-12 text-center text-gray-500">No members found.</td></tr>
+                                        <tr><td colSpan={8} className="py-12 text-center text-[#6b7280]">No members found.</td></tr>
                                     ) : processedMembers.map((member) => {
                                         const plan = member.planId as Plan;
                                         const unreturned = (member.equipmentTaken ?? []).filter((e: EquipmentItem) => !e.isReturned);
@@ -476,20 +476,20 @@ export default function MembersPage() {
                                                                 loading="lazy"
                                                                 quality={40}
                                                               />
-                                                            : <div className="h-9 w-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shadow-sm">
-                                                                <UserIcon className="h-5 w-5 text-gray-500" />
+                                                            : <div className="h-9 w-9 rounded-full bg-[#0b1220] border border-[#1f2937] flex items-center justify-center shadow-sm">
+                                                                <UserIcon className="h-5 w-5 text-[#6b7280]" />
                                                               </div>
                                                         }
                                                         <div>
-                                                            <p className="font-medium text-[#f9fafb] group-hover:text-blue-600 dark:text-blue-400 dark:group-hover:text-indigo-400">{member.name}</p>
-                                                            <p className="text-xs text-gray-400">
+                                                            <p className="font-medium text-[#f9fafb] group-hover:text-blue-600">{member.name}</p>
+                                                            <p className="text-xs text-[#6b7280]">
                                                                 {member.memberId}{member.age ? ` · ${member.age} yrs` : ""}
                                                                 {(member as any)._source === "entertainment" && (
-                                                                    <span className="ml-1.5 inline-flex items-center rounded-full bg-purple-50 px-1.5 py-0.5 text-[10px] font-semibold text-purple-700 ring-1 ring-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:ring-purple-800">🎭</span>
+                                                                    <span className="ml-1.5 inline-flex items-center rounded-full bg-purple-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-purple-400 ring-1 ring-purple-600/20">🎭</span>
                                                                 )}
                                                                 {/* STEP 12 SaaS Safety: Admin visibility override */}
                                                                 {(member as any).manualOverride && (
-                                                                    <span className="ml-1.5 inline-flex items-center rounded-full bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 ring-1 ring-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-400 dark:ring-indigo-800">Manual Override Active</span>
+                                                                    <span className="ml-1.5 inline-flex items-center rounded-full bg-indigo-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-400 ring-1 ring-indigo-600/20">Manual Override Active</span>
                                                                 )}
                                                             </p>
                                                         </div>
@@ -499,29 +499,29 @@ export default function MembersPage() {
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-[#9ca3af]">{member.phone}</td>
                                                 {/* Plan / Qty */}
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm">
-                                                    <p className="text-gray-800 dark:text-gray-200">{plan?.name ?? "N/A"}</p>
-                                                    <p className="text-xs text-gray-400">Qty: {member.planQuantity ?? 1}</p>
+                                                    <p className="text-[#f9fafb]">{plan?.name ?? "N/A"}</p>
+                                                    <p className="text-xs text-[#6b7280]">Qty: {member.planQuantity ?? 1}</p>
                                                 </td>
                                                 {/* Equipment */}
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm">
                                                     {unreturned.length > 0
-                                                        ? <span className="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+                                                        ? <span className="inline-flex items-center rounded-full bg-orange-500/10 px-2.5 py-0.5 text-xs font-medium text-orange-400">
                                                             {unreturned.length} out
                                                         </span>
-                                                        : <span className="text-xs text-gray-400">—</span>
+                                                        : <span className="text-xs text-[#6b7280]">—</span>
                                                     }
                                                 </td>
                                                 {/* Balance */}
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm font-medium">
                                                     {(member.balanceAmount ?? 0) > 0
-                                                        ? <span className="text-red-600 dark:text-red-400">₹{member.balanceAmount.toLocaleString("en-IN")}</span>
-                                                        : <span className="text-gray-400">—</span>
+                                                        ? <span className="text-red-600">₹{member.balanceAmount.toLocaleString("en-IN")}</span>
+                                                        : <span className="text-[#6b7280]">—</span>
                                                     }
                                                 </td>
                                                 {/* Valid Till */}
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-[#9ca3af]">
                                                     <p>{endDate.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</p>
-                                                    <p className="text-xs text-gray-400">{member.daysLeftLabel}</p>
+                                                    <p className="text-xs text-[#6b7280]">{member.daysLeftLabel}</p>
                                                 </td>
                                                 {/* Status badge */}
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm">
@@ -531,23 +531,23 @@ export default function MembersPage() {
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm">
                                                     <div className="flex items-center gap-2">
                                                         {member.cardStatus === "pending" ? (
-                                                            <button disabled title="Generating ID Card..." className="p-1.5 rounded-md text-gray-300 dark:text-gray-600 cursor-wait">
+                                                            <button disabled title="Generating ID Card..." className="p-1.5 rounded-md text-[#9ca3af] cursor-wait">
                                                                 <RefreshCw className="h-4 w-4 animate-spin" />
                                                             </button>
                                                         ) : (
                                                             <a href={`/api/members/${member._id}/pdf`} download title="Download ID Card"
-                                                                className="p-1.5 rounded-md text-gray-400 hover:text-blue-600 dark:text-blue-400 hover:bg-[#8b5cf6]/10  transition-colors">
+                                                                className="p-1.5 rounded-md text-[#6b7280] hover:text-blue-600 hover:bg-[#8b5cf6]/10  transition-colors">
                                                                 <Download className="h-4 w-4" />
                                                             </a>
                                                         )}
                                                         {plan?.hasTokenPrint && (
                                                             <button onClick={() => handleReprint(member)} title="Reprint Token"
-                                                                className="p-1.5 rounded-md text-gray-400 hover:text-green-600 hover:bg-green-50 hover:bg-green-500/10 transition-colors">
+                                                                className="p-1.5 rounded-md text-[#6b7280] hover:text-green-600 hover:bg-green-500/100/10 hover:bg-green-500/100/10 transition-colors">
                                                                 <Printer className="h-4 w-4" />
                                                             </button>
                                                         )}
                                                         <button onClick={() => handleDelete(member._id, member.name)} title="Delete Member"
-                                                            className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 hover:bg-red-500/10 transition-colors">
+                                                            className="p-1.5 rounded-md text-[#6b7280] hover:text-red-600 hover:bg-red-500/100/10 hover:bg-red-500/100/10 transition-colors">
                                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                                 <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
                                                             </svg>
@@ -573,7 +573,7 @@ export default function MembersPage() {
                     <button
                         disabled={page <= 1 || loading}
                         onClick={() => setPage((p) => Math.max(1, p - 1))}
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#1f2937] bg-[#0b1220] text-[#f9fafb] hover:bg-slate-50 dark:hover:bg-slate-700 disabled:bg-slate-50 disabled:text-slate-400 dark:disabled:bg-slate-900/50 dark:disabled:text-slate-600 transition-colors font-medium shadow-sm"
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#1f2937] bg-[#0b1220] text-[#f9fafb] hover:bg-[#8b5cf6]/5 disabled:bg-[#0b1220] disabled:text-[#6b7280] transition-colors font-medium shadow-sm"
                     >
                         <ChevronLeft className="h-4 w-4" /> Previous
                     </button>
@@ -583,7 +583,7 @@ export default function MembersPage() {
                     <button
                         disabled={page >= totalPages || loading}
                         onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 text-white disabled:bg-slate-100 disabled:text-slate-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-600 transition-colors shadow-sm font-medium"
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 text-white disabled:bg-[#0b1220] disabled:text-[#6b7280] transition-colors shadow-sm font-medium"
                     >
                         Next <ChevronRight className="h-4 w-4" />
                     </button>

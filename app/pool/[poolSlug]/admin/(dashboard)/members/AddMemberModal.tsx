@@ -190,7 +190,7 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                     <div>
                         <h2 className="text-xl font-semibold text-[#f9fafb]">Add New Member</h2>
                         {selectedPlan?.hasTokenPrint && (
-                            <p className="mt-0.5 flex items-center gap-1.5 text-xs text-teal-600 dark:text-teal-400">
+                            <p className="mt-0.5 flex items-center gap-1.5 text-xs text-teal-400">
                                 <Printer className="h-3.5 w-3.5" />
                                 Token receipt will print automatically on save
                             </p>
@@ -210,7 +210,7 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                                 <input
                                     required type="text" value={formData.name} maxLength={30}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    className="mt-1 block w-full rounded-md border border-[#1f2937] px-3 py-2 text-gray-900 focus:border-[#8b5cf6] focus:ring-[#8b5cf6] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] text-[#f9fafb] sm:text-sm"
+                                    className="mt-1 block w-full rounded-md border border-[#1f2937] px-3 py-2 text-[#f9fafb] focus:border-[#8b5cf6] focus:ring-[#8b5cf6] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] text-[#f9fafb] sm:text-sm"
                                 />
                             </div>
 
@@ -219,7 +219,7 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                                 <input
                                     required type="tel" value={formData.phone} minLength={10} maxLength={13}
                                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                    className="mt-1 block w-full rounded-md border border-[#1f2937] px-3 py-2 text-gray-900 focus:border-[#8b5cf6] focus:ring-[#8b5cf6] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] text-[#f9fafb] sm:text-sm"
+                                    className="mt-1 block w-full rounded-md border border-[#1f2937] px-3 py-2 text-[#f9fafb] focus:border-[#8b5cf6] focus:ring-[#8b5cf6] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] text-[#f9fafb] sm:text-sm"
                                 />
                             </div>
 
@@ -230,7 +230,7 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                                     onChange={(e) => {
                                         setFormData({ ...formData, planId: e.target.value, planQuantity: 1, paidAmount: 0 });
                                     }}
-                                    className="mt-1 block w-full rounded-md border border-[#1f2937] px-3 py-2 text-gray-900 focus:border-[#8b5cf6] focus:ring-[#8b5cf6] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] text-[#f9fafb] sm:text-sm"
+                                    className="mt-1 block w-full rounded-md border border-[#1f2937] px-3 py-2 text-[#f9fafb] focus:border-[#8b5cf6] focus:ring-[#8b5cf6] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] text-[#f9fafb] sm:text-sm"
                                 >
                                     <option value="">Choose a plan...</option>
                                     {plans.map((p) => (
@@ -239,9 +239,9 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                                 </select>
                                 {selectedPlan && (
                                     <div className="mt-1.5 flex flex-wrap gap-1">
-                                        {selectedPlan.hasTokenPrint && <span className="inline-flex items-center rounded-full bg-teal-50 px-2 py-0.5 text-xs text-teal-700 ring-1 ring-teal-200 dark:bg-teal-900/30 dark:text-teal-400 dark:ring-teal-800">🖨️ Token</span>}
-                                        {selectedPlan.hasEntertainment && <span className="inline-flex items-center rounded-full bg-purple-50 px-2 py-0.5 text-xs text-purple-700 ring-1 ring-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:ring-purple-800">🎭 Entertainment</span>}
-                                        {selectedPlan.allowQuantity && <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-700 ring-1 ring-green-200 dark:bg-green-900/30 dark:text-green-400 dark:ring-green-800">🔢 Multi-Qty</span>}
+                                        {selectedPlan.hasTokenPrint && <span className="inline-flex items-center rounded-full bg-teal-500/10 px-2 py-0.5 text-xs text-teal-400 ring-1 ring-teal-600/20">🖨️ Token</span>}
+                                        {selectedPlan.hasEntertainment && <span className="inline-flex items-center rounded-full bg-purple-500/10 px-2 py-0.5 text-xs text-purple-400 ring-1 ring-purple-600/20">🎭 Entertainment</span>}
+                                        {selectedPlan.allowQuantity && <span className="inline-flex items-center rounded-full bg-green-500/10 px-2 py-0.5 text-xs text-green-400 ring-1 ring-green-600/20">🔢 Multi-Qty</span>}
                                     </div>
                                 )}
                             </div>
@@ -250,12 +250,12 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                             {selectedPlan?.allowQuantity && (
                                 <div>
                                     <label className="block text-sm font-medium text-[#9ca3af]">
-                                        Quantity <span className="text-gray-400">(max 25)</span>
+                                        Quantity <span className="text-[#6b7280]">(max 25)</span>
                                     </label>
                                     <input
                                         type="number" min="1" max="25" value={formData.planQuantity}
                                         onChange={(e) => setFormData({ ...formData, planQuantity: Number(e.target.value) })}
-                                        className="mt-1 block w-full rounded-md border border-[#1f2937] px-3 py-2 text-gray-900 focus:border-[#8b5cf6] focus:ring-[#8b5cf6] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] text-[#f9fafb] sm:text-sm"
+                                        className="mt-1 block w-full rounded-md border border-[#1f2937] px-3 py-2 text-[#f9fafb] focus:border-[#8b5cf6] focus:ring-[#8b5cf6] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] text-[#f9fafb] sm:text-sm"
                                     />
                                 </div>
                             )}
@@ -278,7 +278,7 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                                                 const val = Math.min(999999, Math.max(0, Number(e.target.value)));
                                                 if (Number.isFinite(val)) setFormData({ ...formData, paidAmount: val });
                                             }}
-                                            className="mt-1 block w-full rounded-md border border-[#1f2937] px-3 py-1.5 text-gray-900 focus:border-[#8b5cf6] focus:ring-[#8b5cf6] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] text-[#f9fafb] sm:text-sm"
+                                            className="mt-1 block w-full rounded-md border border-[#1f2937] px-3 py-1.5 text-[#f9fafb] focus:border-[#8b5cf6] focus:ring-[#8b5cf6] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] text-[#f9fafb] sm:text-sm"
                                             placeholder="Max ₹9,99,999"
                                         />
                                     </div>
@@ -287,7 +287,7 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                                         <select
                                             value={formData.paymentMode}
                                             onChange={(e) => setFormData({ ...formData, paymentMode: e.target.value })}
-                                            className="mt-1 block w-full rounded-md border border-[#1f2937] px-3 py-1.5 text-gray-900 focus:border-[#8b5cf6] focus:ring-[#8b5cf6] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] text-[#f9fafb] sm:text-sm"
+                                            className="mt-1 block w-full rounded-md border border-[#1f2937] px-3 py-1.5 text-[#f9fafb] focus:border-[#8b5cf6] focus:ring-[#8b5cf6] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] text-[#f9fafb] sm:text-sm"
                                         >
                                             <option value="cash">Cash</option>
                                             <option value="upi">UPI</option>
@@ -306,12 +306,12 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
 
                             {/* Equipment */}
                             <div>
-                                <label className="block text-sm font-medium text-[#9ca3af]">Equipment Taken <span className="text-gray-400 text-xs">(optional)</span></label>
+                                <label className="block text-sm font-medium text-[#9ca3af]">Equipment Taken <span className="text-[#6b7280] text-xs">(optional)</span></label>
                                 <input
                                     type="text" value={formData.equipmentTaken} maxLength={200}
                                     onChange={(e) => setFormData({ ...formData, equipmentTaken: e.target.value })}
                                     placeholder="e.g. Goggles, Swimming Cap"
-                                    className="mt-1 block w-full rounded-md border border-[#1f2937] px-3 py-2 text-gray-900 focus:border-[#8b5cf6] focus:ring-[#8b5cf6] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] text-[#f9fafb] sm:text-sm"
+                                    className="mt-1 block w-full rounded-md border border-[#1f2937] px-3 py-2 text-[#f9fafb] focus:border-[#8b5cf6] focus:ring-[#8b5cf6] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] text-[#f9fafb] sm:text-sm"
                                 />
                             </div>
                         </div>
@@ -322,7 +322,7 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                             <div className="flex flex-col items-center justify-center space-y-3 rounded-lg border-2 border-dashed border-[#1f2937] p-4 border-[#1f2937]">
                                 {photoPreview ? (
                                     <div className="relative">
-                                        <img src={photoPreview} alt="Preview" className="h-36 w-36 rounded-full border-4 border-indigo-100 object-cover shadow-sm dark:border-indigo-900" />
+                                        <img src={photoPreview} alt="Preview" className="h-36 w-36 rounded-full border-4 border-indigo-500/20 object-cover shadow-sm dark:border-indigo-500/20" />
                                         <button
                                             type="button" onClick={() => setPhotoPreview(null)}
                                             className="absolute bottom-0 right-0 rounded-full bg-[#0b1220] p-2 shadow-md hover:bg-[#020617] bg-[#0b1220] border border-[#1f2937] hover:bg-[#8b5cf6]/10"
@@ -332,7 +332,7 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                                     </div>
                                 ) : isCapturing ? (
                                     <div className="flex flex-col items-center space-y-2">
-                                        <div className="overflow-hidden rounded-full h-36 w-36 border-4 border-indigo-100 dark:border-indigo-900">
+                                        <div className="overflow-hidden rounded-full h-36 w-36 border-4 border-indigo-500/20 dark:border-indigo-500/20">
                                             <Webcam
                                                 audio={false} ref={webcamRef} screenshotFormat="image/jpeg"
                                                 videoConstraints={{ width: 192, height: 192, facingMode: "user" }}
@@ -351,7 +351,7 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                                         </div>
                                         <p className="text-sm font-medium text-[#f9fafb]">Member Photo</p>
                                         <button type="button" onClick={() => setIsCapturing(true)}
-                                            className="mt-2 rounded border border-[#1f2937] bg-[#0b1220] px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-[#020617] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] dark:text-gray-200 hover:bg-[#8b5cf6]/10">
+                                            className="mt-2 rounded border border-[#1f2937] bg-[#0b1220] px-3 py-1.5 text-sm font-medium text-[#9ca3af] shadow-sm hover:bg-[#020617] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] hover:bg-[#8b5cf6]/10">
                                             Open Camera
                                         </button>
                                     </div>
@@ -362,11 +362,11 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
 
                     <div className="flex justify-end space-x-3 border-t border-[#1f2937] pt-4 border-[#1f2937]">
                         <button type="button" onClick={onClose}
-                            className="rounded-md border border-[#1f2937] bg-[#0b1220] px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-[#020617] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] text-[#9ca3af] hover:bg-[#8b5cf6]/10">
+                            className="rounded-md border border-[#1f2937] bg-[#0b1220] px-4 py-2 text-sm font-medium text-[#9ca3af] shadow-sm hover:bg-[#020617] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] text-[#9ca3af] hover:bg-[#8b5cf6]/10">
                             Cancel
                         </button>
                         <button type="submit" disabled={loading}
-                            className="inline-flex items-center gap-2 justify-center rounded-md border border-transparent bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 px-4 py-2 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50">
+                            className="inline-flex items-center gap-2 justify-center rounded-md border border-transparent bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 px-4 py-2 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] focus:ring-offset-2 disabled:opacity-50">
                             {loading && <RefreshCw className="h-4 w-4 animate-spin" />}
                             {loading ? "Saving..." : selectedPlan?.hasTokenPrint ? "Save & Print Token" : "Save Member"}
                         </button>

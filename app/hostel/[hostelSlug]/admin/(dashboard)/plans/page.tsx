@@ -20,7 +20,7 @@ type Plan = {
     isActive: boolean; 
 };
 
-const INPUT = "w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-[#0b1220] px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition";
+const INPUT = "w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-[#0b1220] px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition";
 const LABEL = "block text-xs font-bold text-[#9ca3af] mb-1 uppercase tracking-wide";
 
 const DEFAULT_MESSAGES: PlanMessages = {
@@ -128,7 +128,7 @@ export default function PlansPage() {
                 <button onClick={openAdd} className="flex items-center gap-1.5 bg-[#8b5cf6] hover:bg-[#7c3aed] border-0  text-white text-sm font-medium px-4 py-2 rounded-xl shadow transition"><Plus className="h-4 w-4"/>Add Plan</button>
             </div>
 
-            {loading ? <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{Array.from({length:3}).map((_,i)=><div key={i} className="h-36 rounded-2xl bg-slate-200 dark:bg-slate-800 animate-pulse"/>)}</div>
+            {loading ? <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{Array.from({length:3}).map((_,i)=><div key={i} className="h-36 rounded-2xl bg-slate-200 animate-pulse"/>)}</div>
             : plans.length === 0 ? <div className="py-16 text-center text-slate-400">No plans yet — add one to get started</div>
             : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -139,12 +139,12 @@ export default function PlansPage() {
                                     <h3 className="font-semibold text-[#f9fafb]">{p.name}</h3>
                                     {p.description && <p className="text-xs text-slate-400 mt-0.5">{p.description}</p>}
                                 </div>
-                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.isActive ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600" : "bg-slate-100 dark:bg-slate-700 text-slate-400"}`}>
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.isActive ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600" : "bg-slate-100 text-slate-400"}`}>
                                     {p.isActive ? "Active" : "Inactive"}
                                 </span>
                             </div>
                             <div className="flex items-center gap-4 text-sm">
-                                <div><p className="text-2xl font-bold text-blue-600 dark:text-blue-400 dark:text-indigo-400">₹{p.price.toLocaleString("en-IN")}</p>
+                                <div><p className="text-2xl font-bold text-blue-600">₹{p.price.toLocaleString("en-IN")}</p>
                                 <p className="text-xs text-slate-400">{p.durationDays} days</p></div>
                             </div>
                             {(p.enableWhatsAppAlerts || p.enableWhatsApp) && (
@@ -161,8 +161,8 @@ export default function PlansPage() {
                                 </div>
                             )}
                             <div className="flex gap-2 pt-1">
-                                <button onClick={() => openEdit(p)} className="flex-1 flex items-center justify-center gap-1 text-xs border border-slate-200 dark:border-slate-600 rounded-xl py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition"><Pencil className="h-3 w-3"/>Edit</button>
-                                <button onClick={() => handleDelete(p._id)} className="flex items-center justify-center gap-1 text-xs border border-red-200 dark:border-red-900/40 rounded-xl px-3 py-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition"><Trash2 className="h-3 w-3"/></button>
+                                <button onClick={() => openEdit(p)} className="flex-1 flex items-center justify-center gap-1 text-xs border border-slate-200 dark:border-slate-600 rounded-xl py-1.5 hover:bg-[#8b5cf6]/5 text-slate-600 transition"><Pencil className="h-3 w-3"/>Edit</button>
+                                <button onClick={() => handleDelete(p._id)} className="flex items-center justify-center gap-1 text-xs border border-red-500/20 dark:border-red-900/40 rounded-xl px-3 py-1.5 hover:bg-red-500/100/10 dark:hover:bg-red-900/20 text-red-500 transition"><Trash2 className="h-3 w-3"/></button>
                             </div>
                         </div>
                     ))}
@@ -178,7 +178,7 @@ export default function PlansPage() {
                             <button onClick={()=>setShowForm(false)}><X className="h-5 w-5 text-slate-400"/></button>
                         </div>
                         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
-                            {error && <p className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">{error}</p>}
+                            {error && <p className="text-sm text-red-500 bg-red-500/10 dark:bg-red-900/20 rounded-lg px-3 py-2">{error}</p>}
                             <div><label className={LABEL}>Plan Name</label><input required value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} className={INPUT} placeholder="e.g. Monthly Bed"/></div>
                             <div><label className={LABEL}>Duration (days)</label><input type="number" min="1" required value={form.durationDays} onChange={e=>setForm(p=>({...p,durationDays:e.target.value}))} className={INPUT} placeholder="30"/></div>
                             <div><label className={LABEL}>Price (₹)</label><input type="number" min="0" required value={form.price} onChange={e=>setForm(p=>({...p,price:e.target.value}))} className={INPUT} placeholder="5000"/></div>
@@ -194,7 +194,7 @@ export default function PlansPage() {
                                             setForm(p => ({ ...p, enableWhatsApp: e.target.checked }));
                                             setShowMsgSection(e.target.checked);
                                         }}
-                                        className="mt-1 rounded border-slate-300 text-blue-600 dark:text-blue-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-800"
+                                        className="mt-1 rounded border-slate-300 text-blue-600 shadow-sm focus:border-[#8b5cf6] focus:ring-[#8b5cf6] dark:border-slate-600"
                                     />
                                     <div>
                                         <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
@@ -289,7 +289,7 @@ export default function PlansPage() {
                                 </div>
                             )}
 
-                            {editPlan && <div className="flex items-center justify-between pt-1"><label className="text-sm font-semibold text-slate-600 dark:text-slate-300">Active Status</label>
+                            {editPlan && <div className="flex items-center justify-between pt-1"><label className="text-sm font-semibold text-slate-600">Active Status</label>
                                 <button type="button" onClick={()=>setForm(p=>({...p,isActive:!p.isActive}))} className="text-emerald-600">
                                     {form.isActive ? <ToggleRight className="h-7 w-7"/> : <ToggleLeft className="h-7 w-7 text-slate-400"/>}
                                 </button></div>}

@@ -21,7 +21,7 @@ type Member = {
 type Plan = { _id: string; name: string; durationDays: number; price: number };
 
 const INPUT =
-    "w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition";
+    "w-full rounded-xl border border-[#1f2937] bg-[#0b1220] px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition";
 const LABEL = "block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wide";
 const EMPTY_FORM = {
     name: "", phone: "", collegeName: "", blockNo: "", floorNo: "", roomNo: "", bedNo: "",
@@ -277,7 +277,7 @@ export default function MembersPage() {
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                         <input
-                            className="pl-9 pr-4 py-2 rounded-xl border border-white/10 bg-white/5 text-sm w-52 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="pl-9 pr-4 py-2 rounded-xl border border-[#1f2937] bg-[#0b1220] text-sm w-52 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6]"
                             placeholder="Search members…"
                             value={search}
                             onChange={e => { setSearch(e.target.value); setPage(1); }}
@@ -307,18 +307,18 @@ export default function MembersPage() {
                         <tbody className="divide-y divide-[#1f2937] bg-[#0b1220]">
                             {loading ? Array.from({ length: 5 }).map((_, i) => (
                                 <tr key={i}>{Array.from({ length: 7 }).map((_, j) => (
-                                    <td key={j} className="px-4 py-3"><div className="h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /></td>
+                                    <td key={j} className="px-4 py-3"><div className="h-4 bg-slate-200 rounded animate-pulse" /></td>
                                 ))}</tr>
                             )) : members.length === 0 ? (
                                 <tr><td colSpan={7} className="px-4 py-16 text-center text-slate-400">No members found. Add your first member!</td></tr>
                             ) : members.map(m => {
                                 return (
-                                    <tr key={m._id} className="hover:bg-white/5 transition">
+                                    <tr key={m._id} className="hover:bg-[#0b1220] transition">
                                         <td className="px-4 py-3">
                                             {m.photoUrl ? (
-                                                <img src={m.photoUrl} alt={m.name} className="h-9 w-9 rounded-full object-cover border-2 border-indigo-200 dark:border-indigo-800" />
+                                                <img src={m.photoUrl} alt={m.name} className="h-9 w-9 rounded-full object-cover border-2 border-indigo-200" />
                                             ) : (
-                                                <div className="h-9 w-9 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
+                                                <div className="h-9 w-9 rounded-full bg-indigo-500/10 flex items-center justify-center">
                                                     <UserCircle2 className="h-5 w-5 text-indigo-400" />
                                                 </div>
                                             )}
@@ -335,7 +335,7 @@ export default function MembersPage() {
                                                     Advance: <IndianRupee className="h-3 w-3" />{m.balance.toLocaleString("en-IN")}
                                                 </span>
                                             ) : m.balance < 0 ? (
-                                                <span className="inline-flex items-center gap-1 text-red-600 dark:text-red-400 font-semibold text-xs">
+                                                <span className="inline-flex items-center gap-1 text-red-600 font-semibold text-xs">
                                                     Due: <IndianRupee className="h-3 w-3" />{Math.abs(m.balance).toLocaleString("en-IN")}
                                                 </span>
                                             ) : (
@@ -343,7 +343,7 @@ export default function MembersPage() {
                                             )}
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${m.status === "vacated" ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400" : "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"}`}>
+                                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${m.status === "vacated" ? "bg-red-500/10 dark:bg-red-900/30 text-red-600" : "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"}`}>
                                                 {m.status === "vacated" ? "Vacated" : "Active"}
                                             </span>
                                         </td>
@@ -351,8 +351,8 @@ export default function MembersPage() {
                                             <div className="flex items-center gap-1">
                                                 <button onClick={() => openEdit(m)} title="Edit" className="p-1.5 rounded-lg hover:bg-[#8b5cf6]/10 dark:hover:bg-indigo-900/20 text-blue-500 transition"><Pencil className="h-3.5 w-3.5" /></button>
                                                 <button onClick={() => { setRenewMember(m); setRenewForm({ planId: m.planId?._id || "", paidAmount: "", paymentMode: "cash", notes: "" }); setError(""); }} title="Renew" className="p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-500 transition"><RotateCcw className="h-3.5 w-3.5" /></button>
-                                                <button onClick={() => handleCheckout(m)} title="Checkout" className="p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 text-amber-500 transition"><LogOut className="h-3.5 w-3.5" /></button>
-                                                <button onClick={() => handleDelete(m._id)} title="Delete" className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition"><Trash2 className="h-3.5 w-3.5" /></button>
+                                                <button onClick={() => handleCheckout(m)} title="Checkout" className="p-1.5 rounded-lg hover:bg-amber-500/10 dark:hover:bg-amber-900/20 text-amber-500 transition"><LogOut className="h-3.5 w-3.5" /></button>
+                                                <button onClick={() => handleDelete(m._id)} title="Delete" className="p-1.5 rounded-lg hover:bg-red-500/100/10 dark:hover:bg-red-900/20 text-red-500 transition"><Trash2 className="h-3.5 w-3.5" /></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -362,20 +362,20 @@ export default function MembersPage() {
                     </table>
                 </div>
                 {/* Pagination */}
-                <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-slate-700 text-sm text-slate-500">
+                <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 text-sm text-slate-500">
                     <span>Page {page} of {totalPages || 1}</span>
                     <div className="flex gap-2">
                         <button 
                             disabled={page <= 1} 
                             onClick={() => setPage(p => p - 1)} 
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors font-medium shadow-sm"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#1f2937] bg-[#0b1220] text-slate-300 hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors font-medium shadow-sm"
                         >
                             <ChevronLeft className="h-4 w-4"/> Previous
                         </button>
                         <button 
                             disabled={page >= totalPages} 
                             onClick={() => setPage(p => p + 1)} 
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 text-white disabled:bg-slate-100 disabled:text-slate-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-600 transition-colors shadow-sm font-medium"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 text-white disabled:bg-[#0b1220] disabled:text-[#6b7280] transition-colors shadow-sm font-medium"
                         >
                             Next <ChevronRight className="h-4 w-4"/>
                         </button>
@@ -387,7 +387,7 @@ export default function MembersPage() {
             {showForm && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setShowForm(false); stopCamera(); }} />
-                    <div className="relative w-full max-w-3xl bg-slate-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] border border-white/10">
+                    <div className="relative w-full max-w-3xl bg-slate-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] border border-[#1f2937]">
                         {/* Modal header */}
                         <div className="flex items-center justify-between px-6 py-4 border-b border-[#1f2937] flex-shrink-0">
                             <h2 className="text-lg font-bold text-[#f9fafb]">{editMember ? "Edit Member" : "Add New Member"}</h2>
@@ -402,7 +402,7 @@ export default function MembersPage() {
                             </div>
                         ) : (
                             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-                                {error && <div className="mx-6 mt-4 text-sm text-red-500 bg-red-50 dark:bg-red-900/20 rounded-xl px-4 py-2.5">{error}</div>}
+                                {error && <div className="mx-6 mt-4 text-sm text-red-500 bg-red-500/10 dark:bg-red-900/20 rounded-xl px-4 py-2.5">{error}</div>}
                                 <div className="grid grid-cols-1 md:grid-cols-5 gap-0 p-6">
                                     {/* ── Left: form fields (3/5) ── */}
                                     <div className="md:col-span-3 md:pr-6 space-y-4 md:border-r border-[#1f2937]">
@@ -447,7 +447,7 @@ export default function MembersPage() {
                                             <div className="relative">
                                                 <label className={LABEL}>Room *</label>
                                                 <div 
-                                                    className={`${INPUT} flex justify-between items-center cursor-pointer ${(!form.floorNo || loadingRooms) ? 'opacity-50 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : ''}`}
+                                                    className={`${INPUT} flex justify-between items-center cursor-pointer ${(!form.floorNo || loadingRooms) ? 'opacity-50 cursor-not-allowed bg-slate-100' : ''}`}
                                                     onClick={() => !(!form.floorNo || loadingRooms) && setRoomDropdownOpen(!roomDropdownOpen)}
                                                 >
                                                     <span>{form.roomNo ? `Room ${form.roomNo}${form.bedNo ? ` - Bed ${form.bedNo}` : ''}` : (loadingRooms ? "Loading…" : "Select…")}</span>
@@ -468,7 +468,7 @@ export default function MembersPage() {
                                                                             setRoomDropdownOpen(false);
                                                                         }
                                                                     }}
-                                                                    className={`px-3 py-2 text-sm flex justify-between border-b border-slate-100 dark:border-slate-700/50 last:border-0 ${r.isOccupied ? 'bg-[#020617]/50 text-slate-400 cursor-not-allowed' : 'hover:bg-[#8b5cf6]/10  cursor-pointer text-[#f9fafb]'}`}
+                                                                    className={`px-3 py-2 text-sm flex justify-between border-b border-slate-100/50 last:border-0 ${r.isOccupied ? 'bg-[#020617]/50 text-slate-400 cursor-not-allowed' : 'hover:bg-[#8b5cf6]/10  cursor-pointer text-[#f9fafb]'}`}
                                                                 >
                                                                     <span className="font-medium">{r.roomNo}</span>
                                                                     <span className="text-xs">
@@ -496,9 +496,9 @@ export default function MembersPage() {
                                                 </div>
 
                                                 {selectedPlan && (
-                                                    <div className="rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800/40 px-4 py-2.5 flex items-center justify-between text-sm">
+                                                    <div className="rounded-xl bg-indigo-500/10 dark:bg-indigo-900/20 border border-indigo-200/40 px-4 py-2.5 flex items-center justify-between text-sm">
                                                         <span className="text-[#9ca3af]">Next Due Date (calculated)</span>
-                                                        <span className="font-semibold text-indigo-700 dark:text-indigo-300">{expiryDate}</span>
+                                                        <span className="font-semibold text-indigo-400 dark:text-indigo-300">{expiryDate}</span>
                                                     </div>
                                                 )}
 
@@ -520,9 +520,9 @@ export default function MembersPage() {
 
                                                 {/* Balance — read-only, server also recalculates */}
                                                 {selectedPlan && (
-                                                    <div className={`rounded-xl px-4 py-2.5 text-sm flex items-center justify-between border ${balance > 0 ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800/40" : "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800/40"}`}>
+                                                    <div className={`rounded-xl px-4 py-2.5 text-sm flex items-center justify-between border ${balance > 0 ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800/40" : "bg-orange-500/10 dark:bg-orange-900/20 border-orange-500/20/40"}`}>
                                                         <span className="text-[#9ca3af] font-medium">Initial Balance (₹)</span>
-                                                        <span className={`font-bold ${balance > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-orange-600 dark:text-orange-400"}`}>
+                                                        <span className={`font-bold ${balance > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-orange-600"}`}>
                                                             {balance > 0 ? `+${balance}` : balance}
                                                         </span>
                                                     </div>
@@ -541,12 +541,12 @@ export default function MembersPage() {
                                         <p className="text-xs font-bold text-blue-500 uppercase tracking-widest self-start">Member Photo</p>
 
                                         {/* Preview area */}
-                                        <div className="w-full aspect-[3/4] rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 overflow-hidden flex items-center justify-center relative">
+                                        <div className="w-full aspect-[3/4] rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 overflow-hidden flex items-center justify-center relative">
                                             {showCamera ? (
                                                 <div className="absolute inset-0">
                                                     <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
                                                     <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-3">
-                                                        <button type="button" onClick={capturePhoto} className="bg-white text-slate-800 rounded-full px-4 py-1.5 text-xs font-bold shadow-lg">Capture</button>
+                                                        <button type="button" onClick={capturePhoto} className="bg-[#0b1220] text-slate-800 rounded-full px-4 py-1.5 text-xs font-bold shadow-lg">Capture</button>
                                                         <button type="button" onClick={stopCamera} className="bg-red-500 text-white rounded-full px-4 py-1.5 text-xs font-bold shadow-lg">Cancel</button>
                                                     </div>
                                                 </div>
@@ -570,7 +570,7 @@ export default function MembersPage() {
                                                 <Upload className="h-3.5 w-3.5" />Upload
                                             </button>
                                             {photoPreview && (
-                                                <button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview(""); }} className="p-2 rounded-xl text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition"><X className="h-4 w-4" /></button>
+                                                <button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview(""); }} className="p-2 rounded-xl text-red-400 hover:bg-red-500/100/10 dark:hover:bg-red-900/20 transition"><X className="h-4 w-4" /></button>
                                             )}
                                         </div>
                                         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
@@ -594,17 +594,17 @@ export default function MembersPage() {
             {renewMember && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setRenewMember(null)} />
-                    <div className="relative bg-slate-900 border border-white/10 rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+                    <div className="relative bg-slate-900 border border-[#1f2937] rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <h2 className="text-lg font-bold text-white">Add Payment — {renewMember.name}</h2>
                             <button onClick={() => setRenewMember(null)} className="p-1.5 rounded-lg hover:bg-white/10 transition"><X className="h-5 w-5 text-slate-400" /></button>
                         </div>
-                        <div className="rounded-xl bg-white/5 border border-[#1f2937] px-4 py-3 text-xs space-y-1 text-slate-400">
+                        <div className="rounded-xl bg-[#0b1220] border border-[#1f2937] px-4 py-3 text-xs space-y-1 text-slate-400">
                             <div className="flex justify-between"><span>Room</span><span className="font-semibold text-[#f9fafb]">{(renewMember as any).block_room_no || renewMember.roomNo}</span></div>
                             <div className="flex justify-between"><span>Current Balance</span><span className={`font-semibold ${renewMember.balance >= 0 ? "text-emerald-500" : "text-red-500"}`}>₹{renewMember.balance.toLocaleString()}</span></div>
                             <div className="flex justify-between"><span>Next Due</span><span className="font-semibold text-blue-500">{renewMember.due_date ? new Date(renewMember.due_date).toLocaleDateString("en-IN") : "—"}</span></div>
                         </div>
-                        {error && <p className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">{error}</p>}
+                        {error && <p className="text-sm text-red-500 bg-red-500/10 dark:bg-red-900/20 rounded-lg px-3 py-2">{error}</p>}
                         <form onSubmit={handleRenew} className="space-y-4">
                             <div className="grid grid-cols-2 gap-3">
                                 <div>

@@ -46,13 +46,13 @@ export default function SuperAdminLoginPage() {
             </div>
 
             <div className="relative sm:mx-auto sm:w-full sm:max-w-sm">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900">
-                    <ShieldAlert className="h-8 w-8 text-red-600 dark:text-red-400" />
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-500/10 dark:bg-red-900">
+                    <ShieldAlert className="h-8 w-8 text-red-600" />
                 </div>
-                <h2 className="mt-6 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900 dark:text-white">
+                <h2 className="mt-6 text-center text-2xl font-bold leading-9 tracking-tight text-[#f9fafb]">
                     Super Admin Sign In
                 </h2>
-                <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
+                <p className="mt-2 text-center text-sm text-[#9ca3af]">
                     Platform Management Console
                 </p>
             </div>
@@ -116,7 +116,7 @@ export default function SuperAdminLoginPage() {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="flex w-full justify-center rounded-xl bg-red-600 px-3 py-2.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:opacity-50 transition-all active:scale-[0.98]"
+                                className="flex w-full justify-center rounded-xl bg-red-600 px-3 py-2.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-red-500/100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:opacity-50 transition-all active:scale-[0.98]"
                             >
                                 {loading ? "Signing in..." : "Sign in"}
                             </button>
