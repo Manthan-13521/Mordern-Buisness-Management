@@ -17,6 +17,7 @@ import {
  Store,
  ClipboardCheck,
  FileText,
+ Settings,
 } from "lucide-react";
 
 export function BusinessSidebar() {
@@ -37,6 +38,7 @@ export function BusinessSidebar() {
     { name: "Stock", href: `${base}/stock`, icon: Package },
     { name: "Analytics", href: `${base}/analytics`, icon: BarChart3 },
     { name: "Invoice", href: `${base}/invoice`, icon: FileText },
+    { name: "Settings", href: `${base}/settings`, icon: Settings },
   ];
 
   return (
