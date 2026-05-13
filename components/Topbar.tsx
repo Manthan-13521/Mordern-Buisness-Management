@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useSession } from "next-auth/react";
-import { Droplets, Menu, X, Bell, Settings as SettingsIcon } from "lucide-react";
+import { Droplets, Menu, X } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { usePathname } from "next/navigation";
 
@@ -69,14 +69,7 @@ export function Topbar() {
 
                 {/* Right: Actions + User */}
                 <div className="flex items-center gap-4">
-                    <button className="p-2 text-[#9ca3af] hover:text-[#8b5cf6] hover:bg-[#8b5cf6]/10 rounded-xl transition-all relative">
-                        <Bell className="h-6 w-6" />
-                        <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#8b5cf6] rounded-full border-2 border-[#020617]"></span>
-                    </button>
                     
-                    <button className="hidden sm:flex p-2 text-[#9ca3af] hover:text-[#f9fafb] hover:bg-[#111827] rounded-xl transition-all">
-                        <SettingsIcon className="h-6 w-6" />
-                    </button>
                     
                     <div className="h-10 w-px bg-[#1f2937] mx-1 hidden sm:block" />
 
