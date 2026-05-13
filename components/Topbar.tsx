@@ -66,16 +66,18 @@ export function Topbar() {
                 </div>
 
                 {/* Center: Search */}
-                <div className="hidden lg:flex flex-1 max-w-lg relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Search className="h-5 w-5 text-[#6b7280]" />
+                {!pathname?.endsWith("/expired-members") && (
+                    <div className="hidden lg:flex flex-1 max-w-lg relative">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <Search className="h-5 w-5 text-[#6b7280]" />
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Search members, payments, plans..."
+                            className="block w-full pl-12 pr-4 py-3 border border-[#1f2937] rounded-xl bg-[#0b1220] text-base text-[#f9fafb] placeholder:text-[#6b7280] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
+                        />
                     </div>
-                    <input
-                        type="text"
-                        placeholder="Search members, payments, plans..."
-                        className="block w-full pl-12 pr-4 py-3 border border-[#1f2937] rounded-xl bg-[#0b1220] text-base text-[#f9fafb] placeholder:text-[#6b7280] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
-                    />
-                </div>
+                )}
 
                 {/* Right: Actions + User */}
                 <div className="flex items-center gap-4">
