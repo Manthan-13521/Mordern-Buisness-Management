@@ -200,7 +200,7 @@ export default function PaymentsPage() {
                     <PoolTypeFilter />
                     <button
                         onClick={handleExport}
-                        className="inline-flex items-center rounded-md bg-[#0b1220] border border-[#1f2937] px-3 py-2 text-sm font-semibold text-[#9ca3af] shadow-sm hover:bg-white/10 transition-colors"
+                        className="inline-flex items-center rounded-md bg-[#0b1220] border border-[#1f2937] px-3 py-2 text-sm font-semibold text-[#9ca3af] shadow-sm hover:bg-[#8b5cf6]/10 transition-colors"
                     >
                         <Download className="-ml-0.5 mr-1.5 h-5 w-5 text-[#6b7280]" />
                         Export Excel

@@ -245,8 +245,8 @@ export default function HostelSettingsPage() {
                 {viewLevel === "blocks" && (
                     <div className="flex-1 flex flex-col items-center justify-start pt-4">
                         <div className="w-full flex justify-end gap-3 mb-10 border-b border-[#1f2937] pb-4">
-                            <button onClick={addBlock} className="flex items-center gap-1.5 bg-[#0b1220] border border-[#1f2937] text-blue-400 hover:bg-white/10 px-4 py-2 rounded-lg font-bold text-sm shadow-sm"><Plus className="w-4 h-4"/> Add Block</button>
-                            <button onClick={deleteBlock} className="flex items-center gap-1.5 bg-[#0b1220] border border-[#1f2937] text-rose-400 hover:bg-white/10 px-4 py-2 rounded-lg font-bold text-sm shadow-sm"><Trash2 className="w-4 h-4"/> Remove End</button>
+                            <button onClick={addBlock} className="flex items-center gap-1.5 bg-[#0b1220] border border-[#1f2937] text-blue-400 hover:bg-[#8b5cf6]/10 px-4 py-2 rounded-lg font-bold text-sm shadow-sm"><Plus className="w-4 h-4"/> Add Block</button>
+                            <button onClick={deleteBlock} className="flex items-center gap-1.5 bg-[#0b1220] border border-[#1f2937] text-rose-400 hover:bg-[#8b5cf6]/10 px-4 py-2 rounded-lg font-bold text-sm shadow-sm"><Trash2 className="w-4 h-4"/> Remove End</button>
                         </div>
 
                         <div className="flex flex-wrap justify-center items-end gap-16 sm:gap-24 w-full">

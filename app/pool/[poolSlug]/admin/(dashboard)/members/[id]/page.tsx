@@ -221,7 +221,7 @@ export default function MemberDetailPage() {
                             {/* Action buttons */}
                             <div className="flex items-center gap-2 flex-wrap">
                                 <a href={`/api/members/${memberId}/pdf`} download
-                                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#0b1220] border border-[#1f2937] px-3 py-1.5 text-xs font-bold text-slate-300 shadow-md hover:bg-white/10 transition">
+                                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#0b1220] border border-[#1f2937] px-3 py-1.5 text-xs font-bold text-slate-300 shadow-md hover:bg-[#8b5cf6]/10 transition">
                                     <Download className="h-3.5 w-3.5" /> ID Card
                                 </a>
                                 {member.planId?.hasTokenPrint && (

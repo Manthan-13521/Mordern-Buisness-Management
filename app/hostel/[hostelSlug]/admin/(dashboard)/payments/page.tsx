@@ -122,7 +122,7 @@ export default function PaymentsPage() {
                         <button
                             disabled={page <= 1}
                             onClick={() => setPage(p => p - 1)}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#1f2937] bg-[#0b1220] text-slate-300 hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors font-medium shadow-sm"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#1f2937] bg-[#0b1220] text-slate-300 hover:bg-[#8b5cf6]/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors font-medium shadow-sm"
                         >
                             <ChevronLeft className="h-4 w-4"/> Previous
                         </button>

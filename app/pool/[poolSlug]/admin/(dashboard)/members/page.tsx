@@ -228,7 +228,7 @@ export default function MembersPage() {
             if (m.isDeleted) {
                 verdict = "DELETED";
                 verdictClass = "bg-[#0b1220] text-[#9ca3af] ring-gray-500/20 bg-[#0b1220] border border-[#1f2937] text-[#9ca3af]";
-                rowClass = "bg-red-50";
+                rowClass = "bg-red-500/5";
                 daysLeftLabel = "Deleted";
             } else if (m.defaulterStatus === "blocked") {
                 verdict = "BLOCKED";
@@ -243,7 +243,7 @@ export default function MembersPage() {
             } else if (m.isExpired || msLeft <= 0) {
                 verdict = "EXPIRED";
                 verdictClass = "bg-red-500/10 text-red-400 ring-red-600/20";
-                rowClass = "bg-red-50";
+                rowClass = "bg-red-500/5";
                 daysLeftLabel = "Expired";
             } else {
                 daysLeft = Math.ceil(msLeft / 86400000);
@@ -255,7 +255,7 @@ export default function MembersPage() {
                 if (daysLeft <= 7) {
                     verdict = "EXPIRING";
                     verdictClass = "bg-amber-500/10 text-amber-400 ring-amber-600/20";
-                    rowClass = "bg-amber-50";
+                    rowClass = "bg-amber-500/5";
                 }
             }
 
@@ -379,7 +379,7 @@ export default function MembersPage() {
                     <PoolTypeFilter />
                     <a
                         href={`/api/export/members?type=${selectedType}`}
-                        className="inline-flex items-center rounded-md bg-[#0b1220] border border-[#1f2937] px-3 py-2 text-sm font-semibold text-[#9ca3af] shadow-sm hover:bg-white/10 transition-colors"
+                        className="inline-flex items-center rounded-md bg-[#0b1220] border border-[#1f2937] px-3 py-2 text-sm font-semibold text-[#9ca3af] shadow-sm hover:bg-[#8b5cf6]/10 transition-colors"
                     >
                         <Download className="-ml-0.5 mr-1.5 h-4 w-4 text-[#6b7280]" />
                         Export

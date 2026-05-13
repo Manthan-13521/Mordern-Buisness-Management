@@ -234,7 +234,7 @@ export default function SettingsPage() {
                             <legend className="text-sm font-semibold leading-6 text-[#f9fafb]">Theme Preference</legend>
                             <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 {(["light", "dark", "system"] as const).map((t) => (
-                                    <label key={t} className={`relative flex cursor-pointer rounded-lg border p-4 shadow-sm transition-all ${theme === t ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500" : "border-[#1f2937] bg-[#0b1220] hover:bg-white/10"}`}>
+                                    <label key={t} className={`relative flex cursor-pointer rounded-lg border p-4 shadow-sm transition-all ${theme === t ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500" : "border-[#1f2937] bg-[#0b1220] hover:bg-[#8b5cf6]/10"}`}>
                                         <input type="radio" className="sr-only" name="theme" value={t} checked={theme === t} onChange={() => handleThemeChange(t)} />
                                         <span className="flex items-center gap-2 text-sm font-medium text-white">
                                             {t === "light" ? <Sun className="w-5 h-5 text-yellow-500" /> : t === "dark" ? <Moon className="w-5 h-5 text-indigo-400" /> : <Monitor className="w-5 h-5 text-[#6b7280]" />}
@@ -302,7 +302,7 @@ export default function SettingsPage() {
                                         className={`relative flex items-center justify-center rounded-lg border p-3 transition-all ${
                                             paperWidth === w
                                                 ? "border-teal-500 bg-teal-500/10 ring-1 ring-teal-500 text-teal-400"
-                                                : "border-[#1f2937] bg-[#0b1220] hover:bg-white/10 text-[#6b7280]"
+                                                : "border-[#1f2937] bg-[#0b1220] hover:bg-[#8b5cf6]/10 text-[#6b7280]"
                                         }`}
                                     >
                                         <span className="text-sm font-bold">{w}</span>

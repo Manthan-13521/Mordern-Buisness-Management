@@ -368,7 +368,7 @@ export default function MembersPage() {
                         <button 
                             disabled={page <= 1} 
                             onClick={() => setPage(p => p - 1)} 
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#1f2937] bg-[#0b1220] text-slate-300 hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors font-medium shadow-sm"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#1f2937] bg-[#0b1220] text-slate-300 hover:bg-[#8b5cf6]/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors font-medium shadow-sm"
                         >
                             <ChevronLeft className="h-4 w-4"/> Previous
                         </button>
@@ -597,7 +597,7 @@ export default function MembersPage() {
                     <div className="relative bg-slate-900 border border-[#1f2937] rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <h2 className="text-lg font-bold text-white">Add Payment — {renewMember.name}</h2>
-                            <button onClick={() => setRenewMember(null)} className="p-1.5 rounded-lg hover:bg-white/10 transition"><X className="h-5 w-5 text-slate-400" /></button>
+                            <button onClick={() => setRenewMember(null)} className="p-1.5 rounded-lg hover:bg-[#8b5cf6]/10 transition"><X className="h-5 w-5 text-slate-400" /></button>
                         </div>
                         <div className="rounded-xl bg-[#0b1220] border border-[#1f2937] px-4 py-3 text-xs space-y-1 text-slate-400">
                             <div className="flex justify-between"><span>Room</span><span className="font-semibold text-[#f9fafb]">{(renewMember as any).block_room_no || renewMember.roomNo}</span></div>
