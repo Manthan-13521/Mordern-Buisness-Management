@@ -75,7 +75,16 @@ export async function POST(req: Request) {
 
             // Create SaaSPlan lookup for Organization
             const { SaaSPlan } = await import("@/models/SaaSPlan");
-            const planSearchName = activePlan === "free" ? "Starter" : activePlan === "pro" ? "Pro" : activePlan === "enterprise" ? "Enterprise" : "Starter";
+            const planMap: Record<string, string> = {
+                "1-block": "Starter",
+                "2-block": "Pro",
+                "3-block": "Pro",
+                "4-block": "Enterprise",
+                free: "Starter",
+                pro: "Pro",
+                enterprise: "Enterprise"
+            };
+            const planSearchName = planMap[activePlan] || "Starter";
             const planDoc = await SaaSPlan.findOne({ name: { $regex: new RegExp(planSearchName, "i") } }) || await SaaSPlan.findOne({});
 
             const admin = new User({
