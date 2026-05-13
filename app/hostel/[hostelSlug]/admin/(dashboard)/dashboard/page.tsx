@@ -79,7 +79,7 @@ export default function HostelDashboardPage() {
     );
 
     if (error || !data) return (
-        <div className="flex flex-col items-center justify-center py-24 text-red-500 gap-3">
+        <div className="flex flex-col items-center justify-center py-24 text-rose-400 gap-3">
             <AlertTriangle className="h-8 w-8" />
             <p className="font-medium">{error || "No data available"}</p>
         </div>
@@ -146,7 +146,7 @@ export default function HostelDashboardPage() {
                     <StatCard icon={Users}         label="Total Members"   value={data.totalMembers}   accent="bg-slate-500" />
                     <StatCard icon={Activity}      label="Active Members"  value={data.activeMembers}  accent="bg-emerald-500" />
                     <StatCard icon={AlertTriangle} label="Members with Overdue Rent" value={fmt(data.totalDue || 0)} sub="Total Due" accent="bg-orange-600" />
-                    <StatCard icon={UserX}         label="Checkout Members" value={data.checkoutMembers} accent="bg-red-500" />
+                    <StatCard icon={UserX}         label="Checkout Members" value={data.checkoutMembers} accent="bg-rose-500" />
                     <StatCard icon={AlertTriangle} label="Expiring (3d)"   value={data.expiringMembers} accent="bg-orange-400" />
                 </div>
             </div>

@@ -41,13 +41,13 @@ export default function SuperAdminLoginPage() {
         <div className="flex min-h-screen flex-1 flex-col justify-center px-6 py-12 lg:px-8 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950">
             {/* Background glow */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-red-600/10 rounded-full blur-[120px]" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-red-700/10 rounded-full blur-[120px]" />
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-slate-600/5 rounded-full blur-[100px] delay-700" />
             </div>
 
             <div className="relative sm:mx-auto sm:w-full sm:max-w-sm">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-500/10">
-                    <ShieldAlert className="h-8 w-8 text-red-600" />
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-rose-500/10">
+                    <ShieldAlert className="h-8 w-8 text-rose-500" />
                 </div>
                 <h2 className="mt-6 text-center text-2xl font-bold leading-9 tracking-tight text-[#f9fafb]">
                     Super Admin Sign In
@@ -61,8 +61,8 @@ export default function SuperAdminLoginPage() {
                 <div className="bg-slate-950/40 backdrop-blur-2xl border border-[#1f2937] rounded-2xl shadow-2xl p-8 ring-1 ring-white/5">
                     <form className="space-y-6" onSubmit={handleSubmit}>
                         {error && (
-                            <div className="rounded-xl bg-red-500/10 border border-red-500/30 px-4 py-3">
-                                <p className="text-sm text-red-400">{error}</p>
+                            <div className="rounded-xl bg-rose-500/10 border border-rose-500/30 px-4 py-3">
+                                <p className="text-sm text-rose-400">{error}</p>
                             </div>
                         )}
 
@@ -116,7 +116,7 @@ export default function SuperAdminLoginPage() {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="flex w-full justify-center rounded-xl bg-red-600 px-3 py-2.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-red-500/100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:opacity-50 transition-all active:scale-[0.98]"
+                                className="flex w-full justify-center rounded-xl bg-red-700 px-3 py-2.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-red-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:opacity-50 transition-all active:scale-[0.98]"
                             >
                                 {loading ? "Signing in..." : "Sign in"}
                             </button>

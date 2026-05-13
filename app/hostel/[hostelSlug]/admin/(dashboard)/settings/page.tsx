@@ -124,7 +124,7 @@ export default function SettingsPage() {
                     <div>
                         <p className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider">Status</p>
                         <div className="mt-1">
-                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${subStatus?.status === "active" ? "bg-emerald-100 text-emerald-600" : "bg-red-500/10 text-red-600"}`}>
+                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${subStatus?.status === "active" ? "bg-emerald-100 text-emerald-600" : "bg-rose-500/10 text-rose-500"}`}>
                                 {subStatus?.status || "—"}
                             </span>
                         </div>

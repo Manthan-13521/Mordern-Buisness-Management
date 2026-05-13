@@ -64,7 +64,7 @@ export default function PaymentsPage() {
         initial: "bg-indigo-500/10 text-blue-600",
         renewal: "bg-emerald-100 text-emerald-600",
         balance: "bg-amber-500/10 text-amber-600",
-        rent: "bg-red-500/10 text-red-600",
+        rent: "bg-rose-500/10 text-rose-500",
     };
 
 

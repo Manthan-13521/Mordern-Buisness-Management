@@ -189,7 +189,7 @@ export default function SettingsPage() {
                             <div>
                                 <p className="text-[#9ca3af] text-xs font-semibold uppercase tracking-wider">Status</p>
                                 <div className="mt-1">
-                                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold uppercase tracking-wider ${subStatus?.status === "active" ? "bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20" : "bg-red-500/10 text-red-400 ring-1 ring-red-500/20"}`}>
+                                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold uppercase tracking-wider ${subStatus?.status === "active" ? "bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20" : "bg-rose-500/10 text-rose-400 ring-1 ring-red-500/20"}`}>
                                         {subStatus?.status || "—"}
                                     </span>
                                 </div>
@@ -433,7 +433,7 @@ export default function SettingsPage() {
                                     <button
                                         onClick={handleExcelBackup}
                                         disabled={excelLoading}
-                                        className="inline-flex w-full justify-center items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500/100 disabled:opacity-60 transition-colors"
+                                        className="inline-flex w-full justify-center items-center gap-2 rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-600 disabled:opacity-60 transition-colors"
                                     >
                                         <Download className="w-4 h-4" />
                                         {excelLoading ? "Generating..." : "Export Excel Backup (.xlsx)"}

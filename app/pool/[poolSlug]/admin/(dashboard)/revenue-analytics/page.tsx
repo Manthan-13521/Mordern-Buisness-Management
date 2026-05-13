@@ -66,7 +66,7 @@ export default function RevenueAnalyticsPage() {
     const kpiCards = [
         { label: "Today's Revenue", value: fmt(summary.todayRevenue), icon: DollarSign, color: "text-emerald-400", bg: "from-emerald-500/20 to-emerald-600/5" },
         { label: "Monthly Revenue", value: fmt(summary.monthlyRevenue), icon: TrendingUp, color: "text-blue-400", bg: "from-blue-500/20 to-blue-600/5" },
-        { label: "Outstanding Dues", value: fmt(summary.outstandingDues), icon: AlertTriangle, color: "text-red-400", bg: "from-red-500/20 to-red-600/5" },
+        { label: "Outstanding Dues", value: fmt(summary.outstandingDues), icon: AlertTriangle, color: "text-rose-400", bg: "from-red-500/20 to-red-600/5" },
         { label: "Defaulters", value: summary.defaulterCount, icon: ShieldAlert, color: "text-amber-400", bg: "from-amber-500/20 to-amber-600/5" },
         { label: "Recovery Rate", value: `${summary.recoveryRate}%`, icon: BarChart3, color: summary.recoveryRate >= 80 ? "text-emerald-400" : "text-yellow-400", bg: summary.recoveryRate >= 80 ? "from-emerald-500/20 to-emerald-600/5" : "from-yellow-500/20 to-yellow-600/5" },
         { label: "Credit Balance", value: fmt(summary.creditBalance), icon: CreditCard, color: "text-cyan-400", bg: "from-cyan-500/20 to-cyan-600/5" },
@@ -81,7 +81,7 @@ export default function RevenueAnalyticsPage() {
     const statusBadge: Record<string, string> = {
         active: "bg-green-500/10 text-green-400 border-green-500/30",
         warning: "bg-amber-500/10 text-amber-400 border-amber-500/30",
-        blocked: "bg-red-500/10 text-red-400 border-red-500/30 font-bold",
+        blocked: "bg-rose-500/10 text-rose-400 border-rose-500/30 font-bold",
     };
 
     return (
@@ -217,8 +217,8 @@ export default function RevenueAnalyticsPage() {
                 {/* Top Defaulters Table */}
                 <div className="bg-gray-900 p-6 rounded-2xl shadow-xl border border-gray-800 flex flex-col">
                     <div className="flex items-center gap-3 mb-6">
-                        <div className="p-2.5 bg-red-500/10 rounded-xl">
-                            <Users className="w-5 h-5 text-red-400" />
+                        <div className="p-2.5 bg-rose-500/10 rounded-xl">
+                            <Users className="w-5 h-5 text-rose-400" />
                         </div>
                         <h2 className="text-lg font-semibold text-gray-100">Top Defaulters</h2>
                     </div>
@@ -240,7 +240,7 @@ export default function RevenueAnalyticsPage() {
                                                 <div className="font-medium text-white">{m.name}</div>
                                                 <div className="text-[10px] text-[#6b7280] font-mono">#{m.memberId}</div>
                                             </td>
-                                            <td className="py-3 pr-4 text-right font-bold text-red-400">{fmt(m.balance)}</td>
+                                            <td className="py-3 pr-4 text-right font-bold text-rose-400">{fmt(m.balance)}</td>
                                             <td className="py-3 pr-4 text-right text-[#6b7280]">{m.overdueDays}d</td>
                                             <td className="py-3 text-center">
                                                 <span className={`text-[10px] px-2 py-1 rounded-full border ${statusBadge[m.status]}`}>

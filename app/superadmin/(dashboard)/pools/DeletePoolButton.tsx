@@ -46,7 +46,7 @@ export function DeletePoolButton({ poolId, poolName }: DeletePoolButtonProps) {
         <button
             onClick={handleDelete}
             disabled={loading}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-red-400 bg-red-500/5 border border-red-500/10 hover:bg-red-500/100/15 hover:text-red-300 transition-all disabled:opacity-50 mt-2"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-rose-400 bg-rose-500/5 border border-rose-500/10 hover:bg-red-600/15 hover:text-red-300 transition-all disabled:opacity-50 mt-2"
             title={`Delete pool ${poolName}`}
         >
             <Trash2 className="w-3.5 h-3.5" />

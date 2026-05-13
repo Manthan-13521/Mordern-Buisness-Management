@@ -100,8 +100,8 @@ export default function ExpiredMembersPage() {
     if (error) {
         return (
             <div className="min-h-[60vh] flex flex-col items-center justify-center text-center p-6 animate-in zoom-in duration-300">
-                <div className="w-20 h-20 rounded-3xl bg-red-500/10 flex items-center justify-center mb-6 border border-red-500/20">
-                    <ShieldAlert className="w-10 h-10 text-red-400" />
+                <div className="w-20 h-20 rounded-3xl bg-rose-500/10 flex items-center justify-center mb-6 border border-rose-500/20">
+                    <ShieldAlert className="w-10 h-10 text-rose-400" />
                 </div>
                 <h2 className="text-xl font-bold text-[#f9fafb] mb-2">Sync Error</h2>
                 <p className="text-[#9ca3af] max-w-md mb-8">{error}</p>
@@ -122,8 +122,8 @@ export default function ExpiredMembersPage() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
                     <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-xl bg-red-500/10 border border-red-500/20">
-                            <Clock className="w-6 h-6 text-red-400" />
+                        <div className="p-2 rounded-xl bg-rose-500/10 border border-rose-500/20">
+                            <Clock className="w-6 h-6 text-rose-400" />
                         </div>
                         <h1 className="text-2xl font-bold text-[#f9fafb] tracking-tight">
                             Expired Memberships
@@ -199,14 +199,14 @@ export default function ExpiredMembersPage() {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-5 text-center">
-                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-500/10 text-red-400 border border-red-500/20">
+                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/20">
                                                     <AlertCircle className="w-3 h-3" />
                                                     Expired
                                                 </span>
                                             </td>
                                             <td className="px-6 py-5">
                                                 <div>
-                                                    <p className="text-sm font-bold text-red-400">{formatExpiry(member.expiryDate)}</p>
+                                                    <p className="text-sm font-bold text-rose-400">{formatExpiry(member.expiryDate)}</p>
                                                     <p className="text-xs font-medium text-[#6b7280] mt-0.5 italic">
                                                         {daysSinceExpiry(member.expiryDate)} days overdue
                                                     </p>

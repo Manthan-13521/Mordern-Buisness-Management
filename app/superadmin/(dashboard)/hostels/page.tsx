@@ -107,7 +107,7 @@ export default function SuperAdminHostelsPage() {
             </div>
 
             {message && (
-                <div className={`flex items-start gap-3 rounded-xl p-4 border text-sm ${message.type === "success" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-red-500/10 border-red-500/20 text-red-400"}`}>
+                <div className={`flex items-start gap-3 rounded-xl p-4 border text-sm ${message.type === "success" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-rose-500/10 border-rose-500/20 text-rose-400"}`}>
                     {message.type === "success" ? <CheckCircle className="h-5 w-5 flex-shrink-0" /> : <AlertCircle className="h-5 w-5 flex-shrink-0" />}
                     <p>{message.text}</p>
                     <button onClick={() => setMessage(null)} className="ml-auto"><X className="h-4 w-4" /></button>
@@ -202,7 +202,7 @@ export default function SuperAdminHostelsPage() {
                                     <td className="px-6 py-4">
                                         <button
                                             onClick={() => handleDelete(h)}
-                                            className="inline-flex max-w-max items-center gap-1.5 py-1.5 px-3 border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/100/20 rounded-md text-xs font-semibold transition"
+                                            className="inline-flex max-w-max items-center gap-1.5 py-1.5 px-3 border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-red-600/20 rounded-md text-xs font-semibold transition"
                                         >
                                             <Trash2 className="w-3.5 h-3.5" /> Delete Hostel
                                         </button>

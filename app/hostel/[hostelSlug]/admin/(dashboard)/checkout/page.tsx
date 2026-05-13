@@ -56,7 +56,7 @@ export default function CheckoutPage() {
             <div className="rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
-                        <thead className="bg-slate-50/50 text-xs text-[#6b7280] uppercase tracking-wider">
+                        <thead className="bg-[#020617] text-xs text-[#6b7280] uppercase tracking-wider">
                             <tr>{["ID","Name","Phone","Room","Plan","Check-in","Checkout","Final Balance"].map(h => <th key={h} className="text-left px-4 py-3">{h}</th>)}</tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -75,7 +75,7 @@ export default function CheckoutPage() {
                                         {m.balance > 0 ? (
                                             <span className="text-emerald-500">Advance: ₹{m.balance.toLocaleString()}</span>
                                         ) : m.balance < 0 ? (
-                                            <span className="text-red-500">Due: ₹{Math.abs(m.balance).toLocaleString()}</span>
+                                            <span className="text-rose-400">Due: ₹{Math.abs(m.balance).toLocaleString()}</span>
                                         ) : (
                                             <span className="text-slate-400 font-normal italic">₹0</span>
                                         )}
@@ -111,7 +111,7 @@ export default function CheckoutPage() {
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setRenewMember(null)} />
                     <div className="relative bg-[#0b1220] rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
                         <div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-[#f9fafb]">Renew — {renewMember.name}</h2><button onClick={() => setRenewMember(null)}><X className="h-5 w-5 text-slate-400"/></button></div>
-                        {error && <p className="text-sm text-red-500">{error}</p>}
+                        {error && <p className="text-sm text-rose-400">{error}</p>}
                         <form onSubmit={handleRenew} className="space-y-4">
                             <div><label className={LABEL}>Plan</label>
                                 <select value={renewForm.planId} onChange={e=>setRenewForm(p=>({...p,planId:e.target.value}))} required className={INPUT}>

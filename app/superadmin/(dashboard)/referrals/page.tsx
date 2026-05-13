@@ -146,7 +146,7 @@ export default function ReferralsAdminPage() {
                                                     Active
                                                 </span>
                                             ) : (
-                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-500/10 text-red-800 border border-red-500/20">
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-rose-500/10 text-red-800 border border-rose-500/20">
                                                     Inactive
                                                 </span>
                                             )}
@@ -172,7 +172,7 @@ export default function ReferralsAdminPage() {
                                                         fetchReferrals();
                                                     }
                                                 }}
-                                                className="text-xs font-medium text-red-400 hover:text-red-300"
+                                                className="text-xs font-medium text-rose-400 hover:text-red-300"
                                             >
                                                 Delete
                                             </button>

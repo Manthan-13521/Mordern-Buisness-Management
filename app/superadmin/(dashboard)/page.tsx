@@ -74,7 +74,7 @@ export default function SuperAdminDashboard() {
     if (!data) {
         return (
             <div className="flex items-center justify-center h-[60vh]">
-                <p className="text-red-400">Failed to load dashboard data.</p>
+                <p className="text-rose-400">Failed to load dashboard data.</p>
             </div>
         );
     }
@@ -110,7 +110,7 @@ export default function SuperAdminDashboard() {
                     {alerts.map((a, i) => (
                         <div key={i} className={`flex items-center gap-3 px-5 py-3.5 rounded-xl border text-sm font-medium ${
                             a.type === "danger"
-                                ? "bg-red-500/10 border-red-500/20 text-red-400"
+                                ? "bg-rose-500/10 border-rose-500/20 text-rose-400"
                                 : a.type === "warning"
                                 ? "bg-amber-500/10 border-amber-500/20 text-amber-400"
                                 : "bg-blue-500/10 border-blue-500/20 text-blue-400"
@@ -223,7 +223,7 @@ export default function SuperAdminDashboard() {
                         <div className="flex items-center gap-3 text-xs font-semibold">
                             <span className="flex items-center gap-1.5 text-emerald-400"><span className="w-2 h-2 bg-emerald-400 rounded-full" /> Healthy</span>
                             <span className="flex items-center gap-1.5 text-amber-400"><span className="w-2 h-2 bg-amber-400 rounded-full" /> At Risk</span>
-                            <span className="flex items-center gap-1.5 text-red-400"><span className="w-2 h-2 bg-red-400 rounded-full" /> Critical</span>
+                            <span className="flex items-center gap-1.5 text-rose-400"><span className="w-2 h-2 bg-red-400 rounded-full" /> Critical</span>
                         </div>
                     </div>
 
@@ -302,7 +302,7 @@ export default function SuperAdminDashboard() {
                         </div>
                         <div className="bg-[#0b1220] border border-[#1f2937] rounded-2xl p-5">
                             <p className="text-xs text-[#9ca3af] font-semibold uppercase tracking-wider">Dead Codes</p>
-                            <p className="text-2xl font-bold mt-2 text-red-400">{referralIntel.filter(r => r.isDead).length}</p>
+                            <p className="text-2xl font-bold mt-2 text-rose-400">{referralIntel.filter(r => r.isDead).length}</p>
                             <p className="text-xs text-[#6b7280] mt-1">Active but zero conversions</p>
                         </div>
                         <div className="bg-[#0b1220] border border-[#1f2937] rounded-2xl p-5">
@@ -336,15 +336,15 @@ export default function SuperAdminDashboard() {
                                                 <td className="px-6 py-4 font-bold font-mono tracking-wider text-white">{r.code}</td>
                                                 <td className="px-6 py-4 text-center font-semibold text-blue-400">{r.actualUses}</td>
                                                 <td className="px-6 py-4 text-right font-medium text-emerald-400">₹{r.revenueGenerated.toLocaleString("en-IN")}</td>
-                                                <td className="px-6 py-4 text-right font-medium text-red-400">-₹{r.discountLoss.toLocaleString("en-IN")}</td>
-                                                <td className={`px-6 py-4 text-right font-bold ${r.netProfit >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                                                <td className="px-6 py-4 text-right font-medium text-rose-400">-₹{r.discountLoss.toLocaleString("en-IN")}</td>
+                                                <td className={`px-6 py-4 text-right font-bold ${r.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                                                     ₹{r.netProfit.toLocaleString("en-IN")}
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
                                                     <StatusBadge status={r.isActive ? "active" : "inactive"} />
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
-                                                    {r.isDead && <span className="text-xs font-bold text-red-400 bg-red-500/10 px-2 py-1 rounded-md border border-red-500/20">💀 Dead</span>}
+                                                    {r.isDead && <span className="text-xs font-bold text-rose-400 bg-rose-500/10 px-2 py-1 rounded-md border border-rose-500/20">💀 Dead</span>}
                                                     {r.isHighROI && !r.isDead && <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-500/20">⚡ High ROI</span>}
                                                     {!r.isDead && !r.isHighROI && r.actualUses > 0 && <span className="text-xs text-[#6b7280]">Tracking</span>}
                                                 </td>
@@ -439,7 +439,7 @@ function KpiCard({ title, value, icon, color, subtitle }: { title: string; value
         blue: "from-blue-600/20 to-blue-600/5 border-blue-500/20 text-blue-400",
         green: "from-green-600/20 to-green-600/5 border-green-500/20 text-green-400",
         amber: "from-amber-600/20 to-amber-600/5 border-amber-500/20 text-amber-400",
-        red: "from-red-600/20 to-red-600/5 border-red-500/20 text-red-400",
+        red: "from-red-600/20 to-red-600/5 border-rose-500/20 text-rose-400",
     };
     const cls = colorMap[color] || colorMap.blue;
 
@@ -471,7 +471,7 @@ function StatusBadge({ status }: { status: string }) {
     const map: Record<string, string> = {
         active: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
         trial: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-        expired: "bg-red-500/10 text-red-400 border-red-500/20",
+        expired: "bg-rose-500/10 text-rose-400 border-rose-500/20",
         inactive: "bg-neutral-500/10 text-[#9ca3af] border-neutral-500/20",
     };
     return (
@@ -494,7 +494,7 @@ function QuickAction({ icon, label, href, variant }: { icon: React.ReactNode; la
     const cls = variant === "primary"
         ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white border-0 shadow-lg shadow-blue-500/20"
         : variant === "danger"
-        ? "bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/100/20"
+        ? "bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-red-600/20"
         : "bg-[#0b1220] text-[#9ca3af] border-[#1f2937] hover:bg-[#8b5cf6]/10 hover:text-[#f9fafb]";
 
     return (

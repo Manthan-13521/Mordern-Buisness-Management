@@ -267,7 +267,7 @@ export default function EntryPage() {
         ? Math.min(100, Math.round((occupancy.current / occupancy.capacity) * 100))
         : 0;
     const occupancyColor =
-        occupancyPercent >= 90 ? "bg-red-500" : occupancyPercent >= 70 ? "bg-yellow-500" : "bg-green-500";
+        occupancyPercent >= 90 ? "bg-rose-500" : occupancyPercent >= 70 ? "bg-yellow-500" : "bg-green-500";
 
     return (
         <div className="space-y-6">
@@ -278,7 +278,7 @@ export default function EntryPage() {
                     <p className="mt-1 text-sm text-[#9ca3af]">Scan a member's QR code or look up by UID.</p>
                 </div>
                 <div className="flex flex-col items-end gap-2">
-                    <div className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full ${isOnline ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400"}`}>
+                    <div className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full ${isOnline ? "bg-green-500/10 text-green-400" : "bg-rose-500/10 text-rose-400"}`}>
                         {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
                         {isOnline ? "Online" : "Offline"}
                     </div>
@@ -312,7 +312,7 @@ export default function EntryPage() {
                         />
                     </div>
                     {occupancyPercent >= 90 && (
-                        <p className="mt-1.5 text-xs text-red-600 font-medium">⚠ Pool is nearly full</p>
+                        <p className="mt-1.5 text-xs text-rose-500 font-medium">⚠ Pool is nearly full</p>
                     )}
                 </div>
             )}
@@ -330,13 +330,13 @@ export default function EntryPage() {
                                     sound={false}
                                 />
                             ) : scanResult ? (
-                                <div className={`w-full h-full flex flex-col justify-center items-center p-6 ${scanResult.success ? "bg-green-500/10" : "bg-red-500/10"}`}>
+                                <div className={`w-full h-full flex flex-col justify-center items-center p-6 ${scanResult.success ? "bg-green-500/10" : "bg-rose-500/10"}`}>
                                     {scanResult.success ? (
                                         <UserCheck className="w-20 h-20 text-green-600 mb-4" />
                                     ) : (
-                                        <UserX className="w-20 h-20 text-red-600 mb-4" />
+                                        <UserX className="w-20 h-20 text-rose-500 mb-4" />
                                     )}
-                                    <h2 className={`text-2xl font-bold text-center ${scanResult.success ? "text-green-400" : "text-red-400"}`}>
+                                    <h2 className={`text-2xl font-bold text-center ${scanResult.success ? "text-green-400" : "text-rose-400"}`}>
                                         {scanResult.message}
                                     </h2>
                                 </div>
@@ -363,7 +363,7 @@ export default function EntryPage() {
                                 </button>
                             ) : (
                                 <button onClick={stopScanning}
-                                    className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-500/100 transition-colors">
+                                    className="inline-flex items-center gap-2 rounded-lg bg-red-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-600 transition-colors">
                                     <X className="h-4 w-4" />
                                     Stop Scan
                                 </button>
@@ -401,7 +401,7 @@ export default function EntryPage() {
                                 {lookupLoading ? "..." : "Search"}
                             </button>
                             <button onClick={() => { handleUidLookup(); handleScan(uid.trim(), true); }} disabled={lookupLoading || !uid.trim() || isScanning}
-                                className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-500/100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                                 {lookupLoading ? "..." : "Record Entry"}
                             </button>
                         </div>
@@ -410,9 +410,9 @@ export default function EntryPage() {
                     {/* Lookup Result */}
                     <div className="flex-1 px-6 pb-6">
                         {lookupError && (
-                            <div className="rounded-lg bg-red-500/10/20 border border-red-500/20 p-4 text-center">
-                                <UserX className="h-8 w-8 text-red-400 mx-auto mb-2" />
-                                <p className="text-sm font-medium text-red-400">{lookupError}</p>
+                            <div className="rounded-lg bg-rose-500/10/20 border border-rose-500/20 p-4 text-center">
+                                <UserX className="h-8 w-8 text-rose-400 mx-auto mb-2" />
+                                <p className="text-sm font-medium text-rose-400">{lookupError}</p>
                             </div>
                         )}
                         {lookupResult && (
@@ -428,7 +428,7 @@ export default function EntryPage() {
                                     </span>
                                     <span className={`text-xs font-bold px-2 py-0.5 rounded shadow-sm ${
                                         lookupResult.isDeleted ? "bg-[#020617]0 text-white" :
-                                        lookupResult.isExpired ? "bg-red-500 text-white" :
+                                        lookupResult.isExpired ? "bg-rose-500 text-white" :
                                         "bg-green-500 text-white"
                                     }`}>
                                         {lookupResult.isDeleted ? "DELETED" : lookupResult.isExpired ? "EXPIRED" : "ACTIVE"}
@@ -470,7 +470,7 @@ export default function EntryPage() {
                                                 </p>
                                             )}
                                             {(lookupResult.balanceAmount ?? 0) > 0 && (
-                                                <p className="text-xs text-red-500 font-bold mt-2">
+                                                <p className="text-xs text-rose-400 font-bold mt-2">
                                                     Balance Due: ₹{lookupResult.balanceAmount}
                                                 </p>
                                             )}
@@ -481,7 +481,7 @@ export default function EntryPage() {
                                 {/* Footer / Expiry */}
                                 <div className="bg-[#0b1220]/5 border-[#1f2937] shadow-lg px-5 py-3 border-t border-[#1f2937] flex justify-between items-center">
                                     <span className="text-xs text-[#6b7280] font-medium">Valid Till: {new Date(lookupResult.planEndDate || lookupResult.expiryDate || "").toLocaleDateString()}</span>
-                                    <span className={`text-xs font-bold ${lookupResult.isExpired ? "text-red-600" : "text-blue-600"}`}>
+                                    <span className={`text-xs font-bold ${lookupResult.isExpired ? "text-rose-500" : "text-blue-600"}`}>
                                         {lookupResult.isExpired ? "Expired" : `⏱ ${getRemainingTimeText(lookupResult.planEndDate || lookupResult.expiryDate || "")}`}
                                     </span>
                                 </div>

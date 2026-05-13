@@ -52,14 +52,14 @@ export default function WhatsAppPage() {
                     {!status?.connected && <p className="text-sm text-[#6b7280]">Fill in the form below to connect your Twilio account</p>}
                 </div>
                 {status?.connected && (
-                    <button onClick={handleDisconnect} disabled={disconnecting} className="flex items-center gap-1.5 text-sm border border-red-500/20 text-red-500 px-4 py-2 rounded-xl hover:bg-red-500/10 transition disabled:opacity-50">
+                    <button onClick={handleDisconnect} disabled={disconnecting} className="flex items-center gap-1.5 text-sm border border-rose-500/20 text-rose-400 px-4 py-2 rounded-xl hover:bg-rose-500/10 transition disabled:opacity-50">
                         <Unplug className="h-4 w-4"/>{disconnecting ? "Disconnecting…" : "Disconnect"}
                     </button>
                 )}
             </div>
 
             {message && (
-                <div className={`flex items-start gap-3 rounded-xl p-4 border ${message.type === "success" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-red-500/10 border-red-500/20 text-red-400"}`}>
+                <div className={`flex items-start gap-3 rounded-xl p-4 border ${message.type === "success" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-rose-500/10 border-rose-500/20 text-rose-400"}`}>
                     {message.type === "success" ? <CheckCircle className="h-5 w-5 flex-shrink-0"/> : <AlertCircle className="h-5 w-5 flex-shrink-0"/>}
                     <p className="text-sm">{message.text}</p>
                 </div>
@@ -83,7 +83,7 @@ export default function WhatsAppPage() {
             )}
 
             {/* How it works */}
-            <div className="rounded-2xl bg-slate-50/50 border border-[#1f2937] p-5">
+            <div className="rounded-2xl bg-[#020617] border border-[#1f2937] p-5">
                 <h3 className="text-sm font-semibold text-slate-600 mb-3">How it works</h3>
                 <ol className="space-y-2 text-sm text-[#6b7280] list-decimal list-inside">
                     <li>Connect your Twilio WhatsApp-enabled number above</li>

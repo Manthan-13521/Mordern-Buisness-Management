@@ -122,12 +122,12 @@ export default function BalancePaymentsPage() {
                     <div>
                         <h2 className="text-xs font-bold text-[#9ca3af] uppercase tracking-widest mb-2">Total Outstanding Balance</h2>
                         <p className="text-3xl font-extrabold text-[#f9fafb] flex items-center gap-1">
-                            <IndianRupee className="h-7 w-7 text-red-400" />
+                            <IndianRupee className="h-7 w-7 text-rose-400" />
                             {totalBalance.toLocaleString("en-IN")}
                         </p>
                     </div>
-                    <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20">
-                        <IndianRupee className="h-8 w-8 text-red-400/60" />
+                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20">
+                        <IndianRupee className="h-8 w-8 text-rose-400/60" />
                     </div>
                 </div>
             </div>
@@ -164,12 +164,12 @@ export default function BalancePaymentsPage() {
                                     <td className="px-4 py-3 text-[#6b7280]">{m.phone}</td>
                                     <td className="px-4 py-3 text-[#9ca3af]">{m.planId?.name || "—"}</td>
                                     <td className="px-4 py-3 text-emerald-400">₹{(m.paidAmount ?? 0).toLocaleString("en-IN")}</td>
-                                    <td className="px-4 py-3 font-semibold text-red-400">₹{(m.balanceAmount ?? 0).toLocaleString("en-IN")}</td>
+                                    <td className="px-4 py-3 font-semibold text-rose-400">₹{(m.balanceAmount ?? 0).toLocaleString("en-IN")}</td>
                                     <td className="px-4 py-3 text-xs">
                                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 font-semibold ${
                                             m.paymentStatus === "partial" 
                                             ? "bg-amber-500/10 text-amber-400" 
-                                            : "bg-red-500/10 text-red-400"
+                                            : "bg-rose-500/10 text-rose-400"
                                         }`}>
                                             {m.paymentStatus}
                                         </span>
@@ -223,10 +223,10 @@ export default function BalancePaymentsPage() {
                             <button onClick={() => setPayMember(null)}><X className="h-5 w-5 text-[#6b7280]" /></button>
                         </div>
                         <p className="text-sm text-[#6b7280]">
-                            Pending: <span className="font-bold text-red-400">₹{payMember.balanceAmount.toLocaleString("en-IN")}</span>
+                            Pending: <span className="font-bold text-rose-400">₹{payMember.balanceAmount.toLocaleString("en-IN")}</span>
                         </p>
                         
-                        {error && <p className="text-sm text-red-400">{error}</p>}
+                        {error && <p className="text-sm text-rose-400">{error}</p>}
                         
                         <form onSubmit={handlePay} className="space-y-4">
                             <div>

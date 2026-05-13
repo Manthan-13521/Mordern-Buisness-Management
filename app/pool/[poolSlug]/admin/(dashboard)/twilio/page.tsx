@@ -101,7 +101,7 @@ export default function TwilioSetupPage() {
                 <div className={`fixed top-5 right-5 z-50 flex items-center gap-3 rounded-xl px-5 py-4 shadow-2xl text-sm font-medium transition-all
                     ${toast.type === "success"
                         ? "bg-emerald-600 text-white"
-                        : "bg-red-600 text-white"
+                        : "bg-red-700 text-white"
                     }`}>
                     {toast.type === "success"
                         ? <CheckCircle className="h-5 w-5 shrink-0" />
@@ -149,7 +149,7 @@ export default function TwilioSetupPage() {
                         <button
                             onClick={handleDisconnect}
                             disabled={disconnecting}
-                            className="flex items-center gap-2 rounded-lg bg-red-500/10 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-500/10 transition disabled:opacity-50"
+                            className="flex items-center gap-2 rounded-lg bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-500 hover:bg-rose-500/10 transition disabled:opacity-50"
                         >
                             {disconnecting
                                 ? <Loader2 className="h-4 w-4 animate-spin" />

@@ -166,7 +166,7 @@ export default function LogsPage() {
                                         <td className="px-6 py-4 font-semibold text-emerald-400">₹{log.amount}</td>
                                         <td className="px-6 py-4">
                                             <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${
-                                                log.paymentType === "refund" ? "bg-red-500/10 text-red-600" :
+                                                log.paymentType === "refund" ? "bg-rose-500/10 text-rose-500" :
                                                 log.paymentType === "initial" || log.paymentType === "renewal" ? "bg-emerald-100 text-emerald-600" :
                                                 "bg-blue-500/10 text-blue-600"
                                             }`}>

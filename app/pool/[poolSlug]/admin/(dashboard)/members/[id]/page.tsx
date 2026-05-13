@@ -238,7 +238,7 @@ export default function MemberDetailPage() {
                                     </button>
                                 ) : (
                                     <button onClick={handleDelete}
-                                        className="inline-flex items-center gap-1.5 rounded-md bg-[#0b1220] px-3 py-1.5 text-sm font-medium text-red-600 ring-1 ring-red-500/30 hover:bg-red-500/10 hover:bg-red-500/10 shadow-sm transition">
+                                        className="inline-flex items-center gap-1.5 rounded-md bg-[#0b1220] px-3 py-1.5 text-sm font-medium text-rose-500 ring-1 ring-red-500/30 hover:bg-rose-500/10 hover:bg-rose-500/10 shadow-sm transition">
                                         <Trash2 className="h-3.5 w-3.5" /> Delete
                                     </button>
                                 )}
@@ -255,7 +255,7 @@ export default function MemberDetailPage() {
                             </div>
                             <div>
                                 <dt className="text-[#6b7280]">Balance</dt>
-                                <dd className={`font-medium ${(member.balanceAmount ?? 0) > 0 ? "text-red-600" : "text-[#6b7280]"}`}>
+                                <dd className={`font-medium ${(member.balanceAmount ?? 0) > 0 ? "text-rose-500" : "text-[#6b7280]"}`}>
                                     {(member.balanceAmount ?? 0) > 0 ? `₹${member.balanceAmount.toLocaleString("en-IN")}` : "Nil"}
                                 </dd>
                             </div>

@@ -297,7 +297,7 @@ export default function PlansPage() {
                                                     .catch(console.error);
                                             }
                                         }}
-                                        className="flex-1 rounded-md bg-[#0b1220] px-3 py-2 text-sm font-semibold text-red-600 ring-1 ring-inset ring-red-500/30 hover:bg-red-500/10 bg-[#0b1220] border border-[#1f2937] hover:bg-[#8b5cf6]/10 transition"
+                                        className="flex-1 rounded-md bg-[#0b1220] px-3 py-2 text-sm font-semibold text-rose-500 ring-1 ring-inset ring-red-500/30 hover:bg-rose-500/10 bg-[#0b1220] border border-[#1f2937] hover:bg-[#8b5cf6]/10 transition"
                                     >
                                         <Trash2 className="h-4 w-4 inline mr-1.5" />
                                         Delete

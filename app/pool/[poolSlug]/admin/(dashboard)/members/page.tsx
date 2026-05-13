@@ -228,12 +228,12 @@ export default function MembersPage() {
             if (m.isDeleted) {
                 verdict = "DELETED";
                 verdictClass = "bg-[#0b1220] text-[#9ca3af] ring-gray-500/20 bg-[#0b1220] border border-[#1f2937] text-[#9ca3af]";
-                rowClass = "bg-red-500/5";
+                rowClass = "bg-rose-500/5";
                 daysLeftLabel = "Deleted";
             } else if (m.defaulterStatus === "blocked") {
                 verdict = "BLOCKED";
-                verdictClass = "bg-red-600 text-white ring-red-600/30 shadow animate-pulse";
-                rowClass = "bg-red-500/10 border-l-4 border-red-500";
+                verdictClass = "bg-red-700 text-white ring-red-600/30 shadow animate-pulse";
+                rowClass = "bg-rose-500/10 border-l-4 border-rose-500";
                 daysLeftLabel = `Blocked: ${m.overdueDays}d overdue`;
             } else if (m.defaulterStatus === "warning") {
                 verdict = "WARNING";
@@ -242,8 +242,8 @@ export default function MembersPage() {
                 daysLeftLabel = `Warning: ${m.overdueDays}d overdue`;
             } else if (m.isExpired || msLeft <= 0) {
                 verdict = "EXPIRED";
-                verdictClass = "bg-red-500/10 text-red-400 ring-red-600/20";
-                rowClass = "bg-red-500/5";
+                verdictClass = "bg-rose-500/10 text-rose-400 ring-red-600/20";
+                rowClass = "bg-rose-500/5";
                 daysLeftLabel = "Expired";
             } else {
                 daysLeft = Math.ceil(msLeft / 86400000);
@@ -409,7 +409,7 @@ export default function MembersPage() {
             {/* Legend & Status */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4 text-xs text-[#9ca3af]">
-                    <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-red-500/10 border border-red-500/20" /> Expired / Deleted</span>
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-rose-500/10 border border-rose-500/20" /> Expired / Deleted</span>
                     <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm bg-amber-500/10 border border-amber-500/20" /> Expiring ≤ 7 days</span>
                     <PrinterAppsHelp />
                 </div>
@@ -429,7 +429,7 @@ export default function MembersPage() {
             </div>
 
             {error && (
-                <p className="text-sm text-red-600" role="alert">
+                <p className="text-sm text-rose-500" role="alert">
                     {(error as Error).message || "Could not load members."}
                 </p>
             )}
@@ -514,7 +514,7 @@ export default function MembersPage() {
                                                 {/* Balance */}
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm font-medium">
                                                     {(member.balanceAmount ?? 0) > 0
-                                                        ? <span className="text-red-600">₹{member.balanceAmount.toLocaleString("en-IN")}</span>
+                                                        ? <span className="text-rose-500">₹{member.balanceAmount.toLocaleString("en-IN")}</span>
                                                         : <span className="text-[#6b7280]">—</span>
                                                     }
                                                 </td>
@@ -547,7 +547,7 @@ export default function MembersPage() {
                                                             </button>
                                                         )}
                                                         <button onClick={() => handleDelete(member._id, member.name)} title="Delete Member"
-                                                            className="p-1.5 rounded-md text-[#6b7280] hover:text-red-600 hover:bg-red-500/10 hover:bg-red-500/10 transition-colors">
+                                                            className="p-1.5 rounded-md text-[#6b7280] hover:text-rose-500 hover:bg-rose-500/10 hover:bg-rose-500/10 transition-colors">
                                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                                 <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
                                                             </svg>

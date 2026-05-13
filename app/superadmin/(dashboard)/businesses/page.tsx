@@ -265,7 +265,7 @@ export default function ManageBusinessesPage() {
                                             </button>
                                             <button 
                                                 onClick={() => setShowDeleteModal(business.businessId)}
-                                                className="p-2 hover:bg-red-500/10 rounded-lg text-red-500 hover:text-red-400 transition-all shadow-sm"
+                                                className="p-2 hover:bg-rose-500/10 rounded-lg text-rose-400 hover:text-rose-400 transition-all shadow-sm"
                                                 title="Delete Business"
                                                 disabled={isActionLoading}
                                             >
@@ -351,10 +351,10 @@ export default function ManageBusinessesPage() {
             {/* Cascade Delete Modal */}
             {showDeleteModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in zoom-in-95 duration-200">
-                    <div className="bg-[#0b1220] border border-red-500/20 rounded-3xl w-full max-w-md p-8 shadow-2xl relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-red-500/50" />
-                        <div className="h-16 w-16 rounded-2xl bg-red-500/10 flex items-center justify-center mb-6 border border-red-500/20">
-                            <AlertTriangle className="h-10 w-10 text-red-500" />
+                    <div className="bg-[#0b1220] border border-rose-500/20 rounded-3xl w-full max-w-md p-8 shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-rose-500/50" />
+                        <div className="h-16 w-16 rounded-2xl bg-rose-500/10 flex items-center justify-center mb-6 border border-rose-500/20">
+                            <AlertTriangle className="h-10 w-10 text-rose-400" />
                         </div>
                         <h2 className="text-2xl font-black text-white">Permanent Deletion</h2>
                         <p className="text-[#9ca3af] mt-3 text-sm leading-relaxed">
@@ -366,7 +366,7 @@ export default function ManageBusinessesPage() {
                             <li>Sales, Payments & Stock Ledger</li>
                             <li>Access Accounts for Admins/Operators</li>
                         </ul>
-                        <div className="bg-red-500/5 p-4 rounded-xl border border-red-500/10 mt-6 text-red-400 text-xs font-bold flex items-center gap-2">
+                        <div className="bg-rose-500/5 p-4 rounded-xl border border-rose-500/10 mt-6 text-rose-400 text-xs font-bold flex items-center gap-2">
                             <Info className="h-4 w-4 shrink-0" /> IRREVERSIBLE ACTION
                         </div>
                         
@@ -380,7 +380,7 @@ export default function ManageBusinessesPage() {
                             </button>
                             <button 
                                 onClick={() => deleteBusiness(showDeleteModal)}
-                                className="py-3.5 text-sm font-bold bg-red-600 hover:bg-red-500/100 text-white rounded-xl transition-all shadow-lg shadow-red-900/20 flex items-center justify-center gap-2 disabled:opacity-50"
+                                className="py-3.5 text-sm font-bold bg-red-700 hover:bg-red-600 text-white rounded-xl transition-all shadow-lg shadow-red-900/20 flex items-center justify-center gap-2 disabled:opacity-50"
                                 disabled={isActionLoading}
                             >
                                 {isActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete System"}
@@ -419,7 +419,7 @@ export default function ManageBusinessesPage() {
                             </div>
                             <button 
                                 onClick={() => setResetCreds(null)}
-                                className="w-full py-4 text-sm font-bold bg-green-600 hover:bg-green-500/100 text-white rounded-2xl transition-all shadow-lg"
+                                className="w-full py-4 text-sm font-bold bg-emerald-700 hover:bg-emerald-600 text-white rounded-2xl transition-all shadow-lg"
                             >
                                 I Have Copied It
                             </button>

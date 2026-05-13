@@ -178,7 +178,7 @@ export default function NotificationsPage() {
                                                     <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset ${
                                                         log.status === "sent" 
                                                             ? "bg-green-500/10 text-green-400 ring-green-600/20" 
-                                                            : "bg-red-500/10 text-red-400 ring-red-600/20"
+                                                            : "bg-rose-500/10 text-rose-400 ring-red-600/20"
                                                     }`}>
                                                         {log.status === "failed_permanent" ? "FAILED (PERMANENT)" : log.status === "failed" ? "NOTIFICATION FAILED" : "SENT"}
                                                     </span>

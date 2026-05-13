@@ -13,18 +13,18 @@ async function DashboardStats({ poolId, isAdmin, memberType }: { poolId: string,
     const summary = await getCachedAnalyticsSummary(poolId, memberType);
     const counts = await getCachedDashboardCounts(poolId, memberType);
 
-    const stats: { name: string; stat: string | number; icon: any; color: string }[] = [
-        { name: "Total Members", stat: counts.totalMembers, icon: Users, color: "bg-blue-500" },
-        { name: "Active Members", stat: counts.activeMembers, icon: Activity, color: "bg-green-500" },
-        { name: "Expired Members", stat: counts.totalMembers - counts.activeMembers, icon: UserX, color: "bg-red-500" },
-        { name: "New Members Today", stat: counts.todaysMemberEntries, icon: UserPlus, color: "bg-indigo-500" },
-        { name: "New Ent. Members Today", stat: counts.todaysEntertainmentEntries, icon: Gamepad2, color: "bg-pink-500" },
+    const stats: { name: string; stat: string | number; icon: any; color: string; iconColor: string }[] = [
+        { name: "Total Members", stat: counts.totalMembers, icon: Users, color: "bg-blue-500/10", iconColor: "text-blue-400" },
+        { name: "Active Members", stat: counts.activeMembers, icon: Activity, color: "bg-emerald-500/10", iconColor: "text-emerald-400" },
+        { name: "Expired Members", stat: counts.totalMembers - counts.activeMembers, icon: UserX, color: "bg-rose-500/10", iconColor: "text-rose-400" },
+        { name: "New Members Today", stat: counts.todaysMemberEntries, icon: UserPlus, color: "bg-indigo-500/10", iconColor: "text-indigo-400" },
+        { name: "New Ent. Members Today", stat: counts.todaysEntertainmentEntries, icon: Gamepad2, color: "bg-pink-500/10", iconColor: "text-pink-400" },
     ];
 
     if (isAdmin) {
-        stats.push({ name: "Today's Revenue", stat: `₹${summary.totalRevenue}`, icon: DollarSign, color: "bg-yellow-500" });
-        stats.push({ name: "Monthly Revenue", stat: `₹${summary.monthlyRevenue}`, icon: TrendingUp, color: "bg-purple-500" });
-        stats.push({ name: "Yearly Income", stat: `₹${summary.yearlyRevenue || 0}`, icon: DollarSign, color: "bg-emerald-500" });
+        stats.push({ name: "Today's Revenue", stat: `₹${summary.totalRevenue}`, icon: DollarSign, color: "bg-amber-500/10", iconColor: "text-amber-400" });
+        stats.push({ name: "Monthly Revenue", stat: `₹${summary.monthlyRevenue}`, icon: TrendingUp, color: "bg-purple-500/10", iconColor: "text-purple-400" });
+        stats.push({ name: "Yearly Income", stat: `₹${summary.yearlyRevenue || 0}`, icon: DollarSign, color: "bg-emerald-500/10", iconColor: "text-emerald-400" });
     }
 
     return (
@@ -32,11 +32,11 @@ async function DashboardStats({ poolId, isAdmin, memberType }: { poolId: string,
             {stats.map((item) => (
                 <div
                     key={item.name}
-                    className="relative overflow-hidden rounded-2xl bg-[#0b1220] px-4 pb-12 pt-5 shadow-sm sm:px-6 sm:pt-6 border border-[#1f2937]"
+                    className="relative overflow-hidden rounded-2xl bg-[#0b1220] px-4 pb-12 pt-5 shadow-sm sm:px-6 sm:pt-6 border border-[#1f2937] group hover:border-[#8b5cf6]/30 transition-all"
                 >
                     <dt>
-                        <div className={`absolute rounded-md ${item.color} p-3`}>
-                            <item.icon className="h-6 w-6 text-white" aria-hidden="true" />
+                        <div className={`absolute rounded-xl ${item.color} p-3 border border-[#1f2937]/50`}>
+                            <item.icon className={`h-6 w-6 ${item.iconColor}`} aria-hidden="true" />
                         </div>
                         <p className="ml-16 line-clamp-2 text-sm font-medium leading-tight text-[#9ca3af]">
                             {item.name}
@@ -70,7 +70,7 @@ async function SystemHealth() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
                 <div className="flex flex-col">
                     <span className="text-[#9ca3af] text-xs uppercase font-medium">DB Status</span>
-                    <span className={`font-semibold mt-1 ${health.database?.status === "connected" ? "text-green-400" : "text-red-400"}`}>{health.database?.status}</span>
+                    <span className={`font-semibold mt-1 ${health.database?.status === "connected" ? "text-green-400" : "text-rose-400"}`}>{health.database?.status}</span>
                 </div>
                 <div className="flex flex-col">
                     <span className="text-[#9ca3af] text-xs uppercase font-medium">Uptime</span>
@@ -126,10 +126,10 @@ async function RevenueKPIs({ poolId }: { poolId: string }) {
     const recoveryRate = l.totalDue > 0 ? Math.round((l.totalPaid / l.totalDue) * 100) : 100;
 
     const kpis = [
-        { label: "Outstanding Dues", value: `₹${l.outstandingDues.toLocaleString("en-IN")}`, icon: AlertTriangle, accent: "from-red-500 to-rose-600", textColor: "text-red-400" },
-        { label: "Defaulters", value: defaulterCount, icon: ShieldAlert, accent: "from-amber-500 to-orange-600", textColor: "text-amber-400" },
-        { label: "Recovery Rate", value: `${recoveryRate}%`, icon: BarChart3, accent: recoveryRate >= 80 ? "from-emerald-500 to-green-600" : "from-yellow-500 to-amber-600", textColor: recoveryRate >= 80 ? "text-emerald-400" : "text-yellow-400" },
-        { label: "Credit Balance", value: `₹${l.creditBalance.toLocaleString("en-IN")}`, icon: CreditCard, accent: "from-blue-500 to-cyan-600", textColor: "text-blue-400" },
+        { label: "Outstanding Dues", value: `₹${l.outstandingDues.toLocaleString("en-IN")}`, icon: AlertTriangle, accent: "from-rose-500/20 to-rose-600/10", textColor: "text-rose-400" },
+        { label: "Defaulters", value: defaulterCount, icon: ShieldAlert, accent: "from-amber-500/20 to-amber-600/10", textColor: "text-amber-400" },
+        { label: "Recovery Rate", value: `${recoveryRate}%`, icon: BarChart3, accent: recoveryRate >= 80 ? "from-emerald-500/20 to-emerald-600/10" : "from-amber-500/20 to-amber-600/10", textColor: recoveryRate >= 80 ? "text-emerald-400" : "text-yellow-400" },
+        { label: "Credit Balance", value: `₹${l.creditBalance.toLocaleString("en-IN")}`, icon: CreditCard, accent: "from-blue-500/20 to-blue-600/10", textColor: "text-blue-400" },
     ];
 
     return (
@@ -188,7 +188,7 @@ async function TopDefaulters({ poolId }: { poolId: string }) {
     const statusColors: Record<string, string> = {
         active: "bg-green-500/10 text-green-400 border-green-500/20",
         warning: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-        blocked: "bg-red-500/10 text-red-400 border-red-500/20 animate-pulse"
+        blocked: "bg-rose-500/10 text-rose-400 border-rose-500/20 animate-pulse"
     };
 
     return (
@@ -207,7 +207,7 @@ async function TopDefaulters({ poolId }: { poolId: string }) {
                                 <span className="text-[10px] text-[#6b7280] font-mono">#{m.memberId}</span>
                             </div>
                             <div className="text-right flex flex-col items-end gap-1">
-                                <span className="font-bold text-red-400">₹{m.balance.toLocaleString("en-IN")}</span>
+                                <span className="font-bold text-rose-400">₹{m.balance.toLocaleString("en-IN")}</span>
                                 <span className={`text-[10px] px-2 py-0.5 rounded-full border ${statusColors[m.status]}`}>
                                     {m.overdueDays}d overdue · {m.status.toUpperCase()}
                                 </span>
@@ -278,7 +278,7 @@ async function ExpiryAlerts({ poolId }: { poolId: string }) {
                                 <span className="text-xs text-[#9ca3af] mt-1">{m.phone}</span>
                             </div>
                             <div className="text-right flex flex-col items-end">
-                                <span className={`font-semibold text-xs px-2 py-0.5 rounded-full ${m.remainingDays <= 0 ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'}`}>
+                                <span className={`font-semibold text-xs px-2 py-0.5 rounded-full ${m.remainingDays <= 0 ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'}`}>
                                     {m.remainingDays <= 0 ? 'Today' : `In ${m.remainingDays} day${m.remainingDays > 1 ? 's' : ''}`}
                                 </span>
                             </div>

@@ -298,7 +298,7 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                                 </div>
                                 <div className="flex justify-between text-sm pt-1 border-t border-[#1f2937]">
                                     <span className="text-[#9ca3af]">Balance</span>
-                                    <span className={`font-semibold ${autoBalance > 0 ? "text-red-600" : "text-green-600"}`}>
+                                    <span className={`font-semibold ${autoBalance > 0 ? "text-rose-500" : "text-green-600"}`}>
                                         ₹{autoBalance}
                                     </span>
                                 </div>

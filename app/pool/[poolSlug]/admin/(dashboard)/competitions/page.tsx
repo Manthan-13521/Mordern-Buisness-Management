@@ -143,7 +143,7 @@ function CompetitionDetail({ comp, onRefresh }: { comp: Competition; onRefresh: 
                 </div>
                 {!comp.isCompleted && (
                     <button onClick={markComplete}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-500/100">
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600">
                         <CheckCircle className="h-3.5 w-3.5" /> Mark Complete
                     </button>
                 )}

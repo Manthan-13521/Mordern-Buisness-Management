@@ -76,7 +76,7 @@ export default function BalancePaymentsPage() {
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-[#f9fafb] flex items-center gap-2"><IndianRupee className="h-6 w-6 text-pink-500"/>Balance & Payments</h1>
+                    <h1 className="text-2xl font-bold text-[#f9fafb] flex items-center gap-2"><IndianRupee className="h-6 w-6 text-[#8b5cf6]"/>Balance & Payments</h1>
                     <p className="text-sm text-[#6b7280]">
                         {total} members with pending balance
                         {selectedBlock !== "all" && (
@@ -92,7 +92,7 @@ export default function BalancePaymentsPage() {
             </div>
 
             {/* TOP SUMMARY CARD */}
-            <div className="bg-gradient-to-r from-red-600 to-orange-500 rounded-3xl p-6 shadow-2xl border border-red-500/20 backdrop-blur-md relative overflow-hidden flex items-center justify-between">
+            <div className="bg-gradient-to-r from-red-600 to-orange-500 rounded-3xl p-6 shadow-2xl border border-rose-500/20 backdrop-blur-md relative overflow-hidden flex items-center justify-between">
                 <div className="relative z-10">
                     <h2 className="text-sm font-bold text-white/90 uppercase tracking-widest mb-1">Total Outstanding Balance</h2>
                     <p className="text-4xl font-extrabold text-white flex items-center gap-1 drop-shadow-md">
@@ -108,7 +108,7 @@ export default function BalancePaymentsPage() {
             <div className="rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
-                        <thead className="bg-slate-50/50 text-xs text-[#6b7280] uppercase tracking-wider">
+                        <thead className="bg-[#020617] text-xs text-[#6b7280] uppercase tracking-wider">
                             <tr>{["ID","Name","Room","Plan","Total Fee","Paid","Balance","Action"].map(h=><th key={h} className="text-left px-4 py-3">{h}</th>)}</tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -122,7 +122,7 @@ export default function BalancePaymentsPage() {
                                     <td className="px-4 py-3">{m.planId?.name || "—"}</td>
                                     <td className="px-4 py-3">₹{m.totalFee?.toLocaleString("en-IN")}</td>
                                     <td className="px-4 py-3 text-emerald-600">₹{m.totalPaid?.toLocaleString("en-IN")}</td>
-                                    <td className="px-4 py-3 font-semibold text-red-500">₹{m.balance?.toLocaleString("en-IN")}</td>
+                                    <td className="px-4 py-3 font-semibold text-rose-400">₹{m.balance?.toLocaleString("en-IN")}</td>
                                     <td className="px-4 py-3">
                                         <button onClick={()=>{setPayMember(m);setPayForm({amount:"",paymentMethod:"cash",transactionId:"",notes:""});setError("");}} className="flex items-center gap-1.5 text-xs bg-[#8b5cf6] hover:bg-[#7c3aed] border-0  text-white px-3 py-1.5 rounded-lg transition">
                                             <Plus className="h-3 w-3"/>Pay
@@ -159,8 +159,8 @@ export default function BalancePaymentsPage() {
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={()=>setPayMember(null)}/>
                     <div className="relative bg-[#0b1220] rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
                         <div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-[#f9fafb]">Record Payment — {payMember.name}</h2><button onClick={()=>setPayMember(null)}><X className="h-5 w-5 text-slate-400"/></button></div>
-                        <p className="text-sm text-[#6b7280]">Pending: <span className="font-bold text-red-500">₹{payMember.balance.toLocaleString("en-IN")}</span></p>
-                        {error && <p className="text-sm text-red-500">{error}</p>}
+                        <p className="text-sm text-[#6b7280]">Pending: <span className="font-bold text-rose-400">₹{payMember.balance.toLocaleString("en-IN")}</span></p>
+                        {error && <p className="text-sm text-rose-400">{error}</p>}
                         <form onSubmit={handlePay} className="space-y-4">
                             <div><label className={LABEL}>Amount (₹)</label><input type="number" min="1" max={Math.min(payMember.balance, 9999999999)} required value={payForm.amount} onChange={e=>setPayForm(p=>({...p,amount:e.target.value}))} className={INPUT}/></div>
                             <div><label className={LABEL}>Payment Method</label>

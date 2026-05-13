@@ -150,8 +150,8 @@ export default function HostelAnalyticsPage() {
                 {/* Members with Overdue Rent */}
                 <div className="rounded-2xl bg-[#020617]/80 border border-slate-700/50 p-5">
                     <div className="flex items-center justify-between mb-1">
-                        <div className="h-10 w-10 rounded-xl bg-red-500/20 flex items-center justify-center">
-                            <Receipt className="h-5 w-5 text-red-400" />
+                        <div className="h-10 w-10 rounded-xl bg-rose-500/20 flex items-center justify-center">
+                            <Receipt className="h-5 w-5 text-rose-400" />
                         </div>
                         <span className="text-[10px] font-semibold text-[#6b7280] uppercase">Members with Overdue Rent</span>
                     </div>

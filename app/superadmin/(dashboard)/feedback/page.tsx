@@ -58,7 +58,7 @@ export default function SuperAdminFeedbackPage() {
 
     const StatusBadge = ({ status }: { status: string }) => {
         const colors = {
-            "open": "bg-red-500/20 text-red-400 border border-red-500/30",
+            "open": "bg-rose-500/20 text-rose-400 border border-rose-500/30",
             "in-progress": "bg-amber-500/20 text-amber-400 border border-amber-500/30",
             "resolved": "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30",
         } as any;
