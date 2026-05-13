@@ -18,7 +18,7 @@ async function getNextPoolId() {
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { poolName, city, adminName, adminEmail, adminPhone, password, plan } = body;
+        const { poolName, city, adminName, adminEmail, adminPhone, password, plan, adminBilling } = body;
 
         if (!poolName || !city || !adminEmail || !password) {
             return NextResponse.json({ error: "Missing required fields" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
@@ -47,6 +47,23 @@ export async function POST(req: Request) {
 
         const passwordHash = await bcrypt.hash(password, 10);
 
+        // Determine subscription fields based on admin billing or default
+        let subscriptionStatus = "active";
+        let subscriptionEndsAt: Date | undefined;
+        const activePlan = adminBilling?.planType || plan || "free";
+
+        if (adminBilling) {
+            const now = new Date();
+            const durationDays: Record<string, number> = {
+                trial: 7,
+                quarterly: 90,
+                yearly: 365,
+            };
+            const days = durationDays[adminBilling.planType] || 30;
+            subscriptionEndsAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+            subscriptionStatus = "active";
+        }
+
         try {
             const newPool = new Pool({
                 poolId,
@@ -56,11 +73,12 @@ export async function POST(req: Request) {
                 adminPhone,
                 location: city,
                 status: "ACTIVE",
-                plan: plan || "free",
-                capacity: plan === "enterprise" ? 1000 : (plan === "pro" ? 500 : 200),
-                maxMembers: plan === "enterprise" ? 5000 : (plan === "pro" ? 2000 : 1000),
-                maxStaff: plan === "enterprise" ? 100 : (plan === "pro" ? 50 : 20),
-                subscriptionStatus: "active", // Or "trial"
+                plan: activePlan,
+                capacity: activePlan === "enterprise" ? 1000 : (activePlan === "pro" ? 500 : 200),
+                maxMembers: activePlan === "enterprise" ? 5000 : (activePlan === "pro" ? 2000 : 1000),
+                maxStaff: activePlan === "enterprise" ? 100 : (activePlan === "pro" ? 50 : 20),
+                subscriptionStatus,
+                ...(subscriptionEndsAt ? { subscriptionEndsAt } : {}),
             });
 
             await newPool.save();
@@ -75,6 +93,32 @@ export async function POST(req: Request) {
             });
 
             await newAdmin.save();
+
+            // If admin billing is present, create a BillingLog entry
+            if (adminBilling && adminBilling.amount > 0) {
+                try {
+                    const { BillingLog } = await import("@/models/BillingLog");
+                    const now = new Date();
+                    const durationDays: Record<string, number> = {
+                        trial: 7,
+                        quarterly: 90,
+                        yearly: 365,
+                    };
+                    const days = durationDays[adminBilling.planType] || 30;
+                    const periodEnd = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+
+                    await BillingLog.create({
+                        orgId: newPool._id,
+                        amount: adminBilling.amount,
+                        method: adminBilling.paymentMode === "razorpay" ? "razorpay" : adminBilling.paymentMode === "upi" ? "upi" : adminBilling.paymentMode === "cash" ? "cash" : "manual",
+                        paymentMode: `${adminBilling.paymentMode?.toUpperCase()} (Admin: ${adminBilling.payerName || "SuperAdmin"})`,
+                        periodStart: now,
+                        periodEnd,
+                    });
+                } catch (billingErr) {
+                    console.error("BillingLog creation failed (non-fatal):", billingErr);
+                }
+            }
 
             return NextResponse.json({
                 success: true,
@@ -101,3 +145,4 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Failed to register pool" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
+

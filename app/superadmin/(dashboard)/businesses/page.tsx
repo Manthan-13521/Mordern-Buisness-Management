@@ -157,6 +157,10 @@ export default function ManageBusinessesPage() {
                     <p className="text-[#9ca3af] mt-1">Manage SaaS business tenants, monitor activity, and control access.</p>
                 </div>
                 
+                <a href="/business/register?admin=true" className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 text-white px-4 py-2 font-bold rounded-xl shadow-lg transition flex items-center gap-2 whitespace-nowrap">
+                    <Briefcase className="w-5 h-5"/> Add Business manually
+                </a>
+                
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6b7280]" />
                     <input 

@@ -18,7 +18,7 @@ async function getNextBusinessId() {
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { businessName, adminName, adminEmail, adminPhone, password, address } = body;
+        const { businessName, adminName, adminEmail, adminPhone, password, address, adminBilling } = body;
 
         if (!businessName || !adminEmail || !password) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -72,6 +72,31 @@ export async function POST(req: Request) {
 
             await newAdmin.save();
 
+            // If admin billing is present, create a BillingLog entry
+            if (adminBilling && adminBilling.amount > 0) {
+                try {
+                    const { BillingLog } = await import("@/models/BillingLog");
+                    const now = new Date();
+                    const durationDays: Record<string, number> = {
+                        quarterly: 90,
+                        yearly: 365,
+                    };
+                    const days = durationDays[adminBilling.planType] || 90;
+                    const periodEnd = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+
+                    await BillingLog.create({
+                        orgId: newBusiness._id,
+                        amount: adminBilling.amount,
+                        method: adminBilling.paymentMode === "razorpay" ? "razorpay" : adminBilling.paymentMode === "upi" ? "upi" : adminBilling.paymentMode === "cash" ? "cash" : "manual",
+                        paymentMode: `${adminBilling.paymentMode?.toUpperCase()} (Admin: ${adminBilling.payerName || "SuperAdmin"})`,
+                        periodStart: now,
+                        periodEnd,
+                    });
+                } catch (billingErr) {
+                    console.error("BillingLog creation failed (non-fatal):", billingErr);
+                }
+            }
+
             return NextResponse.json({
                 success: true,
                 business: {
@@ -97,3 +122,4 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: error.message || "Failed to register business" }, { status: 500 });
     }
 }
+

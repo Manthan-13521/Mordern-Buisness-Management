@@ -10,13 +10,14 @@ export const dynamic = "force-dynamic";
 /**
  * POST /api/hostel/register
  * Public — creates a new hostel tenant + hostel_admin user.
+ * Supports optional adminBilling for SuperAdmin manual creation.
  */
 export async function POST(req: Request) {
     try {
         await dbConnect();
         const body = await req.json();
 
-        const { hostelName, city, adminEmail, adminName, password, numberOfBlocks } = body;
+        const { hostelName, city, adminEmail, adminName, password, numberOfBlocks, adminBilling } = body;
 
         if (!hostelName || !city || !adminEmail || !adminName || !password) {
             return NextResponse.json({ error: "Missing required fields" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
@@ -41,6 +42,19 @@ export async function POST(req: Request) {
 
         const passwordHash = await bcrypt.hash(password, 12);
 
+        // Determine subscription fields based on admin billing
+        let subscriptionStatus = "active";
+        let subscriptionEndsAt: Date | undefined;
+        const activePlan = adminBilling?.planType || "free";
+
+        if (adminBilling) {
+            const now = new Date();
+            // Hostel plans map: block-based durations default to yearly
+            const days = 365;
+            subscriptionEndsAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+            subscriptionStatus = "active";
+        }
+
         // Create hostel, admin user, and settings in parallel
         try {
             const [hostel] = await Promise.all([
@@ -52,8 +66,9 @@ export async function POST(req: Request) {
                     adminEmail: normalizedEmail,
                     numberOfBlocks: Math.min(4, Math.max(1, numberOfBlocks || 1)),
                     status: "ACTIVE",
-                    plan: "free",
-                    subscriptionStatus: "active",
+                    plan: activePlan,
+                    subscriptionStatus,
+                    ...(subscriptionEndsAt ? { subscriptionEndsAt } : {}),
                     isTwilioConnected: false,
                     memberCounter: 0,
                 }),
@@ -68,6 +83,27 @@ export async function POST(req: Request) {
                 HostelSettings.create({ hostelId, whatsappEnabled: false }),
             ]);
 
+            // If admin billing is present, create a BillingLog entry
+            if (adminBilling && adminBilling.amount > 0) {
+                try {
+                    const { BillingLog } = await import("@/models/BillingLog");
+                    const now = new Date();
+                    const days = 365;
+                    const periodEnd = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+
+                    await BillingLog.create({
+                        orgId: hostel._id,
+                        amount: adminBilling.amount,
+                        method: adminBilling.paymentMode === "razorpay" ? "razorpay" : adminBilling.paymentMode === "upi" ? "upi" : adminBilling.paymentMode === "cash" ? "cash" : "manual",
+                        paymentMode: `${adminBilling.paymentMode?.toUpperCase()} (Admin: ${adminBilling.payerName || "SuperAdmin"})`,
+                        periodStart: now,
+                        periodEnd,
+                    });
+                } catch (billingErr) {
+                    console.error("BillingLog creation failed (non-fatal):", billingErr);
+                }
+            }
+
             return NextResponse.json({ success: true, hostelSlug: hostel.slug, hostelName: hostel.hostelName }, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         } catch (err: any) {
             // Handle race condition or unexpected Mongo unique constraint failure
@@ -81,3 +117,4 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: error?.message || "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
+

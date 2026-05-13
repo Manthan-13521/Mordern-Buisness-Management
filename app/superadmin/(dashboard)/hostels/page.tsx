@@ -101,7 +101,7 @@ export default function SuperAdminHostelsPage() {
                     <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Manage Tenants</h1>
                     <p className="text-[#6b7280]">View, monitor, and provision hostels across the platform.</p>
                 </div>
-                <a href="/hostel/register" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 text-white px-4 py-2 font-bold rounded-xl shadow-lg transition flex items-center gap-2">
+                <a href="/hostel/register?admin=true" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 text-white px-4 py-2 font-bold rounded-xl shadow-lg transition flex items-center gap-2">
                     <Plus className="w-5 h-5"/> Add Hostel manually
                 </a>
             </div>
