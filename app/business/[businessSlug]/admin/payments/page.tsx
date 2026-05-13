@@ -12,11 +12,16 @@ import {
   Search,
   IndianRupee,
   History,
-  Save
+  Save,
+  Eye,
+  Upload,
+  FileText,
+  Paperclip
 } from "lucide-react";
 import toast from "react-hot-toast";
 import clsx from "clsx";
 import { useBusinessPayments, useBusinessCustomers } from "@/hooks/useAnalytics";
+import { ChangeEvent } from "react";
 
 export default function PaymentsPage() {
   const { data: paymentsData, isLoading: payLoading, refetch: fetchPayments } = useBusinessPayments();
@@ -27,6 +32,7 @@ export default function PaymentsPage() {
   const loading = payLoading || custLoading;
   const [showAddModal, setShowAddModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [uploadingTxnId, setUploadingTxnId] = useState<string | null>(null);
 
   const [newPayment, setNewPayment] = useState({
     customerId: "",
@@ -34,10 +40,68 @@ export default function PaymentsPage() {
     type: "cash",
     paymentType: "received",
     date: new Date().toISOString().split('T')[0],
-    notes: ""
+    notes: "",
+    receiptUrl: ""
   });
+  const [uploading, setUploading] = useState(false);
 
   const fetchData = fetchPayments;
+
+  const handleReceiptUploadForTxn = async (e: ChangeEvent<HTMLInputElement>, txnId: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 5MB limit check
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File size must be less than 5MB");
+      e.target.value = "";
+      return;
+    }
+
+    setUploadingTxnId(txnId);
+    const toastId = toast.loading("Uploading receipt...");
+
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = async () => {
+        const base64 = reader.result;
+        // 1. Upload to Cloudinary
+        const uploadRes = await fetch("/api/business/upload", {
+          method: "POST",
+          body: JSON.stringify({ file: base64, folder: "receipts" }),
+        });
+
+        if (!uploadRes.ok) {
+          const data = await uploadRes.json();
+          toast.error(data.details || data.error || "Upload failed", { id: toastId });
+          setUploadingTxnId(null);
+          return;
+        }
+
+        const { url } = await uploadRes.json();
+
+        // 2. Patch transaction
+        const patchRes = await fetch("/api/business/transactions", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ transactionId: txnId, receiptUrl: url }),
+        });
+
+        if (patchRes.ok) {
+          toast.success("Receipt attached successfully", { id: toastId });
+          fetchData();
+        } else {
+          const data = await patchRes.json();
+          toast.error(data.error || "Failed to attach receipt", { id: toastId });
+        }
+      };
+    } catch (err: any) {
+      toast.error(err.message || "Upload error", { id: toastId });
+    } finally {
+      setUploadingTxnId(null);
+    }
+  };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -53,7 +117,7 @@ export default function PaymentsPage() {
       if (res.ok) {
         toast.success("Payment recorded");
         setShowAddModal(false);
-        setNewPayment({ ...newPayment, customerId: "", amount: 0, notes: "" });
+        setNewPayment({ ...newPayment, customerId: "", amount: 0, notes: "", receiptUrl: "" });
         fetchData();
       } else {
         toast.error("Failed to save payment");
@@ -64,6 +128,45 @@ export default function PaymentsPage() {
       setIsSaving(false);
     }
   }
+
+  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File size must be less than 5MB");
+      e.target.value = "";
+      return;
+    }
+
+    setUploading(true);
+    const toastId = toast.loading("Uploading receipt...");
+
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = async () => {
+        const base64 = reader.result;
+        const res = await fetch("/api/business/upload", {
+          method: "POST",
+          body: JSON.stringify({ file: base64, folder: "receipts" }),
+        });
+
+        if (res.ok) {
+          const { url } = await res.json();
+          setNewPayment({ ...newPayment, receiptUrl: url });
+          toast.success("Receipt uploaded", { id: toastId });
+        } else {
+          const data = await res.json();
+          toast.error(data.details || data.error || "Upload failed", { id: toastId });
+        }
+      };
+    } catch (err: any) {
+      toast.error(err.message || "Upload error", { id: toastId });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300 max-w-7xl mx-auto">
@@ -132,6 +235,7 @@ export default function PaymentsPage() {
                   <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide">Channel</th>
                   <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide text-right">Amount</th>
                   <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide text-right">Type</th>
+                  <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide text-right">Receipt</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#1f2937]">
@@ -175,6 +279,35 @@ export default function PaymentsPage() {
                         )}>
                           {isReceived ? 'received' : 'paid'}
                         </span>
+                      </td>
+                      <td className="px-6 py-5 text-right">
+                        {payment.receiptUrl ? (
+                          <a 
+                            href={payment.receiptUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="p-2 inline-flex items-center justify-center bg-[#111827] border border-[#1f2937] text-[#9ca3af] hover:text-[#8b5cf6] hover:border-[#8b5cf6]/50 rounded-lg transition-all"
+                            title="View Receipt"
+                          >
+                            <Eye className="w-5 h-5" />
+                          </a>
+                        ) : (
+                          <label className="relative cursor-pointer p-2 inline-flex items-center justify-center gap-1.5 bg-[#111827] border border-dashed border-[#374151] text-[#9ca3af] hover:text-[#8b5cf6] hover:border-[#8b5cf6]/50 rounded-lg transition-all group/upload">
+                            <input
+                              type="file"
+                              accept="image/*,.pdf"
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              onChange={(e) => handleReceiptUploadForTxn(e, payment._id)}
+                              disabled={uploadingTxnId === payment._id}
+                            />
+                            {uploadingTxnId === payment._id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Upload className="w-4 h-4" />
+                            )}
+                            <span className="text-[9px] font-bold uppercase tracking-widest">Attach</span>
+                          </label>
+                        )}
                       </td>
                     </tr>
                   );
@@ -281,6 +414,34 @@ export default function PaymentsPage() {
                   onChange={(e) => setNewPayment({ ...newPayment, notes: e.target.value })}
                   className="w-full bg-[#020617] border border-[#1f2937] rounded-xl px-4 py-3 text-sm font-medium text-[#f9fafb] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all resize-none"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest block">Receipt / Proof (Max 5MB)</label>
+                <div className="relative group">
+                  <input 
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={handleFileUpload}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  />
+                  <div className={clsx(
+                    "w-full bg-[#020617] border border-dashed rounded-xl px-4 py-4 flex flex-col items-center justify-center gap-2 transition-all",
+                    newPayment.receiptUrl ? "border-[#22c55e] bg-[#22c55e]/5" : "border-[#1f2937] group-hover:border-[#8b5cf6]"
+                  )}>
+                    {newPayment.receiptUrl ? (
+                      <>
+                        <FileText className="w-6 h-6 text-[#22c55e]" />
+                        <span className="text-xs font-bold text-[#22c55e]">Receipt Attached</span>
+                      </>
+                    ) : (
+                      <>
+                        <Paperclip className="w-6 h-6 text-[#6b7280]" />
+                        <span className="text-xs font-bold text-[#6b7280]">Attach Payment Proof</span>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="pt-4 flex gap-3">
