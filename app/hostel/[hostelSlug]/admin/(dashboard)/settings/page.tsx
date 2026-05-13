@@ -103,8 +103,8 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                     <div><p className="text-slate-400 text-xs">Hostel Slug</p><p className="font-mono font-medium text-[#f9fafb]">{info?.slug}</p></div>
                     <div><p className="text-slate-400 text-xs">Admin Email</p><p className="font-medium text-[#f9fafb]">{info?.adminEmail}</p></div>
-                    <div><p className="text-slate-400 text-xs">WhatsApp Status</p>
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${info?.isTwilioConnected ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-[#6b7280]"}`}>{info?.isTwilioConnected ? "Connected" : "Not Connected"}</span></div>
+                    <div><p className="text-[#6b7280] text-xs">WhatsApp Status</p>
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium border ${info?.isTwilioConnected ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-[#020617] text-[#6b7280] border-[#1f2937]"}`}>{info?.isTwilioConnected ? "Connected" : "Not Connected"}</span></div>
                 </div>
             </div>
 
@@ -124,7 +124,7 @@ export default function SettingsPage() {
                     <div>
                         <p className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider">Status</p>
                         <div className="mt-1">
-                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${subStatus?.status === "active" ? "bg-emerald-100 text-emerald-600" : "bg-rose-500/10 text-rose-500"}`}>
+                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider border ${subStatus?.status === "active" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-rose-500/10 text-rose-400 border-rose-500/20"}`}>
                                 {subStatus?.status || "—"}
                             </span>
                         </div>
