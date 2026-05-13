@@ -75,7 +75,7 @@ export default function NotificationsPage() {
                 <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none flex space-x-3">
                     <button
                         onClick={fetchLogs}
-                        className="inline-flex items-center rounded-md bg-[#0b1220] px-3 py-2 text-sm font-semibold text-gray-900 dark:text-gray-300 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all font-medium"
+                        className="inline-flex items-center rounded-md bg-[#0b1220] px-3 py-2 text-sm font-semibold text-gray-900 dark:text-gray-300 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-700 hover:bg-gray-100 hover:bg-[#8b5cf6]/5 transition-all font-medium"
                     >
                         <RefreshCw className="-ml-0.5 mr-1.5 h-4 w-4" />
                         Refresh
@@ -83,7 +83,7 @@ export default function NotificationsPage() {
                     <button
                         onClick={triggerReminders}
                         disabled={triggering}
-                        className="inline-flex items-center rounded-md bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-50 dark:hover:bg-blue-500/100 disabled:opacity-50"
+                        className="inline-flex items-center rounded-md bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 px-3 py-2 text-sm font-semibold text-white shadow-sm  disabled:opacity-50"
                     >
                         <Send className="-ml-0.5 mr-1.5 h-4 w-4" />
                         {triggering ? "Running..." : "Trigger Pending Reminders"}
@@ -100,7 +100,7 @@ export default function NotificationsPage() {
                         id="filter"
                         value={filterType}
                         onChange={(e) => setFilterType(e.target.value)}
-                        className="block w-full rounded-md border border-gray-300 dark:border-gray-700 py-1.5 pl-3 pr-10 text-gray-900 focus:ring-2 focus:ring-blue-500 sm:text-sm sm:leading-6 bg-[#0b1220] shadow-sm dark:text-gray-100"
+                        className="block w-full rounded-md border border-gray-300 border-[#1f2937] py-1.5 pl-3 pr-10 text-gray-900 focus:ring-2 focus:ring-blue-500 sm:text-sm sm:leading-6 bg-[#0b1220] shadow-sm dark:text-gray-100"
                     >
                         <option value="all">All Notifications</option>
                         <option value="expiry_next_day">Next Day Expiry Alerts</option>

@@ -190,9 +190,9 @@ export default function PlansPage() {
         }
     };
 
-    const inputCls = "mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg dark:border-gray-600 dark:text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500";
-    const labelCls = "block text-sm font-medium text-gray-700 dark:text-gray-300";
-    const checkCls = "rounded border-gray-300 text-blue-600 dark:text-blue-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg dark:ring-offset-gray-900";
+    const inputCls = "mt-1 block w-full rounded-md border border-[#1f2937] px-3 py-2 text-sm bg-[#0b1220] border border-[#1f2937] border-[#1f2937] text-[#f9fafb] focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500";
+    const labelCls = "block text-sm font-medium text-[#9ca3af]";
+    const checkCls = "rounded border-[#1f2937] text-blue-600 dark:text-blue-400 shadow-sm focus:border-[#8b5cf6] focus:ring-[#8b5cf6] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] dark:ring-offset-gray-900";
 
     return (
         <div className="space-y-6">
@@ -207,7 +207,7 @@ export default function PlansPage() {
                     <button
                         onClick={openCreate}
                         type="button"
-                        className="mt-4 sm:mt-0 flex items-center gap-1.5 rounded-md bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-50 dark:hover:bg-blue-500/100 transition"
+                        className="mt-4 sm:mt-0 flex items-center gap-1.5 rounded-md bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 px-4 py-2 text-sm font-semibold text-white shadow-sm  transition"
                     >
                         <Plus className="h-4 w-4" />
                         Add Plan
@@ -225,7 +225,7 @@ export default function PlansPage() {
                     plans.map((plan: any) => (
                         <div
                             key={plan._id}
-                            className="relative flex flex-col justify-between rounded-2xl border border-gray-200 p-6 shadow-sm dark:border-gray-800 bg-[#0b1220]"
+                            className="relative flex flex-col justify-between rounded-2xl border border-[#1f2937] p-6 shadow-sm border-[#1f2937] bg-[#0b1220]"
                         >
                             <div>
                                 <h3 className="text-lg font-semibold text-[#f9fafb]">{plan.name}</h3>
@@ -239,7 +239,7 @@ export default function PlansPage() {
                                     </span>
                                 </p>
 
-                                <ul className="mt-4 space-y-1.5 text-sm text-gray-600 dark:text-gray-300">
+                                <ul className="mt-4 space-y-1.5 text-sm text-[#9ca3af]">
                                     {plan.features.map((f: string, i: number) => (
                                         <li key={i} className="flex items-center gap-2">
                                             <svg className="h-4 w-4 text-blue-500 shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -269,11 +269,11 @@ export default function PlansPage() {
                                         <p className="text-xs font-semibold text-green-700 dark:text-green-400 mb-1">📋 Alert Messages</p>
                                         <div>
                                             <span className="text-xs font-medium text-[#9ca3af]">Before expiry: </span>
-                                            <span className="text-xs text-gray-600 dark:text-gray-300 line-clamp-2">{plan.messages.beforeExpiry?.text}</span>
+                                            <span className="text-xs text-[#9ca3af] line-clamp-2">{plan.messages.beforeExpiry?.text}</span>
                                         </div>
                                         <div>
                                             <span className="text-xs font-medium text-[#9ca3af]">After expiry: </span>
-                                            <span className="text-xs text-gray-600 dark:text-gray-300 line-clamp-2">{plan.messages.afterExpiry?.text}</span>
+                                            <span className="text-xs text-[#9ca3af] line-clamp-2">{plan.messages.afterExpiry?.text}</span>
                                         </div>
                                     </div>
                                 )}
@@ -297,7 +297,7 @@ export default function PlansPage() {
                                                     .catch(console.error);
                                             }
                                         }}
-                                        className="flex-1 rounded-md bg-white px-3 py-2 text-sm font-semibold text-red-600 ring-1 ring-inset ring-red-300 hover:bg-red-50 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg dark:ring-red-900 dark:hover:bg-gray-700 transition"
+                                        className="flex-1 rounded-md bg-[#0b1220] px-3 py-2 text-sm font-semibold text-red-600 ring-1 ring-inset ring-red-300 hover:bg-red-50 bg-[#0b1220] border border-[#1f2937] dark:ring-red-900 hover:bg-[#8b5cf6]/10 transition"
                                     >
                                         <Trash2 className="h-4 w-4 inline mr-1.5" />
                                         Delete
@@ -316,7 +316,7 @@ export default function PlansPage() {
 
                         {/* Modal Header */}
                         <div className="px-6 py-5 border-b border-[#1f2937]">
-                            <h2 className="text-xl font-semibold dark:text-white">
+                            <h2 className="text-xl font-semibold text-[#f9fafb]">
                                 {editPlanId ? "Edit Plan" : "Create Plan"}
                             </h2>
                         </div>
@@ -411,7 +411,7 @@ export default function PlansPage() {
 
                                                 {/* Before Expiry */}
                                                 <div className="space-y-2">
-                                                    <p className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">⏳ Before Expiry (2 days)</p>
+                                                    <p className="text-xs font-bold text-[#9ca3af] uppercase tracking-wide">⏳ Before Expiry (2 days)</p>
                                                     <div>
                                                         <label className="text-xs text-[#9ca3af] mb-1 block">Message Text</label>
                                                         <textarea
@@ -448,7 +448,7 @@ export default function PlansPage() {
 
                                                 {/* After Expiry */}
                                                 <div className="space-y-2">
-                                                    <p className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">❌ After Expiry</p>
+                                                    <p className="text-xs font-bold text-[#9ca3af] uppercase tracking-wide">❌ After Expiry</p>
                                                     <div>
                                                         <label className="text-xs text-[#9ca3af] mb-1 block">Message Text</label>
                                                         <textarea
@@ -493,7 +493,7 @@ export default function PlansPage() {
                                         { key: "allowQuantity", label: "🔢 Allow Multiple Quantity Purchases (Max 25)" },
                                         { key: "voiceAlert",    label: "🔊 Voice Alert upon expiration (System Speaker)" },
                                     ].map(({ key, label }) => (
-                                        <label key={key} className="flex items-center gap-2 text-sm dark:text-gray-300 cursor-pointer">
+                                        <label key={key} className="flex items-center gap-2 text-sm text-[#9ca3af] cursor-pointer">
                                             <input
                                                 type="checkbox"
                                                 checked={(formData as any)[key]}
@@ -514,7 +514,7 @@ export default function PlansPage() {
                                             { key: "quickDelete",      label: "⚡ Quick Delete — auto-purge 1 day after expiry" },
                                             { key: "hasTokenPrint",    label: "🖨️ Token Print — auto-print 80mm receipt on registration" },
                                         ].map(({ key, label }) => (
-                                            <label key={key} className="flex items-start gap-2 text-sm dark:text-gray-300 cursor-pointer">
+                                            <label key={key} className="flex items-start gap-2 text-sm text-[#9ca3af] cursor-pointer">
                                                 <input
                                                     type="checkbox"
                                                     checked={(formData as any)[key]}
@@ -534,14 +534,14 @@ export default function PlansPage() {
                             <button
                                 type="button"
                                 onClick={() => { setIsModalOpen(false); setEditPlanId(null); }}
-                                className="px-4 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-[#8b5cf6]/5 transition"
+                                className="px-4 py-2 text-sm rounded-md border border-[#1f2937] text-[#9ca3af] hover:bg-[#8b5cf6]/5 transition"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
                                 form="plan-form"
-                                className="px-5 py-2 text-sm rounded-md bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 text-white font-semibold hover:bg-blue-50 dark:hover:bg-blue-500/100 transition"
+                                className="px-5 py-2 text-sm rounded-md bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 text-white font-semibold  transition"
                             >
                                 {editPlanId ? "Update Plan" : "Save Plan"}
                             </button>

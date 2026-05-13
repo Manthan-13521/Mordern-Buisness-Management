@@ -185,7 +185,7 @@ export default function HostelSettingsPage() {
     const activeRoom = activeFloor && activeRoomIndex !== null ? activeFloor.rooms[activeRoomIndex] : null;
 
     const Breadcrumb = () => (
-        <div className="flex items-center gap-2 text-sm font-bold text-slate-400 mb-6 bg-slate-900 p-3 rounded-xl border border-white/5 shadow-lg w-full">
+        <div className="flex items-center gap-2 text-sm font-bold text-slate-400 mb-6 bg-slate-900 p-3 rounded-xl border border-[#1f2937] shadow-lg w-full">
             <button onClick={() => setViewLevel("blocks")} className={`hover:text-blue-600 dark:text-blue-400 transition-colors flex items-center gap-1.5 ${viewLevel === "blocks" ? "text-blue-600 dark:text-blue-400" : ""}`}>
                 <Building2 className="w-4 h-4" /> Structure
             </button>
@@ -218,11 +218,11 @@ export default function HostelSettingsPage() {
         <div className="max-w-6xl mx-auto space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <h1 className="text-2xl font-black text-[#f9fafb] tracking-tight uppercase flex items-center gap-2">
-                    <span className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 p-2 rounded-lg text-white"><Layers className="w-6 h-6"/></span>
+                    <span className="bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 p-2 rounded-lg text-white"><Layers className="w-6 h-6"/></span>
                     Hostel Settings
                 </h1>
                 
-                <button onClick={handleSave} disabled={saving} className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 hover:bg-blue-50 dark:hover:bg-blue-500/100 text-white font-bold px-6 py-2.5 rounded-xl transition-all shadow-md shadow-indigo-600/20 disabled:opacity-50 flex items-center gap-2">
+                <button onClick={handleSave} disabled={saving} className="bg-[#8b5cf6] hover:bg-[#7c3aed] border-0  text-white font-bold px-6 py-2.5 rounded-xl transition-all shadow-md shadow-indigo-600/20 disabled:opacity-50 flex items-center gap-2">
                     <Save className="w-4 h-4" />
                     {saving ? "Saving..." : "Save Structure"}
                 </button>
@@ -233,7 +233,7 @@ export default function HostelSettingsPage() {
 
             <Breadcrumb />
 
-            <div className="bg-slate-950/20 backdrop-blur-md border border-white/5 rounded-2xl min-h-[500px] flex flex-col p-6 shadow-inner relative">
+            <div className="bg-slate-950/20 backdrop-blur-md border border-[#1f2937] rounded-2xl min-h-[500px] flex flex-col p-6 shadow-inner relative">
 
                 {viewLevel !== "blocks" && (
                     <button onClick={goBack} className="absolute top-6 left-6 z-10 flex items-center gap-1.5 bg-slate-800 border border-white/10 hover:border-blue-500 text-slate-300 font-bold px-4 py-2 rounded-lg transition-all shadow-sm">
@@ -268,7 +268,7 @@ export default function HostelSettingsPage() {
                                     >
                                         {/* Nice stepped roof */}
                                         <div className="w-24 h-4 bg-slate-400 dark:bg-slate-600 rounded-t-sm group-hover:bg-indigo-400 transition-colors"></div>
-                                        <div className="w-32 h-6 bg-slate-300 dark:bg-slate-500 rounded-t-sm group-hover:bg-blue-50 dark:hover:bg-blue-500/100 transition-colors shadow-sm z-10"></div>
+                                        <div className="w-32 h-6 bg-slate-300 dark:bg-slate-500 rounded-t-sm group- transition-colors shadow-sm z-10"></div>
                                         
                                         {/* Building Body */}
                                         <div className="w-40 min-h-[240px] bg-slate-100 dark:bg-slate-800 border-x border-t border-slate-300 dark:border-slate-700 flex flex-col-reverse p-3 shadow-2xl group-hover:border-indigo-400 group-hover:shadow-indigo-500/20 transition-all rounded-b-md border-b-[8px] border-b-slate-400 dark:border-b-slate-900">
@@ -325,8 +325,8 @@ export default function HostelSettingsPage() {
                         <div className="w-full flex justify-between items-center gap-3 mb-10 border-b-2 border-[#1f2937] pb-4 ml-0 sm:ml-20">
                             <h3 className="font-bold text-slate-500 uppercase tracking-widest">Building Stack</h3>
                             <div className="flex gap-3">
-                                <button onClick={addFloor} className="flex items-center gap-1.5 bg-white border-2 border-indigo-200 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 px-4 py-2 rounded-lg font-bold text-sm shadow-sm"><Plus className="w-4 h-4"/> Add Top Floor</button>
-                                <button onClick={deleteFloor} className="flex items-center gap-1.5 bg-white border-2 border-slate-200 text-rose-500 hover:bg-rose-50 px-4 py-2 rounded-lg font-bold text-sm shadow-sm"><Trash2 className="w-4 h-4"/> Remove Top</button>
+                                <button onClick={addFloor} className="flex items-center gap-1.5 bg-[#0b1220] border-2 border-indigo-200 text-blue-600 dark:text-blue-400 hover:bg-[#8b5cf6]/10 px-4 py-2 rounded-lg font-bold text-sm shadow-sm"><Plus className="w-4 h-4"/> Add Top Floor</button>
+                                <button onClick={deleteFloor} className="flex items-center gap-1.5 bg-[#0b1220] border-2 border-slate-200 text-rose-500 hover:bg-rose-50 px-4 py-2 rounded-lg font-bold text-sm shadow-sm"><Trash2 className="w-4 h-4"/> Remove Top</button>
                             </div>
                         </div>
 
@@ -338,7 +338,7 @@ export default function HostelSettingsPage() {
                                 <div 
                                     key={i} 
                                     onClick={() => { setActiveFloorIndex(i); setViewLevel("rooms"); }}
-                                    className="w-[300px] sm:w-[400px] h-16 sm:h-20 bg-[#0b1220] border-4 border-slate-400 dark:border-slate-500 rounded-sm flex justify-between items-center px-6 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-500/10 dark:hover:bg-slate-700 hover:border-indigo-500 group transition-all"
+                                    className="w-[300px] sm:w-[400px] h-16 sm:h-20 bg-[#0b1220] border-4 border-slate-400 dark:border-slate-500 rounded-sm flex justify-between items-center px-6 cursor-pointer hover:bg-[#8b5cf6]/10 dark:hover:bg-slate-700 hover:border-indigo-500 group transition-all"
                                 >
                                     <span className="text-2xl font-black text-[#f9fafb] group-hover:text-blue-600 dark:text-blue-400 transition-colors">Floor {f.floorNo}</span>
                                     <div className="flex gap-2">
@@ -360,8 +360,8 @@ export default function HostelSettingsPage() {
                         <div className="w-full flex justify-between items-center gap-3 mb-10 border-b-2 border-[#1f2937] pb-4 ml-0 sm:ml-20">
                             <h3 className="font-bold text-slate-500 uppercase tracking-widest">Floor Plan Editor</h3>
                             <div className="flex gap-3">
-                                <button onClick={addRoom} className="flex items-center gap-1.5 bg-white border-2 border-indigo-200 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 px-4 py-2 rounded-lg font-bold text-sm shadow-sm"><Plus className="w-4 h-4"/> Add Room</button>
-                                <button onClick={deleteRoom} className="flex items-center gap-1.5 bg-white border-2 border-slate-200 text-rose-500 hover:bg-rose-50 px-4 py-2 rounded-lg font-bold text-sm shadow-sm"><Trash2 className="w-4 h-4"/> Remove Room</button>
+                                <button onClick={addRoom} className="flex items-center gap-1.5 bg-[#0b1220] border-2 border-indigo-200 text-blue-600 dark:text-blue-400 hover:bg-[#8b5cf6]/10 px-4 py-2 rounded-lg font-bold text-sm shadow-sm"><Plus className="w-4 h-4"/> Add Room</button>
+                                <button onClick={deleteRoom} className="flex items-center gap-1.5 bg-[#0b1220] border-2 border-slate-200 text-rose-500 hover:bg-rose-50 px-4 py-2 rounded-lg font-bold text-sm shadow-sm"><Trash2 className="w-4 h-4"/> Remove Room</button>
                             </div>
                         </div>
 
@@ -435,7 +435,7 @@ export default function HostelSettingsPage() {
             </div>
 
             {/* WA Configuration Card */}
-            <div className="bg-slate-900 border border-white/5 rounded-2xl p-6 shadow-lg">
+            <div className="bg-slate-900 border border-[#1f2937] rounded-2xl p-6 shadow-lg">
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex flex-col">
                         <span className="font-black text-white flex items-center gap-2 uppercase tracking-wide">WhatsApp Automation</span>

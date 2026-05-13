@@ -178,7 +178,7 @@ export default function BalancePaymentsPage() {
                                                 setPayForm({ amount: "", paymentMethod: "cash", transactionId: "", notes: "" });
                                                 setError("");
                                             }}
-                                            className="flex items-center gap-1.5 text-xs bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 hover:bg-blue-50 dark:hover:bg-blue-500/100 text-white px-3 py-1.5 rounded-lg transition"
+                                            className="flex items-center gap-1.5 text-xs bg-[#8b5cf6] hover:bg-[#7c3aed] border-0  text-white px-3 py-1.5 rounded-lg transition"
                                         >
                                             <Plus className="h-3 w-3" />Pay
                                         </button>
@@ -202,7 +202,7 @@ export default function BalancePaymentsPage() {
                         <button 
                             disabled={page >= totalPages} 
                             onClick={() => setPage(p => p + 1)} 
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 text-white hover:bg-indigo-700 disabled:bg-slate-100 disabled:text-slate-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-600 transition-colors shadow-sm font-medium"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 text-white disabled:bg-slate-100 disabled:text-slate-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-600 transition-colors shadow-sm font-medium"
                         >
                             Next <ChevronRight className="h-4 w-4"/>
                         </button>
@@ -270,7 +270,7 @@ export default function BalancePaymentsPage() {
                                     className={INPUT}
                                 />
                             </div>
-                            <button type="submit" disabled={submitting} className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 hover:bg-blue-50 dark:hover:bg-blue-500/100 text-white font-semibold py-2.5 rounded-xl transition disabled:opacity-50">
+                            <button type="submit" disabled={submitting} className="w-full bg-[#8b5cf6] hover:bg-[#7c3aed] border-0  text-white font-semibold py-2.5 rounded-xl transition disabled:opacity-50">
                                 {submitting ? "Saving…" : "Record Payment"}
                             </button>
                         </form>

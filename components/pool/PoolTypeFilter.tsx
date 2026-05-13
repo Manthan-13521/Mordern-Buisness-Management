@@ -14,7 +14,7 @@ export function PoolTypeFilter() {
                     id="pool-type-filter"
                     value={selectedType}
                     onChange={(e) => setSelectedType(e.target.value as any)}
-                    className="appearance-none text-sm font-bold rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 pl-9 pr-8 py-2 min-w-[150px] focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors cursor-pointer shadow-sm"
+                    className="appearance-none text-sm font-bold rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-[#0b1220] text-slate-800 dark:text-slate-100 pl-9 pr-8 py-2 min-w-[150px] focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors cursor-pointer shadow-sm"
                     aria-label="Filter by Member Type"
                 >
                     <option value="all">All Types</option>

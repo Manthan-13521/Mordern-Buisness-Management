@@ -400,7 +400,7 @@ export default function SettingsPage() {
                                     <button
                                         onClick={handleCapacitySave}
                                         disabled={capacityLoading}
-                                        className="inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-50 dark:hover:bg-blue-500/100 disabled:opacity-60 transition-colors"
+                                        className="inline-flex items-center gap-2 rounded-md bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 px-4 py-2 text-sm font-semibold text-white shadow-sm  disabled:opacity-60 transition-colors"
                                     >
                                         <Save className="w-4 h-4" />
                                         {capacityLoading ? "Saving..." : "Save Capacity"}
@@ -456,7 +456,7 @@ export default function SettingsPage() {
                                     <button
                                         onClick={handleAwsExcelBackup}
                                         disabled={awsBackupLoading}
-                                        className="inline-flex w-full justify-center items-center gap-2 rounded-md bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-50 dark:hover:bg-blue-500/100 disabled:opacity-60 transition-colors"
+                                        className="inline-flex w-full justify-center items-center gap-2 rounded-md bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 px-4 py-2 text-sm font-semibold text-white shadow-sm  disabled:opacity-60 transition-colors"
                                     >
                                         <Server className="w-4 h-4" />
                                         {awsBackupLoading ? "Uploading..." : "AWS Excel Backup (Last 1 Year)"}

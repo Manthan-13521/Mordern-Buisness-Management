@@ -110,7 +110,7 @@ export default function OverviewPage() {
     return (
         <div className="max-w-6xl mx-auto space-y-6">
             <h1 className="text-2xl font-black text-[#f9fafb] tracking-tight uppercase flex items-center gap-2">
-                <span className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 p-2 rounded-lg text-white"><Building2 className="w-6 h-6"/></span>
+                <span className="bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 p-2 rounded-lg text-white"><Building2 className="w-6 h-6"/></span>
                 Hostel Overview
             </h1>
             
@@ -140,7 +140,7 @@ export default function OverviewPage() {
                                     <div className="relative flex flex-col items-center">
                                         {/* Nice stepped roof */}
                                         <div className="w-24 h-4 bg-slate-400 dark:bg-slate-600 rounded-t-sm group-hover:bg-indigo-400 transition-colors"></div>
-                                        <div className="w-32 h-6 bg-slate-300 dark:bg-slate-500 rounded-t-sm group-hover:bg-blue-50 dark:hover:bg-blue-500/100 transition-colors shadow-sm z-10"></div>
+                                        <div className="w-32 h-6 bg-slate-300 dark:bg-slate-500 rounded-t-sm group- transition-colors shadow-sm z-10"></div>
                                         
                                         {/* Building Body */}
                                         <div className="w-40 min-h-[220px] bg-slate-100 dark:bg-slate-800 border-x border-t border-slate-300 dark:border-slate-700 flex flex-col-reverse p-3 shadow-2xl group-hover:border-indigo-400 group-hover:shadow-indigo-500/20 transition-all rounded-b-md border-b-[8px] border-b-slate-400 dark:border-b-slate-900">
@@ -201,7 +201,7 @@ export default function OverviewPage() {
                                 <div 
                                     key={f._id} 
                                     onClick={() => { setSelectedFloor(f); setViewLevel("rooms"); }}
-                                    className="w-[280px] sm:w-[360px] h-16 sm:h-20 bg-[#0b1220] border-2 border-slate-300 dark:border-slate-500 rounded flex justify-between items-center px-6 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-500/10 dark:hover:bg-indigo-900/40 hover:border-indigo-400 group transition-all"
+                                    className="w-[280px] sm:w-[360px] h-16 sm:h-20 bg-[#0b1220] border-2 border-slate-300 dark:border-slate-500 rounded flex justify-between items-center px-6 cursor-pointer hover:bg-[#8b5cf6]/10 dark:hover:bg-indigo-900/40 hover:border-indigo-400 group transition-all"
                                 >
                                     <span className="text-2xl font-black text-[#f9fafb] group-hover:text-blue-600 dark:text-blue-400 transition-colors">{f.floorNo}</span>
                                     <div className="flex gap-4 text-xs font-bold uppercase tracking-wider text-right text-slate-500 group-hover:text-blue-500">
@@ -269,7 +269,7 @@ export default function OverviewPage() {
                                     `}
                                 >
                                     {/* Pillow shape layout */}
-                                    <div className="w-12 h-6 sm:w-16 sm:h-8 rounded-full bg-white dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 mb-auto"></div>
+                                    <div className="w-12 h-6 sm:w-16 sm:h-8 rounded-full bg-[#0b1220] dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 mb-auto"></div>
                                     
                                     <span className={`text-2xl font-black absolute top-1/2 -translate-y-1/2 ${bed.isOccupied ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>
                                         {bed.bedNo}

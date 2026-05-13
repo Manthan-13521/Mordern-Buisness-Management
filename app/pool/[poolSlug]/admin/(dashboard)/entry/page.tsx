@@ -294,7 +294,7 @@ export default function EntryPage() {
             {occupancy && (
                 <div className="rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm p-4">
                     <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <div className="flex items-center gap-2 text-sm font-medium text-[#9ca3af]">
                             <Users className="w-4 h-4" />
                             Pool Occupancy
                         </div>
@@ -357,7 +357,7 @@ export default function EntryPage() {
                         <div className="flex gap-3">
                             {!cameraActive ? (
                                 <button onClick={startScanning}
-                                    className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-50 dark:hover:bg-blue-500/100 transition-colors">
+                                    className="inline-flex items-center gap-2 rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 px-5 py-2.5 text-sm font-semibold text-white shadow-sm  transition-colors">
                                     <ScanLine className="h-4 w-4" />
                                     Start Scan
                                 </button>
@@ -394,10 +394,10 @@ export default function EntryPage() {
                                     }
                                 }}
                                 placeholder="M0001 or MS0001"
-                                className="flex-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-sm px-3 py-2 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                className="flex-1 rounded-lg border border-[#1f2937] bg-[#0b1220] dark:backdrop-blur-md dark:border border-[#1f2937] shadow-sm px-3 py-2 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                             />
                             <button onClick={() => handleUidLookup()} disabled={lookupLoading || !uid.trim()}
-                                className="rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-50 dark:hover:bg-blue-500/100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                className="rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 px-4 py-2 text-sm font-semibold text-white  disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                                 {lookupLoading ? "..." : "Search"}
                             </button>
                             <button onClick={() => { handleUidLookup(); handleScan(uid.trim(), true); }} disabled={lookupLoading || !uid.trim() || isScanning}
@@ -427,7 +427,7 @@ export default function EntryPage() {
                                         {lookupResult._source === "entertainment" ? "Entertainment ID" : "Member ID Card"}
                                     </span>
                                     <span className={`text-xs font-bold px-2 py-0.5 rounded shadow-sm ${
-                                        lookupResult.isDeleted ? "bg-gray-500 text-white" :
+                                        lookupResult.isDeleted ? "bg-[#020617]0 text-white" :
                                         lookupResult.isExpired ? "bg-red-500 text-white" :
                                         "bg-green-500 text-white"
                                     }`}>
@@ -442,7 +442,7 @@ export default function EntryPage() {
                                         {lookupResult.photoUrl ? (
                                             <img src={`/api/members/${lookupResult._id}/photo`} alt="" className="h-56 w-48 object-cover border-4 border-[#1f2937] rounded-lg shadow-sm" />
                                         ) : (
-                                            <div className="h-56 w-48 bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg border-4 border-gray-50 flex items-center justify-center rounded-lg shadow-sm">
+                                            <div className="h-56 w-48 bg-white/5 dark:backdrop-blur-md dark:border border-[#1f2937] shadow-lg border-4 border-gray-50 flex items-center justify-center rounded-lg shadow-sm">
                                                 <UserCheck className="h-16 w-16 text-gray-400" />
                                             </div>
                                         )}
@@ -479,7 +479,7 @@ export default function EntryPage() {
                                 </div>
 
                                 {/* Footer / Expiry */}
-                                <div className="bg-white/5 dark:dark:backdrop-blur-md dark:border-white/10 shadow-lg px-5 py-3 border-t border-[#1f2937] flex justify-between items-center">
+                                <div className="bg-white/5 dark:dark:backdrop-blur-md border-[#1f2937] shadow-lg px-5 py-3 border-t border-[#1f2937] flex justify-between items-center">
                                     <span className="text-xs text-gray-500 font-medium">Valid Till: {new Date(lookupResult.planEndDate || lookupResult.expiryDate || "").toLocaleDateString()}</span>
                                     <span className={`text-xs font-bold ${lookupResult.isExpired ? "text-red-600" : "text-blue-600 dark:text-blue-400 dark:text-indigo-400"}`}>
                                         {lookupResult.isExpired ? "Expired" : `⏱ ${getRemainingTimeText(lookupResult.planEndDate || lookupResult.expiryDate || "")}`}

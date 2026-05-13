@@ -125,7 +125,7 @@ export default function PlansPage() {
             <div className="flex items-center justify-between">
                 <div><h1 className="text-2xl font-bold text-[#f9fafb] flex items-center gap-2"><ClipboardList className="h-6 w-6 text-violet-500"/>Plans</h1>
                 <p className="text-sm text-slate-500">{plans.length} plans configured</p></div>
-                <button onClick={openAdd} className="flex items-center gap-1.5 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 hover:bg-blue-50 dark:hover:bg-blue-500/100 text-white text-sm font-medium px-4 py-2 rounded-xl shadow transition"><Plus className="h-4 w-4"/>Add Plan</button>
+                <button onClick={openAdd} className="flex items-center gap-1.5 bg-[#8b5cf6] hover:bg-[#7c3aed] border-0  text-white text-sm font-medium px-4 py-2 rounded-xl shadow transition"><Plus className="h-4 w-4"/>Add Plan</button>
             </div>
 
             {loading ? <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{Array.from({length:3}).map((_,i)=><div key={i} className="h-36 rounded-2xl bg-slate-200 dark:bg-slate-800 animate-pulse"/>)}</div>
@@ -294,7 +294,7 @@ export default function PlansPage() {
                                     {form.isActive ? <ToggleRight className="h-7 w-7"/> : <ToggleLeft className="h-7 w-7 text-slate-400"/>}
                                 </button></div>}
                             <div className="pt-2">
-                                <button type="submit" disabled={submitting} className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 hover:bg-blue-50 dark:hover:bg-blue-500/100 text-white font-bold py-3 rounded-xl shadow-lg shadow-indigo-500/20 transition disabled:opacity-50 flex items-center justify-center gap-2">
+                                <button type="submit" disabled={submitting} className="w-full bg-[#8b5cf6] hover:bg-[#7c3aed] border-0  text-white font-bold py-3 rounded-xl shadow-lg shadow-indigo-500/20 transition disabled:opacity-50 flex items-center justify-center gap-2">
                                     {submitting && <RefreshCw className="h-4 w-4 animate-spin" />}
                                     {submitting ? "Saving Plan..." : editPlan ? "Update Plan" : "Create Plan"}
                                 </button>

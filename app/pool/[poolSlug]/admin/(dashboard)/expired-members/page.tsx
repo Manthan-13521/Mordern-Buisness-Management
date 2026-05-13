@@ -72,7 +72,7 @@ export default function ExpiredMembersPage() {
                     <PoolTypeFilter />
                     <button
                         onClick={() => fetchExpired(page)}
-                        className="inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-50 dark:hover:bg-blue-500/100 transition-colors"
+                        className="inline-flex items-center gap-2 rounded-md bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 px-4 py-2 text-sm font-semibold text-white  transition-colors"
                     >
                         <RotateCcw className="w-4 h-4" /> Refresh
                     </button>
@@ -82,7 +82,7 @@ export default function ExpiredMembersPage() {
             {loading ? (
                 <div className="animate-pulse space-y-3">
                     {[...Array(5)].map((_, i) => (
-                        <div key={i} className="h-16 bg-gray-200 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg rounded-xl" />
+                        <div key={i} className="h-16 bg-gray-200 bg-[#0b1220] border border-[#1f2937] rounded-xl" />
                     ))}
                 </div>
             ) : error ? (
@@ -97,7 +97,7 @@ export default function ExpiredMembersPage() {
                 <>
                     <div className="overflow-x-auto rounded-xl border border-[#1f2937] shadow">
                         <table className="min-w-full divide-y divide-[#1f2937] bg-[#0b1220]">
-                            <thead className="bg-gray-50 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg">
+                            <thead className="bg-[#020617] bg-[#0b1220] border border-[#1f2937]">
                                 <tr>
                                     {["Member ID", "Name", "Phone", "Plan", "Expiry Date", "Days Expired", "QR Token (ID)"].map(h => (
                                         <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">{h}</th>
@@ -112,8 +112,8 @@ export default function ExpiredMembersPage() {
                                             <div className="text-sm font-medium text-[#f9fafb]">{m.name}</div>
                                             {m.age && <div className="text-xs text-gray-500">Age: {m.age}</div>}
                                         </td>
-                                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{m.phone}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                                        <td className="px-4 py-3 text-sm text-[#9ca3af]">{m.phone}</td>
+                                        <td className="px-4 py-3 text-sm text-[#9ca3af]">
                                             {m.planId?.name || <span className="text-gray-400 italic">No plan</span>}
                                             {m.planId?.price && <div className="text-xs text-gray-400">₹{m.planId.price}</div>}
                                         </td>
@@ -149,7 +149,7 @@ export default function ExpiredMembersPage() {
                                 <button
                                     onClick={() => fetchExpired(page + 1)}
                                     disabled={page >= totalPages}
-                                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 text-white hover:bg-indigo-700 disabled:bg-slate-100 disabled:text-slate-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-600 transition-colors shadow-sm font-medium"
+                                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 text-white disabled:bg-slate-100 disabled:text-slate-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-600 transition-colors shadow-sm font-medium"
                                 >
                                     Next <ChevronRight className="h-4 w-4" />
                                 </button>

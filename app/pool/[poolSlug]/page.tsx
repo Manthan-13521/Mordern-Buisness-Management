@@ -22,11 +22,11 @@ export default async function PoolLanding({ params }: { params: Promise<{ poolSl
             <div className="mt-10 flex items-center justify-center gap-x-6">
               <Link
                 href={`/pool/${poolSlug}/register`}
-                className="rounded-md bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 px-6 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-50 dark:hover:bg-blue-500/100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 flex items-center gap-2"
+                className="rounded-md bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 px-6 py-3.5 text-sm font-semibold text-white shadow-sm  focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 flex items-center gap-2"
               >
                 Register Now <ArrowRight className="w-4 h-4" />
               </Link>
-              <Link href={`/pool/${poolSlug}/admin/login`} className="text-sm font-semibold leading-6 text-gray-900 dark:text-gray-100 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md">
+              <Link href={`/pool/${poolSlug}/admin/login`} className="text-sm font-semibold leading-6 text-gray-900 dark:text-gray-100 p-2 hover:bg-gray-100 hover:bg-[#8b5cf6]/5 rounded-md">
                 Admin Area <span aria-hidden="true">→</span>
               </Link>
             </div>
@@ -48,7 +48,7 @@ export default async function PoolLanding({ params }: { params: Promise<{ poolSl
             <dl className="grid max-w-xl grid-cols-1 gap-x-8 gap-y-10 lg:max-w-none lg:grid-cols-3 lg:gap-y-16">
               <div className="relative pl-16">
                 <dt className="text-base font-semibold leading-7 text-[#f9fafb]">
-                  <div className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0">
+                  <div className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0">
                     <UserPlus className="h-6 w-6 text-white" aria-hidden="true" />
                   </div>
                   Online Registration
@@ -57,7 +57,7 @@ export default async function PoolLanding({ params }: { params: Promise<{ poolSl
               </div>
               <div className="relative pl-16">
                 <dt className="text-base font-semibold leading-7 text-[#f9fafb]">
-                  <div className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0">
+                  <div className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0">
                     <Clock className="h-6 w-6 text-white" aria-hidden="true" />
                   </div>
                   Instant QR ID
@@ -66,7 +66,7 @@ export default async function PoolLanding({ params }: { params: Promise<{ poolSl
               </div>
               <div className="relative pl-16">
                 <dt className="text-base font-semibold leading-7 text-[#f9fafb]">
-                  <div className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0">
+                  <div className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0">
                     <ShieldCheck className="h-6 w-6 text-white" aria-hidden="true" />
                   </div>
                   Secure Entry

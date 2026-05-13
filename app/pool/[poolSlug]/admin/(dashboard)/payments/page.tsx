@@ -207,7 +207,7 @@ export default function PaymentsPage() {
                     </button>
                     <button
                         onClick={() => setIsModalOpen(true)}
-                        className="inline-flex items-center rounded-md bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-50 dark:hover:bg-blue-500/100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+                        className="inline-flex items-center rounded-md bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 px-3 py-2 text-sm font-semibold text-white shadow-sm  focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
                     >
                         <Plus className="-ml-0.5 mr-1.5 h-5 w-5" />
                         Record Payment
@@ -218,9 +218,9 @@ export default function PaymentsPage() {
             <div className="mt-8 flow-root">
                 <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
                     <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-                        <div className="overflow-hidden shadow-lg border border-white/5 rounded-lg">
-                            <table className="min-w-full divide-y divide-white/5">
-                                <thead className="bg-slate-900/50 backdrop-blur-md">
+                        <div className="overflow-hidden shadow-lg border border-[#1f2937] rounded-lg">
+                            <table className="min-w-full divide-y divide-[#1f2937]">
+                                <thead className="bg-[#0b1220]">
                                     <tr>
                                         <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-[#f9fafb] sm:pl-6">Date</th>
                                         <th className="px-3 py-3.5 text-left text-sm font-semibold text-[#f9fafb]">Member</th>
@@ -230,7 +230,7 @@ export default function PaymentsPage() {
                                         <th className="px-3 py-3.5 text-left text-sm font-semibold text-[#f9fafb]">Status</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-white/5 bg-[#0b1220]">
+                                <tbody className="divide-y divide-[#1f2937] bg-[#0b1220]">
                                     {loading ? (
                                         <tr><td colSpan={6} className="py-10 text-center text-gray-500">Loading...</td></tr>
                                     ) : payments.length === 0 ? (
@@ -304,7 +304,7 @@ export default function PaymentsPage() {
                         <button 
                             disabled={page >= totalPages || loading} 
                             onClick={() => setPage(p => Math.min(totalPages, p + 1))} 
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 text-white hover:bg-indigo-700 disabled:bg-slate-100 disabled:text-slate-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-600 transition-colors shadow-sm font-medium"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 text-white disabled:bg-slate-100 disabled:text-slate-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-600 transition-colors shadow-sm font-medium"
                         >
                             Next <ChevronRight className="h-4 w-4" />
                         </button>
@@ -328,7 +328,7 @@ export default function PaymentsPage() {
 
                             <div>
                                 <label className="block text-sm font-medium dark:text-gray-300">Plan</label>
-                                <select required value={formData.planId} onChange={e => handlePlanChange(e.target.value)} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 bg-[#0b1220] shadow-sm dark:text-white dark:border-gray-700">
+                                <select required value={formData.planId} onChange={e => handlePlanChange(e.target.value)} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 bg-[#0b1220] shadow-sm dark:text-white border-[#1f2937]">
                                     <option value="">Select Plan</option>
                                     {plans.map(p => <option key={p._id} value={p._id}>{p.name} - ₹{p.price}</option>)}
                                 </select>
@@ -359,13 +359,13 @@ export default function PaymentsPage() {
                             {formData.paymentMethod === "upi" && (
                                 <div>
                                     <label className="block text-sm font-medium dark:text-gray-300">Transaction ID</label>
-                                    <input required type="text" value={formData.transactionId} onChange={e => setFormData({ ...formData, transactionId: e.target.value })} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 bg-[#0b1220] shadow-sm dark:text-white dark:border-gray-700" placeholder="e.g. UPI Ref No" />
+                                    <input required type="text" value={formData.transactionId} onChange={e => setFormData({ ...formData, transactionId: e.target.value })} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 bg-[#0b1220] shadow-sm dark:text-white border-[#1f2937]" placeholder="e.g. UPI Ref No" />
                                 </div>
                             )}
 
                             <div className="flex justify-end space-x-3 mt-6">
-                                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm rounded-md border dark:border-gray-700 dark:text-gray-300">Cancel</button>
-                                <button type="submit" className="px-4 py-2 text-sm rounded-md bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 text-white hover:bg-blue-50 dark:hover:bg-blue-500/100">Record</button>
+                                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm rounded-md border border-[#1f2937] dark:text-gray-300">Cancel</button>
+                                <button type="submit" className="px-4 py-2 text-sm rounded-md bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 text-white ">Record</button>
                             </div>
                         </form>
                     </div>

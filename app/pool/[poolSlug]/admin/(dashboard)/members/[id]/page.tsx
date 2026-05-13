@@ -204,7 +204,7 @@ export default function MemberDetailPage() {
             <ExpiryBanner member={member} />
 
             {/* Member Info Card */}
-            <div className="rounded-2xl border border-white/5 bg-slate-900 shadow-2xl overflow-hidden">
+            <div className="rounded-2xl border border-[#1f2937] bg-slate-900 shadow-2xl overflow-hidden">
                 <div className="flex items-start gap-6 p-6">
                     {member.photoUrl
                         ? <img src={`/api/members/${member._id}/photo`} alt="" className="h-20 w-20 rounded-xl object-cover ring-1 ring-[#1f2937] shrink-0" />
@@ -233,12 +233,12 @@ export default function MemberDetailPage() {
                                 <PrinterAppsHelp />
                                 {member.isDeleted ? (
                                     <button onClick={handleRestore}
-                                        className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-50 dark:hover:bg-blue-500/100">
+                                        className="inline-flex items-center gap-1.5 rounded-md bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 px-3 py-1.5 text-sm font-medium text-white ">
                                         <RotateCcw className="h-3.5 w-3.5" /> Restore
                                     </button>
                                 ) : (
                                     <button onClick={handleDelete}
-                                        className="inline-flex items-center gap-1.5 rounded-md bg-[#0b1220] px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 ring-1 ring-red-300 dark:ring-red-800 hover:bg-red-50 dark:hover:bg-red-900/30 shadow-sm transition">
+                                        className="inline-flex items-center gap-1.5 rounded-md bg-[#0b1220] px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 ring-1 ring-red-300 dark:ring-red-800 hover:bg-red-50 hover:bg-red-500/10 shadow-sm transition">
                                         <Trash2 className="h-3.5 w-3.5" /> Delete
                                     </button>
                                 )}
@@ -271,7 +271,7 @@ export default function MemberDetailPage() {
             </div>
 
             {/* Equipment Panel */}
-            <div className="rounded-2xl border border-white/5 bg-slate-900 shadow-2xl overflow-hidden">
+            <div className="rounded-2xl border border-[#1f2937] bg-slate-900 shadow-2xl overflow-hidden">
                 <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between bg-white/5 dark:backdrop-blur-md">
                     <h3 className="text-base font-semibold text-[#f9fafb] flex items-center gap-2">
                         <Package className="h-4 w-4 text-blue-500" /> Equipment
@@ -292,12 +292,12 @@ export default function MemberDetailPage() {
                             value={newItem}
                             onChange={e => setNewItem(e.target.value)}
                             onKeyDown={e => e.key === "Enter" && handleIssueEquipment()}
-                            className="flex-1 rounded-md border border-gray-300 dark:border-gray-700 bg-[#0b1220] shadow-sm px-3 py-2 text-sm text-[#f9fafb] placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500"
+                            className="flex-1 rounded-md border border-gray-300 border-[#1f2937] bg-[#0b1220] shadow-sm px-3 py-2 text-sm text-[#f9fafb] placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500"
                         />
                         <button
                             onClick={handleIssueEquipment}
                             disabled={issuing || !newItem.trim()}
-                            className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 px-4 py-2 text-sm font-medium text-white hover:bg-blue-50 dark:hover:bg-blue-500/100 disabled:opacity-50"
+                            className="inline-flex items-center gap-1.5 rounded-md bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 px-4 py-2 text-sm font-medium text-white  disabled:opacity-50"
                         >
                             <Package className="h-3.5 w-3.5" /> Issue
                         </button>
@@ -317,7 +317,7 @@ export default function MemberDetailPage() {
                                     </div>
                                     <button
                                         onClick={() => handleReturnEquipment(item._id)}
-                                        className="inline-flex items-center gap-1 rounded-md bg-[#0b1220] px-2.5 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 ring-1 ring-green-300 dark:ring-green-800 hover:bg-green-50 dark:hover:bg-green-900/30 shadow-sm transition"
+                                        className="inline-flex items-center gap-1 rounded-md bg-[#0b1220] px-2.5 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 ring-1 ring-green-300 dark:ring-green-800 hover:bg-green-50 hover:bg-green-500/10 shadow-sm transition"
                                     >
                                         <PackageCheck className="h-3 w-3" /> Return
                                     </button>

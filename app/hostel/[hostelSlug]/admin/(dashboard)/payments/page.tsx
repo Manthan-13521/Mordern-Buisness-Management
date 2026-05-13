@@ -94,13 +94,13 @@ export default function PaymentsPage() {
                 </div>
             </div>
 
-            <div className="rounded-2xl bg-slate-900 border border-white/5 shadow-lg overflow-hidden">
+            <div className="rounded-2xl bg-slate-900 border border-[#1f2937] shadow-lg overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
                         <thead className="bg-slate-950/50 backdrop-blur-md text-xs text-slate-400 uppercase tracking-wider">
                             <tr>{["Member","Plan","Amount","Method","Type","Date"].map(h=><th key={h} className="text-left px-4 py-3 whitespace-nowrap">{h}</th>)}</tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5 bg-[#0b1220]">
+                        <tbody className="divide-y divide-[#1f2937] bg-[#0b1220]">
                             {loading ? Array.from({length:5}).map((_,i)=><tr key={i}>{Array.from({length:6}).map((_,j)=><td key={j} className="px-4 py-3"><div className="h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"/></td>)}</tr>)
                             : payments.length===0 ? <tr><td colSpan={6} className="px-4 py-12 text-center text-slate-400">No payments found{selectedBlock !== "all" ? ` for Block ${selectedBlock}` : ""}</td></tr>
                             : payments.map(p=>(
@@ -129,7 +129,7 @@ export default function PaymentsPage() {
                         <button
                             disabled={page >= totalPages}
                             onClick={() => setPage(p => p + 1)}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 text-white disabled:bg-slate-100 disabled:text-slate-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-600 transition-colors shadow-sm font-medium"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 text-white disabled:bg-slate-100 disabled:text-slate-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-600 transition-colors shadow-sm font-medium"
                         >
                             Next <ChevronRight className="h-4 w-4"/>
                         </button>

@@ -227,7 +227,7 @@ export default function MembersPage() {
 
             if (m.isDeleted) {
                 verdict = "DELETED";
-                verdictClass = "bg-gray-100 text-gray-600 ring-gray-500/20 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg dark:text-gray-400";
+                verdictClass = "bg-[#0b1220] text-gray-600 ring-gray-500/20 bg-[#0b1220] border border-[#1f2937] text-[#9ca3af]";
                 rowClass = "bg-red-50 dark:bg-red-950/30";
                 daysLeftLabel = "Deleted";
             } else if (m.defaulterStatus === "blocked") {
@@ -386,7 +386,7 @@ export default function MembersPage() {
                     </a>
                     <button
                         onClick={() => setIsAddModalOpen(true)}
-                        className="inline-flex items-center rounded-md bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-50 dark:hover:bg-blue-500/100"
+                        className="inline-flex items-center rounded-md bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 px-3 py-2 text-sm font-semibold text-white shadow-sm "
                     >
                         <Plus className="-ml-0.5 mr-1.5 h-4 w-4" />
                         Add Member
@@ -399,7 +399,7 @@ export default function MembersPage() {
                 <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                     type="text"
-                    className="block w-full rounded-md border border-white/10 bg-white/5 py-2 pl-9 pr-3 text-sm text-white placeholder-white/40 focus:ring-2 focus:ring-blue-500 transition shadow-sm"
+                    className="block w-full rounded-md border border-white/10 bg-white/5 py-2 pl-9 pr-3 text-sm text-white placeholder-white/40 focus:ring-2 focus:ring-[#8b5cf6] transition shadow-sm"
                     placeholder="Search name, ID, phone…"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -438,9 +438,9 @@ export default function MembersPage() {
             <div className="flow-root">
                 <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
                     <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-                        <div className="overflow-hidden shadow-lg border border-white/5 rounded-lg">
-                            <table className="min-w-full divide-y divide-white/5">
-                                <thead className="bg-slate-900/50 backdrop-blur-md">
+                        <div className="overflow-hidden shadow-lg border border-[#1f2937] rounded-lg">
+                            <table className="min-w-full divide-y divide-[#1f2937]">
+                                <thead className="bg-[#0b1220]">
                                     <tr>
                                         {["Member", "Phone", "Plan / Qty", "Equipment", "Balance", "Valid Till", "Status", ""].map((h) => (
                                             <th key={h} className="px-3 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-[#9ca3af] first:pl-6">
@@ -449,7 +449,7 @@ export default function MembersPage() {
                                         ))}
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-white/5 bg-[#0b1220]">
+                                <tbody className="divide-y divide-[#1f2937] bg-[#0b1220]">
                                     {loading ? (
                                         <tr><td colSpan={8} className="py-12 text-center">
                                             <RefreshCw className="animate-spin h-5 w-5 mx-auto text-blue-500" />
@@ -536,18 +536,18 @@ export default function MembersPage() {
                                                             </button>
                                                         ) : (
                                                             <a href={`/api/members/${member._id}/pdf`} download title="Download ID Card"
-                                                                className="p-1.5 rounded-md text-gray-400 hover:text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 dark:hover:bg-indigo-900/30 transition-colors">
+                                                                className="p-1.5 rounded-md text-gray-400 hover:text-blue-600 dark:text-blue-400 hover:bg-[#8b5cf6]/10  transition-colors">
                                                                 <Download className="h-4 w-4" />
                                                             </a>
                                                         )}
                                                         {plan?.hasTokenPrint && (
                                                             <button onClick={() => handleReprint(member)} title="Reprint Token"
-                                                                className="p-1.5 rounded-md text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors">
+                                                                className="p-1.5 rounded-md text-gray-400 hover:text-green-600 hover:bg-green-50 hover:bg-green-500/10 transition-colors">
                                                                 <Printer className="h-4 w-4" />
                                                             </button>
                                                         )}
                                                         <button onClick={() => handleDelete(member._id, member.name)} title="Delete Member"
-                                                            className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
+                                                            className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 hover:bg-red-500/10 transition-colors">
                                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                                 <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
                                                             </svg>
@@ -583,7 +583,7 @@ export default function MembersPage() {
                     <button
                         disabled={page >= totalPages || loading}
                         onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 text-white hover:bg-indigo-700 disabled:bg-slate-100 disabled:text-slate-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-600 transition-colors shadow-sm font-medium"
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 text-white disabled:bg-slate-100 disabled:text-slate-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-600 transition-colors shadow-sm font-medium"
                     >
                         Next <ChevronRight className="h-4 w-4" />
                     </button>

@@ -77,7 +77,7 @@ export default function HostelRegisterPage() {
                 <p className="text-slate-300 text-sm"><span className="font-semibold text-white">{success.hostelName}</span> has been registered. Your admin account is ready.</p>
                 <button
                     onClick={() => router.push("/select-plan")}
-                    className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 hover:bg-blue-50 dark:hover:bg-blue-500/100 text-white font-semibold py-3 rounded-xl shadow transition"
+                    className="w-full bg-[#8b5cf6] hover:bg-[#7c3aed] border-0  text-white font-semibold py-3 rounded-xl shadow transition"
                 >
                     Continue to Plan Selection →
                 </button>
@@ -97,7 +97,7 @@ export default function HostelRegisterPage() {
                 <div className="bg-slate-950/40 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl p-8 ring-1 ring-white/5">
                     {/* Header */}
                     <div className="flex flex-col items-center mb-8">
-                        <div className="h-14 w-14 rounded-2xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 flex items-center justify-center shadow-lg shadow-indigo-900/50 mb-4">
+                        <div className="h-14 w-14 rounded-2xl bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 flex items-center justify-center shadow-lg shadow-indigo-900/50 mb-4">
                             <Building2 className="h-7 w-7 text-white" />
                         </div>
                         <h1 className="text-2xl font-bold text-white">Register Your Hostel</h1>
@@ -162,7 +162,7 @@ export default function HostelRegisterPage() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 hover:bg-blue-50 dark:hover:bg-blue-500/100 active:bg-indigo-700 text-white text-sm font-semibold py-3 shadow-lg shadow-indigo-900/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                            className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#8b5cf6] hover:bg-[#7c3aed] border-0  active:bg-indigo-700 text-white text-sm font-semibold py-3 shadow-lg shadow-indigo-900/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2"
                         >
                             <Building2 className="h-4 w-4" />
                             {loading ? "Creating Hostel…" : "Create Hostel Account"}

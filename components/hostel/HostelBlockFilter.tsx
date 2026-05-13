@@ -17,7 +17,7 @@ export function HostelBlockFilter() {
                     value={selectedBlock}
                     onChange={(e) => setSelectedBlock(e.target.value)}
                     disabled={blocksLoading}
-                    className="appearance-none text-sm font-bold rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 pl-9 pr-8 py-2 min-w-[140px] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
+                    className="appearance-none text-sm font-bold rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-[#0b1220] text-slate-800 dark:text-slate-100 pl-9 pr-8 py-2 min-w-[140px] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
                     aria-label="Filter by block"
                 >
                     <option value="all">All Blocks</option>

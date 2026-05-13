@@ -287,14 +287,14 @@ export default function MembersPage() {
                         <RefreshCw className="h-4 w-4 text-slate-500" />
                     </button>
                     <HostelBlockFilter />
-                    <button onClick={openAdd} className="flex items-center gap-1.5 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 hover:bg-blue-50 dark:hover:bg-blue-500/100 text-white text-sm font-semibold px-4 py-2 rounded-xl shadow transition">
+                    <button onClick={openAdd} className="flex items-center gap-1.5 bg-[#8b5cf6] hover:bg-[#7c3aed] border-0  text-white text-sm font-semibold px-4 py-2 rounded-xl shadow transition">
                         <Plus className="h-4 w-4" />Add Member
                     </button>
                 </div>
             </div>
 
             {/* Table */}
-            <div className="rounded-2xl bg-slate-900 border border-white/5 shadow-lg overflow-hidden">
+            <div className="rounded-2xl bg-slate-900 border border-[#1f2937] shadow-lg overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
                         <thead className="bg-slate-950/50 backdrop-blur-md text-xs text-slate-400 uppercase tracking-wider">
@@ -304,7 +304,7 @@ export default function MembersPage() {
                                 ))}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5 bg-[#0b1220]">
+                        <tbody className="divide-y divide-[#1f2937] bg-[#0b1220]">
                             {loading ? Array.from({ length: 5 }).map((_, i) => (
                                 <tr key={i}>{Array.from({ length: 7 }).map((_, j) => (
                                     <td key={j} className="px-4 py-3"><div className="h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /></td>
@@ -349,7 +349,7 @@ export default function MembersPage() {
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-1">
-                                                <button onClick={() => openEdit(m)} title="Edit" className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/10 dark:hover:bg-indigo-900/20 text-blue-500 transition"><Pencil className="h-3.5 w-3.5" /></button>
+                                                <button onClick={() => openEdit(m)} title="Edit" className="p-1.5 rounded-lg hover:bg-[#8b5cf6]/10 dark:hover:bg-indigo-900/20 text-blue-500 transition"><Pencil className="h-3.5 w-3.5" /></button>
                                                 <button onClick={() => { setRenewMember(m); setRenewForm({ planId: m.planId?._id || "", paidAmount: "", paymentMode: "cash", notes: "" }); setError(""); }} title="Renew" className="p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-500 transition"><RotateCcw className="h-3.5 w-3.5" /></button>
                                                 <button onClick={() => handleCheckout(m)} title="Checkout" className="p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 text-amber-500 transition"><LogOut className="h-3.5 w-3.5" /></button>
                                                 <button onClick={() => handleDelete(m._id)} title="Delete" className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition"><Trash2 className="h-3.5 w-3.5" /></button>
@@ -375,7 +375,7 @@ export default function MembersPage() {
                         <button 
                             disabled={page >= totalPages} 
                             onClick={() => setPage(p => p + 1)} 
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 text-white hover:bg-indigo-700 disabled:bg-slate-100 disabled:text-slate-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-600 transition-colors shadow-sm font-medium"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 text-white disabled:bg-slate-100 disabled:text-slate-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-600 transition-colors shadow-sm font-medium"
                         >
                             Next <ChevronRight className="h-4 w-4"/>
                         </button>
@@ -398,7 +398,7 @@ export default function MembersPage() {
                         {blocks.length === 0 ? (
                             <div className="p-12 text-center flex flex-col items-center">
                                 <p className="text-[#9ca3af] mb-4">No hostel structure found. You must configure blocks, floors, and rooms first.</p>
-                                <a href="hostel-settings" className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-50 dark:hover:bg-blue-500/100">Go to Settings</a>
+                                <a href="hostel-settings" className="bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 text-white px-4 py-2 rounded-xl text-sm font-semibold ">Go to Settings</a>
                             </div>
                         ) : (
                             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
@@ -468,7 +468,7 @@ export default function MembersPage() {
                                                                             setRoomDropdownOpen(false);
                                                                         }
                                                                     }}
-                                                                    className={`px-3 py-2 text-sm flex justify-between border-b border-slate-100 dark:border-slate-700/50 last:border-0 ${r.isOccupied ? 'bg-[#020617]/50 text-slate-400 cursor-not-allowed' : 'hover:bg-blue-50 dark:hover:bg-blue-500/10 dark:hover:bg-indigo-900/30 cursor-pointer text-[#f9fafb]'}`}
+                                                                    className={`px-3 py-2 text-sm flex justify-between border-b border-slate-100 dark:border-slate-700/50 last:border-0 ${r.isOccupied ? 'bg-[#020617]/50 text-slate-400 cursor-not-allowed' : 'hover:bg-[#8b5cf6]/10  cursor-pointer text-[#f9fafb]'}`}
                                                                 >
                                                                     <span className="font-medium">{r.roomNo}</span>
                                                                     <span className="text-xs">
@@ -580,7 +580,7 @@ export default function MembersPage() {
 
                                 {/* Submit */}
                                 <div className="px-6 pb-6 flex-shrink-0">
-                                    <button type="submit" disabled={submitting} className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 hover:bg-blue-50 dark:hover:bg-blue-500/100 text-white font-bold py-3 rounded-xl shadow-lg transition disabled:opacity-50 text-sm tracking-wide">
+                                    <button type="submit" disabled={submitting} className="w-full bg-[#8b5cf6] hover:bg-[#7c3aed] border-0  text-white font-bold py-3 rounded-xl shadow-lg transition disabled:opacity-50 text-sm tracking-wide">
                                         {submitting ? "Saving…" : editMember ? "Update Member" : "Add Member"}
                                     </button>
                                 </div>
@@ -599,7 +599,7 @@ export default function MembersPage() {
                             <h2 className="text-lg font-bold text-white">Add Payment — {renewMember.name}</h2>
                             <button onClick={() => setRenewMember(null)} className="p-1.5 rounded-lg hover:bg-white/10 transition"><X className="h-5 w-5 text-slate-400" /></button>
                         </div>
-                        <div className="rounded-xl bg-white/5 border border-white/5 px-4 py-3 text-xs space-y-1 text-slate-400">
+                        <div className="rounded-xl bg-white/5 border border-[#1f2937] px-4 py-3 text-xs space-y-1 text-slate-400">
                             <div className="flex justify-between"><span>Room</span><span className="font-semibold text-[#f9fafb]">{(renewMember as any).block_room_no || renewMember.roomNo}</span></div>
                             <div className="flex justify-between"><span>Current Balance</span><span className={`font-semibold ${renewMember.balance >= 0 ? "text-emerald-500" : "text-red-500"}`}>₹{renewMember.balance.toLocaleString()}</span></div>
                             <div className="flex justify-between"><span>Next Due</span><span className="font-semibold text-blue-500">{renewMember.due_date ? new Date(renewMember.due_date).toLocaleDateString("en-IN") : "—"}</span></div>

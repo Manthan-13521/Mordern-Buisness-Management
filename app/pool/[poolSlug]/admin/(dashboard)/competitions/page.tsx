@@ -38,30 +38,30 @@ function CreateModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
                 <h2 className="text-lg font-semibold text-[#f9fafb] mb-4">Create Competition</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
+                        <label className="block text-sm font-medium text-[#9ca3af] mb-1">Name</label>
                         <input required type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
                             placeholder="e.g. 100m Freestyle Sprint"
-                            className="block w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-[#0b1220] shadow-sm px-3 py-2 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500" />
+                            className="block w-full rounded-lg border border-[#1f2937] bg-[#0b1220] shadow-sm px-3 py-2 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500" />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date</label>
+                        <label className="block text-sm font-medium text-[#9ca3af] mb-1">Date</label>
                         <input required type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })}
-                            className="block w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-[#0b1220] shadow-sm px-3 py-2 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500" />
+                            className="block w-full rounded-lg border border-[#1f2937] bg-[#0b1220] shadow-sm px-3 py-2 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500" />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
+                        <label className="block text-sm font-medium text-[#9ca3af] mb-1">Category</label>
                         <input required type="text" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}
                             placeholder="e.g. Junior, Senior, Open"
-                            className="block w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-[#0b1220] shadow-sm px-3 py-2 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500" />
+                            className="block w-full rounded-lg border border-[#1f2937] bg-[#0b1220] shadow-sm px-3 py-2 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500" />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes <span className="text-gray-400">(optional)</span></label>
+                        <label className="block text-sm font-medium text-[#9ca3af] mb-1">Notes <span className="text-gray-400">(optional)</span></label>
                         <input type="text" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })}
-                            className="block w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-[#0b1220] shadow-sm px-3 py-2 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500" />
+                            className="block w-full rounded-lg border border-[#1f2937] bg-[#0b1220] shadow-sm px-3 py-2 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500" />
                     </div>
                     <div className="flex justify-end gap-3 pt-2">
-                        <button type="button" onClick={onClose} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-[#8b5cf6]/5">Cancel</button>
-                        <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 px-4 py-2 text-sm font-medium text-white hover:bg-blue-50 dark:hover:bg-blue-500/100 disabled:opacity-60">
+                        <button type="button" onClick={onClose} className="rounded-lg px-4 py-2 text-sm font-medium text-[#9ca3af] ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-[#8b5cf6]/5">Cancel</button>
+                        <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 px-4 py-2 text-sm font-medium text-white  disabled:opacity-60">
                             {saving && <RefreshCw className="h-4 w-4 animate-spin" />} Create
                         </button>
                     </div>
@@ -160,7 +160,7 @@ function CompetitionDetail({ comp, onRefresh }: { comp: Competition; onRefresh: 
                     <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">🏆 Winners</p>
                     <div className="space-y-1.5">
                         {comp.winners.sort((a, b) => a.position - b.position).map(w => (
-                            <div key={w.position} className="flex items-center gap-2 rounded-lg bg-gray-50 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg/50 px-3 py-2">
+                            <div key={w.position} className="flex items-center gap-2 rounded-lg bg-[#020617] bg-[#0b1220] border border-[#1f2937]/50 px-3 py-2">
                                 <span className={`text-lg ${medalColors[w.position - 1] ?? "text-gray-400"}`}>
                                     {w.position === 1 ? "🥇" : w.position === 2 ? "🥈" : w.position === 3 ? "🥉" : `#${w.position}`}
                                 </span>
@@ -181,17 +181,17 @@ function CompetitionDetail({ comp, onRefresh }: { comp: Competition; onRefresh: 
                     </p>
                     {winners.map((w, i) => (
                         <div key={i} className="space-y-1.5">
-                            <p className="text-xs font-bold text-gray-600 dark:text-gray-300">{medalLabels[i]}</p>
+                            <p className="text-xs font-bold text-[#9ca3af]">{medalLabels[i]}</p>
                             <div className="grid grid-cols-3 gap-2">
                                 <input type="text" placeholder="Winner name" value={w.name}
                                     onChange={e => { const arr = [...winners]; arr[i] = { ...arr[i], name: e.target.value }; setWinners(arr); }}
-                                    className="col-span-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg px-2.5 py-1.5 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500" />
+                                    className="col-span-1 rounded-lg border border-[#1f2937] bg-[#0b1220] bg-[#0b1220] border border-[#1f2937] px-2.5 py-1.5 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500" />
                                 <input type="number" step="0.01" placeholder="Time (s)" value={w.timing}
                                     onChange={e => { const arr = [...winners]; arr[i] = { ...arr[i], timing: e.target.value }; setWinners(arr); }}
-                                    className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg px-2.5 py-1.5 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500" />
+                                    className="rounded-lg border border-[#1f2937] bg-[#0b1220] bg-[#0b1220] border border-[#1f2937] px-2.5 py-1.5 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500" />
                                 <input type="text" placeholder="Prize (opt)" value={w.prize}
                                     onChange={e => { const arr = [...winners]; arr[i] = { ...arr[i], prize: e.target.value }; setWinners(arr); }}
-                                    className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg px-2.5 py-1.5 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500" />
+                                    className="rounded-lg border border-[#1f2937] bg-[#0b1220] bg-[#0b1220] border border-[#1f2937] px-2.5 py-1.5 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500" />
                             </div>
                         </div>
                     ))}
@@ -211,7 +211,7 @@ function CompetitionDetail({ comp, onRefresh }: { comp: Competition; onRefresh: 
                 ) : (
                     <div className="space-y-1.5">
                         {comp.participants.map(p => (
-                            <div key={p._id} className="flex items-center gap-2 rounded-lg bg-gray-50 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg/50 px-3 py-2">
+                            <div key={p._id} className="flex items-center gap-2 rounded-lg bg-[#020617] bg-[#0b1220] border border-[#1f2937]/50 px-3 py-2">
                                 {p.laneNumber && <span className="text-xs text-gray-400 w-6">L{p.laneNumber}</span>}
                                 <p className="flex-1 text-sm text-gray-800 dark:text-gray-200">{p.name}</p>
                                 {p.timing && <span className="text-xs text-gray-500">{p.timing}s</span>}
@@ -227,9 +227,9 @@ function CompetitionDetail({ comp, onRefresh }: { comp: Competition; onRefresh: 
                 <div className="flex gap-2 pt-2">
                     <input type="text" placeholder="Add participant name…" value={newParticipant} onChange={e => setNewParticipant(e.target.value)}
                         onKeyDown={e => e.key === "Enter" && addParticipant()}
-                        className="flex-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg px-3 py-2 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500" />
+                        className="flex-1 rounded-lg border border-[#1f2937] bg-[#0b1220] bg-[#0b1220] border border-[#1f2937] px-3 py-2 text-sm text-[#f9fafb] focus:ring-2 focus:ring-indigo-500" />
                     <button onClick={addParticipant} disabled={adding || !newParticipant.trim()}
-                        className="rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 px-4 py-2 text-sm font-medium text-white hover:bg-blue-50 dark:hover:bg-blue-500/100 disabled:opacity-50">
+                        className="rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 px-4 py-2 text-sm font-medium text-white  disabled:opacity-50">
                         {adding ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                     </button>
                 </div>
@@ -284,13 +284,13 @@ export default function CompetitionsPage() {
                     <p className="mt-1 text-sm text-[#9ca3af]">{total} event{total !== 1 ? "s" : ""}</p>
                 </div>
                 <button onClick={() => setShowModal(true)}
-                    className="mt-4 sm:mt-0 inline-flex items-center gap-1.5 rounded-md bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-50 dark:hover:bg-blue-500/100">
+                    className="mt-4 sm:mt-0 inline-flex items-center gap-1.5 rounded-md bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 px-3 py-2 text-sm font-semibold text-white ">
                     <Plus className="h-4 w-4" /> New Competition
                 </button>
             </div>
 
             {/* Filter Tabs */}
-            <div className="flex gap-1 p-1 bg-gray-100 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg rounded-lg w-fit">
+            <div className="flex gap-1 p-1 bg-[#0b1220] bg-[#0b1220] border border-[#1f2937] rounded-lg w-fit">
                 {(["all", "upcoming", "completed"] as const).map(f => (
                     <button key={f} onClick={() => setFilter(f)}
                         className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors capitalize ${filter === f ? "bg-white dark:bg-gray-700 text-[#f9fafb] shadow-sm" : "text-[#9ca3af] hover:text-gray-700 dark:hover:text-gray-300"}`}>

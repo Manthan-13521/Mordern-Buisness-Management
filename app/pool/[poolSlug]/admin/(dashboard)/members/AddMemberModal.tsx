@@ -185,10 +185,10 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 sm:p-0">
-            <div className="relative w-full max-w-2xl rounded-xl bg-background p-6 shadow-2xl overflow-y-auto max-h-[90vh] border border-gray-100 dark:border-gray-800">
+            <div className="relative w-full max-w-2xl rounded-xl bg-[#0b1220] p-6 shadow-2xl overflow-y-auto max-h-[90vh] border border-[#1f2937]">
                 <div className="flex items-center justify-between mb-6">
                     <div>
-                        <h2 className="text-xl font-semibold dark:text-white">Add New Member</h2>
+                        <h2 className="text-xl font-semibold text-[#f9fafb]">Add New Member</h2>
                         {selectedPlan?.hasTokenPrint && (
                             <p className="mt-0.5 flex items-center gap-1.5 text-xs text-teal-600 dark:text-teal-400">
                                 <Printer className="h-3.5 w-3.5" />
@@ -196,8 +196,8 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                             </p>
                         )}
                     </div>
-                    <button onClick={onClose} className="rounded-full p-2 hover:bg-gray-100 dark:hover:bg-gray-800">
-                        <X className="h-5 w-5 dark:text-gray-400" />
+                    <button onClick={onClose} className="rounded-full p-2 hover:bg-[#0b1220] hover:bg-[#8b5cf6]/5">
+                        <X className="h-5 w-5 text-[#9ca3af]" />
                     </button>
                 </div>
 
@@ -206,31 +206,31 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                         {/* Left Column: Form Fields */}
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium dark:text-gray-300">Full Name</label>
+                                <label className="block text-sm font-medium text-[#9ca3af]">Full Name</label>
                                 <input
                                     required type="text" value={formData.name} maxLength={30}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg dark:text-white sm:text-sm"
+                                    className="mt-1 block w-full rounded-md border border-[#1f2937] px-3 py-2 text-gray-900 focus:border-[#8b5cf6] focus:ring-[#8b5cf6] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] text-[#f9fafb] sm:text-sm"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium dark:text-gray-300">Phone Number</label>
+                                <label className="block text-sm font-medium text-[#9ca3af]">Phone Number</label>
                                 <input
                                     required type="tel" value={formData.phone} minLength={10} maxLength={13}
                                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg dark:text-white sm:text-sm"
+                                    className="mt-1 block w-full rounded-md border border-[#1f2937] px-3 py-2 text-gray-900 focus:border-[#8b5cf6] focus:ring-[#8b5cf6] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] text-[#f9fafb] sm:text-sm"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium dark:text-gray-300">Select Plan</label>
+                                <label className="block text-sm font-medium text-[#9ca3af]">Select Plan</label>
                                 <select
                                     required value={formData.planId}
                                     onChange={(e) => {
                                         setFormData({ ...formData, planId: e.target.value, planQuantity: 1, paidAmount: 0 });
                                     }}
-                                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg dark:text-white sm:text-sm"
+                                    className="mt-1 block w-full rounded-md border border-[#1f2937] px-3 py-2 text-gray-900 focus:border-[#8b5cf6] focus:ring-[#8b5cf6] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] text-[#f9fafb] sm:text-sm"
                                 >
                                     <option value="">Choose a plan...</option>
                                     {plans.map((p) => (
@@ -249,28 +249,28 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                             {/* Quantity — only shown if plan.allowQuantity */}
                             {selectedPlan?.allowQuantity && (
                                 <div>
-                                    <label className="block text-sm font-medium dark:text-gray-300">
+                                    <label className="block text-sm font-medium text-[#9ca3af]">
                                         Quantity <span className="text-gray-400">(max 25)</span>
                                     </label>
                                     <input
                                         type="number" min="1" max="25" value={formData.planQuantity}
                                         onChange={(e) => setFormData({ ...formData, planQuantity: Number(e.target.value) })}
-                                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg dark:text-white sm:text-sm"
+                                        className="mt-1 block w-full rounded-md border border-[#1f2937] px-3 py-2 text-gray-900 focus:border-[#8b5cf6] focus:ring-[#8b5cf6] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] text-[#f9fafb] sm:text-sm"
                                     />
                                 </div>
                             )}
 
                             {/* Price & Payment */}
-                            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2.5 bg-gray-50/50 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg/50">
+                            <div className="rounded-lg border border-[#1f2937] p-3 space-y-2.5 bg-[#020617] bg-[#0b1220] border border-[#1f2937]/50">
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500 dark:text-gray-400">
+                                    <span className="text-[#9ca3af]">
                                         Total {formData.planQuantity > 1 && `(₹${selectedPlan?.price} × ${formData.planQuantity})`}
                                     </span>
-                                    <span className="font-semibold dark:text-white">₹{totalPrice}</span>
+                                    <span className="font-semibold text-[#f9fafb]">₹{totalPrice}</span>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="block text-xs font-medium dark:text-gray-300">Paid (₹)</label>
+                                        <label className="block text-xs font-medium text-[#9ca3af]">Paid (₹)</label>
                                         <input
                                             type="number" min="0" max="999999" step="1"
                                             value={formData.paidAmount}
@@ -278,16 +278,16 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                                                 const val = Math.min(999999, Math.max(0, Number(e.target.value)));
                                                 if (Number.isFinite(val)) setFormData({ ...formData, paidAmount: val });
                                             }}
-                                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-1.5 text-gray-900 focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg dark:text-white sm:text-sm"
+                                            className="mt-1 block w-full rounded-md border border-[#1f2937] px-3 py-1.5 text-gray-900 focus:border-[#8b5cf6] focus:ring-[#8b5cf6] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] text-[#f9fafb] sm:text-sm"
                                             placeholder="Max ₹9,99,999"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-medium dark:text-gray-300">Mode</label>
+                                        <label className="block text-xs font-medium text-[#9ca3af]">Mode</label>
                                         <select
                                             value={formData.paymentMode}
                                             onChange={(e) => setFormData({ ...formData, paymentMode: e.target.value })}
-                                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-1.5 text-gray-900 focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg dark:text-white sm:text-sm"
+                                            className="mt-1 block w-full rounded-md border border-[#1f2937] px-3 py-1.5 text-gray-900 focus:border-[#8b5cf6] focus:ring-[#8b5cf6] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] text-[#f9fafb] sm:text-sm"
                                         >
                                             <option value="cash">Cash</option>
                                             <option value="upi">UPI</option>
@@ -296,8 +296,8 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                                         </select>
                                     </div>
                                 </div>
-                                <div className="flex justify-between text-sm pt-1 border-t border-gray-200 dark:border-gray-700">
-                                    <span className="text-gray-500 dark:text-gray-400">Balance</span>
+                                <div className="flex justify-between text-sm pt-1 border-t border-[#1f2937]">
+                                    <span className="text-[#9ca3af]">Balance</span>
                                     <span className={`font-semibold ${autoBalance > 0 ? "text-red-600" : "text-green-600"}`}>
                                         ₹{autoBalance}
                                     </span>
@@ -306,12 +306,12 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
 
                             {/* Equipment */}
                             <div>
-                                <label className="block text-sm font-medium dark:text-gray-300">Equipment Taken <span className="text-gray-400 text-xs">(optional)</span></label>
+                                <label className="block text-sm font-medium text-[#9ca3af]">Equipment Taken <span className="text-gray-400 text-xs">(optional)</span></label>
                                 <input
                                     type="text" value={formData.equipmentTaken} maxLength={200}
                                     onChange={(e) => setFormData({ ...formData, equipmentTaken: e.target.value })}
                                     placeholder="e.g. Goggles, Swimming Cap"
-                                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg dark:text-white sm:text-sm"
+                                    className="mt-1 block w-full rounded-md border border-[#1f2937] px-3 py-2 text-gray-900 focus:border-[#8b5cf6] focus:ring-[#8b5cf6] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] text-[#f9fafb] sm:text-sm"
                                 />
                             </div>
                         </div>
@@ -319,15 +319,15 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                         {/* Right Column: Photo + Face Scan */}
                         <div className="space-y-4">
                             {/* Photo Capture */}
-                            <div className="flex flex-col items-center justify-center space-y-3 rounded-lg border-2 border-dashed border-gray-300 p-4 dark:border-gray-700">
+                            <div className="flex flex-col items-center justify-center space-y-3 rounded-lg border-2 border-dashed border-[#1f2937] p-4 border-[#1f2937]">
                                 {photoPreview ? (
                                     <div className="relative">
                                         <img src={photoPreview} alt="Preview" className="h-36 w-36 rounded-full border-4 border-indigo-100 object-cover shadow-sm dark:border-indigo-900" />
                                         <button
                                             type="button" onClick={() => setPhotoPreview(null)}
-                                            className="absolute bottom-0 right-0 rounded-full bg-white p-2 shadow-md hover:bg-gray-50 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg dark:hover:bg-gray-700"
+                                            className="absolute bottom-0 right-0 rounded-full bg-[#0b1220] p-2 shadow-md hover:bg-[#020617] bg-[#0b1220] border border-[#1f2937] hover:bg-[#8b5cf6]/10"
                                         >
-                                            <RefreshCw className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+                                            <RefreshCw className="h-4 w-4 text-[#9ca3af]" />
                                         </button>
                                     </div>
                                 ) : isCapturing ? (
@@ -340,18 +340,18 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                                             />
                                         </div>
                                         <button type="button" onClick={handleCapture}
-                                            className="rounded-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 px-4 py-2 text-sm font-medium text-white hover:bg-blue-50 dark:hover:bg-blue-500/100">
+                                            className="rounded-full bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 px-4 py-2 text-sm font-medium text-white ">
                                             Capture Photo
                                         </button>
                                     </div>
                                 ) : (
                                     <div className="flex flex-col items-center text-center">
-                                        <div className="mb-2 rounded-full bg-gray-100 p-3 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg">
-                                            <Camera className="h-6 w-6 text-gray-400 dark:text-gray-500" />
+                                        <div className="mb-2 rounded-full bg-[#0b1220] p-3 bg-[#0b1220] border border-[#1f2937]">
+                                            <Camera className="h-6 w-6 text-[#6b7280]" />
                                         </div>
-                                        <p className="text-sm font-medium text-gray-900 dark:text-white">Member Photo</p>
+                                        <p className="text-sm font-medium text-[#f9fafb]">Member Photo</p>
                                         <button type="button" onClick={() => setIsCapturing(true)}
-                                            className="mt-2 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-600 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg dark:text-gray-200 dark:hover:bg-gray-700">
+                                            className="mt-2 rounded border border-[#1f2937] bg-[#0b1220] px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-[#020617] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] dark:text-gray-200 hover:bg-[#8b5cf6]/10">
                                             Open Camera
                                         </button>
                                     </div>
@@ -360,13 +360,13 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
                         </div>
                     </div>
 
-                    <div className="flex justify-end space-x-3 border-t border-gray-200 pt-4 dark:border-gray-800">
+                    <div className="flex justify-end space-x-3 border-t border-[#1f2937] pt-4 border-[#1f2937]">
                         <button type="button" onClick={onClose}
-                            className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-600 bg-white dark:bg-white/5 dark:backdrop-blur-md dark:border dark:border-white/10 shadow-lg dark:text-gray-300 dark:hover:bg-gray-700">
+                            className="rounded-md border border-[#1f2937] bg-[#0b1220] px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-[#020617] border-[#1f2937] bg-[#0b1220] border border-[#1f2937] text-[#9ca3af] hover:bg-[#8b5cf6]/10">
                             Cancel
                         </button>
                         <button type="submit" disabled={loading}
-                            className="inline-flex items-center gap-2 justify-center rounded-md border border-transparent bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50">
+                            className="inline-flex items-center gap-2 justify-center rounded-md border border-transparent bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 px-4 py-2 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50">
                             {loading && <RefreshCw className="h-4 w-4 animate-spin" />}
                             {loading ? "Saving..." : selectedPlan?.hasTokenPrint ? "Save & Print Token" : "Save Member"}
                         </button>
