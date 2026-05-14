@@ -52,7 +52,7 @@ export async function GET(req: Request) {
             Hostel.countDocuments({}),
             Business.countDocuments({}),
             Member.countDocuments({}),
-            BillingLog.find({}).sort({ createdAt: -1 }).limit(500).lean(),
+            BillingLog.find({}).populate("orgId").sort({ createdAt: -1 }).limit(500).lean(),
             // Also fetch successful subscription payments for complete billing view
             SubscriptionPaymentLog.find({ status: "success" }).sort({ createdAt: -1 }).limit(500).lean(),
             ReferralCode.find({}).lean(),
@@ -89,6 +89,12 @@ export async function GET(req: Request) {
             ])
         ]);
 
+        // ── Map UserID to OrgName for subscription logs ──────────────────────
+        const userToOrgMap: Record<string, string> = {};
+        allOrgs.forEach((o: any) => {
+            if (o.ownerId) userToOrgMap[o.ownerId.toString()] = o.name;
+        });
+
         // ── Derive KPIs (combined from both payment sources) ─────────────────
         const billingRevenue = revenueAgg[0]?.total || 0;
         const subRevenue = subRevenueAgg[0]?.total || 0;
@@ -119,6 +125,7 @@ export async function GET(req: Request) {
         const normalizedSubLogs = subscriptionPaymentLogs.map((s: any) => ({
             _id: s._id,
             orgId: s.userId, // Use userId as org reference for display
+            orgName: userToOrgMap[s.userId?.toString()] || "Unknown Entity",
             amount: s.amount,
             method: "razorpay",
             paymentMode: "Razorpay",
@@ -131,13 +138,13 @@ export async function GET(req: Request) {
         }));
 
         // Deduplicate: if a BillingLog already exists for the same razorpay payment, skip the sub log
-        const billingOrgIds = new Set(billingLogs.map((b: any) => `${b.orgId?.toString()}_${new Date(b.createdAt).toISOString().slice(0,10)}`));
+        const billingOrgIds = new Set(billingLogs.map((b: any) => `${b.orgId?._id?.toString() || b.orgId?.toString()}_${new Date(b.createdAt).toISOString().slice(0,10)}`));
         const uniqueSubLogs = normalizedSubLogs.filter((s: any) => 
             !billingOrgIds.has(`${s.orgId?.toString()}_${new Date(s.createdAt).toISOString().slice(0,10)}`)
         );
 
         // Combine and sort by date
-        const allBillingLogs = [...billingLogs, ...uniqueSubLogs].sort(
+        const allBillingLogs = [...billingLogs.map((b: any) => ({ ...b, orgName: b.orgId?.name || "Unknown Business" })), ...uniqueSubLogs].sort(
             (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
 

@@ -213,7 +213,7 @@ export default function ManageBusinessesPage() {
                                             </div>
                                             <div>
                                                 <div className="font-bold text-[#f9fafb]">{business.name}</div>
-                                                <div className="text-xs text-[#6b7280] font-mono">/{business.slug}</div>
+                                                <div className="text-xs text-[#6b7280] font-mono">{business.businessId} • /{business.slug}</div>
                                             </div>
                                         </div>
                                     </td>

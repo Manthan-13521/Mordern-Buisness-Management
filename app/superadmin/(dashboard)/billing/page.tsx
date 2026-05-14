@@ -75,6 +75,7 @@ export default function PlatformBillingDashboard() {
                                 <th className="text-left px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#9ca3af]">#</th>
                                 <th className="text-left px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#9ca3af]">Timestamp</th>
                                 <th className="text-left px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#9ca3af]">Org ID</th>
+                                <th className="text-left px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#9ca3af]">Business</th>
                                 <th className="text-right px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#9ca3af]">Amount</th>
                                 <th className="text-center px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#9ca3af]">Method</th>
                                 <th className="text-left px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#9ca3af]">Payer</th>
@@ -96,7 +97,8 @@ export default function PlatformBillingDashboard() {
                                         <td className="px-6 py-4 text-[#9ca3af] font-medium text-xs">
                                             {new Date(b.createdAt).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                                         </td>
-                                        <td className="px-6 py-4 text-[#9ca3af] font-mono text-xs">{b.orgId?.toString().slice(-8) || "—"}</td>
+                                        <td className="px-6 py-4 text-[#9ca3af] font-mono text-xs">{b.orgId?._id?.toString().slice(-8) || b.orgId?.toString().slice(-8) || "—"}</td>
+                                        <td className="px-6 py-4 text-[#f9fafb] font-bold text-xs uppercase tracking-tight">{b.orgName || "—"}</td>
                                         <td className="px-6 py-4 text-right font-bold text-emerald-400">₹{b.amount?.toLocaleString("en-IN")}</td>
                                         <td className="px-6 py-4 text-center">
                                             <span className={`text-xs font-bold uppercase px-2.5 py-1 rounded-md border ${

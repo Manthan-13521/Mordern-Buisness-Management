@@ -109,7 +109,7 @@ export async function POST(req: Request) {
                 // Add subscription to User for system-wide consistency
                 subscription: adminBilling ? {
                     module: "hostel",
-                    planType: adminBilling.planType,
+                    planType: "block-based",
                     blocks: numberOfBlocks as any,
                     pricePaid: adminBilling.amount,
                     startDate: new Date(),
