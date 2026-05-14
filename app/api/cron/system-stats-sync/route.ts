@@ -4,7 +4,8 @@ import { SystemStats } from "@/models/SystemStats";
 import { Member } from "@/models/Member";
 import { HostelMember } from "@/models/HostelMember";
 import { BusinessCustomer } from "@/models/BusinessCustomer";
-import { UnifiedUser } from "@/models/UnifiedUser"; // Proxy for active users or just count them
+import { UnifiedUser } from "@/models/UnifiedUser";
+import { ReferralUsage } from "@/models/ReferralUsage";
 
 export const dynamic = "force-dynamic";
 
@@ -24,29 +25,30 @@ export async function GET(req: Request) {
         const now = new Date();
         const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
-        // Get total pool organizations
-        const poolCount = await Pool.countDocuments({});
+        // Get total pool members
+        const poolUsers = await Member.countDocuments({});
 
-        // Get total hostel organizations
-        const hostelCount = await Hostel.countDocuments({});
+        // Get total hostel members
+        const hostelUsers = await HostelMember.countDocuments({});
 
-        // Get total business organizations
-        const businessCount = await Business.countDocuments({});
+        // Get total business customers
+        const businessUsers = await BusinessCustomer.countDocuments({});
 
-        // Get total members across all systems
-        const poolMembers = await Member.countDocuments({});
-        const hostelMembers = await HostelMember.countDocuments({});
-        const businessMembers = await BusinessCustomer.countDocuments({});
-        const totalMembers = poolMembers + hostelMembers + businessMembers;
+        // Get total referral uses
+        const referralUses = await ReferralUsage.countDocuments({});
+
+        // For activeUsers across the system
+        const activeUsersCount = poolUsers + hostelUsers + businessUsers;
 
         await SystemStats.findOneAndUpdate(
             { month: monthKey },
             {
                 $set: {
-                    poolUsers: poolCount,      // Now representing organization count
-                    hostelUsers: hostelCount,  // Now representing organization count
-                    businessUsers: businessCount, // Now representing organization count
-                    activeUsers: totalMembers  // Now representing total system members
+                    poolUsers,
+                    hostelUsers,
+                    businessUsers,
+                    activeUsers: activeUsersCount,
+                    referralUses
                 }
             },
             { upsert: true, new: true }

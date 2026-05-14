@@ -35,7 +35,8 @@ export async function GET(req: Request) {
                 pool: s.poolUsers || 0,
                 hostel: s.hostelUsers || 0,
                 business: s.businessUsers || 0,
-                active: s.activeUsers || 0
+                active: s.activeUsers || 0,
+                referrals: s.referralUses || 0
             };
         });
 

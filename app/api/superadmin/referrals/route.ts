@@ -40,6 +40,30 @@ export async function GET(req: Request) {
         const totalReferralUsers = await ReferralUsage.countDocuments();
         const totalDiscounts = usageStats.reduce((acc, curr) => acc + curr.revenueDiscounted, 0);
 
+        // Fetch monthly trend (last 6 months)
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        
+        const trendStats = await ReferralUsage.aggregate([
+            { $match: { createdAt: { $gte: sixMonthsAgo } } },
+            {
+                $group: {
+                    _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+                    uses: { $sum: 1 }
+                }
+            },
+            { $sort: { _id: 1 } }
+        ]);
+
+        const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const formattedTrend = trendStats.map(t => {
+            const [year, monthStr] = t._id.split("-");
+            return {
+                month: `${MONTH_NAMES[parseInt(monthStr) - 1]}`,
+                uses: t.uses
+            };
+        });
+
         // Map data for response
         const mappedCodes = codes.map((c: any) => ({
             ...c,
@@ -53,7 +77,8 @@ export async function GET(req: Request) {
             codes: mappedCodes,
             totalReferralUsers,
             totalDiscounts,
-            topCode: mappedCodes.length > 0 ? mappedCodes[0].code : "N/A"
+            topCode: mappedCodes.length > 0 ? mappedCodes[0].code : "N/A",
+            trend: formattedTrend
         });
 
     } catch (e) {

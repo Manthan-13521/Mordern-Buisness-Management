@@ -1,10 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Tag, RefreshCw, BarChart2, CheckCircle2, XCircle } from "lucide-react";
+import { Plus, Tag, RefreshCw, BarChart2, CheckCircle2, XCircle, TrendingUp } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 export default function ReferralsAdminPage() {
-    const [data, setData] = useState<{ codes: any[], totalReferralUsers: number, totalDiscounts: number, topCode: string } | null>(null);
+    const [data, setData] = useState<{ 
+        codes: any[], 
+        totalReferralUsers: number, 
+        totalDiscounts: number, 
+        topCode: string,
+        trend?: any[] 
+    } | null>(null);
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
     
@@ -109,6 +116,27 @@ export default function ReferralsAdminPage() {
                     <div className="bg-purple-500/10 p-3 rounded-lg text-purple-400">
                         <CheckCircle2 className="w-6 h-6" />
                     </div>
+                </div>
+            </div>
+
+            {/* Referral Trend Graph */}
+            <div className="bg-[#0b1220] border border-[#1f2937] rounded-xl p-6 shadow-sm">
+                <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-pink-500" /> Referral Growth Trend
+                </h3>
+                <div className="h-64 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={data?.trend || []}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                            <XAxis dataKey="month" stroke="#9ca3af" fontSize={10} />
+                            <YAxis stroke="#9ca3af" fontSize={10} />
+                            <Tooltip 
+                                contentStyle={{ backgroundColor: "#0f172a", border: "1px solid #1e293b", borderRadius: "8px" }}
+                                itemStyle={{ fontSize: 12, fontWeight: "bold" }}
+                            />
+                            <Line type="monotone" name="Activations" dataKey="uses" stroke="#ec4899" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                        </LineChart>
+                    </ResponsiveContainer>
                 </div>
             </div>
 
