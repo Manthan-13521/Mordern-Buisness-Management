@@ -121,6 +121,7 @@ export default function ReferralsAdminPage() {
                             <thead className="text-xs text-[#6b7280] uppercase bg-[#020617]/50 rounded-lg">
                                 <tr>
                                     <th className="px-6 py-4 font-medium rounded-l-lg">Code</th>
+                                    <th className="px-6 py-4 font-medium">Discount</th>
                                     <th className="px-6 py-4 font-medium">Uses</th>
                                     <th className="px-6 py-4 font-medium">Revenue Impact</th>
                                     <th className="px-6 py-4 font-medium">Limit</th>
@@ -129,11 +130,16 @@ export default function ReferralsAdminPage() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {loading && <tr><td colSpan={5} className="text-center py-8">Loading...</td></tr>}
-                                {!loading && data?.codes?.length === 0 && <tr><td colSpan={5} className="text-center py-8 text-[#6b7280]">No active referral codes.</td></tr>}
+                                {loading && <tr><td colSpan={7} className="text-center py-8">Loading...</td></tr>}
+                                {!loading && data?.codes?.length === 0 && <tr><td colSpan={7} className="text-center py-8 text-[#6b7280]">No active referral codes.</td></tr>}
                                 {!loading && data?.codes?.map(c => (
                                     <tr key={c._id} className="border-b last:border-0 border-[#1f2937]/60 hover:bg-[#020617]/50">
                                         <td className="px-6 py-4 font-bold tracking-wider text-[#f9fafb]">{c.code}</td>
+                                        <td className="px-6 py-4">
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                                                {c.discountType === "percentage" ? `${c.discountValue}%` : `₹${c.discountValue}`}
+                                            </span>
+                                        </td>
                                         <td className="px-6 py-4">
                                             <span className="font-semibold text-blue-600">{c.actualUses}</span> 
                                             <span className="text-[#6b7280]"> claimed</span>
