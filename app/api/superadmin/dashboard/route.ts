@@ -120,22 +120,32 @@ export async function GET(req: Request) {
         const convertedToPaid = allOrgs.filter((o: any) => o.status === "active").length;
         const conversionRate = totalEverTrial > 0 ? Math.round((convertedToPaid / totalEverTrial) * 100) : 0;
 
+        // Helper to get primary entity ID (POOL001, HOST001, BIZ001) from organization
+        const getEntityId = (o: any) => {
+            if (!o) return "N/A";
+            return o.poolIds?.[0] || o.hostelIds?.[0] || o.businessIds?.[0] || "N/A";
+        };
+
         // ── Merge billing logs from both sources for complete billing view ────
         // Normalize SubscriptionPaymentLog entries to BillingLog shape
-        const normalizedSubLogs = subscriptionPaymentLogs.map((s: any) => ({
-            _id: s._id,
-            orgId: s.userId, // Use userId as org reference for display
-            orgName: userToOrgMap[s.userId?.toString()] || "Unknown Entity",
-            amount: s.amount,
-            method: "razorpay",
-            paymentMode: "Razorpay",
-            periodStart: s.createdAt,
-            periodEnd: s.createdAt, // subscription logs don't have period end
-            createdAt: s.createdAt,
-            source: "subscription",
-            module: s.module,
-            planType: s.planType,
-        }));
+        const normalizedSubLogs = subscriptionPaymentLogs.map((s: any) => {
+            const org = allOrgs.find((o: any) => o.ownerId?.toString() === s.userId?.toString());
+            return {
+                _id: s._id,
+                orgId: s.userId, // Use userId as org reference for display
+                orgName: org?.name || "Unknown Entity",
+                entityId: getEntityId(org),
+                amount: s.amount,
+                method: "razorpay",
+                paymentMode: "Razorpay",
+                periodStart: s.createdAt,
+                periodEnd: s.createdAt, // subscription logs don't have period end
+                createdAt: s.createdAt,
+                source: "subscription",
+                module: s.module,
+                planType: s.planType,
+            };
+        });
 
         // Deduplicate: if a BillingLog already exists for the same razorpay payment, skip the sub log
         const billingOrgIds = new Set(billingLogs.map((b: any) => `${b.orgId?._id?.toString() || b.orgId?.toString()}_${new Date(b.createdAt).toISOString().slice(0,10)}`));
@@ -144,7 +154,14 @@ export async function GET(req: Request) {
         );
 
         // Combine and sort by date
-        const allBillingLogs = [...billingLogs.map((b: any) => ({ ...b, orgName: b.orgId?.name || "Unknown Business" })), ...uniqueSubLogs].sort(
+        const allBillingLogs = [
+            ...billingLogs.map((b: any) => ({ 
+                ...b, 
+                orgName: b.orgId?.name || "Unknown Business",
+                entityId: getEntityId(b.orgId)
+            })), 
+            ...uniqueSubLogs
+        ].sort(
             (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
 
