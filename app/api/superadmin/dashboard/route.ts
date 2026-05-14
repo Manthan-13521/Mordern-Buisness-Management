@@ -15,6 +15,7 @@ export async function GET(req: Request) {
         await dbConnect();
 
         const { Organization } = await import("@/models/Organization");
+        const { SaaSPlan } = await import("@/models/SaaSPlan");
         const { OrgSubscription } = await import("@/models/OrgSubscription");
         const { BillingLog } = await import("@/models/BillingLog");
         const { SubscriptionPaymentLog } = await import("@/models/SubscriptionPaymentLog");
@@ -22,6 +23,7 @@ export async function GET(req: Request) {
         const { ReferralUsage } = await import("@/models/ReferralUsage");
         const { Pool } = await import("@/models/Pool");
         const { Hostel } = await import("@/models/Hostel");
+        const { Business } = await import("@/models/Business");
         const { Member } = await import("@/models/Member");
 
         const now = new Date();
@@ -33,6 +35,7 @@ export async function GET(req: Request) {
             allOrgs,
             totalPools,
             totalHostels,
+            totalBusinesses,
             totalMembers,
             billingLogs,
             subscriptionPaymentLogs,
@@ -47,6 +50,7 @@ export async function GET(req: Request) {
             Organization.find({}).populate("planId").lean(),
             Pool.countDocuments({}),
             Hostel.countDocuments({}),
+            Business.countDocuments({}),
             Member.countDocuments({}),
             BillingLog.find({}).sort({ createdAt: -1 }).limit(500).lean(),
             // Also fetch successful subscription payments for complete billing view
@@ -232,6 +236,7 @@ export async function GET(req: Request) {
                 expiredOrgs: expiredOrgs.length,
                 totalPools,
                 totalHostels,
+                totalBusinesses,
                 totalMembers,
                 conversionRate,
             },

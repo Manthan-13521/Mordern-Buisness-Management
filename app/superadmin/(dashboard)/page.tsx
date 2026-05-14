@@ -21,6 +21,7 @@ interface DashboardData {
         expiredOrgs: number;
         totalPools: number;
         totalHostels: number;
+        totalBusinesses: number;
         totalMembers: number;
         conversionRate: number;
     };
@@ -157,9 +158,10 @@ export default function SuperAdminDashboard() {
                     {/* Row 2: Platform Stats */}
                     <div>
                         <p className="text-xs font-bold uppercase tracking-widest text-blue-400 mb-4 flex items-center gap-2"><Activity className="w-3.5 h-3.5" /> Platform Health</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                             <MiniStat label="Pools" value={kpis.totalPools} icon={<Droplets className="w-4 h-4" />} />
                             <MiniStat label="Hostels" value={kpis.totalHostels} icon={<Building2 className="w-4 h-4" />} />
+                            <MiniStat label="Businesses" value={kpis.totalBusinesses} icon={<Activity className="w-4 h-4" />} />
                             <MiniStat label="Total Members" value={kpis.totalMembers} icon={<Users className="w-4 h-4" />} />
                             <MiniStat label="Conversion Rate" value={`${kpis.conversionRate}%`} icon={<Target className="w-4 h-4" />} />
                         </div>
