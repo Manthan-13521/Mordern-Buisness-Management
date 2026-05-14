@@ -55,6 +55,18 @@ export async function POST(req: Request) {
             subscriptionStatus = "active";
         }
 
+        // Map activePlan (frontend ID) to model enum: free, starter, pro, enterprise
+        const modelPlanMap: Record<string, "free" | "starter" | "pro" | "enterprise"> = {
+            "1-block": "starter",
+            "2-block": "pro",
+            "3-block": "pro",
+            "4-block": "enterprise",
+            free: "free",
+            pro: "pro",
+            enterprise: "enterprise",
+        };
+        const modelPlan = modelPlanMap[activePlan] || "free";
+
         // Create hostel, admin user, and settings in parallel
         try {
             const hostel = new Hostel({
@@ -66,7 +78,7 @@ export async function POST(req: Request) {
                 adminPhone,
                 numberOfBlocks,
                 status: "ACTIVE",
-                plan: activePlan,
+                plan: modelPlan,
                 subscriptionStatus,
                 subscriptionEndsAt,
             });

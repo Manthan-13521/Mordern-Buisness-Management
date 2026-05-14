@@ -110,11 +110,13 @@ function HostelRegisterInner() {
                 return;
             }
 
-            await signIn("credentials", {
-                redirect: false,
-                username: form.adminEmail,
-                password: form.password,
-            });
+            if (!isAdminMode) {
+                await signIn("credentials", {
+                    redirect: false,
+                    username: form.adminEmail,
+                    password: form.password,
+                });
+            }
 
             setSuccess({ hostelSlug: data.hostelSlug, hostelName: data.hostelName });
         } catch (err) {

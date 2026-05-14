@@ -118,12 +118,14 @@ function PoolRegisterForm() {
                 return;
             }
 
-            // Auto-login to wipe any existing old session (like from a previous hostel login)
-            await signIn("credentials", {
-                redirect: false,
-                username: form.adminEmail,
-                password: form.password,
-            });
+            if (!isAdminMode) {
+                // Auto-login to wipe any existing old session (like from a previous hostel login)
+                await signIn("credentials", {
+                    redirect: false,
+                    username: form.adminEmail,
+                    password: form.password,
+                });
+            }
 
             // Support both old (rawPassword in root) and new response shapes
             setSuccess({

@@ -64,6 +64,17 @@ export async function POST(req: Request) {
             subscriptionStatus = "active";
         }
 
+        const modelPlanMap: Record<string, "free" | "starter" | "pro" | "enterprise"> = {
+            trial: "starter",
+            quarterly: "pro",
+            yearly: "enterprise",
+            free: "free",
+            starter: "starter",
+            pro: "pro",
+            enterprise: "enterprise",
+        };
+        const modelPlan = modelPlanMap[activePlan] || "free";
+
         try {
             const newPool = new Pool({
                 poolId,
@@ -73,10 +84,10 @@ export async function POST(req: Request) {
                 adminPhone,
                 location: city,
                 status: "ACTIVE",
-                plan: activePlan,
-                capacity: activePlan === "enterprise" ? 1000 : (activePlan === "pro" ? 500 : 200),
-                maxMembers: activePlan === "enterprise" ? 5000 : (activePlan === "pro" ? 2000 : 1000),
-                maxStaff: activePlan === "enterprise" ? 100 : (activePlan === "pro" ? 50 : 20),
+                plan: modelPlan,
+                capacity: modelPlan === "enterprise" ? 1000 : (modelPlan === "pro" ? 500 : 200),
+                maxMembers: modelPlan === "enterprise" ? 5000 : (modelPlan === "pro" ? 2000 : 1000),
+                maxStaff: modelPlan === "enterprise" ? 100 : (modelPlan === "pro" ? 50 : 20),
                 subscriptionStatus,
                 ...(subscriptionEndsAt ? { subscriptionEndsAt } : {}),
             });
