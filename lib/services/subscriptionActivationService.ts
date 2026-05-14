@@ -2,6 +2,8 @@ import { dbConnect } from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { SubscriptionPaymentLog } from "@/models/SubscriptionPaymentLog";
 import { Organization } from "@/models/Organization";
+import { ReferralCode } from "@/models/ReferralCode";
+import { ReferralUsage } from "@/models/ReferralUsage";
 import { getPriceKey, SUBSCRIPTION_PRICES, SubscriptionPlanType, SubscriptionModule } from "@/lib/subscriptionConfig";
 import { redis } from "@/lib/redis";
 import crypto from "crypto";
@@ -41,7 +43,8 @@ export async function activateSubscription(params: {
     referralCode?:      string;
     amountPaid?:        number; // Actual amount from Razorpay
 }): Promise<{ user: any; amountINR: number; expiryDate: Date }> {
-    const { razorpayOrderId, razorpayPaymentId, razorpaySignature, isMock, userId, planType: reqPlanType, module: reqModule, blocks: reqBlocks, referralCode } = params;
+    const { razorpayOrderId, razorpayPaymentId, razorpaySignature, isMock, userId, planType: reqPlanType, module: reqModule, blocks: reqBlocks } = params;
+    let referralCode = params.referralCode;
     let amountPaid = params.amountPaid;
 
     // ── Verified values: these are set from the Razorpay order (source of truth) ──
@@ -106,10 +109,16 @@ export async function activateSubscription(params: {
                     throw new Error("Requested plan does not match the order");
                 }
 
-                // ── SOURCE OF TRUTH: Use order-derived values, NOT request values ──
                 verifiedPlanType = orderPlan;
                 verifiedModule = orderModule;
                 verifiedBlocks = orderBlocks;
+                const orderReferralCode = notes.referralCode as string | undefined;
+
+                // ── SOURCE OF TRUTH: Use order-derived values, NOT request values ──
+                // If referralCode wasn't in params (e.g. frontend fallback), use the one from the order notes
+                if (!referralCode && orderReferralCode) {
+                    referralCode = orderReferralCode;
+                }
 
                 // Get actual amount from order
                 if (amountPaid === undefined) {
@@ -283,6 +292,40 @@ export async function activateSubscription(params: {
     } catch (orgErr: any) {
         // Non-fatal — Organization sync is best-effort
         logger.warn("[Activation] Organization sync failed (non-fatal)", { error: orgErr?.message });
+    }
+
+    // 9. Record Referral Usage (if applicable)
+    // This increments the usage counter and records a log for the Referral Engine dashboard
+    if (referralCode) {
+        try {
+            const codeDoc = await ReferralCode.findOne({ code: referralCode.toUpperCase().trim() });
+            if (codeDoc) {
+                // Increment atomic counter
+                await ReferralCode.updateOne({ _id: codeDoc._id }, { $inc: { usedCount: 1 } });
+
+                // Calculate discount applied for reporting
+                const basePrice = SUBSCRIPTION_PRICES[priceKey] || 0;
+                const discountApplied = Math.max(0, basePrice - finalAmountPaid);
+
+                // Record detailed usage log
+                const org = await Organization.findOne({ ownerId: user._id }).lean() as any;
+                if (org) {
+                    await ReferralUsage.create({
+                        code: codeDoc.code,
+                        orgId: org._id,
+                        discountApplied: discountApplied
+                    });
+                    logger.info("[Activation] Referral usage recorded", { 
+                        code: codeDoc.code, 
+                        orgId: org._id.toString(), 
+                        discountApplied 
+                    });
+                }
+            }
+        } catch (refErr: any) {
+            // Non-fatal — analytics failure shouldn't block activation
+            logger.warn("[Activation] Referral recording failed (non-fatal)", { error: refErr?.message });
+        }
     }
 
     return { user: user.toObject(), amountINR: finalAmountPaid, expiryDate };
