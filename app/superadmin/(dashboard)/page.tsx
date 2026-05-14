@@ -187,10 +187,10 @@ export default function SuperAdminDashboard() {
                                                 itemStyle={{ fontSize: 13, fontWeight: "bold" }}
                                             />
                                             <Legend wrapperStyle={{ fontSize: 12, paddingTop: "10px" }} />
-                                            <Line type="monotone" name="Pool Users" dataKey="pool" stroke="#3b82f6" strokeWidth={3} dot={{ stroke: "#1d4ed8", strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
-                                            <Line type="monotone" name="Hostel Users" dataKey="hostel" stroke="#10b981" strokeWidth={3} dot={{ stroke: "#047857", strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
-                                            <Line type="monotone" name="Business Users" dataKey="business" stroke="#8b5cf6" strokeWidth={3} dot={{ stroke: "#6d28d9", strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
-                                            <Line type="monotone" name="System Active Users" dataKey="active" stroke="#f59e0b" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                                            <Line type="monotone" name="Pools" dataKey="pool" stroke="#3b82f6" strokeWidth={3} dot={{ stroke: "#1d4ed8", strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
+                                            <Line type="monotone" name="Hostels" dataKey="hostel" stroke="#10b981" strokeWidth={3} dot={{ stroke: "#047857", strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
+                                            <Line type="monotone" name="Businesses" dataKey="business" stroke="#8b5cf6" strokeWidth={3} dot={{ stroke: "#6d28d9", strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
+                                            <Line type="monotone" name="Total Members" dataKey="active" stroke="#f59e0b" strokeWidth={2} strokeDasharray="5 5" dot={false} />
                                         </LineChart>
                                     </ResponsiveContainer>
                                 )}

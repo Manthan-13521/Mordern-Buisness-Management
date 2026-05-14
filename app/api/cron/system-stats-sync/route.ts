@@ -24,30 +24,29 @@ export async function GET(req: Request) {
         const now = new Date();
         const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
-        // Get total pool members
-        const poolUsers = await Member.countDocuments({});
+        // Get total pool organizations
+        const poolCount = await Pool.countDocuments({});
 
-        // Get total hostel members
-        const hostelUsers = await HostelMember.countDocuments({});
+        // Get total hostel organizations
+        const hostelCount = await Hostel.countDocuments({});
 
-        // Get total business customers
-        const businessUsers = await BusinessCustomer.countDocuments({});
+        // Get total business organizations
+        const businessCount = await Business.countDocuments({});
 
-        // For activeUsers across the system, assuming total unique users 
-        // who have accessed or are 'active' (not deleted, etc)
-        // Here we just use a metric based on unified users or just total combined.
-        // If there's an isActive flag we'd use it. For now, estimate active as sum of systems if we don't have a single "active" flag.
-        // Let's count them:
-        const activeUsersCount = poolUsers + hostelUsers + businessUsers; // Placeholder for global active metric
+        // Get total members across all systems
+        const poolMembers = await Member.countDocuments({});
+        const hostelMembers = await HostelMember.countDocuments({});
+        const businessMembers = await BusinessCustomer.countDocuments({});
+        const totalMembers = poolMembers + hostelMembers + businessMembers;
 
         await SystemStats.findOneAndUpdate(
             { month: monthKey },
             {
                 $set: {
-                    poolUsers,
-                    hostelUsers,
-                    businessUsers,
-                    activeUsers: activeUsersCount
+                    poolUsers: poolCount,      // Now representing organization count
+                    hostelUsers: hostelCount,  // Now representing organization count
+                    businessUsers: businessCount, // Now representing organization count
+                    activeUsers: totalMembers  // Now representing total system members
                 }
             },
             { upsert: true, new: true }
