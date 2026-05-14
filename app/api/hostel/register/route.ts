@@ -7,12 +7,12 @@ import bcrypt from "bcryptjs";
 
 async function getNextHostelId() {
     const lastHostel = await Hostel.findOne({}, { hostelId: 1 }).sort({ createdAt: -1 });
-    if (!lastHostel || !lastHostel.hostelId || !lastHostel.hostelId.startsWith("HOST")) {
-        return "HOST001";
+    if (!lastHostel || !lastHostel.hostelId || !lastHostel.hostelId.startsWith("HOS")) {
+        return "HOS001";
     }
-    const currentId = parseInt(lastHostel.hostelId.replace("HOST", ""));
+    const currentId = parseInt(lastHostel.hostelId.replace("HOS", ""));
     const nextId = isNaN(currentId) ? 1 : currentId + 1;
-    return `HOST${nextId.toString().padStart(3, "0")}`;
+    return `HOS${nextId.toString().padStart(3, "0")}`;
 }
 
 export const dynamic = "force-dynamic";
