@@ -5,6 +5,16 @@ import { User } from "@/models/User";
 import { HostelSettings } from "@/models/HostelSettings";
 import bcrypt from "bcryptjs";
 
+async function getNextHostelId() {
+    const lastHostel = await Hostel.findOne({}, { hostelId: 1 }).sort({ createdAt: -1 });
+    if (!lastHostel || !lastHostel.hostelId || !lastHostel.hostelId.startsWith("HOST")) {
+        return "HOST001";
+    }
+    const currentId = parseInt(lastHostel.hostelId.replace("HOST", ""));
+    const nextId = isNaN(currentId) ? 1 : currentId + 1;
+    return `HOST${nextId.toString().padStart(3, "0")}`;
+}
+
 export const dynamic = "force-dynamic";
 
 /**
@@ -32,7 +42,7 @@ export async function POST(req: Request) {
         }
 
         // Generate unique hostelId and slug
-        const hostelId = crypto.randomUUID();
+        const hostelId = await getNextHostelId();
         const baseSlug = hostelName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
         let slug = baseSlug;
         let slugSuffix = 1;
