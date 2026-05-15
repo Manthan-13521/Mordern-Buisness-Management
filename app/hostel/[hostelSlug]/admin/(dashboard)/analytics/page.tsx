@@ -27,8 +27,16 @@ export default function HostelAnalyticsPage() {
 
             const [dJson, incomeJson] = await Promise.all([dRes.json(), incomeRes.json()]);
 
-            setDashData(dJson);
-            setMonthlyIncome(Array.isArray(incomeJson) ? incomeJson : []);
+            setDashData(dJson || {});
+            // SAFE: Ensure monthlyIncome is always a valid array with numeric values
+            const rawIncome = Array.isArray(incomeJson) ? incomeJson : [];
+            setMonthlyIncome(rawIncome.map((m: any) => {
+                const cleaned: any = { month: m.month || '' };
+                Object.keys(m).filter(k => k !== 'month').forEach(k => {
+                    cleaned[k] = Number(m[k]) || 0;
+                });
+                return cleaned;
+            }));
         } catch (e) {
             console.error(e);
         } finally {
@@ -75,11 +83,12 @@ export default function HostelAnalyticsPage() {
     const cashFlowStatus = totalRevenue > 0 ? "POSITIVE" : totalRevenue === 0 ? "NEUTRAL" : "NEGATIVE";
 
     // Build chart data for Revenue Trend (last 12 months)
-    const chartMax = Math.max(...monthlyIncome.map((m: any) => {
-        // Sum all block values or use single value
-        const keys = Object.keys(m).filter(k => k !== "month");
-        return keys.reduce((sum, k) => sum + (Number(m[k]) || 0), 0);
-    }), 1);
+    const chartMax = monthlyIncome.length > 0 
+        ? Math.max(...monthlyIncome.map((m: any) => {
+            const keys = Object.keys(m).filter(k => k !== "month");
+            return keys.reduce((sum, k) => sum + (Number(m[k]) || 0), 0);
+          }), 1)
+        : 1;
 
     // Build yearly performance data (aggregate monthly income by month index)
     const yearlyPerf = MONTH_LABELS.map((label, idx) => {
@@ -167,30 +176,38 @@ export default function HostelAnalyticsPage() {
                     <h2 className="text-sm font-bold text-white mb-6 flex items-center gap-2 uppercase tracking-wide">
                         <BarChart3 className="h-4 w-4 text-indigo-400" /> Revenue & Profit Trend
                     </h2>
-                    <div className="flex items-end gap-1 h-48">
-                        {monthlyIncome.map((m: any, i: number) => {
-                            const keys = Object.keys(m).filter(k => k !== "month");
-                            const total = keys.reduce((sum, k) => sum + (Number(m[k]) || 0), 0);
-                            const pct = (total / chartMax) * 100;
-                            const monthLabel = m.month?.split("-")[1] || "";
-                            return (
-                                <div key={i} className="flex-1 flex flex-col items-center gap-1" title={`${m.month}: ${fmt(total)}`}>
-                                    <div className="w-full relative flex-1 flex items-end">
-                                        <div
-                                            className="w-full rounded-t-md bg-gradient-to-t from-indigo-600 to-indigo-400 transition-all duration-500 min-h-[2px]"
-                                            style={{ height: `${Math.max(pct, 2)}%` }}
-                                        />
-                                    </div>
-                                    <span className="text-[9px] text-[#6b7280]">{monthLabel}</span>
-                                </div>
-                            );
-                        })}
-                    </div>
-                    {monthlyIncome.length > 0 && (
-                        <div className="flex justify-between mt-2 text-[10px] text-[#6b7280]">
-                            <span>{monthlyIncome[0]?.month}</span>
-                            <span>{monthlyIncome[monthlyIncome.length - 1]?.month}</span>
+                    {monthlyIncome.length === 0 ? (
+                        <div className="flex items-center justify-center h-48 text-[#6b7280] text-sm">
+                            No revenue data available yet
                         </div>
+                    ) : (
+                        <>
+                            <div className="flex items-end gap-1 h-48">
+                                {monthlyIncome.map((m: any, i: number) => {
+                                    const keys = Object.keys(m).filter(k => k !== "month");
+                                    const total = keys.reduce((sum, k) => sum + (Number(m[k]) || 0), 0);
+                                    const pct = chartMax > 0 ? (total / chartMax) * 100 : 0;
+                                    const monthLabel = m.month?.split("-")[1] || "";
+                                    return (
+                                        <div key={i} className="flex-1 flex flex-col items-center gap-1" title={`${m.month}: ${fmt(total)}`}>
+                                            <div className="w-full relative flex-1 flex items-end">
+                                                <div
+                                                    className="w-full rounded-t-md bg-gradient-to-t from-indigo-600 to-indigo-400 transition-all duration-500 min-h-[2px]"
+                                                    style={{ height: `${Math.max(pct, 2)}%` }}
+                                                />
+                                            </div>
+                                            <span className="text-[9px] text-[#6b7280]">{monthLabel}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            {monthlyIncome.length > 0 && (
+                                <div className="flex justify-between mt-2 text-[10px] text-[#6b7280]">
+                                    <span>{monthlyIncome[0]?.month}</span>
+                                    <span>{monthlyIncome[monthlyIncome.length - 1]?.month}</span>
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
 

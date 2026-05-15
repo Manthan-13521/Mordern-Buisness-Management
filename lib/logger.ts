@@ -66,12 +66,20 @@ export type AuditEventType =
     | "CROSS_TENANT_ATTEMPT"
     // ── Uploads ────────────────────────────────────────────────
     | "UPLOAD_REJECTED"
-    | "UPLOAD_SIZE_EXCEEDED";
+    | "UPLOAD_SIZE_EXCEEDED"
+    // ── Hostel ─────────────────────────────────────────────────
+    | "HOSTEL_PAYMENT_EDITED"
+    | "HOSTEL_PAYMENT_DELETED"
+    | "HOSTEL_MEMBER_VACATED"
+    | "HOSTEL_MEMBER_DELETED"
+    | "HOSTEL_BACKUP_CREATED";
 
 interface AuditEvent {
     type: AuditEventType;
     userId?: string;
     poolId?: string;
+    hostelId?: string;
+    businessId?: string;
     ip?: string;
     meta?: Record<string, unknown>;
 }
@@ -114,6 +122,8 @@ export const logger = {
             type: event.type,
             userId: event.userId,
             poolId: event.poolId,
+            hostelId: event.hostelId,
+            businessId: event.businessId,
             ip: event.ip,
             ...event.meta
         }, `Audit: ${event.type}`);

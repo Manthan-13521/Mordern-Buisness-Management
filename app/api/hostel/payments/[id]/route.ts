@@ -3,6 +3,7 @@ import { dbConnect } from "@/lib/mongodb";
 import { HostelPayment } from "@/models/HostelPayment";
 import { HostelMember } from "@/models/HostelMember";
 import { HostelPaymentArchive } from "@/models/HostelPaymentArchive";
+import { HostelLog } from "@/models/HostelLog";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,6 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
         const user = await resolveUser(req);
         await dbConnect();
         const [body] = await Promise.all([req.json()]);
-        await dbConnect();
         
         if (!user || user.role !== "hostel_admin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -52,6 +52,17 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
         if (notes !== undefined) payment.notes = notes;
         
         await payment.save();
+
+        // AUDIT: Log payment edit for financial integrity
+        await HostelLog.create({
+            hostelId,
+            type: "payment_edit",
+            memberId: member.memberId,
+            memberObjectId: member._id,
+            memberName: member.name,
+            description: `Payment ₹${payment.amount} edited (was ₹${payment.amount - difference}). Balance adjusted by ₹${difference}.`,
+            performedBy: user.email as string,
+        });
 
         return NextResponse.json({ success: true, payment });
     } catch (error: any) {
@@ -104,6 +115,15 @@ export async function DELETE(req: Request, context: { params: Promise<{ id: stri
 
         // Natively erase from active set
         await HostelPayment.deleteOne({ _id: payment._id });
+
+        // AUDIT: Log payment deletion for financial integrity
+        await HostelLog.create({
+            hostelId,
+            type: "payment_delete",
+            memberObjectId: payment.memberId,
+            description: `Payment ₹${payment.amount} (${payment.paymentType}) reversed and archived. Balance adjusted.`,
+            performedBy: user.email as string,
+        });
 
         return NextResponse.json({ success: true, message: "Payment successfully reversed and archived" });
     } catch (error: any) {

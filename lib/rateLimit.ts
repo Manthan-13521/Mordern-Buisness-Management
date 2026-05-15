@@ -47,6 +47,31 @@ export const RATE_LIMITS: Record<string, number> = {
     'POST:/api/pool/register':      10,
     'POST:/api/pools/subscribe':    5,
 
+    // Hostel — registration (public, strict)
+    'POST:/api/hostel/register':    5,
+
+    // Hostel — member operations
+    'POST:/api/hostel/members':     20,
+    'PUT:/api/hostel/members':      20,
+    'DELETE:/api/hostel/members':   10,
+    'POST:/api/hostel/members/run-rent-cycle': 3,
+
+    // Hostel — payments (financial, strict)
+    'POST:/api/hostel/payments':    15,
+    'PUT:/api/hostel/payments':     10,
+    'DELETE:/api/hostel/payments':  5,
+
+    // Hostel — staff & attendance
+    'POST:/api/hostel/staff':       15,
+    'POST:/api/hostel/staff/attendance': 30,
+
+    // Hostel — backups (resource-intensive)
+    'GET:/api/hostel/settings/backup/excel': 3,
+
+    // Hostel — analytics (moderate)
+    'GET:/api/hostel/dashboard':    30,
+    'GET:/api/hostel/analytics':    20,
+
     // cron / jobs — very strict
     'GET:/api/cron/cleanup':        2,
     'POST:/api/jobs/generate-card': 10,

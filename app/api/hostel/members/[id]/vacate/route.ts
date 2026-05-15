@@ -14,7 +14,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         const user = await resolveUser(req);
         await dbConnect();
         const [{ id }] = await Promise.all([params]);
-        await dbConnect();
         
         if (!user || user.role !== "hostel_admin") {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });

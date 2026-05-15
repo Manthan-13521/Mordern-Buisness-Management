@@ -17,7 +17,8 @@ export async function GET(req: Request) {
     try {
         await dbConnect();
         user = await resolveUser(req);
-        if (user && (user.role === "admin" || user.role === "superadmin" || user.role === "hostel_admin")) {
+        // SECURITY: Only hostel_admin and superadmin can access hostel backups
+        if (user && (user.role === "superadmin" || user.role === "hostel_admin")) {
             isAuthorized = true;
         }
 
@@ -25,7 +26,11 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
-        const hostelId = user?.hostelId || user?.poolId;
+        // SECURITY: Never fall back to poolId for hostel data
+        const hostelId = user?.hostelId;
+        if (!hostelId && user?.role !== "superadmin") {
+            return NextResponse.json({ error: "Hostel ID missing from session" }, { status: 403 });
+        }
         const baseMatch = hostelId ? { hostelId } : {};
 
         const [members, payments] = await Promise.all([
