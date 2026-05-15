@@ -59,6 +59,7 @@ export default function InvoicePage() {
   const [bdesc, setBdesc] = useState("");
   const [bgst, setBgst] = useState("");
   const [baddr, setBaddr] = useState("");
+  const [dbGst, setDbGst] = useState(""); // GST from DB — used to determine read-only state
 
   const [cname, setCname] = useState("");
   const [cbizname, setCbizname] = useState("");
@@ -152,6 +153,11 @@ export default function InvoicePage() {
         // Name and address always come from DB — user may override below
         setBname(prev => prev || data.name || "");
         setBaddr(prev => prev || data.address || "");
+        // GST from DB takes priority — auto-fill and lock
+        if (data.gstNumber) {
+          setBgst(data.gstNumber);
+          setDbGst(data.gstNumber);
+        }
       })
       .catch(() => {});
   }, []);
@@ -347,9 +353,17 @@ export default function InvoicePage() {
                     className="w-full bg-[#020617] border border-[#1f2937] rounded-xl px-4 py-3 text-sm font-medium text-[#f9fafb] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest">GST Number</label>
-                  <input value={bgst} onChange={(e) => setBgst(e.target.value)}
-                    className="w-full bg-[#020617] border border-[#1f2937] rounded-xl px-4 py-3 text-sm font-medium text-[#f9fafb] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all" />
+                  <label className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest flex items-center gap-2">
+                    GST Number
+                    {dbGst && <span className="text-[9px] text-[#22c55e] bg-[#22c55e]/10 px-2 py-0.5 rounded-md border border-[#22c55e]/20">Auto-filled from Settings</span>}
+                  </label>
+                  <input value={bgst} onChange={(e) => { if (!dbGst) setBgst(e.target.value); }}
+                    readOnly={!!dbGst}
+                    className={`w-full border rounded-xl px-4 py-3 text-sm font-medium text-[#f9fafb] focus:outline-none transition-all ${
+                      dbGst
+                        ? 'bg-[#111827] border-[#22c55e]/30 cursor-not-allowed opacity-80'
+                        : 'bg-[#020617] border-[#1f2937] focus:ring-2 focus:ring-[#8b5cf6]'
+                    }`} />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest">Address</label>

@@ -18,7 +18,7 @@ async function getNextBusinessId() {
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { businessName, adminName, adminEmail, adminPhone, password, address, adminBilling } = body;
+        const { businessName, adminName, adminEmail, adminPhone, password, address, gstNumber, adminBilling } = body;
 
         if (!businessName || !adminEmail || !password) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -63,6 +63,7 @@ export async function POST(req: Request) {
                 slug,
                 address,
                 phone: adminPhone,
+                gstNumber: gstNumber || undefined,
                 isActive: true,
             });
 

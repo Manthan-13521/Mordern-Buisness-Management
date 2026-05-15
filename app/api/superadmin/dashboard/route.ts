@@ -41,10 +41,6 @@ export async function GET(req: Request) {
             subscriptionPaymentLogs,
             referralCodes,
             referralUsages,
-            revenueAgg,
-            subRevenueAgg,
-            mrrAgg,
-            subMrrAgg,
             dailySignups,
         ] = await Promise.all([
             Organization.find({}).populate("planId").lean(),
@@ -53,29 +49,9 @@ export async function GET(req: Request) {
             Business.countDocuments({}),
             Member.countDocuments({}),
             BillingLog.find({}).populate("orgId").sort({ createdAt: -1 }).limit(500).lean(),
-            // Also fetch successful subscription payments for complete billing view
             SubscriptionPaymentLog.find({ status: "success" }).sort({ createdAt: -1 }).limit(500).lean(),
             ReferralCode.find({}).lean(),
             ReferralUsage.find({}).lean(),
-            // Total SaaS Revenue from BillingLog (all time)
-            BillingLog.aggregate([
-                { $group: { _id: null, total: { $sum: "$amount" } } }
-            ]),
-            // Total SaaS Revenue from SubscriptionPaymentLog (all time)
-            SubscriptionPaymentLog.aggregate([
-                { $match: { status: "success" } },
-                { $group: { _id: null, total: { $sum: "$amount" } } }
-            ]),
-            // MRR — BillingLog revenue in last 30 days
-            BillingLog.aggregate([
-                { $match: { createdAt: { $gte: thirtyDaysAgo } } },
-                { $group: { _id: null, total: { $sum: "$amount" } } }
-            ]),
-            // MRR — SubscriptionPaymentLog revenue in last 30 days
-            SubscriptionPaymentLog.aggregate([
-                { $match: { status: "success", createdAt: { $gte: thirtyDaysAgo } } },
-                { $group: { _id: null, total: { $sum: "$amount" } } }
-            ]),
             // Daily signups in last 30 days
             Organization.aggregate([
                 { $match: { createdAt: { $gte: thirtyDaysAgo } } },
@@ -89,20 +65,11 @@ export async function GET(req: Request) {
             ])
         ]);
 
-        // ── Map UserID to OrgName for subscription logs ──────────────────────
-        const userToOrgMap: Record<string, string> = {};
+        // ── Map UserID to Org for subscription logs ──────────────────────────
+        const userToOrgMap: Record<string, any> = {};
         allOrgs.forEach((o: any) => {
-            if (o.ownerId) userToOrgMap[o.ownerId.toString()] = o.name;
+            if (o.ownerId) userToOrgMap[o.ownerId.toString()] = o;
         });
-
-        // ── Derive KPIs (combined from both payment sources) ─────────────────
-        const billingRevenue = revenueAgg[0]?.total || 0;
-        const subRevenue = subRevenueAgg[0]?.total || 0;
-        const totalRevenue = billingRevenue + subRevenue;
-
-        const billingMrr = mrrAgg[0]?.total || 0;
-        const subMrr = subMrrAgg[0]?.total || 0;
-        const mrr = billingMrr + subMrr;
 
         const activeOrgs = allOrgs.filter((o: any) => o.status === "active");
         const trialOrgs = allOrgs.filter((o: any) => o.status === "trial");
@@ -116,7 +83,7 @@ export async function GET(req: Request) {
         });
 
         // Conversion rate: paid / trial (using allOrgs to capture total historical funnel)
-        const totalEverTrial = allOrgs.length; // everyone starts as trial or direct
+        const totalEverTrial = allOrgs.length;
         const convertedToPaid = allOrgs.filter((o: any) => o.status === "active").length;
         const conversionRate = totalEverTrial > 0 ? Math.round((convertedToPaid / totalEverTrial) * 100) : 0;
 
@@ -129,10 +96,10 @@ export async function GET(req: Request) {
         // ── Merge billing logs from both sources for complete billing view ────
         // Normalize SubscriptionPaymentLog entries to BillingLog shape
         const normalizedSubLogs = subscriptionPaymentLogs.map((s: any) => {
-            const org = allOrgs.find((o: any) => o.ownerId?.toString() === s.userId?.toString());
+            const org = userToOrgMap[s.userId?.toString()];
             return {
                 _id: s._id,
-                orgId: s.userId, // Use userId as org reference for display
+                orgId: org?._id || s.userId, // Use org._id (NOT userId) so dedup works
                 orgName: org?.name || "Unknown Entity",
                 entityId: getEntityId(org),
                 amount: s.amount,
@@ -147,11 +114,19 @@ export async function GET(req: Request) {
             };
         });
 
-        // Deduplicate: if a BillingLog already exists for the same razorpay payment, skip the sub log
-        const billingOrgIds = new Set(billingLogs.map((b: any) => `${b.orgId?._id?.toString() || b.orgId?.toString()}_${new Date(b.createdAt).toISOString().slice(0,10)}`));
-        const uniqueSubLogs = normalizedSubLogs.filter((s: any) => 
-            !billingOrgIds.has(`${s.orgId?.toString()}_${new Date(s.createdAt).toISOString().slice(0,10)}`)
+        // Deduplicate: if a BillingLog already exists for the same org on the same day, skip the sub log.
+        // Both sides now use org ObjectId for consistent comparison.
+        const billingDedup = new Set(
+            billingLogs.map((b: any) => {
+                const orgIdStr = b.orgId?._id?.toString() || b.orgId?.toString();
+                const dateStr = new Date(b.createdAt).toISOString().slice(0, 10);
+                return `${orgIdStr}_${dateStr}`;
+            })
         );
+        const uniqueSubLogs = normalizedSubLogs.filter((s: any) => {
+            const key = `${s.orgId?.toString()}_${new Date(s.createdAt).toISOString().slice(0, 10)}`;
+            return !billingDedup.has(key);
+        });
 
         // Combine and sort by date
         const allBillingLogs = [
@@ -164,6 +139,12 @@ export async function GET(req: Request) {
         ].sort(
             (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
+
+        // ── Derive KPIs from deduplicated billing list (single source of truth) ─
+        const totalRevenue = allBillingLogs.reduce((sum: number, b: any) => sum + (b.amount || 0), 0);
+        const mrr = allBillingLogs
+            .filter((b: any) => new Date(b.createdAt) >= thirtyDaysAgo)
+            .reduce((sum: number, b: any) => sum + (b.amount || 0), 0);
 
         // ── Organization Health Table ─────────────────────────────────────────
         const orgHealth = allOrgs.map((o: any) => {

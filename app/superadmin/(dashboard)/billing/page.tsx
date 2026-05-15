@@ -92,7 +92,7 @@ export default function PlatformBillingDashboard() {
                                 const isManual = b.paymentMode?.includes("Admin:");
 
                                 return (
-                                    <tr key={i} className="border-b border-[#1f2937]/50 hover:bg-[#8b5cf6]/5 transition-colors">
+                                    <tr key={b._id || i} className="border-b border-[#1f2937]/50 hover:bg-[#8b5cf6]/5 transition-colors">
                                         <td className="px-6 py-4 text-[#6b7280] font-mono text-xs">{i + 1}</td>
                                         <td className="px-6 py-4 text-[#9ca3af] font-medium text-xs">
                                             {new Date(b.createdAt).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}

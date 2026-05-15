@@ -19,8 +19,8 @@ const businessLabourAdvanceSchema = new Schema<IBusinessLabourAdvance>(
   { timestamps: true }
 );
 
-// Unique index to ensure only one advance record per staff per month
-businessLabourAdvanceSchema.index({ labourId: 1, month: 1 }, { unique: true });
+// Unique index to ensure only one advance record per staff per month per business
+businessLabourAdvanceSchema.index({ businessId: 1, labourId: 1, month: 1 }, { unique: true });
 
 export const BusinessLabourAdvance: Model<IBusinessLabourAdvance> =
   mongoose.models.BusinessLabourAdvance || mongoose.model<IBusinessLabourAdvance>("BusinessLabourAdvance", businessLabourAdvanceSchema);

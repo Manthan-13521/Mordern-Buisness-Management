@@ -7,6 +7,7 @@ export interface IBusiness extends Document {
   ownerId?: mongoose.Types.ObjectId;
   phone?: string;
   address?: string;
+  gstNumber?: string;
   logoUrl?: string;
   isActive: boolean;
   createdAt: Date;
@@ -21,6 +22,7 @@ const businessSchema = new Schema<IBusiness>(
     ownerId: { type: Schema.Types.ObjectId, ref: "User", index: true },
     phone: { type: String },
     address: { type: String },
+    gstNumber: { type: String },
     logoUrl: { type: String },
     isActive: { type: Boolean, default: true },
   },

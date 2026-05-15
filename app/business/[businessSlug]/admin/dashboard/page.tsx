@@ -17,6 +17,7 @@ export default function BusinessDashboard() {
   const { data: dashboardData, isLoading: loading } = useDashboardStats();
   const stats = dashboardData?.stats || {};
   const recentSales = dashboardData?.recentSales || [];
+  const recentPayments = dashboardData?.recentPayments || [];
 
   if (loading) {
     return (
@@ -33,8 +34,6 @@ export default function BusinessDashboard() {
       icon: ShoppingBag, 
       color: "text-[#38bdf8]", 
       bg: "bg-[#38bdf8]/10",
-      trend: "+12%",
-      isPositive: true
     },
     { 
       title: "Monthly Revenue", 
@@ -42,8 +41,6 @@ export default function BusinessDashboard() {
       icon: TrendingUp, 
       color: "text-[#22c55e]", 
       bg: "bg-[#22c55e]/10",
-      trend: "+8.4%",
-      isPositive: true
     },
     { 
       title: "Total Receivables", 
@@ -51,8 +48,6 @@ export default function BusinessDashboard() {
       icon: IndianRupee, 
       color: "text-[#ef4444]", 
       bg: "bg-[#ef4444]/10",
-      trend: "+2.1%",
-      isPositive: false
     },
     { 
       title: "Yearly Performance", 
@@ -60,8 +55,6 @@ export default function BusinessDashboard() {
       icon: ArrowUpRight, 
       color: "text-[#8b5cf6]", 
       bg: "bg-[#8b5cf6]/10",
-      trend: "+15.2%",
-      isPositive: true
     },
   ];
 
@@ -80,10 +73,6 @@ export default function BusinessDashboard() {
             <div className="flex items-center justify-between mb-4">
               <div className={`p-2 rounded-xl border border-transparent ${card.bg}`}>
                 <card.icon className={`w-5 h-5 ${card.color}`} />
-              </div>
-              <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${card.isPositive ? 'bg-[#22c55e]/10 text-[#22c55e]' : 'bg-[#ef4444]/10 text-[#ef4444]'}`}>
-                {card.isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                {card.trend}
               </div>
             </div>
             <p className="text-xs font-bold text-[#9ca3af] uppercase tracking-widest">{card.title}</p>
@@ -179,21 +168,34 @@ export default function BusinessDashboard() {
               <div className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse" />
             </div>
             <div className="space-y-4">
-              {/* Visual mockup for payments */}
-              {[1, 2, 3].map((_, i) => (
+              {recentPayments.length > 0 ? recentPayments.slice(0, 3).map((p: any, i: number) => (
                 <div key={i} className="flex items-center gap-3 group px-2 py-1 -mx-2 hover:bg-[#8b5cf6]/5 rounded-xl transition-all cursor-default">
-                  <div className="w-8 h-8 rounded-lg bg-[#22c55e]/10 flex items-center justify-center border border-[#22c55e]/20">
-                    <IndianRupee className="w-4 h-4 text-[#22c55e]" />
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center border ${
+                    p.transactionType === 'received' 
+                      ? 'bg-[#22c55e]/10 border-[#22c55e]/20' 
+                      : 'bg-[#ef4444]/10 border-[#ef4444]/20'
+                  }`}>
+                    <IndianRupee className={`w-4 h-4 ${p.transactionType === 'received' ? 'text-[#22c55e]' : 'text-[#ef4444]'}`} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-[#f9fafb] truncate group-hover:text-[#8b5cf6] transition-colors">Payment Received</p>
-                    <p className="text-[10px] text-[#9ca3af] font-medium">Via UPI Bank Transfer</p>
+                    <p className="text-xs font-bold text-[#f9fafb] truncate group-hover:text-[#8b5cf6] transition-colors">
+                      {p.customerId?.name || 'Unknown'}
+                    </p>
+                    <p className="text-[10px] text-[#9ca3af] font-medium">
+                      {p.paymentMethod?.toUpperCase() || 'Cash'} • {new Date(p.date).toLocaleDateString()}
+                    </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-bold text-[#22c55e]">+₹4,500</p>
+                    <p className={`text-xs font-bold ${p.transactionType === 'received' ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
+                      {p.transactionType === 'received' ? '+' : '-'}₹{p.amount?.toLocaleString() || 0}
+                    </p>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center py-4">
+                  <p className="text-xs text-[#6b7280] font-medium">No recent payments</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

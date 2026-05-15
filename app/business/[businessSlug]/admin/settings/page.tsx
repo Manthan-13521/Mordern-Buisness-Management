@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Settings, Save, Download, HardDrive, Server, Sun, Moon, Monitor, Sparkles, Zap, ArrowRight, Building2 } from "lucide-react";
 import Link from "next/link";
 
-type BusinessInfo = { name: string; slug: string; address: string; phone: string; adminEmail?: string; };
+type BusinessInfo = { name: string; slug: string; address: string; phone: string; gstNumber?: string; adminEmail?: string; };
 const INPUT = "w-full rounded-xl border border-[#1f2937] bg-[#0b1220] px-3 py-2 text-sm text-[#f9fafb] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6]";
 const LABEL = "block text-xs font-medium text-[#9ca3af] mb-1";
 
@@ -83,8 +83,12 @@ export default function SettingsPage() {
                         <p className="font-medium text-[#f9fafb] mt-1">{info?.phone || "—"}</p>
                     </div>
                     <div>
+                        <p className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider">GST Number</p>
+                        <p className="font-medium text-[#f9fafb] mt-1">{info?.gstNumber || <span className="text-[#6b7280] italic">Not set</span>}</p>
+                    </div>
+                    <div className="col-span-2">
                         <p className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider">Address</p>
-                        <p className="font-medium text-[#f9fafb] mt-1 line-clamp-1" title={info?.address}>{info?.address || "—"}</p>
+                        <p className="font-medium text-[#f9fafb] mt-1 line-clamp-2" title={info?.address}>{info?.address || "—"}</p>
                     </div>
                 </div>
             </div>

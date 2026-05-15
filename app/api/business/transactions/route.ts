@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessTransaction } from "@/models/BusinessTransaction";
+import { requireBusinessId } from "@/lib/tenant";
+import { analyticsLimiter } from "@/lib/rateLimiter";
 import { logger } from "@/lib/logger";
 import mongoose from "mongoose";
 
@@ -14,8 +16,26 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
+        // 🟠 RATE LIMITING
+        const ip = req.headers.get("x-forwarded-for") || "unknown";
+        const rl = analyticsLimiter.checkTenant(user.businessId || "unknown", ip);
+        if (!rl.allowed) {
+            return NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429 });
+        }
+
+        let businessId: string;
+        try {
+            businessId = requireBusinessId(user);
+        } catch (err: any) {
+            return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
+        }
+
         await dbConnect();
-        const businessId = user.businessId;
+
+        // 🔴 TERMINAL DEFENSE
+        if (!businessId) {
+            throw new Error("Tenant context lost before query execution");
+        }
         const { searchParams } = new URL(req.url);
         const customerId = searchParams.get("customerId");
 
@@ -83,7 +103,18 @@ export async function PATCH(req: Request) {
         }
 
         await dbConnect();
-        const businessId = user.businessId;
+
+        let businessId: string;
+        try {
+            businessId = requireBusinessId(user);
+        } catch (err: any) {
+            return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
+        }
+
+        // 🔴 TERMINAL DEFENSE
+        if (!businessId) {
+            throw new Error("Tenant context lost before database operation");
+        }
 
         // Only allow updating receipt on transactions owned by this business
         const updated = await BusinessTransaction.findOneAndUpdate(

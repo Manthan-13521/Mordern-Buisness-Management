@@ -46,7 +46,8 @@ function BusinessRegisterInner() {
         adminEmail: "",
         adminPhone: "",
         password: "",
-        address: ""
+        address: "",
+        gstNumber: ""
     });
 
     // Admin billing state
@@ -317,6 +318,20 @@ function BusinessRegisterInner() {
                                                 name="address"
                                                 placeholder="City, State, Country"
                                                 value={formData.address}
+                                                onChange={handleChange}
+                                                className="w-full bg-[#020617] border border-[#1f2937] rounded-xl pl-12 pr-6 py-3.5 text-sm text-[#f9fafb] placeholder:text-[#6b7280] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all font-medium"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-[#9ca3af] uppercase tracking-widest block">GST Number <span className="opacity-50">(Optional)</span></label>
+                                        <div className="relative group">
+                                            <Receipt className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6b7280] group-focus-within:text-[#8b5cf6] transition-colors" />
+                                            <input 
+                                                type="text"
+                                                name="gstNumber"
+                                                placeholder="e.g. 36AABCU9603R1ZM"
+                                                value={formData.gstNumber}
                                                 onChange={handleChange}
                                                 className="w-full bg-[#020617] border border-[#1f2937] rounded-xl pl-12 pr-6 py-3.5 text-sm text-[#f9fafb] placeholder:text-[#6b7280] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all font-medium"
                                             />

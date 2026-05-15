@@ -4,6 +4,8 @@ import { dbConnect } from "@/lib/mongodb";
 import { BusinessLabourPayment } from "@/models/BusinessLabourPayment";
 import { requireBusinessId } from "@/lib/tenant";
 import { SystemLock } from "@/models/SystemLock";
+import { financialWriteLimiter } from "@/lib/rateLimiter";
+import { auditLog } from "@/lib/auditLog";
 import { logger } from "@/lib/logger";
 import crypto from "crypto";
 
@@ -20,6 +22,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ labourI
             businessId = requireBusinessId(user);
         } catch (err: any) {
             return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
+        }
+
+        // 🟠 RATE LIMITING
+        const ip = req.headers.get("x-forwarded-for") || "unknown";
+        const rl = financialWriteLimiter.checkTenant(user.businessId || "unknown", ip);
+        if (!rl.allowed) {
+            return NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429 });
         }
 
         const { labourId } = await params;
@@ -47,6 +56,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ labourI
         });
 
         await payment.save();
+
+        auditLog.financial({ businessId, userId: user.id, action: "LABOUR_PAYMENT", details: { labourId, amount } });
 
         // ── 90-Day Rolling Window Cleanup (Distributed Atomic Locked Sweep) ──
         if (Math.random() < 0.05) {

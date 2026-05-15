@@ -3,6 +3,8 @@ import { resolveUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessLabourAdvance } from "@/models/BusinessLabourAdvance";
 import { requireBusinessId } from "@/lib/tenant";
+import { financialWriteLimiter } from "@/lib/rateLimiter";
+import { auditLog } from "@/lib/auditLog";
 import { logger } from "@/lib/logger";
 
 export async function POST(req: Request) {
@@ -22,6 +24,13 @@ export async function POST(req: Request) {
       );
     }
 
+    // 🟠 RATE LIMITING
+    const ip = req.headers.get("x-forwarded-for") || "unknown";
+    const rl = financialWriteLimiter.checkTenant(user.businessId || "unknown", ip);
+    if (!rl.allowed) {
+      return NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429 });
+    }
+
     const { staffId, month, amount } = await req.json();
 
     if (!staffId || !month || typeof amount !== "number") {
@@ -35,6 +44,8 @@ export async function POST(req: Request) {
       { $set: { amount } },
       { upsert: true, new: true }
     );
+
+    auditLog.financial({ businessId, userId: user.id, action: "LABOUR_ADVANCE", details: { staffId, month, amount } });
 
     return NextResponse.json({ success: true, data: advance });
   } catch (error: any) {

@@ -4,6 +4,7 @@ import { dbConnect } from "@/lib/mongodb";
 import { BusinessTransaction } from "@/models/BusinessTransaction";
 import { BusinessCustomer } from "@/models/BusinessCustomer";
 import { requireBusinessId } from "@/lib/tenant";
+import { analyticsLimiter } from "@/lib/rateLimiter";
 import { logger } from "@/lib/logger";
 import {
     getRevenueForDateRange,
@@ -19,6 +20,13 @@ export async function GET(req: Request) {
         const user = await resolveUser(req);
         if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        // 🟠 RATE LIMITING
+        const ip = req.headers.get("x-forwarded-for") || "unknown";
+        const rl = analyticsLimiter.checkTenant(user.businessId || "unknown", ip);
+        if (!rl.allowed) {
+            return NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429 });
         }
         
         let businessId;
@@ -222,6 +230,26 @@ export async function GET(req: Request) {
         });
     } catch (error: any) {
         logger.error("Advanced analytics error", { error: error?.message });
-        return NextResponse.json({ error: "Failed to fetch analytics" }, { status: 500 });
+        // 🔴 SAFE FALLBACK: Return consistent response shape so charts never crash
+        return NextResponse.json({
+            data: {
+                businessSummary: {
+                    totalRevenue: 0, totalExpenses: 0, netProfit: 0,
+                    totalReceivables: 0, totalPayables: 0,
+                    currentCashFlow: 0, cashIn: 0, cashOut: 0
+                },
+                trendData: [],
+                yearlyReport: [],
+                customerInsights: { topCustomers: [], highestPending: [] },
+                productAnalytics: { topProducts: [], leastPerforming: [] },
+                paymentAnalytics: { totalReceived: 0, totalGiven: 0, methodsBreakdown: [] },
+                healthIndicators: { profitMargin: 0, receivableRatio: 0, cashFlowStatus: "Unknown" }
+            },
+            meta: {
+                error: "Failed to fetch analytics",
+                details: error?.message,
+                timestamp: new Date().toISOString()
+            }
+        }, { status: 500 });
     }
 }

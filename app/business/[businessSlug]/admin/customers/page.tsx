@@ -289,10 +289,16 @@ export default function CustomersPage() {
                       </td>
                       <td className="px-6 py-[53px] text-right">
                         <p className={clsx(
-                          "text-[1.35rem] font-semibold inline-flex rounded-lg",
-                          isDue ? "text-[#ef4444]" : "text-[#9ca3af]"
+                          "text-[1.35rem] font-semibold inline-flex items-center gap-2 rounded-lg",
+                          isDue ? "text-[#ef4444]" : customer.currentDue < 0 ? "text-[#f59e0b]" : "text-[#9ca3af]"
                         )}>
-                          ₹{customer.currentDue.toLocaleString()}
+                          ₹{Math.abs(customer.currentDue).toLocaleString()}
+                          {customer.currentDue > 0 && (
+                            <span className="text-[0.8rem] font-bold text-[#22c55e]">(Receive)</span>
+                          )}
+                          {customer.currentDue < 0 && (
+                            <span className="text-[0.8rem] font-bold text-[#f59e0b]">(Pay)</span>
+                          )}
                         </p>
                       </td>
                       <td className="px-6 py-[53px]">

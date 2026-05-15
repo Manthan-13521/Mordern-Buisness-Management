@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { Business } from "@/models/Business";
+import { requireBusinessId } from "@/lib/tenant";
 import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
@@ -14,8 +15,19 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
+        let businessId: string;
+        try {
+            businessId = requireBusinessId(user);
+        } catch (err: any) {
+            return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
+        }
+
         await dbConnect();
-        const businessId = user.businessId;
+
+        // 🔴 TERMINAL DEFENSE
+        if (!businessId) {
+            throw new Error("Tenant context lost before query execution");
+        }
 
         const business = await Business.findOne({ businessId }).lean() as any;
         if (!business) {
@@ -26,6 +38,7 @@ export async function GET(req: Request) {
             name: business.name || "",
             address: business.address || "",
             phone: business.phone || "",
+            gstNumber: business.gstNumber || "",
             logoUrl: business.logoUrl || "",
             slug: business.slug || "",
         }, {

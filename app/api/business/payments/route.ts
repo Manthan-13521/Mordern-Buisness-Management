@@ -3,13 +3,31 @@ import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessTransaction } from "@/models/BusinessTransaction";
 import { BusinessCustomer } from "@/models/BusinessCustomer";
+import { requireBusinessId } from "@/lib/tenant";
+import { financialWriteLimiter } from "@/lib/rateLimiter";
+import { auditLog } from "@/lib/auditLog";
 import { logger } from "@/lib/logger";
 import { PaymentSchema } from "@/lib/shared/types";
 import mongoose from "mongoose";
+import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
-// PaymentSchema is imported from @/lib/shared/types
+// ── Idempotency Guard (LRU, 5-second window) ──
+const recentPaymentKeys = new Map<string, number>();
+const IDEMPOTENCY_WINDOW_MS = 5_000;
+const MAX_CACHE_SIZE = 500;
+function checkIdempotency(key: string): boolean {
+    const now = Date.now();
+    if (recentPaymentKeys.size > MAX_CACHE_SIZE) {
+        for (const [k, ts] of recentPaymentKeys) {
+            if (now - ts > IDEMPOTENCY_WINDOW_MS) recentPaymentKeys.delete(k);
+        }
+    }
+    if (recentPaymentKeys.has(key) && now - recentPaymentKeys.get(key)! < IDEMPOTENCY_WINDOW_MS) return true;
+    recentPaymentKeys.set(key, now);
+    return false;
+}
 
 export async function GET(req: Request) {
     try {
@@ -18,8 +36,19 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
+        let businessId: string;
+        try {
+            businessId = requireBusinessId(user);
+        } catch (err: any) {
+            return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
+        }
+
         await dbConnect();
-        const businessId = user.businessId;
+
+        // 🔴 TERMINAL DEFENSE
+        if (!businessId) {
+            throw new Error("Tenant context lost before query execution");
+        }
 
         const { searchParams } = new URL(req.url);
         const customerId = searchParams.get("customerId");
@@ -71,6 +100,13 @@ export async function POST(req: Request) {
         if (!user || user.role !== "business_admin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
+
+        // 🟠 RATE LIMITING
+        const ip = req.headers.get("x-forwarded-for") || "unknown";
+        const rl = financialWriteLimiter.checkTenant(user.businessId || "unknown", ip);
+        if (!rl.allowed) {
+            return NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429 });
+        }
         try {
             body = await req.json();
         } catch (e) {
@@ -88,8 +124,26 @@ export async function POST(req: Request) {
 
         const { customerId, amount, type, fileUrl, receiptUrl, paymentType, date, notes } = parseResult.data;
 
+        let businessId: string;
+        try {
+            businessId = requireBusinessId(user);
+        } catch (err: any) {
+            return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
+        }
+
         await dbConnect();
-        const businessId = user.businessId;
+
+        // 🔴 TERMINAL DEFENSE
+        if (!businessId) {
+            throw new Error("Tenant context lost before database operation");
+        }
+
+        // 🟡 IDEMPOTENCY: Prevent duplicate payment writes from retries/double-clicks
+        const idempotencyKey = crypto.createHash("md5").update(`${businessId}:${customerId}:${amount}:${paymentType}`).digest("hex");
+        if (checkIdempotency(idempotencyKey)) {
+            logger.warn("Duplicate payment submission blocked", { businessId, customerId, amount });
+            return NextResponse.json({ success: false, error: "Duplicate submission detected. Please wait." }, { status: 429 });
+        }
 
         const payment = new BusinessTransaction({
             customerId,
@@ -120,6 +174,8 @@ export async function POST(req: Request) {
             { _id: customerId, businessId },
             { $inc: incObject }
         );
+
+        auditLog.financial({ businessId, userId: user.id, action: "PAYMENT_CREATED", details: { customerId, amount, paymentType } });
 
         return NextResponse.json({ success: true, data: payment }, {
             status: 201,

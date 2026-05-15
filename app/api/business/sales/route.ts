@@ -3,13 +3,32 @@ import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessTransaction } from "@/models/BusinessTransaction";
 import { BusinessCustomer } from "@/models/BusinessCustomer";
+import { requireBusinessId } from "@/lib/tenant";
+import { financialWriteLimiter } from "@/lib/rateLimiter";
+import { auditLog } from "@/lib/auditLog";
 import { logger } from "@/lib/logger";
 import { SaleSchema } from "@/lib/shared/types";
 import mongoose from "mongoose";
+import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
-// SaleSchema is imported from @/lib/shared/types
+// ── Idempotency Guard (LRU, 5-second window) ──
+const recentSaleKeys = new Map<string, number>();
+const IDEMPOTENCY_WINDOW_MS = 5_000;
+const MAX_CACHE_SIZE = 500;
+function checkIdempotency(key: string): boolean {
+    const now = Date.now();
+    // Evict expired
+    if (recentSaleKeys.size > MAX_CACHE_SIZE) {
+        for (const [k, ts] of recentSaleKeys) {
+            if (now - ts > IDEMPOTENCY_WINDOW_MS) recentSaleKeys.delete(k);
+        }
+    }
+    if (recentSaleKeys.has(key) && now - recentSaleKeys.get(key)! < IDEMPOTENCY_WINDOW_MS) return true;
+    recentSaleKeys.set(key, now);
+    return false;
+}
 
 export async function GET(req: Request) {
     try {
@@ -18,8 +37,19 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
+        let businessId: string;
+        try {
+            businessId = requireBusinessId(user);
+        } catch (err: any) {
+            return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
+        }
+
         await dbConnect();
-        const businessId = user.businessId;
+
+        // 🔴 TERMINAL DEFENSE
+        if (!businessId) {
+            throw new Error("Tenant context lost before query execution");
+        }
 
         const { searchParams } = new URL(req.url);
         const customerId = searchParams.get("customerId");
@@ -59,6 +89,13 @@ export async function POST(req: Request) {
         if (!user || user.role !== "business_admin") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
+
+        // 🟠 RATE LIMITING
+        const ip = req.headers.get("x-forwarded-for") || "unknown";
+        const rl = financialWriteLimiter.checkTenant(user.businessId || "unknown", ip);
+        if (!rl.allowed) {
+            return NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429 });
+        }
         try {
             body = await req.json();
         } catch (e) {
@@ -76,8 +113,26 @@ export async function POST(req: Request) {
 
         const { customerId, items, transportationCost, totalAmount, date, saleType, receiptUrl, paidAmount } = parseResult.data;
 
+        let businessId: string;
+        try {
+            businessId = requireBusinessId(user);
+        } catch (err: any) {
+            return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
+        }
+
         await dbConnect();
-        const businessId = user.businessId;
+
+        // 🔴 TERMINAL DEFENSE
+        if (!businessId) {
+            throw new Error("Tenant context lost before database operation");
+        }
+
+        // 🟡 IDEMPOTENCY: Prevent duplicate sale writes from retries/double-clicks
+        const idempotencyKey = crypto.createHash("md5").update(`${businessId}:${customerId}:${totalAmount}:${saleType}`).digest("hex");
+        if (checkIdempotency(idempotencyKey)) {
+            logger.warn("Duplicate sale submission blocked", { businessId, customerId, totalAmount });
+            return NextResponse.json({ success: false, error: "Duplicate submission detected. Please wait." }, { status: 429 });
+        }
 
         const sale = new BusinessTransaction({
             customerId,
@@ -106,6 +161,8 @@ export async function POST(req: Request) {
                 } 
             }
         );
+
+        auditLog.financial({ businessId, userId: user.id, action: "SALE_CREATED", details: { customerId, totalAmount, saleType } });
 
         return NextResponse.json({ success: true, data: sale }, {
             status: 201,

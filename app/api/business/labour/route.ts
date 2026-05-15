@@ -5,6 +5,8 @@ import { BusinessLabour } from "@/models/BusinessLabour";
 import { BusinessAttendance } from "@/models/BusinessAttendance";
 import { BusinessLabourAdvance } from "@/models/BusinessLabourAdvance";
 import { requireBusinessId } from "@/lib/tenant";
+import { generalLimiter } from "@/lib/rateLimiter";
+import { auditLog } from "@/lib/auditLog";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 
@@ -142,6 +144,13 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
+        // 🟠 RATE LIMITING
+        const ip = req.headers.get("x-forwarded-for") || "unknown";
+        const rl = generalLimiter.checkTenant(user.businessId || "unknown", ip);
+        if (!rl.allowed) {
+            return NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429 });
+        }
+
         const body = await req.json();
         const parsed = LabourCreateSchema.safeParse(body);
         if (!parsed.success) {
@@ -179,6 +188,8 @@ export async function POST(req: Request) {
         });
 
         await labour.save();
+
+        auditLog.financial({ businessId, userId: user.id, action: "LABOUR_CREATED", details: { name, role, salary } });
 
         return NextResponse.json({
             data: labour,
