@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { dbConnect } from "@/lib/mongodb";
 import { HostelMember } from "@/models/HostelMember";
 import { HostelBlock } from "@/models/HostelBlock";
@@ -6,6 +7,7 @@ import { HostelPlan } from "@/models/HostelPlan";
 import { HostelRoom } from "@/models/HostelRoom";
 import { HostelFloor } from "@/models/HostelFloor";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
+import { timedQuery } from "@/lib/queryTimer";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -39,16 +41,20 @@ export async function GET(req: Request) {
         const blockIdToName = new Map(allBlocks.map(b => [b._id.toString(), b.name]));
 
         // Aggregate members vacated by vacated_at
-        const agg = await HostelMember.aggregate([
-            { $match: { hostelId, status: { $in: ["vacated", "deleted"] }, vacated_at: { $gte: startDate } } },
-            { $group: {
-                _id: {
-                    month: { $dateToString: { format: "%Y-%m", date: "$vacated_at" } },
-                    blockId: "$blockId"
-                },
-                totalCheckouts: { $sum: 1 }
-            }}
-        ]);
+        const agg = await timedQuery(
+            "hostel/analytics/monthly-checkouts",
+            hostelId as string,
+            () => HostelMember.aggregate([
+                { $match: { hostelId, status: { $in: ["vacated", "deleted"] }, vacated_at: { $gte: startDate } } },
+                { $group: {
+                    _id: {
+                        month: { $dateToString: { format: "%Y-%m", date: "$vacated_at" } },
+                        blockId: "$blockId"
+                    },
+                    totalCheckouts: { $sum: 1 }
+                }}
+            ])
+        );
 
         const finalData = months.map(m => {
             const monthObj: any = { month: m };
@@ -82,6 +88,6 @@ export async function GET(req: Request) {
 
     } catch (error) {
         console.error("[GET /api/hostel/analytics/monthly-checkouts]", error);
-        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        return NextResponse.json([], {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

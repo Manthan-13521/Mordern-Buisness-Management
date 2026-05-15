@@ -8,6 +8,7 @@ import { HostelRoom } from "@/models/HostelRoom";
 import { HostelFloor } from "@/models/HostelFloor";
 import mongoose from "mongoose";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
+import { timedQuery } from "@/lib/queryTimer";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -42,18 +43,22 @@ export async function GET(req: Request) {
 
         const matchStage: any = { hostelId, status: "success", isDeleted: false, paymentType: { $ne: "rent" }, createdAt: { $gte: startDate } };
 
-        const agg = await HostelPayment.aggregate([
-            { $match: matchStage },
-            { $lookup: { from: "hostelmembers", localField: "memberId", foreignField: "_id", as: "member" } },
-            { $unwind: { path: "$member", preserveNullAndEmptyArrays: true } },
-            { $group: {
-                _id: {
-                    month: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
-                    blockId: "$member.blockId"
-                },
-                totalIncome: { $sum: "$amount" }
-            }}
-        ]);
+        const agg = await timedQuery(
+            "hostel/analytics/monthly-income",
+            hostelId as string,
+            () => HostelPayment.aggregate([
+                { $match: matchStage },
+                { $lookup: { from: "hostelmembers", localField: "memberId", foreignField: "_id", as: "member" } },
+                { $unwind: { path: "$member", preserveNullAndEmptyArrays: true } },
+                { $group: {
+                    _id: {
+                        month: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+                        blockId: "$member.blockId"
+                    },
+                    totalIncome: { $sum: "$amount" }
+                }}
+            ])
+        );
 
         const finalData = months.map(m => {
             const monthObj: any = { month: m };
@@ -88,6 +93,7 @@ export async function GET(req: Request) {
 
     } catch (error) {
         console.error("[GET /api/hostel/analytics/monthly-income]", error);
-        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        // SAFE FALLBACK: Return empty chart data instead of crashing
+        return NextResponse.json([], {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

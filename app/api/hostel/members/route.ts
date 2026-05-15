@@ -15,6 +15,9 @@ import path from "path";
 import { HostelRegistrationLog } from "@/models/HostelRegistrationLog";
 import { HostelPaymentLog } from "@/models/HostelPaymentLog";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
+import { isDuplicate } from "@/lib/idempotency";
+import { checkRateLimit, getClientIp, rateLimitHeaders } from "@/lib/rateLimit";
+import { logger } from "@/lib/logger";
 export const dynamic = "force-dynamic";
 
 // ─── GET: list members (paginated + search + filters) ────────────────────────
@@ -95,6 +98,16 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Forbidden" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
+        // ── RATE LIMITING ──
+        const ip = getClientIp(req);
+        const { allowed, limit, remaining } = checkRateLimit(ip, "/api/hostel/members", "POST");
+        if (!allowed) {
+            return NextResponse.json(
+                { error: "Too many requests. Please try again later." },
+                { status: 429, headers: rateLimitHeaders(limit, remaining) }
+            );
+        }
+
         // Support both JSON and FormData (photo upload)
         const contentType = req.headers.get("content-type") || "";
         let body: Record<string, any> = {};
@@ -114,6 +127,15 @@ export async function POST(req: Request) {
         }
 
         const { name, phone, planId, blockNo, floorNo, roomNo, paymentMode, paidAmount, notes, collegeName, bedNo: explicitBedNo } = body;
+
+        // ── IDEMPOTENCY: Prevent double member creation (10s window) ──
+        const dedupeKey = `member-create:${hostelId}:${phone}`;
+        if (isDuplicate(dedupeKey, 10_000)) {
+            return NextResponse.json(
+                { message: "Member registration already in progress. Please wait." },
+                { status: 200 }
+            );
+        }
 
         if (!name || !phone || !planId || !blockNo || !floorNo || !roomNo) {
             return NextResponse.json({ error: "Missing required fields: name, phone, planId, blockNo, floorNo, roomNo" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
@@ -176,9 +198,18 @@ export async function POST(req: Request) {
             // Handle photo upload
             let photoUrl: string | undefined;
             if (photoFile) {
+                // PHASE 5: Strict Photo Validation
+                const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+                if (!ALLOWED_TYPES.includes(photoFile.type)) {
+                    return NextResponse.json({ error: "Invalid file type. Only JPEG, PNG and WEBP are allowed." }, { status: 400 });
+                }
+                if (photoFile.size > 5 * 1024 * 1024) { // 5MB limit
+                    return NextResponse.json({ error: "File too large. Maximum size is 5MB." }, { status: 400 });
+                }
+
                 try {
-                    const ext = photoFile.name.split(".").pop() || "jpg";
-                    const filename = `${hostelId}_${Date.now()}.${ext}`;
+                    const ext = photoFile.type.split("/")[1] || "jpg";
+                    const filename = `hostel_${hostelId}_${Date.now()}.${ext}`;
                     const uploadDir = path.join(process.cwd(), "public", "uploads", "hostel-members");
                     await mkdir(uploadDir, { recursive: true });
                     const buffer = Buffer.from(await photoFile.arrayBuffer());
@@ -288,13 +319,27 @@ export async function POST(req: Request) {
                 });
             }
 
+            // PHASE 6: Audit Logging
+            logger.audit({
+                type: "MEMBER_CREATED",
+                userId: user.id,
+                hostelId: hostelId,
+                ip,
+                meta: {
+                    memberId: createdMember.memberId,
+                    name: createdMember.name,
+                    room: roomNo,
+                    paid: paid
+                }
+            });
+
         } catch (error) {
             throw error; 
         }
 
         const saved = await HostelMember.findById(memberObjId).populate("planId", "name durationDays price").lean();
 
-        return NextResponse.json(saved, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        return NextResponse.json(saved, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private", ...rateLimitHeaders(limit, remaining) } });
     } catch (error: any) {
         console.error("[POST /api/hostel/members]", error);
         return NextResponse.json({ error: error?.message || "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });

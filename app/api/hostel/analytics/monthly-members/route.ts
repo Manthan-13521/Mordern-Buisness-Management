@@ -5,7 +5,9 @@ import { HostelBlock } from "@/models/HostelBlock";
 import { HostelPlan } from "@/models/HostelPlan";
 import { HostelRoom } from "@/models/HostelRoom";
 import { HostelFloor } from "@/models/HostelFloor";
+import mongoose from "mongoose";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
+import { timedQuery } from "@/lib/queryTimer";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -39,16 +41,20 @@ export async function GET(req: Request) {
         const blockIdToName = new Map(allBlocks.map(b => [b._id.toString(), b.name]));
 
         // Aggregate members joined by createdAt
-        const agg = await HostelMember.aggregate([
-            { $match: { hostelId, createdAt: { $gte: startDate } } }, // Assuming joining tracks createdAt
-            { $group: {
-                _id: {
-                    month: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
-                    blockId: "$blockId"
-                },
-                totalMembers: { $sum: 1 }
-            }}
-        ]);
+        const agg = await timedQuery(
+            "hostel/analytics/monthly-members",
+            hostelId as string,
+            () => HostelMember.aggregate([
+                { $match: { hostelId, createdAt: { $gte: startDate } } }, // Assuming joining tracks createdAt
+                { $group: {
+                    _id: {
+                        month: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+                        blockId: "$blockId"
+                    },
+                    totalMembers: { $sum: 1 }
+                }}
+            ])
+        );
 
         const finalData = months.map(m => {
             const monthObj: any = { month: m };
@@ -82,6 +88,6 @@ export async function GET(req: Request) {
 
     } catch (error) {
         console.error("[GET /api/hostel/analytics/monthly-members]", error);
-        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        return NextResponse.json([], {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }

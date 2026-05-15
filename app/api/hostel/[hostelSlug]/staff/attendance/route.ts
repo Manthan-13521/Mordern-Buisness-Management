@@ -4,6 +4,8 @@ import { dbConnect } from "@/lib/mongodb";
 import { HostelStaffAttendance } from "@/models/HostelStaffAttendance";
 import { Pool } from "@/models/Pool";
 import { Hostel } from "@/models/Hostel";
+import { checkRateLimit, getClientIp, rateLimitHeaders } from "@/lib/rateLimit";
+import { isDuplicate } from "@/lib/idempotency";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +33,24 @@ export async function POST(req: Request, props: { params: Promise<{ hostelSlug: 
     if (!validateTenantAccess(user, tenantId, "hostel")) {
       return NextResponse.json({ error: "Access denied: hostel mismatch" }, { status: 403 });
     }
+
+    // ── RATE LIMITING ──
+    const ip = getClientIp(req);
+    const { allowed, limit, remaining } = checkRateLimit(ip, "/api/hostel/staff/attendance", "POST");
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please wait." },
+        { status: 429, headers: rateLimitHeaders(limit, remaining) }
+      );
+    }
+
     const { date, records } = await req.json();
+
+    // ── IDEMPOTENCY: Prevent double submission for same date (10s window) ──
+    const dedupeKey = `attendance:${tenantId}:${date}`;
+    if (isDuplicate(dedupeKey, 10_000)) {
+      return NextResponse.json({ success: true, message: "Already processed" });
+    }
 
     const promises = records.map(async (rec: any) => {
       // Normalize to model enum: "Present" | "Absent" (capital first letter)

@@ -9,6 +9,8 @@ import mongoose from "mongoose";
 import { HostelPaymentLog } from "@/models/HostelPaymentLog";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { HostelPlan } from "@/models/HostelPlan"; // CRITICAL: Fixes populate("planId") crashing due to MissingSchemaError
+import { isDuplicate } from "@/lib/idempotency";
+import { checkRateLimit, getClientIp, rateLimitHeaders } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -74,8 +76,7 @@ export async function POST(req: Request) {
     try {
         const user = await resolveUser(req);
         await dbConnect();
-        const [body] = await Promise.all([req.json()]);
-        await dbConnect();
+        const body = await req.json();
         if (!user || user.role !== "hostel_admin") {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
@@ -87,6 +88,25 @@ export async function POST(req: Request) {
         const paid = Number(amount);
         if (!memberId || !Number.isFinite(paid) || paid <= 0 || paid > 9_999_999_999) {
             return NextResponse.json({ error: "Invalid payment amount or member info" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        }
+
+        // ── RATE LIMITING ──
+        const ip = getClientIp(req);
+        const { allowed, limit, remaining } = checkRateLimit(ip, "/api/hostel/payments", "POST");
+        if (!allowed) {
+            return NextResponse.json(
+                { error: "Too many payment requests. Please wait." },
+                { status: 429, headers: rateLimitHeaders(limit, remaining) }
+            );
+        }
+
+        // ── IN-MEMORY IDEMPOTENCY: Prevent double-click duplication (5s window) ──
+        const dedupeKey = `payment:${hostelId}:${memberId}:${paid}`;
+        if (isDuplicate(dedupeKey, 5_000)) {
+            return NextResponse.json(
+                { message: "Duplicate payment detected. Please wait before retrying." },
+                { status: 200 }
+            );
         }
 
         // ── Idempotency Check (Duplicate Request Guard) ──

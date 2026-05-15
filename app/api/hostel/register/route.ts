@@ -4,6 +4,8 @@ import { Hostel } from "@/models/Hostel";
 import { User } from "@/models/User";
 import { HostelSettings } from "@/models/HostelSettings";
 import bcrypt from "bcryptjs";
+import { checkRateLimit, getClientIp, rateLimitHeaders } from "@/lib/rateLimit";
+import { logger } from "@/lib/logger";
 
 async function getNextHostelId() {
     const lastHostel = await Hostel.findOne({}, { hostelId: 1 }).sort({ createdAt: -1 });
@@ -25,6 +27,17 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
     try {
         await dbConnect();
+        
+        // ── RATE LIMITING ──
+        const ip = getClientIp(req);
+        const { allowed, limit, remaining } = checkRateLimit(ip, "/api/hostel/register", "POST");
+        if (!allowed) {
+            return NextResponse.json(
+                { error: "Too many registration attempts. Please try again later." },
+                { status: 429, headers: rateLimitHeaders(limit, remaining) }
+            );
+        }
+
         const body = await req.json();
 
         const { hostelName, city, adminEmail, adminName, password, numberOfBlocks, adminBilling, adminPhone } = body;
@@ -144,27 +157,20 @@ export async function POST(req: Request) {
 
             await HostelSettings.create({ hostelId, whatsappEnabled: false });
 
-            // If admin billing is present, create a BillingLog entry
-            if (adminBilling && adminBilling.amount > 0) {
-                try {
-                    const { BillingLog } = await import("@/models/BillingLog");
-                    const now = new Date();
-                    const periodEnd = subscriptionEndsAt || now;
-
-                    await BillingLog.create({
-                        orgId: newOrg._id,
-                        amount: adminBilling.amount,
-                        method: adminBilling.paymentMode === "razorpay" ? "razorpay" : adminBilling.paymentMode === "upi" ? "upi" : adminBilling.paymentMode === "cash" ? "cash" : "manual",
-                        paymentMode: `${adminBilling.paymentMode?.toUpperCase()} (Admin: ${adminBilling.payerName || "SuperAdmin"})`,
-                        periodStart: now,
-                        periodEnd,
-                    });
-                } catch (billingErr) {
-                    console.error("BillingLog creation failed (non-fatal):", billingErr);
+            // AUDIT: Log new hostel registration
+            logger.audit({
+                type: "ADMIN_ACTION",
+                userId: admin._id.toString(),
+                hostelId: hostelId,
+                ip,
+                meta: { 
+                    action: "HOSTEL_REGISTERED", 
+                    hostelName: hostel.hostelName,
+                    plan: modelPlan 
                 }
-            }
+            });
 
-            return NextResponse.json({ success: true, hostelSlug: hostel.slug, hostelName: hostel.hostelName }, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            return NextResponse.json({ success: true, hostelSlug: hostel.slug, hostelName: hostel.hostelName }, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private", ...rateLimitHeaders(limit, remaining) } });
         } catch (err: any) {
             // Handle race condition or unexpected Mongo unique constraint failure
             if (err.code === 11000) {

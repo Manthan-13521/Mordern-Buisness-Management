@@ -6,6 +6,8 @@ import { HostelBlock } from "@/models/HostelBlock";
 import { getHostelSettings } from "@/models/HostelSettings";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { getCachedDashboard } from "@/lib/dashboardCache";
+import { checkRateLimit, getClientIp, rateLimitHeaders } from "@/lib/rateLimit";
+import { timedQuery } from "@/lib/queryTimer";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
@@ -15,6 +17,17 @@ export async function GET(req: Request) {
         if (!user || user.role !== "hostel_admin") {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
+
+        // ── RATE LIMITING (30/min) ──
+        const ip = getClientIp(req);
+        const { allowed, limit, remaining } = checkRateLimit(ip, "/api/hostel/dashboard", "GET");
+        if (!allowed) {
+            return NextResponse.json(
+                { error: "Too many requests. Please wait." },
+                { status: 429, headers: rateLimitHeaders(limit, remaining) }
+            );
+        }
+
         const hostelId = user.hostelId as string;
         if (!hostelId) return NextResponse.json({ error: "Hostel not found" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
@@ -141,18 +154,24 @@ export async function GET(req: Request) {
 
         // Live aggregation (consistent with /api/hostel/analytics/monthly-income)
         const [monthlyAgg, yearlyAgg, totalAgg] = await Promise.all([
-            HostelPayment.aggregate([
-                { $match: { ...paymentBase, createdAt: { $gte: startOfMonth } } },
-                { $group: { _id: null, total: { $sum: "$amount" } } },
-            ]).option({ maxTimeMS: 5000 }),
-            HostelPayment.aggregate([
-                { $match: { ...paymentBase, createdAt: { $gte: startOfYear } } },
-                { $group: { _id: null, total: { $sum: "$amount" } } },
-            ]).option({ maxTimeMS: 5000 }),
-            HostelPayment.aggregate([
-                { $match: paymentBase },
-                { $group: { _id: null, total: { $sum: "$amount" } } },
-            ]).option({ maxTimeMS: 5000 }),
+            timedQuery("hostel/dashboard/monthly-income", hostelId, () => 
+                HostelPayment.aggregate([
+                    { $match: { ...paymentBase, createdAt: { $gte: startOfMonth } } },
+                    { $group: { _id: null, total: { $sum: "$amount" } } },
+                ]).option({ maxTimeMS: 5000 })
+            ),
+            timedQuery("hostel/dashboard/yearly-income", hostelId, () => 
+                HostelPayment.aggregate([
+                    { $match: { ...paymentBase, createdAt: { $gte: startOfYear } } },
+                    { $group: { _id: null, total: { $sum: "$amount" } } },
+                ]).option({ maxTimeMS: 5000 })
+            ),
+            timedQuery("hostel/dashboard/total-revenue", hostelId, () => 
+                HostelPayment.aggregate([
+                    { $match: paymentBase },
+                    { $group: { _id: null, total: { $sum: "$amount" } } },
+                ]).option({ maxTimeMS: 5000 })
+            ),
         ]);
         monthlyIncome = monthlyAgg[0]?.total ?? 0;
         yearlyIncome  = yearlyAgg[0]?.total ?? 0;
@@ -184,6 +203,17 @@ export async function GET(req: Request) {
         }, { headers: { "Cache-Control": "private, max-age=10", "X-Cache": "REDIS" } });
     } catch (error) {
         console.error("[GET /api/hostel/dashboard]", error);
-        return NextResponse.json({ error: "Failed to fetch dashboard" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        // SAFE FALLBACK: Return zeroed dashboard on critical failure to prevent blank screen
+        return NextResponse.json({
+            monthlyJoined: 0, yearlyJoined: 0,
+            monthlyIncome: 0, yearlyIncome: 0,
+            totalMembers: 0, activeMembers: 0,
+            defaulterMembers: 0, checkoutMembers: 0,
+            expiringMembers: 0,
+            totalRevenue: 0, totalRooms: 0,
+            totalCapacity: 0, occupiedBeds: 0,
+            occupancyRate: 0, expiringList: [],
+            totalDue: 0,
+        }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
