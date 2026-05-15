@@ -34,7 +34,9 @@ export async function POST(req: Request, props: { params: Promise<{ hostelSlug: 
     const { date, records } = await req.json();
 
     const promises = records.map(async (rec: any) => {
-      const normalizedStatus = (rec.status || "").toLowerCase();
+      // Normalize to model enum: "Present" | "Absent" (capital first letter)
+      const raw = (rec.status || "").toLowerCase();
+      const normalizedStatus = raw === "present" ? "Present" : raw === "half_day" ? "half_day" : raw === "absent" ? "Absent" : rec.status;
       return HostelStaffAttendance.findOneAndUpdate({ staffId: rec.labourId, hostelId: tenantId, date }, { $set: { status: normalizedStatus } }, { upsert: true });
     });
 

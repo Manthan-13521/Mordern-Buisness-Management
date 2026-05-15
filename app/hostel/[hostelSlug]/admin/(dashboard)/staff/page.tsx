@@ -195,8 +195,10 @@ export default function HostelStaffPage(props: { params: Promise<{ hostelSlug: s
     });
 
     const totalPaid = (staff.payments || []).reduce((s: number, p: any) => s + p.amount, 0);
+    const due = Math.max(0, Math.round(lifetimeEarned - totalPaid));
+    const advance = Math.max(0, Math.round(totalPaid - lifetimeEarned));
     
-    return { present, earned: Math.round(earnedThisMonth), totalPaid, due: Math.round(lifetimeEarned - totalPaid) };
+    return { present, earned: Math.round(earnedThisMonth), totalPaid, due, advance };
   };
 
   const summary = useMemo(() => {
@@ -210,7 +212,7 @@ export default function HostelStaffPage(props: { params: Promise<{ hostelSlug: s
     labours.forEach(staff => {
       const stats = getStats(staff);
       totalDue += stats.due;
-      totalAdvance += (staff.advancePaid || 0);
+      totalAdvance += stats.advance + (staff.advancePaid || 0);
       
       const hasToday = (staff.recentAttendance || []).find((a: any) => {
         const s = (a.status || "").toLowerCase();

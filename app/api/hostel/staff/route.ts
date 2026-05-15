@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
             hostelId,
             staffId: { $in: staffIds },
             date: { $gte: startStr, $lte: endStr },
-            status: "Present"
+            status: { $in: ["Present", "present"] }
         }).lean();
 
         const data = rawData.map((s: any) => {

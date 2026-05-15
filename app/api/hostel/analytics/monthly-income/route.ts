@@ -14,8 +14,7 @@ export const revalidate = 0;
 export async function GET(req: Request) {
     try {
         await dbConnect();
-                const user = await resolveUser(req);
-                await dbConnect();
+        const user = await resolveUser(req);
 
         if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });

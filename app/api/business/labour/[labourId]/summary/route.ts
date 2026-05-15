@@ -87,6 +87,7 @@ export async function GET(
       paid: number;
       status: "CLEARED" | "DUE";
       dueAmount: number;
+      advanceAmount: number;
     }> = [];
 
     for (let i = 2; i >= 0; i--) {
@@ -118,6 +119,7 @@ export async function GET(
       });
 
       const dueAmount = Math.max(0, earned - paid);
+      const advanceAmount = Math.max(0, paid - earned);
       const status: "CLEARED" | "DUE" = paid >= earned ? "CLEARED" : "DUE";
 
       months.push({
@@ -129,6 +131,7 @@ export async function GET(
         paid: Math.round(paid),
         status,
         dueAmount: Math.round(dueAmount),
+        advanceAmount: Math.round(advanceAmount),
       });
     }
 

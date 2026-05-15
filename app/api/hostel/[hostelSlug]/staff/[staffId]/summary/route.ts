@@ -86,6 +86,7 @@ export async function GET(req: Request, props: { params: Promise<{ hostelSlug: s
       });
 
       const dueAmount = Math.max(0, earned - paid);
+      const advanceAmount = Math.max(0, paid - earned);
       months.push({
         month: monthNames[targetMonth],
         year: targetYear,
@@ -95,6 +96,7 @@ export async function GET(req: Request, props: { params: Promise<{ hostelSlug: s
         paid: Math.round(paid),
         status: paid >= earned ? "CLEARED" : "DUE",
         dueAmount: Math.round(dueAmount),
+        advanceAmount: Math.round(advanceAmount),
       });
     }
 

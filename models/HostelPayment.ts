@@ -53,6 +53,7 @@ const hostelPaymentSchema = new Schema<IHostelPayment>(
 hostelPaymentSchema.index({ hostelId: 1, createdAt: -1 });
 hostelPaymentSchema.index({ hostelId: 1, memberId: 1 });
 hostelPaymentSchema.index({ hostelId: 1, status: 1, createdAt: -1 });
+hostelPaymentSchema.index({ hostelId: 1, paymentType: 1, createdAt: -1 });
 
 export const HostelPayment: Model<IHostelPayment> =
     mongoose.models.HostelPayment ||

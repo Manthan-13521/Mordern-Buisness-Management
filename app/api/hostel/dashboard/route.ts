@@ -132,53 +132,31 @@ export async function GET(req: Request) {
         const totalDue = Math.abs(totalDueAgg[0]?.total || 0);
 
         // ── Income stats ───────────────────────────────────────────────────────
-        // When block = "all" → use HostelAnalytics snapshots (fast, pre-aggregated)
-        // When block != "all" → live aggregation scoped to the block's members
+        // CANONICAL SOURCE: Live HostelPayment aggregation for ALL cases.
+        // This ensures dashboard numbers match analytics chart values exactly.
+        // HostelAnalytics snapshots may be incomplete for legacy payments.
         let monthlyIncome = 0;
         let yearlyIncome  = 0;
         let totalRevenue  = 0;
 
-        if (block === "all") {
-            // Snapshot path — use pre-aggregated HostelAnalytics
-            const { HostelAnalytics } = await import("@/models/HostelAnalytics");
-
-            const [monthlySnap, yearlySnap, totalSnap] = await Promise.all([
-                HostelAnalytics.aggregate([
-                    { $match: { hostelId, yearMonth: { $regex: `^${currentYearMonth}` } } },
-                    { $group: { _id: null, total: { $sum: "$totalIncome" } } },
-                ]).option({ maxTimeMS: 5000 }),
-                HostelAnalytics.aggregate([
-                    { $match: { hostelId, yearMonth: { $regex: `^${currentYear}` } } },
-                    { $group: { _id: null, total: { $sum: "$totalIncome" } } },
-                    ]).option({ maxTimeMS: 5000 }),
-                HostelAnalytics.aggregate([
-                    { $match: { hostelId } },
-                    { $group: { _id: null, total: { $sum: "$totalIncome" } } },
-                ]).option({ maxTimeMS: 5000 }),
-            ]);
-            monthlyIncome = monthlySnap[0]?.total ?? 0;
-            yearlyIncome  = yearlySnap[0]?.total ?? 0;
-            totalRevenue  = totalSnap[0]?.total ?? 0;
-        } else {
-            // Live aggregation scoped to this block's members
-            const [monthlyAgg, yearlyAgg, totalAgg] = await Promise.all([
-                HostelPayment.aggregate([
-                    { $match: { ...paymentBase, createdAt: { $gte: startOfMonth } } },
-                    { $group: { _id: null, total: { $sum: "$amount" } } },
-                ]).option({ maxTimeMS: 5000 }),
-                HostelPayment.aggregate([
-                    { $match: { ...paymentBase, createdAt: { $gte: startOfYear } } },
-                    { $group: { _id: null, total: { $sum: "$amount" } } },
-                ]).option({ maxTimeMS: 5000 }),
-                HostelPayment.aggregate([
-                    { $match: paymentBase },
-                    { $group: { _id: null, total: { $sum: "$amount" } } },
-                ]).option({ maxTimeMS: 5000 }),
-            ]);
-            monthlyIncome = monthlyAgg[0]?.total ?? 0;
-            yearlyIncome  = yearlyAgg[0]?.total ?? 0;
-            totalRevenue  = totalAgg[0]?.total ?? 0;
-        }
+        // Live aggregation (consistent with /api/hostel/analytics/monthly-income)
+        const [monthlyAgg, yearlyAgg, totalAgg] = await Promise.all([
+            HostelPayment.aggregate([
+                { $match: { ...paymentBase, createdAt: { $gte: startOfMonth } } },
+                { $group: { _id: null, total: { $sum: "$amount" } } },
+            ]).option({ maxTimeMS: 5000 }),
+            HostelPayment.aggregate([
+                { $match: { ...paymentBase, createdAt: { $gte: startOfYear } } },
+                { $group: { _id: null, total: { $sum: "$amount" } } },
+            ]).option({ maxTimeMS: 5000 }),
+            HostelPayment.aggregate([
+                { $match: paymentBase },
+                { $group: { _id: null, total: { $sum: "$amount" } } },
+            ]).option({ maxTimeMS: 5000 }),
+        ]);
+        monthlyIncome = monthlyAgg[0]?.total ?? 0;
+        yearlyIncome  = yearlyAgg[0]?.total ?? 0;
+        totalRevenue  = totalAgg[0]?.total ?? 0;
 
         const occupancyRate = totalCapacity > 0 ? Math.round((occupiedBeds / totalCapacity) * 100) : 0;
 

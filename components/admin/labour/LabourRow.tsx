@@ -12,6 +12,7 @@ interface MonthlySummary {
   paid: number;
   status: "CLEARED" | "DUE";
   dueAmount: number;
+  advanceAmount?: number;
 }
 
 interface LabourRowProps {
@@ -407,6 +408,15 @@ export const LabourRow: React.FC<LabourRowProps> = ({
                           color: '#f43f5e',
                         }}>
                           ₹{m.dueAmount.toLocaleString()}
+                        </span>
+                      )}
+                      {m.status === 'CLEARED' && (m.advanceAmount || 0) > 0 && (
+                        <span style={{
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          color: '#f59e0b',
+                        }}>
+                          +₹{(m.advanceAmount || 0).toLocaleString()} adv
                         </span>
                       )}
                     </div>

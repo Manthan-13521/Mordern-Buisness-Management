@@ -239,8 +239,10 @@ export default function LabourPage() {
 
     const lifetimeEarned = (totalPresent * staff.salary) + (totalHalf * 0.5 * staff.salary);
     const totalPaid = (staff.payments || []).reduce((s: number, p: any) => s + p.amount, 0);
+    const due = Math.max(0, Math.round(lifetimeEarned - totalPaid));
+    const advance = Math.max(0, Math.round(totalPaid - lifetimeEarned));
     
-    return { present, earned: earnedThisMonth, totalPaid, due: lifetimeEarned - totalPaid };
+    return { present, earned: earnedThisMonth, totalPaid, due, advance };
   };
 
   const summary = useMemo(() => {
@@ -254,7 +256,7 @@ export default function LabourPage() {
     labours.forEach(staff => {
       const stats = getStats(staff);
       totalDue += stats.due;
-      totalAdvance += (staff.advancePaid || 0);
+      totalAdvance += stats.advance + (staff.advancePaid || 0);
       
       const hasToday = (staff.recentAttendance || []).find((a: any) => dateKey(new Date(a.date)) === today && a.status === 'present');
       if (hasToday) presentToday++;
