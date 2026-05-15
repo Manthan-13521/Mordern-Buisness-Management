@@ -255,7 +255,7 @@ export async function POST(req: Request) {
             // ── STEP 7C: Ledger Source of Truth Engine ──────────────────────────
             const { Ledger } = await import("@/models/Ledger");
             const memberObjId = new mongoose.Types.ObjectId(memberId as string);
-            let ledger = await Ledger.findOne({ memberId: memberObjId });
+            let ledger = await Ledger.findOne({ memberId: memberObjId, poolId });
             
             if (ledger) {
                 ledger.totalPaid += safeAmount;
@@ -283,7 +283,7 @@ export async function POST(req: Request) {
 
             // ── Sync Hybrid Cache visually onto Member Object ──────────────────
             let updatedMember = await Member.findOneAndUpdate(
-                { _id: memberObjId },
+                { _id: memberObjId, poolId },
                 { $set: { balanceAmount: ledger.balance, paidAmount: ledger.totalPaid, cachedBalance: ledger.balance } },
                 { returnDocument: 'after' }
             ) as any;
@@ -291,7 +291,7 @@ export async function POST(req: Request) {
             if (!updatedMember) {
                 const { EntertainmentMember } = await import("@/models/EntertainmentMember");
                 updatedMember = await EntertainmentMember.findOneAndUpdate(
-                    { _id: memberObjId },
+                    { _id: memberObjId, poolId },
                     { $set: { balanceAmount: ledger.balance, paidAmount: ledger.totalPaid, cachedBalance: ledger.balance } },
                     { returnDocument: 'after' }
                 ) as any;

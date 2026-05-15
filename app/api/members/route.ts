@@ -342,6 +342,7 @@ export async function POST(req: Request) {
         const newMember = new MemberModel({
             memberId,
             poolId,
+            organizationId: poolId, // Ensure org-scoped queries include this member
             name,
             phone,
             photoUrl,
@@ -381,7 +382,15 @@ export async function POST(req: Request) {
             );
         }).catch(txnError => {
             console.error("Atomic transaction failed during member creation:", txnError);
-            throw new Error(`Failed to securely save member records: ${txnError.message || 'Transaction aborted'}`);
+            // Surface meaningful error for common cases
+            if (txnError?.code === 11000) {
+                throw new Error("A member with this ID already exists. Please try again.");
+            }
+            if (txnError?.name === "ValidationError") {
+                const fields = Object.keys(txnError.errors || {}).join(", ");
+                throw new Error(`Validation failed for: ${fields}`);
+            }
+            throw new Error(`Failed to save member: ${txnError?.message || 'Unknown error'}`);
         });
 
         // ── STEP 7B: Automated Subscription & Revenue Ledger Generation ──────────────

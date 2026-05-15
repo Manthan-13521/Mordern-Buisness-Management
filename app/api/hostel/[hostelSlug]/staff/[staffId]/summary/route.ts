@@ -30,6 +30,10 @@ export async function GET(req: Request, props: { params: Promise<{ hostelSlug: s
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const tenantId = await resolveTenant(hostelSlug, "hostel");
+    const { validateTenantAccess } = await import("@/lib/tenant");
+    if (!validateTenantAccess(user, tenantId, "hostel")) {
+      return NextResponse.json({ error: "Access denied: hostel mismatch" }, { status: 403 });
+    }
 
     const staff = await HostelStaff.findOne({ _id: staffId, hostelId: tenantId });
     if (!staff) return NextResponse.json({ error: "Staff not found" }, { status: 404 });

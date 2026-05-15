@@ -32,6 +32,12 @@ export async function GET(req: Request, props: { params: Promise<{ poolSlug: str
 
     const tenantId = await resolveTenant(poolSlug, "pool");
 
+    // ── TENANT OWNERSHIP CHECK ──────────────────────────────────────────
+    // Prevent cross-pool access: user can only access their own pool
+    if (user.role !== "superadmin" && user.poolId !== tenantId) {
+      return NextResponse.json({ error: "Access denied: pool mismatch" }, { status: 403 });
+    }
+
     const now = new Date();
     const currentMonthKey = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
 
@@ -113,6 +119,12 @@ export async function POST(req: Request, props: { params: Promise<{ poolSlug: st
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const tenantId = await resolveTenant(poolSlug, "pool");
+
+    // ── TENANT OWNERSHIP CHECK ──────────────────────────────────────────
+    if (user.role !== "superadmin" && user.poolId !== tenantId) {
+      return NextResponse.json({ error: "Access denied: pool mismatch" }, { status: 403 });
+    }
+
     const body = await req.json();
     const { name, role, salary, phone } = body;
 

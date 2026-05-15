@@ -16,7 +16,6 @@ const systemStatsSchema = new Schema<ISystemStats>(
     hostelUsers: { type: Number, default: 0 },
     businessUsers: { type: Number, default: 0 },
     activeUsers: { type: Number, default: 0 },
-    referralUses: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

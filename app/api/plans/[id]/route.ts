@@ -56,6 +56,20 @@ export async function PUT(
             return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
+        // ── AUDIT LOG: Plan Updated ───────────────────────────────────
+        const { logger } = await import("@/lib/logger");
+        logger.audit({
+            type: "PLAN_UPDATED",
+            userId: user.id,
+            poolId: updatedPlan.poolId,
+            meta: {
+                planId: updatedPlan._id,
+                planName: updatedPlan.name,
+                updatedFields: Object.keys(updateFields),
+                changedBy: user.email || user.id,
+            }
+        });
+
         return NextResponse.json(updatedPlan, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("Failed to update plan:", error);
@@ -82,11 +96,24 @@ export async function DELETE(
 
         // Soft-delete: set deletedAt timestamp so it disappears from charts
         // but historical data (member records, payments) stays intact
-        const softDeleted = await secureUpdateById(Plan, id, { $set: { deletedAt: new Date() } }, user);
+        const softDeleted = await secureUpdateById(Plan, id, { $set: { deletedAt: new Date() } }, user) as any;
 
         if (!softDeleted) {
             return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
+
+        // ── AUDIT LOG: Plan Deleted ───────────────────────────────────
+        const { logger } = await import("@/lib/logger");
+        logger.audit({
+            type: "PLAN_DELETED",
+            userId: user.id,
+            poolId: softDeleted.poolId,
+            meta: {
+                planId: softDeleted._id,
+                planName: softDeleted.name,
+                deletedBy: user.email || user.id,
+            }
+        });
 
         return NextResponse.json({ message: "Plan deleted successfully" }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {

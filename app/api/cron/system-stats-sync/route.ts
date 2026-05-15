@@ -4,8 +4,7 @@ import { SystemStats } from "@/models/SystemStats";
 import { Member } from "@/models/Member";
 import { HostelMember } from "@/models/HostelMember";
 import { BusinessCustomer } from "@/models/BusinessCustomer";
-import { UnifiedUser } from "@/models/UnifiedUser";
-import { ReferralUsage } from "@/models/ReferralUsage";
+import { UnifiedUser } from "@/models/UnifiedUser"; // Proxy for active users or just count them
 
 export const dynamic = "force-dynamic";
 
@@ -34,11 +33,12 @@ export async function GET(req: Request) {
         // Get total business customers
         const businessUsers = await BusinessCustomer.countDocuments({});
 
-        // Get total referral uses
-        const referralUses = await ReferralUsage.countDocuments({});
-
-        // For activeUsers across the system
-        const activeUsersCount = poolUsers + hostelUsers + businessUsers;
+        // For activeUsers across the system, assuming total unique users 
+        // who have accessed or are 'active' (not deleted, etc)
+        // Here we just use a metric based on unified users or just total combined.
+        // If there's an isActive flag we'd use it. For now, estimate active as sum of systems if we don't have a single "active" flag.
+        // Let's count them:
+        const activeUsersCount = poolUsers + hostelUsers + businessUsers; // Placeholder for global active metric
 
         await SystemStats.findOneAndUpdate(
             { month: monthKey },
@@ -47,8 +47,7 @@ export async function GET(req: Request) {
                     poolUsers,
                     hostelUsers,
                     businessUsers,
-                    activeUsers: activeUsersCount,
-                    referralUses
+                    activeUsers: activeUsersCount
                 }
             },
             { upsert: true, new: true }

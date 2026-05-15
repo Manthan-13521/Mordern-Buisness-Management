@@ -31,6 +31,11 @@ export async function GET(req: Request, props: { params: Promise<{ poolSlug: str
 
     const tenantId = await resolveTenant(poolSlug, "pool");
 
+    // ── TENANT OWNERSHIP CHECK ──────────────────────────────────────────
+    if (user.role !== "superadmin" && user.poolId !== tenantId) {
+      return NextResponse.json({ error: "Access denied: pool mismatch" }, { status: 403 });
+    }
+
     const staff = await Staff.findOne({ _id: staffId, poolId: tenantId }).lean();
     if (!staff) return NextResponse.json({ error: "Staff not found" }, { status: 404 });
 

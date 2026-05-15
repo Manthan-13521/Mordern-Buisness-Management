@@ -53,213 +53,218 @@ function getISTDayBounds() {
 /**
  * ── Member list (all members) ──────────────────────────────────────────
  */
-export const getCachedMembers = unstable_cache(
-    async (poolId: string, page: number = 1, limit: number = 50) => {
-        await dbConnect();
-        const baseMatch = buildPoolFilter(poolId);
-        
-        const skip = (page - 1) * limit;
-        
-        const [members, total] = await Promise.all([
-            Member.find({ ...baseMatch, isDeleted: false })
-                .populate("planId", "name")
-                .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(limit)
-                .lean(),
-            Member.countDocuments({ ...baseMatch, isDeleted: false })
-        ]);
-        
-        return { members, total, page, limit };
-    },
-    ["cached-members-list"],
-    { revalidate: 15 }
-);
+export const getCachedMembers = (poolId: string, page: number = 1, limit: number = 50) =>
+    unstable_cache(
+        async () => {
+            await dbConnect();
+            const baseMatch = buildPoolFilter(poolId);
+            
+            const skip = (page - 1) * limit;
+            
+            const [members, total] = await Promise.all([
+                Member.find({ ...baseMatch, isDeleted: false })
+                    .populate("planId", "name")
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limit)
+                    .lean(),
+                Member.countDocuments({ ...baseMatch, isDeleted: false })
+            ]);
+            
+            return { members, total, page, limit };
+        },
+        [`cached-members-list-${poolId}-p${page}-l${limit}`],
+        { revalidate: 15 }
+    )();
 
 /**
  * ── Analytics summary data ─────────────────────────────────────────────
  * Used for Today's Revenue and Monthly Revenue on the dashboard.
  */
-export const getCachedAnalyticsSummary = unstable_cache(
-    async (poolId: string, memberType: string = "all") => {
-        await dbConnect();
-        const baseMatch = buildPoolFilter(poolId);
-        const { startOfDayIST, endOfDayIST, startOfMonthIST, startOfYearIST, now } = getISTDayBounds();
+export const getCachedAnalyticsSummary = (poolId: string, memberType: string = "all") =>
+    unstable_cache(
+        async () => {
+            await dbConnect();
+            const baseMatch = buildPoolFilter(poolId);
+            const { startOfDayIST, endOfDayIST, startOfMonthIST, startOfYearIST, now } = getISTDayBounds();
 
-        const paymentMatch = { ...baseMatch };
-        if (memberType === "member") paymentMatch.memberCollection = "members";
-        if (memberType === "entertainment") paymentMatch.memberCollection = "entertainment_members";
+            const paymentMatch: Record<string, unknown> = { ...baseMatch };
+            if (memberType === "member") paymentMatch.memberCollection = "members";
+            if (memberType === "entertainment") paymentMatch.memberCollection = "entertainment_members";
 
-        const memberQueryMatch = { ...baseMatch, isDeleted: false };
-        let includeRegular = memberType === "all" || memberType === "member";
-        let includeEntertainment = memberType === "all" || memberType === "entertainment";
+            const memberQueryMatch = { ...baseMatch, isDeleted: false };
+            const includeRegular = memberType === "all" || memberType === "member";
+            const includeEntertainment = memberType === "all" || memberType === "entertainment";
 
-        const [
-            activeRegular,
-            activeEntertainment,
-            todaysRevenue,
-            monthlyRevenue,
-            yearlyRevenue,
-            entriesToday,
-            todaysMemberEntries,
-            todaysEntertainmentEntries
-        ] = await Promise.all([
-            (includeRegular ? Member.countDocuments({
-                ...memberQueryMatch,
-                memberType: "regular",
-                $or: [{ planEndDate: { $gte: now } }, { expiryDate: { $gte: now } }]
-            }) : Promise.resolve(0)) as Promise<number>,
-            (includeEntertainment ? Member.countDocuments({
-                ...memberQueryMatch,
-                memberType: "entertainment",
-                $or: [{ planEndDate: { $gte: now } }, { expiryDate: { $gte: now } }]
-            }) : Promise.resolve(0)) as Promise<number>,
-            Payment.aggregate([
-                { $match: { ...paymentMatch, status: "success", createdAt: { $gte: startOfDayIST, $lte: endOfDayIST } } },
-                { $group: { _id: null, total: { $sum: "$amount" } } }
-            ]),
-            Payment.aggregate([
-                { $match: { ...paymentMatch, status: "success", createdAt: { $gte: startOfMonthIST } } },
-                { $group: { _id: null, total: { $sum: "$amount" } } }
-            ]),
-            Payment.aggregate([
-                { $match: { ...paymentMatch, status: "success", createdAt: { $gte: startOfYearIST } } },
-                { $group: { _id: null, total: { $sum: "$amount" } } }
-            ]),
-            EntryLog.aggregate([
-                { $match: { ...baseMatch, scanTime: { $gte: startOfDayIST, $lte: endOfDayIST }, status: "granted" } },
-                { $group: { _id: null, total: { $sum: { $ifNull: ["$numPersons", 1] } } } }
-            ]),
-            includeRegular ? Member.countDocuments({
-                ...memberQueryMatch,
-                memberType: "regular",
-                createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
-            }) : 0,
-            includeEntertainment ? Member.countDocuments({
-                ...memberQueryMatch,
-                memberType: "entertainment",
-                createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
-            }) : 0
-        ]);
+            const [
+                activeRegular,
+                activeEntertainment,
+                todaysRevenue,
+                monthlyRevenue,
+                yearlyRevenue,
+                entriesToday,
+                todaysMemberEntries,
+                todaysEntertainmentEntries
+            ] = await Promise.all([
+                (includeRegular ? Member.countDocuments({
+                    ...memberQueryMatch,
+                    memberType: "regular",
+                    $or: [{ planEndDate: { $gte: now } }, { expiryDate: { $gte: now } }]
+                }) : Promise.resolve(0)) as Promise<number>,
+                (includeEntertainment ? Member.countDocuments({
+                    ...memberQueryMatch,
+                    memberType: "entertainment",
+                    $or: [{ planEndDate: { $gte: now } }, { expiryDate: { $gte: now } }]
+                }) : Promise.resolve(0)) as Promise<number>,
+                Payment.aggregate([
+                    { $match: { ...paymentMatch, status: "success", createdAt: { $gte: startOfDayIST, $lte: endOfDayIST } } },
+                    { $group: { _id: null, total: { $sum: "$amount" } } }
+                ]),
+                Payment.aggregate([
+                    { $match: { ...paymentMatch, status: "success", createdAt: { $gte: startOfMonthIST } } },
+                    { $group: { _id: null, total: { $sum: "$amount" } } }
+                ]),
+                Payment.aggregate([
+                    { $match: { ...paymentMatch, status: "success", createdAt: { $gte: startOfYearIST } } },
+                    { $group: { _id: null, total: { $sum: "$amount" } } }
+                ]),
+                EntryLog.aggregate([
+                    { $match: { ...baseMatch, scanTime: { $gte: startOfDayIST, $lte: endOfDayIST }, status: "granted" } },
+                    { $group: { _id: null, total: { $sum: { $ifNull: ["$numPersons", 1] } } } }
+                ]),
+                includeRegular ? Member.countDocuments({
+                    ...memberQueryMatch,
+                    memberType: "regular",
+                    createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
+                }) : 0,
+                includeEntertainment ? Member.countDocuments({
+                    ...memberQueryMatch,
+                    memberType: "entertainment",
+                    createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
+                }) : 0
+            ]);
 
-        return {
-            activeMembers: (activeRegular as number) + (activeEntertainment as number),
-            totalRevenue: todaysRevenue[0]?.total || 0,
-            monthlyRevenue: monthlyRevenue[0]?.total || 0,
-            yearlyRevenue: yearlyRevenue[0]?.total || 0,
-            entriesToday: entriesToday[0]?.total || 0,
-            todaysMemberEntries,
-            todaysEntertainmentEntries,
-        };
-    },
-    ["cached-analytics-summary"],
-    { revalidate: 10 }
-);
+            return {
+                activeMembers: (activeRegular as number) + (activeEntertainment as number),
+                totalRevenue: todaysRevenue[0]?.total || 0,
+                monthlyRevenue: monthlyRevenue[0]?.total || 0,
+                yearlyRevenue: yearlyRevenue[0]?.total || 0,
+                entriesToday: entriesToday[0]?.total || 0,
+                todaysMemberEntries,
+                todaysEntertainmentEntries,
+            };
+        },
+        [`cached-analytics-summary-${poolId}-${memberType}`],
+        { revalidate: 10 }
+    )();
 
 /**
  * ── Plans list ─────────────────────────────────────────────────────────
  */
-export const getCachedPlans = unstable_cache(
-    async (poolId: string) => {
-        await dbConnect();
-        const baseMatch = buildPoolFilter(poolId);
-        return Plan.find({ ...baseMatch, deletedAt: null }).sort({ createdAt: -1 }).lean();
-    },
-    ["cached-plans-list"],
-    { revalidate: 120 }
-);
+export const getCachedPlans = (poolId: string) =>
+    unstable_cache(
+        async () => {
+            await dbConnect();
+            const baseMatch = buildPoolFilter(poolId);
+            return Plan.find({ ...baseMatch, deletedAt: null }).sort({ createdAt: -1 }).lean();
+        },
+        [`cached-plans-list-${poolId}`],
+        { revalidate: 120 }
+    )();
 
 /**
  * ── Notification logs ──────────────────────────────────────────────────
  */
-export const getCachedNotificationLogs = unstable_cache(
-    async (poolId: string, limit: number = 50) => {
-        await dbConnect();
-        const baseMatch = buildPoolFilter(poolId);
-        return NotificationLog.find(baseMatch)
-            .populate("memberId", "name phone memberId")
-            .sort({ date: -1 })
-            .limit(limit)
-            .lean();
-    },
-    ["cached-notification-logs"],
-    { revalidate: 30 }
-);
+export const getCachedNotificationLogs = (poolId: string, limit: number = 50) =>
+    unstable_cache(
+        async () => {
+            await dbConnect();
+            const baseMatch = buildPoolFilter(poolId);
+            return NotificationLog.find(baseMatch)
+                .populate("memberId", "name phone memberId")
+                .sort({ date: -1 })
+                .limit(limit)
+                .lean();
+        },
+        [`cached-notification-logs-${poolId}-l${limit}`],
+        { revalidate: 30 }
+    )();
 
 /**
  * ── Dashboard summary counts ───────────────────────────────────────────
  * Used for Total Members, Active Members, Today's Entries cards.
  */
-export const getCachedDashboardCounts = unstable_cache(
-    async (poolId: string, memberType: string = "all") => {
-        await dbConnect();
-        const baseMatch = buildPoolFilter(poolId);
-        const { startOfDayIST, endOfDayIST, now } = getISTDayBounds();
+export const getCachedDashboardCounts = (poolId: string, memberType: string = "all") =>
+    unstable_cache(
+        async () => {
+            await dbConnect();
+            const baseMatch = buildPoolFilter(poolId);
+            const { startOfDayIST, endOfDayIST, now } = getISTDayBounds();
 
-        const memberQueryMatch = { ...baseMatch, isDeleted: false };
-        let includeRegular = memberType === "all" || memberType === "member";
-        let includeEntertainment = memberType === "all" || memberType === "entertainment";
+            const memberQueryMatch = { ...baseMatch, isDeleted: false };
+            const includeRegular = memberType === "all" || memberType === "member";
+            const includeEntertainment = memberType === "all" || memberType === "entertainment";
 
-        // Immutable total count (current year)
-        const currentYear = new Date().getFullYear();
-        const startOfYear = new Date(currentYear, 0, 1);
-        const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59, 999);
-        const yearCreatedFilter = { $gte: startOfYear, $lte: endOfYear };
-        const { DeletedMember } = await import("@/models/DeletedMember");
+            // Immutable total count (current year)
+            const currentYear = new Date().getFullYear();
+            const startOfYear = new Date(currentYear, 0, 1);
+            const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59, 999);
+            const yearCreatedFilter = { $gte: startOfYear, $lte: endOfYear };
+            const { DeletedMember } = await import("@/models/DeletedMember");
 
-        const [
-            activeRegular, 
-            activeEntertainment, 
-            todaysEntries, 
-            todaysMemberEntries, 
-            todaysEntertainmentEntries,
-            regThisYear,
-            entThisYear,
-            delRegThisYear,
-            delEntThisYear
-        ] = await Promise.all([
-            includeRegular ? Member.countDocuments({
-                ...memberQueryMatch,
-                memberType: "regular",
-                $or: [{ planEndDate: { $gte: now } }, { expiryDate: { $gte: now } }]
-            }) : 0,
-            includeEntertainment ? Member.countDocuments({
-                ...memberQueryMatch,
-                memberType: "entertainment",
-                $or: [{ planEndDate: { $gte: now } }, { expiryDate: { $gte: now } }]
-            }) : 0,
-            EntryLog.aggregate([
-                { $match: { ...baseMatch, scanTime: { $gte: startOfDayIST, $lte: endOfDayIST }, status: "granted" } },
-                { $group: { _id: null, total: { $sum: { $ifNull: ["$numPersons", 1] } } } }
-            ]),
-            includeRegular ? Member.countDocuments({
-                ...memberQueryMatch,
-                memberType: "regular",
-                createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
-            }) : 0,
-            includeEntertainment ? Member.countDocuments({
-                ...memberQueryMatch,
-                memberType: "entertainment",
-                createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
-            }) : 0,
-            // Immutable count queries
-            includeRegular ? Member.countDocuments({ ...baseMatch, createdAt: yearCreatedFilter }) : 0,
-            includeEntertainment ? EntertainmentMember.countDocuments({ ...baseMatch, createdAt: yearCreatedFilter }) : 0,
-            includeRegular ? DeletedMember.countDocuments({ ...baseMatch, "fullData.createdAt": yearCreatedFilter, collectionSource: "members" }) : 0,
-            includeEntertainment ? DeletedMember.countDocuments({ ...baseMatch, "fullData.createdAt": yearCreatedFilter, collectionSource: "entertainment_members" }) : 0
-        ]);
+            const [
+                activeRegular, 
+                activeEntertainment, 
+                todaysEntries, 
+                todaysMemberEntries, 
+                todaysEntertainmentEntries,
+                regThisYear,
+                entThisYear,
+                delRegThisYear,
+                delEntThisYear
+            ] = await Promise.all([
+                includeRegular ? Member.countDocuments({
+                    ...memberQueryMatch,
+                    memberType: "regular",
+                    $or: [{ planEndDate: { $gte: now } }, { expiryDate: { $gte: now } }]
+                }) : 0,
+                includeEntertainment ? Member.countDocuments({
+                    ...memberQueryMatch,
+                    memberType: "entertainment",
+                    $or: [{ planEndDate: { $gte: now } }, { expiryDate: { $gte: now } }]
+                }) : 0,
+                EntryLog.aggregate([
+                    { $match: { ...baseMatch, scanTime: { $gte: startOfDayIST, $lte: endOfDayIST }, status: "granted" } },
+                    { $group: { _id: null, total: { $sum: { $ifNull: ["$numPersons", 1] } } } }
+                ]),
+                includeRegular ? Member.countDocuments({
+                    ...memberQueryMatch,
+                    memberType: "regular",
+                    createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
+                }) : 0,
+                includeEntertainment ? Member.countDocuments({
+                    ...memberQueryMatch,
+                    memberType: "entertainment",
+                    createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
+                }) : 0,
+                // Immutable count queries
+                includeRegular ? Member.countDocuments({ ...baseMatch, createdAt: yearCreatedFilter }) : 0,
+                includeEntertainment ? EntertainmentMember.countDocuments({ ...baseMatch, createdAt: yearCreatedFilter }) : 0,
+                includeRegular ? DeletedMember.countDocuments({ ...baseMatch, "fullData.createdAt": yearCreatedFilter, collectionSource: "members" }) : 0,
+                includeEntertainment ? DeletedMember.countDocuments({ ...baseMatch, "fullData.createdAt": yearCreatedFilter, collectionSource: "entertainment_members" }) : 0
+            ]);
 
-        const totalRegular = (regThisYear as number) + (delRegThisYear as number);
-        const totalEntertainment = (entThisYear as number) + (delEntThisYear as number);
+            const totalRegular = (regThisYear as number) + (delRegThisYear as number);
+            const totalEntertainment = (entThisYear as number) + (delEntThisYear as number);
 
-        return {
-            totalMembers: totalRegular + totalEntertainment,
-            activeMembers: (activeRegular as number) + (activeEntertainment as number),
-            todaysEntries: todaysEntries[0]?.total || 0,
-            todaysMemberEntries,
-            todaysEntertainmentEntries,
-        };
-    },
-    ["cached-dashboard-counts"],
-    { revalidate: 10 }
-);
+            return {
+                totalMembers: totalRegular + totalEntertainment,
+                activeMembers: (activeRegular as number) + (activeEntertainment as number),
+                todaysEntries: todaysEntries[0]?.total || 0,
+                todaysMemberEntries,
+                todaysEntertainmentEntries,
+            };
+        },
+        [`cached-dashboard-counts-${poolId}-${memberType}`],
+        { revalidate: 10 }
+    )();

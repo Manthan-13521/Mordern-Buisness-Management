@@ -92,6 +92,21 @@ export async function POST(req: NextRequest) {
             role,
         });
 
+        // ── AUDIT LOG: Staff Created ─────────────────────────────────
+        const { logger } = await import("@/lib/logger");
+        logger.audit({
+            type: "ADMIN_ACTION",
+            userId: user.id,
+            poolId: user.poolId,
+            meta: {
+                action: "STAFF_CREATED",
+                staffId: staff.staffId,
+                staffName: staff.name,
+                role: staff.role,
+                createdBy: user.email || user.id,
+            }
+        });
+
         return NextResponse.json(staff, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         console.error("[POST /api/staff]", error);
@@ -127,6 +142,20 @@ export async function DELETE(req: NextRequest) {
         if (!deletedStaff) {
             return NextResponse.json({ error: "Staff not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
+
+        // ── AUDIT LOG: Staff Deleted ─────────────────────────────────
+        const { logger } = await import("@/lib/logger");
+        logger.audit({
+            type: "ADMIN_ACTION",
+            userId: user.id,
+            poolId: user.poolId,
+            meta: {
+                action: "STAFF_DELETED",
+                staffId: deletedStaff.staffId,
+                staffName: deletedStaff.name,
+                deletedBy: user.email || user.id,
+            }
+        });
 
         return NextResponse.json({ success: true }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {

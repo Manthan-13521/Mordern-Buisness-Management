@@ -169,7 +169,10 @@ export default function PoolStaffPage(props: { params: Promise<{ poolSlug: strin
     const lifetimeEarned = (totalPresent * safeSalary) + (totalHalf * 0.5 * safeSalary);
     const totalPaid = (staff.payments || []).reduce((s: number, p: any) => s + p.amount, 0);
     
-    return { present, earned: earnedThisMonth, totalPaid, due: lifetimeEarned - totalPaid };
+    // ACCOUNTING: due and advance can NEVER be negative
+    const due = Math.max(0, lifetimeEarned - totalPaid);
+    const advance = Math.max(0, totalPaid - lifetimeEarned);
+    return { present, earned: earnedThisMonth, totalPaid, due, advance };
   };
 
   const summary = useMemo(() => {
@@ -182,8 +185,8 @@ export default function PoolStaffPage(props: { params: Promise<{ poolSlug: strin
 
     labours.forEach(staff => {
       const stats = getStats(staff);
-      totalDue += stats.due;
-      totalAdvance += (staff.advancePaid || 0);
+      totalDue += stats.due;  // Always >= 0
+      totalAdvance += stats.advance + (staff.advancePaid || 0);
       
       const hasToday = (staff.recentAttendance || []).find((a: any) => dateKey(new Date(a.date)) === today && a.status === 'present');
       if (hasToday) presentToday++;

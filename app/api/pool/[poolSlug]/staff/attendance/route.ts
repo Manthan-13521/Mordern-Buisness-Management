@@ -27,6 +27,12 @@ export async function POST(req: Request, props: { params: Promise<{ poolSlug: st
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const tenantId = await resolveTenant(poolSlug, "pool");
+
+    // ── TENANT OWNERSHIP CHECK ──────────────────────────────────────────
+    if (user.role !== "superadmin" && user.poolId !== tenantId) {
+      return NextResponse.json({ error: "Access denied: pool mismatch" }, { status: 403 });
+    }
+
     const { date, records } = await req.json();
 
     const promises = records.map(async (rec: any) => {

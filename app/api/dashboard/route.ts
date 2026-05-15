@@ -178,10 +178,10 @@ export async function GET(req: Request) {
                     ]
                 }),
 
-                // Immutable total counts (now inside cache)
-                Member.countDocuments({ poolId, createdAt: yearCreatedFilter }),
-                EntertainmentMember.countDocuments({ poolId, createdAt: yearCreatedFilter }),
-                DeletedMember.countDocuments({ poolId, "fullData.createdAt": yearCreatedFilter }),
+                // Immutable total counts (now inside cache) — SECURITY: use baseMatch not raw poolId
+                Member.countDocuments({ ...baseMatch, createdAt: yearCreatedFilter }),
+                EntertainmentMember.countDocuments({ ...baseMatch, createdAt: yearCreatedFilter }),
+                DeletedMember.countDocuments({ ...baseMatch, "fullData.createdAt": yearCreatedFilter }),
             ]);
 
             const activeMembers = regActiveMembers + entActiveMembers;

@@ -135,6 +135,23 @@ export async function DELETE(req: Request, props: RouteContext) {
             deleted = await secureDeleteById(EntertainmentMember, id, user);
         }
 
+        // ── AUDIT LOG: Member Deletion ──────────────────────────────────
+        const { logger } = await import("@/lib/logger");
+        logger.audit({
+            type: "MEMBER_DELETED",
+            userId: user.id,
+            poolId: member.poolId?.toString(),
+            meta: {
+                memberId: member.memberId,
+                memberName: member.name,
+                isEntertainment,
+                deletedBy: user.email || user.id,
+            }
+        });
+
+        // Invalidate dashboard cache
+        import("@/lib/dashboardCache").then(m => m.invalidateDashboard(member.poolId?.toString())).catch(() => {});
+
         return NextResponse.json({ message: "Member deleted successfully." }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[DELETE /api/members/[id]]", error);

@@ -93,11 +93,12 @@ export const LabourRow: React.FC<LabourRowProps> = ({
 
   const getStatusColor = (status: string) => {
     if (status.toLowerCase() === 'paid') return '#10b981';
+    if (status.toLowerCase() === 'overpaid') return '#f59e0b';
     if (status.toLowerCase() === 'partial') return '#f59e0b';
     return '#f43f5e';
   };
 
-  const status = stats.due <= 0 ? 'Paid' : stats.totalPaid > 0 ? 'Partial' : 'Due';
+  const status = stats.due === 0 ? (stats.advance > 0 ? 'Overpaid' : 'Paid') : stats.totalPaid > 0 ? 'Partial' : 'Due';
 
   return (
     <div style={{

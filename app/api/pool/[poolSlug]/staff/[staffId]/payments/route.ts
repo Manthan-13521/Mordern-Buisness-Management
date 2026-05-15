@@ -27,6 +27,12 @@ export async function POST(req: Request, props: { params: Promise<{ poolSlug: st
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const tenantId = await resolveTenant(poolSlug, "pool");
+
+    // ── TENANT OWNERSHIP CHECK ──────────────────────────────────────────
+    if (user.role !== "superadmin" && user.poolId !== tenantId) {
+      return NextResponse.json({ error: "Access denied: pool mismatch" }, { status: 403 });
+    }
+
     const { amount } = await req.json();
 
     const payment = new StaffPayment({
@@ -36,6 +42,20 @@ export async function POST(req: Request, props: { params: Promise<{ poolSlug: st
     });
 
     await payment.save();
+
+    // ── AUDIT LOG: Staff Payment Recorded ──────────────────────────
+    const { logger } = await import("@/lib/logger");
+    logger.audit({
+        type: "STAFF_PAYMENT_RECORDED",
+        userId: user.id,
+        poolId: tenantId,
+        meta: {
+            staffId,
+            amount,
+            recordedBy: user.email || user.id,
+        }
+    });
+
     return NextResponse.json(payment);
   } catch (error: any) {
     console.error(error);

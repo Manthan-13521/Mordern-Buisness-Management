@@ -36,13 +36,27 @@ export async function withTransaction<T>(
 
   // ── Replica set / Atlas: full ACID transaction ───────────────────────
   const session = await conn.startSession();
-  session.startTransaction();
   try {
+    session.startTransaction();
     const result = await fn(session);
     await session.commitTransaction();
     return result;
-  } catch (err) {
-    await session.abortTransaction();
+  } catch (err: any) {
+    try { await session.abortTransaction(); } catch { /* already aborted */ }
+
+    // ── Atlas M0/M2/M5 free-tier fallback ────────────────────────────
+    // These tiers have replica sets but do NOT support multi-document
+    // transactions. Error code 263 = "Transactions are not supported".
+    const isUnsupported =
+      err?.codeName === "IllegalOperation" ||
+      err?.code === 263 ||
+      err?.message?.includes("transaction") && err?.message?.includes("not supported");
+
+    if (isUnsupported) {
+      console.warn("[withTransaction] Transactions not supported on this tier, falling back to non-transactional write");
+      return fn(null);
+    }
+
     throw err;
   } finally {
     session.endSession();

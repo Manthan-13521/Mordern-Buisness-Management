@@ -6,6 +6,12 @@ import { Pool } from "@/models/Pool";
 import { redis } from "@/lib/redis";
 import { logger } from "@/lib/logger";
 
+// ── Force model registration ────────────────────────────────────────────
+// SaaSPlan is referenced by Organization.planId via populate().
+// Without this, Next.js tree-shaking may remove the import in production,
+// causing: "Schema hasn't been registered for model 'SaaSPlan'"
+void SaaSPlan;
+
 /**
  * ── SaaS Guard: Business Logic Enforcer ────────────────────────────────
  */

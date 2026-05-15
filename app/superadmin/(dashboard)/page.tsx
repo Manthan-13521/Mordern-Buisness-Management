@@ -190,7 +190,6 @@ export default function SuperAdminDashboard() {
                                             <Line type="monotone" name="Pool Users" dataKey="pool" stroke="#3b82f6" strokeWidth={3} dot={{ stroke: "#1d4ed8", strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
                                             <Line type="monotone" name="Hostel Users" dataKey="hostel" stroke="#10b981" strokeWidth={3} dot={{ stroke: "#047857", strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
                                             <Line type="monotone" name="Business Users" dataKey="business" stroke="#8b5cf6" strokeWidth={3} dot={{ stroke: "#6d28d9", strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
-                                            <Line type="monotone" name="Referral Conversions" dataKey="referrals" stroke="#ec4899" strokeWidth={3} dot={{ stroke: "#be185d", strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
                                             <Line type="monotone" name="System Active Users" dataKey="active" stroke="#f59e0b" strokeWidth={2} strokeDasharray="5 5" dot={false} />
                                         </LineChart>
                                     </ResponsiveContainer>
@@ -322,7 +321,6 @@ export default function SuperAdminDashboard() {
                                 <thead>
                                     <tr className="border-b border-[#1f2937]">
                                         <th className="text-left px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#9ca3af]">Code</th>
-                                        <th className="text-center px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#9ca3af]">Discount</th>
                                         <th className="text-center px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#9ca3af]">Uses</th>
                                         <th className="text-right px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#9ca3af]">Revenue</th>
                                         <th className="text-right px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#9ca3af]">Discount Loss</th>
@@ -333,16 +331,11 @@ export default function SuperAdminDashboard() {
                                 </thead>
                                 <tbody>
                                     {referralIntel.length === 0 ? (
-                                        <tr><td colSpan={8} className="text-center py-12 text-[#6b7280]">No referral codes yet.</td></tr>
+                                        <tr><td colSpan={7} className="text-center py-12 text-[#6b7280]">No referral codes yet.</td></tr>
                                     ) : (
                                         referralIntel.map((r: any) => (
                                             <tr key={r._id} className="border-b border-[#1f2937]/50 hover:bg-[#8b5cf6]/5 transition-colors">
                                                 <td className="px-6 py-4 font-bold font-mono tracking-wider text-white">{r.code}</td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20 uppercase">
-                                                        {r.discountType === "percentage" ? `${r.discountValue}%` : `₹${r.discountValue}`}
-                                                    </span>
-                                                </td>
                                                 <td className="px-6 py-4 text-center font-semibold text-blue-400">{r.actualUses}</td>
                                                 <td className="px-6 py-4 text-right font-medium text-emerald-400">₹{r.revenueGenerated.toLocaleString("en-IN")}</td>
                                                 <td className="px-6 py-4 text-right font-medium text-rose-400">-₹{r.discountLoss.toLocaleString("en-IN")}</td>

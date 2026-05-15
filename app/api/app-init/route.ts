@@ -19,6 +19,11 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
+        // ── TENANT ISOLATION GUARD ──────────────────────────────────────────
+        // Non-superadmin MUST have a poolId. Never allow empty baseMatch.
+        if (user.role !== "superadmin" && !user.poolId) {
+            return NextResponse.json({ error: "No pool assigned to this account" }, { status: 400 });
+        }
         const poolId = user.poolId || "superadmin";
         await dbConnect();
 
@@ -48,7 +53,9 @@ export async function GET(req: Request) {
             );
             startOfMonthIST.setTime(startOfMonthIST.getTime() - IST_OFFSET);
 
-            const baseMatch = poolId && poolId !== "superadmin" ? { poolId } : {};
+            // SECURITY: For non-superadmin, poolId is guaranteed non-empty (guard above).
+            // For superadmin, empty match is intentional (aggregate view).
+            const baseMatch = poolId !== "superadmin" ? { poolId } : {};
 
             // ALL sub-fetches in parallel — single DB connection, single function invocation
             const [

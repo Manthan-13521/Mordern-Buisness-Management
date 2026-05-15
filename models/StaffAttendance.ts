@@ -23,6 +23,9 @@ const staffAttendanceSchema = new Schema<IStaffAttendance>(
     { timestamps: true }
 );
 
+// Compound index for the $lookup aggregation in staff route (staffId + poolId + timestamp sort)
+staffAttendanceSchema.index({ staffId: 1, poolId: 1, timestamp: -1 });
+
 // Force re-registration so the updated enum takes effect even if model was cached
 if (mongoose.models.StaffAttendance) {
     delete mongoose.models.StaffAttendance;

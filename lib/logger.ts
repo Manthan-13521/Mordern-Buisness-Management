@@ -56,7 +56,17 @@ export type AuditEventType =
     | "SUBSCRIPTION_PAYMENT_FAILED"
     | "SUBSCRIPTION_WEBHOOK_INVALID_SIG"
     | "SUBSCRIPTION_AMOUNT_MISMATCH"
-    | "SUBSCRIPTION_ACTIVATION_TAMPERED";
+    | "SUBSCRIPTION_ACTIVATION_TAMPERED"
+    // ── Staff ──────────────────────────────────────────────────
+    | "STAFF_SALARY_CHANGED"
+    | "STAFF_PAYMENT_RECORDED"
+    | "STAFF_ADVANCE_RECORDED"
+    // ── Tenant Security ────────────────────────────────────────
+    | "TENANT_ACCESS_DENIED"
+    | "CROSS_TENANT_ATTEMPT"
+    // ── Uploads ────────────────────────────────────────────────
+    | "UPLOAD_REJECTED"
+    | "UPLOAD_SIZE_EXCEEDED";
 
 interface AuditEvent {
     type: AuditEventType;

@@ -27,6 +27,12 @@ export async function POST(req: Request, props: { params: Promise<{ poolSlug: st
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const tenantId = await resolveTenant(poolSlug, "pool");
+
+    // ── TENANT OWNERSHIP CHECK ──────────────────────────────────────────
+    if (user.role !== "superadmin" && user.poolId !== tenantId) {
+      return NextResponse.json({ error: "Access denied: pool mismatch" }, { status: 403 });
+    }
+
     const { staffId, month, amount } = await req.json();
 
     const advance = await StaffAdvance.findOneAndUpdate(
@@ -34,6 +40,20 @@ export async function POST(req: Request, props: { params: Promise<{ poolSlug: st
       { $set: { amount } },
       { upsert: true, new: true }
     );
+
+    // ── AUDIT LOG: Staff Advance Recorded ──────────────────────────
+    const { logger } = await import("@/lib/logger");
+    logger.audit({
+        type: "STAFF_ADVANCE_RECORDED",
+        userId: user.id,
+        poolId: tenantId,
+        meta: {
+            staffId,
+            month,
+            amount,
+            recordedBy: user.email || user.id,
+        }
+    });
 
     return NextResponse.json(advance);
   } catch (error: any) {
