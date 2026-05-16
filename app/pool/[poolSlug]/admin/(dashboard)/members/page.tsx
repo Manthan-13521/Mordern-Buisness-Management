@@ -158,7 +158,7 @@ export default function MembersPage() {
             if (!res.ok) throw new Error("Failed to fetch members");
             const json = await res.json();
             const rows = Array.isArray(json) ? json : (json.data ?? []);
-            const total = json.total ?? rows.length;
+            const total = json.meta?.total ?? json.total ?? rows.length;
             
             // --- STEP 5: INCREMENTAL SYNC WITH CONFLICT RESOLUTION ---
             if (session?.user?.poolId) {
