@@ -113,18 +113,40 @@ export async function enforceSaaSGuard(poolId: string): Promise<SaaSContext> {
         
         const planObj: any = org.planId;
         
-        // We do NOT throw here automatically anymore, to allow read-only dashboard access.
-        // Instead we throw when specific write operations are requested.
-        const isHardExpired = org.status === "expired" && (!org.graceEndsAt || Date.now() > new Date(org.graceEndsAt).getTime());
+        // Defensive: if the referenced SaaSPlan was deleted or doesn't exist,
+        // fall back to generous legacy context instead of crashing on planObj._id
+        if (!planObj || !planObj._id) {
+            logger.warn("[SaaSGuard] Organization has null/missing planId after populate", {
+                orgId: (org._id as any).toString(),
+                rawPlanId: org.planId,
+            });
+            context = {
+                orgId: (org._id as any).toString(),
+                planId: "MISSING_PLAN",
+                features: {
+                    analytics: true,
+                    whatsapp: true,
+                    autoBlock: true,
+                    prioritySupport: false,
+                },
+                maxMembers: 9999,
+                status: org.status,
+                isHardExpired: false,
+            };
+        } else {
+            // We do NOT throw here automatically anymore, to allow read-only dashboard access.
+            // Instead we throw when specific write operations are requested.
+            const isHardExpired = org.status === "expired" && (!org.graceEndsAt || Date.now() > new Date(org.graceEndsAt).getTime());
 
-        context = {
-            orgId: (org._id as any).toString(),
-            planId: planObj._id.toString(),
-            features: planObj.features,
-            maxMembers: planObj.maxMembers,
-            status: org.status,
-            isHardExpired
-        };
+            context = {
+                orgId: (org._id as any).toString(),
+                planId: planObj._id.toString(),
+                features: planObj.features,
+                maxMembers: planObj.maxMembers,
+                status: org.status,
+                isHardExpired
+            };
+        }
     }
 
     // 3. Cache the DB result for 30 mins to avoid stale plans

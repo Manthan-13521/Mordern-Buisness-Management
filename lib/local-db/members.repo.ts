@@ -109,6 +109,11 @@ export async function syncUnsyncedMembers() {
 
         if (res.ok) {
           const result = await res.json();
+          if (!result || !result._id) {
+            // Server saved but returned null — mark as synced to stop retries
+            await db.members.update(member.id, { synced: true });
+            continue;
+          }
           // Replace using atomic transaction to avoid changing PK errors
           await replaceTempMemberLocal(member.id, {
              ...result,
@@ -117,6 +122,9 @@ export async function syncUnsyncedMembers() {
              status: result.verdict || "ACTIVE",
              updatedAt: result.updatedAt || Date.now(),
           });
+        } else if (res.status === 400 || res.status === 403 || res.status === 409) {
+          // Non-retryable server error — remove the stuck entry to stop infinite retries
+          await db.members.delete(member.id);
         }
       } catch (err) {
         console.error("Failed to sync offline member:", member.name, err);
