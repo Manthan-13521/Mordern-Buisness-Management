@@ -129,6 +129,15 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
 
             const newMember = await res.json();
 
+            // Defensive: if server returned null/empty, treat as success but skip sync/print
+            if (!newMember || !newMember._id) {
+                onSuccess();
+                onClose();
+                setFormData({ name: "", phone: "", planId: "", planQuantity: 1, paidAmount: 0, paymentMode: "cash", equipmentTaken: "" });
+                setPhotoPreview(null);
+                return;
+            }
+
             // --- STEP 4: SYNC TEMPORARY ID TO SERVER DATA ---
             if (session?.user?.poolId) {
                 try {

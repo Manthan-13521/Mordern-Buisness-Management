@@ -466,9 +466,17 @@ export async function POST(req: Request) {
             }
         }
 
-        const savedMember = isEntertainment
+        let savedMember = isEntertainment
             ? await secureFindById(EntertainmentMember, newMember._id.toString(), user, { populate: { path: "planId", select: "name hasTokenPrint quickDelete price" } })
             : await secureFindById(Member, newMember._id.toString(), user, { populate: { path: "planId", select: "name hasTokenPrint quickDelete price" } });
+
+        // Defensive fallback: if secureFindById returns null (e.g. read-replica lag),
+        // return the document we just saved. The plan won't be populated, but the
+        // client won't crash.
+        if (!savedMember) {
+            console.warn("[POST /api/members] secureFindById returned null for just-saved member", newMember._id);
+            savedMember = newMember.toObject ? newMember.toObject() : newMember;
+        }
 
         // No background job needed since generation is inline
 

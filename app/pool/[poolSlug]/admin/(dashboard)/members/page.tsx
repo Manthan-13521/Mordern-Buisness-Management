@@ -163,7 +163,7 @@ export default function MembersPage() {
             // --- STEP 5: INCREMENTAL SYNC WITH CONFLICT RESOLUTION ---
             if (session?.user?.poolId) {
                 try {
-                    const { syncMemberConflictSafe } = await import("@/lib/local-db/members.repo");
+                    const { syncMemberConflictSafe, getMembersByPoolLocal, deleteMemberLocal } = await import("@/lib/local-db/members.repo");
                     await Promise.all(
                         rows.map(async (m: any) => {
                             await syncMemberConflictSafe(m, session.user.poolId as string);
@@ -172,6 +172,22 @@ export default function MembersPage() {
 
                     if (rows.length > 0) {
                         await setLastSyncedAtLocal(session.user.poolId, Date.now().toString());
+                    }
+
+                    // Clean stale IndexedDB entries when server confirms empty list (new account)
+                    if (rows.length === 0 && page === 1 && !searchDebounced) {
+                        try {
+                            const locals = await getMembersByPoolLocal(session.user.poolId);
+                            if (Array.isArray(locals)) {
+                                for (const m of locals) {
+                                    if ((m as any).synced !== false) {
+                                        await deleteMemberLocal((m as any).id);
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            console.warn("Stale local data cleanup failed:", e);
+                        }
                     }
                 } catch (err) {
                     console.error("Local sync loop error:", err);
@@ -184,7 +200,7 @@ export default function MembersPage() {
     });
 
     const { members, offlineTotal } = useMemo(() => {
-        if (data?.members) return { members: data.members, offlineTotal: 0 };
+        if (data?.members !== undefined) return { members: data.members ?? [], offlineTotal: 0 };
         if (!localMembers) return { members: [], offlineTotal: 0 };
         
         let filtered = localMembers as any[];
