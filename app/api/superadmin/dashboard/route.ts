@@ -18,6 +18,9 @@ export async function GET(req: Request) {
         const { SubscriptionPaymentLog } = await import("@/models/SubscriptionPaymentLog");
         const { ReferralCode } = await import("@/models/ReferralCode");
         const { ReferralUsage } = await import("@/models/ReferralUsage");
+        const { User } = await import("@/models/User");
+        const { SaaSPlan } = await import("@/models/SaaSPlan");
+        const { OrgSubscription } = await import("@/models/OrgSubscription");
         const { Organization } = await import("@/models/Organization");
 
         const now = new Date();

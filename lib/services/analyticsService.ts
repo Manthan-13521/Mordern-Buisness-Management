@@ -46,6 +46,7 @@ export async function getEcosystemSnapshot(): Promise<EcosystemSnapshot> {
     await dbConnect();
 
     const { Organization } = await import("@/models/Organization");
+    const { SaaSPlan } = await import("@/models/SaaSPlan");
     const { Pool } = await import("@/models/Pool");
     const { Hostel } = await import("@/models/Hostel");
     const { Business } = await import("@/models/Business");
