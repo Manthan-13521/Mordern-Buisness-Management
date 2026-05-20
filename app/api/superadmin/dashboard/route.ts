@@ -33,9 +33,9 @@ export async function GET(req: Request) {
         // ── Run all aggregations in parallel ──────────────────────────────────
         const [
             allOrgs,
-            totalPools,
-            totalHostels,
-            totalBusinesses,
+            allPools,
+            allHostels,
+            allBusinesses,
             totalMembers,
             billingLogs,
             subscriptionPaymentLogs,
@@ -44,9 +44,9 @@ export async function GET(req: Request) {
             dailySignups,
         ] = await Promise.all([
             Organization.find({}).populate("planId").lean(),
-            Pool.countDocuments({}),
-            Hostel.countDocuments({}),
-            Business.countDocuments({}),
+            Pool.find({}).select("poolId status").lean(),
+            Hostel.find({}).select("hostelId status").lean(),
+            Business.find({}).select("businessId isActive").lean(),
             Member.countDocuments({}),
             BillingLog.find({}).populate("orgId").sort({ createdAt: -1 }).limit(500).lean(),
             SubscriptionPaymentLog.find({ status: "success" }).sort({ createdAt: -1 }).limit(500).lean(),
@@ -65,15 +65,36 @@ export async function GET(req: Request) {
             ])
         ]);
 
+        const totalPools = allPools.length;
+        const totalHostels = allHostels.length;
+        const totalBusinesses = allBusinesses.length;
+
+        const activePoolIds = new Set(allPools.filter((p: any) => p.status === "ACTIVE").map((p: any) => p.poolId));
+        const activeHostelIds = new Set(allHostels.filter((h: any) => h.status === "ACTIVE").map((h: any) => h.hostelId));
+        const activeBusinessIds = new Set(allBusinesses.filter((b: any) => b.isActive).map((b: any) => b.businessId));
+
+        const isOrgEffectivelyActive = (o: any) => {
+            const hasActivePool = o.poolIds?.some((id: string) => activePoolIds.has(id));
+            const hasActiveHostel = o.hostelIds?.some((id: string) => activeHostelIds.has(id));
+            const hasActiveBusiness = o.businessIds?.some((id: string) => activeBusinessIds.has(id));
+            
+            // If the org has any sub-tenants registered, at least one MUST be active
+            if ((o.poolIds?.length || 0) + (o.hostelIds?.length || 0) + (o.businessIds?.length || 0) > 0) {
+                return hasActivePool || hasActiveHostel || hasActiveBusiness;
+            }
+            // If it has NO sub-tenants, it's just an empty shell. We can count it if it was just created.
+            return true;
+        };
+
         // ── Map UserID to Org for subscription logs ──────────────────────────
         const userToOrgMap: Record<string, any> = {};
         allOrgs.forEach((o: any) => {
             if (o.ownerId) userToOrgMap[o.ownerId.toString()] = o;
         });
 
-        const activeOrgs = allOrgs.filter((o: any) => o.status === "active");
-        const trialOrgs = allOrgs.filter((o: any) => o.status === "trial");
-        const expiredOrgs = allOrgs.filter((o: any) => o.status === "expired");
+        const activeOrgs = allOrgs.filter((o: any) => o.status === "active" && isOrgEffectivelyActive(o));
+        const trialOrgs = allOrgs.filter((o: any) => o.status === "trial" && isOrgEffectivelyActive(o));
+        const expiredOrgs = allOrgs.filter((o: any) => o.status === "expired" || (o.status === "active" && !isOrgEffectivelyActive(o)));
 
         // Expiring soon: trial ending in <2 days OR subscription ending in <2 days
         const expiringSoon = allOrgs.filter((o: any) => {
@@ -148,12 +169,17 @@ export async function GET(req: Request) {
 
         // ── Organization Health Table ─────────────────────────────────────────
         const orgHealth = allOrgs.map((o: any) => {
+            let displayStatus = o.status;
+            if ((o.status === "active" || o.status === "trial") && !isOrgEffectivelyActive(o)) {
+                displayStatus = "inactive";
+            }
+
             let risk: "green" | "yellow" | "red" = "green";
-            if (o.status === "expired") risk = "red";
-            else if (o.status === "trial") {
+            if (displayStatus === "expired" || displayStatus === "inactive") risk = "red";
+            else if (displayStatus === "trial") {
                 if (o.trialEndsAt && new Date(o.trialEndsAt) <= twoDaysFromNow) risk = "red";
                 else risk = "yellow";
-            } else if (o.status === "active" && o.currentPeriodEnd && new Date(o.currentPeriodEnd) <= twoDaysFromNow) {
+            } else if (displayStatus === "active" && o.currentPeriodEnd && new Date(o.currentPeriodEnd) <= twoDaysFromNow) {
                 risk = "yellow";
             }
 
@@ -165,7 +191,7 @@ export async function GET(req: Request) {
                 _id: o._id,
                 name: o.name,
                 plan: o.planId?.name || "No Plan",
-                status: o.status,
+                status: displayStatus,
                 revenue: orgRevenue,
                 risk,
                 trialEndsAt: o.trialEndsAt,
