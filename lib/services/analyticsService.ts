@@ -1,9 +1,4 @@
 import { dbConnect } from "@/lib/mongodb";
-import { Organization } from "@/models/Organization";
-import { Pool } from "@/models/Pool";
-import { Hostel } from "@/models/Hostel";
-import { Business } from "@/models/Business";
-import { Member } from "@/models/Member";
 
 export type OrganizationHealth = {
     _id: string;
@@ -39,7 +34,7 @@ export type EcosystemSnapshot = {
         conversionRate: number;
     };
     timeline: TimelinePoint[];
-    validatedOrgs: any[]; // The sanitized array of orgs for downstream logic
+    validatedOrgs: any[];
     activePoolIds: Set<string>;
     activeHostelIds: Set<string>;
     activeBusinessIds: Set<string>;
@@ -49,6 +44,12 @@ const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Se
 
 export async function getEcosystemSnapshot(): Promise<EcosystemSnapshot> {
     await dbConnect();
+
+    const { Organization } = await import("@/models/Organization");
+    const { Pool } = await import("@/models/Pool");
+    const { Hostel } = await import("@/models/Hostel");
+    const { Business } = await import("@/models/Business");
+    const { Member } = await import("@/models/Member");
 
     const now = new Date();
     const twoDaysFromNow = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
