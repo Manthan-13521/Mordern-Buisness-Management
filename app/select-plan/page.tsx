@@ -243,9 +243,8 @@ export default function SelectPlanPage() {
                                 razorpayOrderId: response.razorpay_order_id,
                                 razorpayPaymentId: response.razorpay_payment_id,
                                 razorpaySignature: response.razorpay_signature,
-                                planType,
-                                module,
-                                blocks,
+                                // SECURITY: planType/module/blocks NOT sent.
+                                // Server derives from Razorpay order notes (source of truth).
                             }),
                         });
                         const verifyData = await verifyRes.json();

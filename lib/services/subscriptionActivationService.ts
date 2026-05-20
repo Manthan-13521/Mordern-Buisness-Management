@@ -95,23 +95,44 @@ export async function activateSubscription(params: {
                 const orderPlan = notes.planType as SubscriptionPlanType;
                 const orderModule = notes.module as SubscriptionModule;
                 const orderBlocks = notes.blocks ? parseInt(notes.blocks) : undefined;
-                
-                // Verify that the requested plan matches what was actually ordered
-                if (orderPlan !== reqPlanType || orderModule !== reqModule || orderBlocks !== reqBlocks) {
-                    logger.audit({
-                        type: "SUBSCRIPTION_ACTIVATION_TAMPERED",
-                        userId,
-                        meta: { 
-                            requested: { plan: reqPlanType, module: reqModule, blocks: reqBlocks },
-                            ordered: { plan: orderPlan, module: orderModule, blocks: orderBlocks }
-                        }
+
+                // SECURITY: For frontend-initiated activations (signature present),
+                // ALWAYS use order notes as the source of truth.
+                // Client-provided planType/module/blocks are completely ignored.
+                if (razorpaySignature) {
+                    if (!orderPlan || !orderModule) {
+                        logger.audit({
+                            type: "SUBSCRIPTION_ACTIVATION_MISSING_NOTES",
+                            userId,
+                            meta: { razorpayOrderId, notes },
+                        });
+                        throw new Error("Payment order is missing plan details");
+                    }
+                    verifiedPlanType = orderPlan;
+                    verifiedModule = orderModule;
+                    verifiedBlocks = orderBlocks;
+                    logger.info("[Activation] Using Razorpay order notes as source of truth (frontend path)", {
+                        verifiedPlanType, verifiedModule, verifiedBlocks, razorpayOrderId,
                     });
-                    throw new Error("Requested plan does not match the order");
+                } else {
+                    // Webhook path: request params are already verified by webhook handler.
+                    // Still cross-check against order for extra safety.
+                    if (orderPlan && (orderPlan !== reqPlanType || orderModule !== reqModule)) {
+                        logger.audit({
+                            type: "SUBSCRIPTION_ACTIVATION_TAMPERED",
+                            userId,
+                            meta: { 
+                                requested: { plan: reqPlanType, module: reqModule, blocks: reqBlocks },
+                                ordered: { plan: orderPlan, module: orderModule, blocks: orderBlocks }
+                            }
+                        });
+                        throw new Error("Requested plan does not match the order");
+                    }
+                    verifiedPlanType = orderPlan || reqPlanType;
+                    verifiedModule = orderModule || reqModule;
+                    verifiedBlocks = orderBlocks ?? reqBlocks;
                 }
 
-                verifiedPlanType = orderPlan;
-                verifiedModule = orderModule;
-                verifiedBlocks = orderBlocks;
                 const orderReferralCode = notes.referralCode as string | undefined;
 
                 // ── SOURCE OF TRUTH: Use order-derived values, NOT request values ──
@@ -292,6 +313,29 @@ export async function activateSubscription(params: {
     } catch (orgErr: any) {
         // Non-fatal — Organization sync is best-effort
         logger.warn("[Activation] Organization sync failed (non-fatal)", { error: orgErr?.message });
+    }
+
+    // 8b. CRITICAL: Sync Hostel.numberOfBlocks to match paid block entitlement
+    // This ensures the Hostel model stays in sync with the verified subscription blocks.
+    if (verifiedModule === "hostel" && verifiedBlocks && verifiedBlocks >= 1) {
+        try {
+            const { Hostel } = await import("@/models/Hostel");
+            const hostelUpdateResult = await Hostel.findOneAndUpdate(
+                { hostelId: user.hostelId },
+                { $set: { numberOfBlocks: verifiedBlocks } },
+                { new: true }
+            );
+            if (hostelUpdateResult) {
+                logger.info("[Activation] Hostel.numberOfBlocks synced to paid entitlement", {
+                    hostelId: user.hostelId,
+                    paidBlocks: verifiedBlocks,
+                    previousBlocks: hostelUpdateResult.numberOfBlocks,
+                });
+            }
+        } catch (hostelSyncErr: any) {
+            // Non-fatal — subscription is already activated, hostel sync is best-effort
+            logger.warn("[Activation] Hostel block sync failed (non-fatal)", { error: hostelSyncErr?.message });
+        }
     }
 
     // 9. Record Referral Usage (if applicable)

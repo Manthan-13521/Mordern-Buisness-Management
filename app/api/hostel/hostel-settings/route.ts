@@ -6,8 +6,24 @@ import { HostelBlock } from "@/models/HostelBlock";
 import { HostelFloor } from "@/models/HostelFloor";
 import { HostelRoom } from "@/models/HostelRoom";
 import { HostelMember } from "@/models/HostelMember";
+import { User } from "@/models/User";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
 export const dynamic = "force-dynamic";
+
+/**
+ * Derive the max allowed blocks from paid subscription entitlement.
+ * Source of truth: User.subscription.blocks (set by subscription activation).
+ * Fallback: Hostel.numberOfBlocks (for admin-created accounts without subscription record).
+ */
+async function getMaxBlocksFromEntitlement(hostelId: string, userId: string): Promise<number> {
+    const dbUser = await User.findById(userId).select("subscription").lean() as any;
+    if (dbUser?.subscription?.blocks && dbUser.subscription.blocks >= 1) {
+        return dbUser.subscription.blocks;
+    }
+    // Fallback for admin-created accounts that have no subscription record
+    const hostel = await Hostel.findOne({ hostelId }).select("numberOfBlocks").lean() as any;
+    return hostel?.numberOfBlocks ?? 1;
+}
 
 // GET /api/hostel/hostel-settings — strict structure + occupancy mapping
 export async function GET(req: Request) {
@@ -65,11 +81,14 @@ export async function GET(req: Request) {
             };
         });
 
+        // SECURITY: maxBlocks from paid entitlement, not Hostel.numberOfBlocks
+        const paidMaxBlocks = await getMaxBlocksFromEntitlement(hostelId, user.id as string);
+
         return NextResponse.json({
             whatsappEnabled: settings.whatsappEnabled,
             whatsappMessageTemplate: settings.whatsappMessageTemplate,
             blocks,
-            maxBlocks: hostel?.numberOfBlocks ?? 4,
+            maxBlocks: paidMaxBlocks,
             hostelName: hostel?.hostelName,
         }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
@@ -91,10 +110,10 @@ export async function PUT(req: Request) {
         const { blocks, whatsappEnabled, whatsappMessageTemplate } = body;
         const incomingBlocks = Array.isArray(blocks) ? blocks : [];
 
-        const hostel = await Hostel.findOne({ hostelId }).select("numberOfBlocks").lean() as any;
-        const maxBlocks = hostel?.numberOfBlocks ?? 4;
-        if (incomingBlocks.length > maxBlocks) {
-            return NextResponse.json({ error: `Maximum ${maxBlocks} block(s) allowed.` }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        // SECURITY: Validate against paid entitlement, not Hostel.numberOfBlocks
+        const paidMaxBlocks = await getMaxBlocksFromEntitlement(hostelId, user.id as string);
+        if (incomingBlocks.length > paidMaxBlocks) {
+            return NextResponse.json({ error: `Maximum ${paidMaxBlocks} block(s) allowed by your subscription. Upgrade to add more blocks.` }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // Structural Limiter Check

@@ -22,8 +22,11 @@ export async function POST(req: Request) {
         // SECURITY: isMock must NEVER be honored in production — prevents free subscription exploit
         const isMock = process.env.NODE_ENV !== "production" && rawMock === true;
 
-        if (!planType || !module) {
-            return NextResponse.json({ error: "planType and module are required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        // SECURITY: For real (non-mock) payments, planType/module/blocks are IGNORED.
+        // The activation service derives them from Razorpay order notes (source of truth).
+        // Mock mode still accepts them since there's no real Razorpay order to query.
+        if (isMock && (!planType || !module)) {
+            return NextResponse.json({ error: "planType and module are required for mock activation" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         if (!isMock && (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature)) {
@@ -38,9 +41,12 @@ export async function POST(req: Request) {
             razorpaySignature: razorpaySignature || "",
             isMock:            isMock === true,
             userId:            user.id,
-            planType,
-            module,
-            blocks:            blocks ? parseInt(blocks) : undefined,
+            // SECURITY: For real payments, pass placeholder values.
+            // activateSubscription() will override with Razorpay order notes.
+            // For mock mode, pass the client-provided values.
+            planType:          isMock ? planType : (planType || "yearly"),
+            module:            isMock ? module : (module || "pool"),
+            blocks:            isMock ? (blocks ? parseInt(blocks) : undefined) : undefined,
         });
 
         return NextResponse.json({

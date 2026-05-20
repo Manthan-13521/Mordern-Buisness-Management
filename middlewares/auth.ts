@@ -52,29 +52,62 @@ export function withAuthRouting(req: NextRequestWithAuth): NextResponse | undefi
         const isProtectedApi = SUBSCRIPTION_PROTECTED_APIS.some((p) => path.startsWith(p));
         const isAlwaysAllowed = SUBSCRIPTION_ALWAYS_ALLOW.some((p) => path.startsWith(p));
         const subStatus = (token as any)?.subscriptionStatus;
+        const httpMethod = req.method?.toUpperCase() || "GET";
+        const isReadOnly = httpMethod === "GET" || httpMethod === "HEAD" || httpMethod === "OPTIONS";
 
         if (
             isProtectedApi &&
             !isAlwaysAllowed &&
             token?.role !== "superadmin" &&
-            token?.role !== "operator" &&
-            (!subStatus || subStatus === "expired" || subStatus === "none" || subStatus === "suspended" || subStatus === "cancelled")
+            token?.role !== "operator"
         ) {
-            console.warn(`[Middleware] API subscription block: ${path}`, {
-                userId: token?.id, status: subStatus, role: token?.role
-            });
-            const errMsg = subStatus === "expired" || subStatus === "suspended"
-                ? "Subscription expired. Please renew to continue."
-                : "No active subscription. Please select a plan.";
-            const res = NextResponse.json(
-                {
-                    error: errMsg,
-                    code: subStatus === "expired" ? "SUBSCRIPTION_EXPIRED" : "SUBSCRIPTION_REQUIRED",
-                },
-                { status: 403 }
-            );
-            applySecurityHeaders(res);
-            return res;
+            // SUSPENDED: Hard block all access (abuse/manual block — not just payment expiry)
+            if (subStatus === "suspended") {
+                console.warn(`[Middleware] API suspended block: ${path}`, {
+                    userId: token?.id, status: subStatus, role: token?.role
+                });
+                const res = NextResponse.json(
+                    { error: "Account suspended. Contact support.", code: "ACCOUNT_SUSPENDED" },
+                    { status: 403 }
+                );
+                applySecurityHeaders(res);
+                return res;
+            }
+
+            // EXPIRED: Allow read-only (GET/HEAD), block mutating methods (POST/PUT/PATCH/DELETE)
+            if (subStatus === "expired") {
+                if (!isReadOnly) {
+                    console.warn(`[Middleware] API expired write block: ${httpMethod} ${path}`, {
+                        userId: token?.id, status: subStatus, role: token?.role
+                    });
+                    const res = NextResponse.json(
+                        {
+                            error: "Subscription expired. Renew to perform this action.",
+                            code: "SUBSCRIPTION_EXPIRED",
+                        },
+                        { status: 403 }
+                    );
+                    applySecurityHeaders(res);
+                    return res;
+                }
+                // GET/HEAD for expired: allow through (read-only dashboard)
+            }
+
+            // NONE / CANCELLED: Block all access — user never had or cancelled subscription
+            if (!subStatus || subStatus === "none" || subStatus === "cancelled") {
+                console.warn(`[Middleware] API no-subscription block: ${path}`, {
+                    userId: token?.id, status: subStatus, role: token?.role
+                });
+                const res = NextResponse.json(
+                    {
+                        error: "No active subscription. Please select a plan.",
+                        code: "SUBSCRIPTION_REQUIRED",
+                    },
+                    { status: 403 }
+                );
+                applySecurityHeaders(res);
+                return res;
+            }
         }
 
         // ── Fast-Fail Tenant API Edge Guard ──
@@ -131,16 +164,20 @@ export function withAuthRouting(req: NextRequestWithAuth): NextResponse | undefi
         token?.role !== "superadmin" &&
         token?.role !== "operator"
     ) {
-        // Expired → renew page
-        if (subStatus === "expired" || subStatus === "suspended") {
-            console.warn(`[Middleware] Page subscription redirect → /renew-plan`, {
+        // SUSPENDED: Hard redirect to renew (abuse/manual block)
+        if (subStatus === "suspended") {
+            console.warn(`[Middleware] Page suspended redirect → /renew-plan`, {
                 userId: token?.id, status: subStatus, path
             });
             const res = NextResponse.redirect(new URL("/renew-plan", req.url));
             applySecurityHeaders(res);
             return res;
         }
-        // Never subscribed → select plan page
+        // EXPIRED: Allow through — dashboard shows in read-only mode.
+        // SubscriptionBanner handles the UI warning + renewal CTA.
+        // (Do NOT redirect to /renew-plan — users need to see their data)
+
+        // NONE / CANCELLED: Never subscribed → select plan page
         if (!subStatus || subStatus === "none" || subStatus === "cancelled") {
             console.warn(`[Middleware] Page subscription redirect → /select-plan`, {
                 userId: token?.id, status: subStatus, path

@@ -90,6 +90,11 @@ export async function POST(req: Request) {
         };
         const modelPlan = modelPlanMap[activePlan] || "free";
 
+        // SECURITY: For public signup (no adminBilling), always set numberOfBlocks=1.
+        // The real block count is set after payment via subscription activation.
+        // For admin mode (adminBilling present), use the selected block count.
+        const effectiveBlocks = adminBilling ? numberOfBlocks : 1;
+
         // Create hostel, admin user, and settings in parallel
         try {
             const hostel = new Hostel({
@@ -99,7 +104,7 @@ export async function POST(req: Request) {
                 city,
                 adminEmail: normalizedEmail,
                 adminPhone,
-                numberOfBlocks,
+                numberOfBlocks: effectiveBlocks,
                 status: "ACTIVE",
                 plan: modelPlan,
                 subscriptionStatus,

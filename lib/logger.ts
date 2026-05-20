@@ -72,7 +72,13 @@ export type AuditEventType =
     | "HOSTEL_PAYMENT_DELETED"
     | "HOSTEL_MEMBER_VACATED"
     | "HOSTEL_MEMBER_DELETED"
-    | "HOSTEL_BACKUP_CREATED";
+    | "HOSTEL_BACKUP_CREATED"
+    // ── Business Registration ──────────────────────────────────
+    | "BUSINESS_REGISTRATION_PAYMENT_FAILED"
+    | "BUSINESS_REGISTRATION_AMOUNT_MISMATCH"
+    | "BUSINESS_REGISTERED_VIA_PAYMENT"
+    // ── Subscription Security ──────────────────────────────────
+    | "SUBSCRIPTION_ACTIVATION_MISSING_NOTES";
 
 interface AuditEvent {
     type: AuditEventType;
