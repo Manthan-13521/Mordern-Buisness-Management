@@ -23,18 +23,21 @@ export async function POST(req: Request) {
         const body = await req.json();
         const { businessName, adminName, adminEmail, adminPhone, password, address, gstNumber, adminBilling, planType: selectedPlanType } = body;
 
-        if (!businessName || !adminEmail || !password) {
+        if (!body.pendingId && (!businessName || !adminEmail || !password)) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
         await dbConnect();
 
-        const normalizedEmail = adminEmail.toLowerCase().trim();
+        let normalizedEmail = "";
+        if (!body.pendingId) {
+            normalizedEmail = adminEmail.toLowerCase().trim();
 
-        // Check if email is already in use
-        const existingUser = await User.findOne({ email: normalizedEmail });
-        if (existingUser) {
-            return NextResponse.json({ error: "An account with this email already exists. Please login." }, { status: 400 });
+            // Check if email is already in use
+            const existingUser = await User.findOne({ email: normalizedEmail });
+            if (existingUser) {
+                return NextResponse.json({ error: "An account with this email already exists. Please login." }, { status: 400 });
+            }
         }
 
         // ══════════════════════════════════════════════════════════════════════
