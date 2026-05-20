@@ -1,58 +1,45 @@
 import { NextResponse } from "next/server";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
+import { getEcosystemSnapshot } from "@/lib/services/analyticsService";
 
-
-export const dynamic = "force-dynamic"; // M-7 FIX: Never cache this route — auth-gated sensitive data
+export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
     try {
         const user = await resolveUser(req);
         if (!user || user.role !== "superadmin") {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 }); // Prevent unauthorized access
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
         await dbConnect();
 
-        const { Organization } = await import("@/models/Organization");
-        const { SaaSPlan } = await import("@/models/SaaSPlan");
-        const { OrgSubscription } = await import("@/models/OrgSubscription");
         const { BillingLog } = await import("@/models/BillingLog");
         const { SubscriptionPaymentLog } = await import("@/models/SubscriptionPaymentLog");
         const { ReferralCode } = await import("@/models/ReferralCode");
         const { ReferralUsage } = await import("@/models/ReferralUsage");
-        const { Pool } = await import("@/models/Pool");
-        const { Hostel } = await import("@/models/Hostel");
-        const { Business } = await import("@/models/Business");
-        const { Member } = await import("@/models/Member");
+        const { Organization } = await import("@/models/Organization");
 
         const now = new Date();
         const twoDaysFromNow = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
         const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-        // ── Run all aggregations in parallel ──────────────────────────────────
+        // ── Single Source of Truth: Ecosystem Snapshot ─────────────────────────
+        const snapshot = await getEcosystemSnapshot();
+        const { kpis, validatedOrgs: allOrgs, activePoolIds, activeHostelIds, activeBusinessIds } = snapshot;
+
+        // ── Fetch billing, referral, and signup data in parallel ───────────────
         const [
-            allOrgs,
-            allPools,
-            allHostels,
-            allBusinesses,
-            totalMembers,
             billingLogs,
             subscriptionPaymentLogs,
             referralCodes,
             referralUsages,
             dailySignups,
         ] = await Promise.all([
-            Organization.find({}).populate("planId").lean(),
-            Pool.find({}).select("poolId status").lean(),
-            Hostel.find({}).select("hostelId status").lean(),
-            Business.find({}).select("businessId isActive").lean(),
-            Member.countDocuments({}),
             BillingLog.find({}).populate("orgId").sort({ createdAt: -1 }).limit(500).lean(),
             SubscriptionPaymentLog.find({ status: "success" }).sort({ createdAt: -1 }).limit(500).lean(),
             ReferralCode.find({}).lean(),
             ReferralUsage.find({}).lean(),
-            // Daily signups in last 30 days
             Organization.aggregate([
                 { $match: { createdAt: { $gte: thirtyDaysAgo } } },
                 {
@@ -65,69 +52,31 @@ export async function GET(req: Request) {
             ])
         ]);
 
-        const totalPools = allPools.length;
-        const totalHostels = allHostels.length;
-        const totalBusinesses = allBusinesses.length;
-
-        const activePoolIds = new Set(allPools.filter((p: any) => p.status === "ACTIVE").map((p: any) => p.poolId));
-        const activeHostelIds = new Set(allHostels.filter((h: any) => h.status === "ACTIVE").map((h: any) => h.hostelId));
-        const activeBusinessIds = new Set(allBusinesses.filter((b: any) => b.isActive).map((b: any) => b.businessId));
-
-        const isOrgEffectivelyActive = (o: any) => {
-            const hasActivePool = o.poolIds?.some((id: string) => activePoolIds.has(id));
-            const hasActiveHostel = o.hostelIds?.some((id: string) => activeHostelIds.has(id));
-            const hasActiveBusiness = o.businessIds?.some((id: string) => activeBusinessIds.has(id));
-            
-            // If the org has any sub-tenants registered, at least one MUST be active
-            if ((o.poolIds?.length || 0) + (o.hostelIds?.length || 0) + (o.businessIds?.length || 0) > 0) {
-                return hasActivePool || hasActiveHostel || hasActiveBusiness;
-            }
-            // If it has NO sub-tenants, it's just an empty shell. We can count it if it was just created.
-            return true;
-        };
-
         // ── Map UserID to Org for subscription logs ──────────────────────────
         const userToOrgMap: Record<string, any> = {};
         allOrgs.forEach((o: any) => {
             if (o.ownerId) userToOrgMap[o.ownerId.toString()] = o;
         });
 
-        const activeOrgs = allOrgs.filter((o: any) => o.status === "active" && isOrgEffectivelyActive(o));
-        const trialOrgs = allOrgs.filter((o: any) => o.status === "trial" && isOrgEffectivelyActive(o));
-        const expiredOrgs = allOrgs.filter((o: any) => o.status === "expired" || (o.status === "active" && !isOrgEffectivelyActive(o)));
-
-        // Expiring soon: trial ending in <2 days OR subscription ending in <2 days
-        const expiringSoon = allOrgs.filter((o: any) => {
-            if (o.status === "trial" && o.trialEndsAt && new Date(o.trialEndsAt) <= twoDaysFromNow && new Date(o.trialEndsAt) > now) return true;
-            if (o.status === "active" && o.currentPeriodEnd && new Date(o.currentPeriodEnd) <= twoDaysFromNow && new Date(o.currentPeriodEnd) > now) return true;
-            return false;
-        });
-
-        // Conversion rate: paid / trial (using allOrgs to capture total historical funnel)
-        const totalEverTrial = allOrgs.length;
-        const convertedToPaid = allOrgs.filter((o: any) => o.status === "active").length;
-        const conversionRate = totalEverTrial > 0 ? Math.round((convertedToPaid / totalEverTrial) * 100) : 0;
-
-        // Helper to get primary entity ID (POOL001, HOST001, BIZ001) from organization
+        // Helper to get primary entity ID from organization
         const getEntityId = (o: any) => {
             if (!o) return "N/A";
             return o.poolIds?.[0] || o.hostelIds?.[0] || o.businessIds?.[0] || "N/A";
         };
 
         // ── Merge billing logs from both sources for complete billing view ────
-        // Normalize SubscriptionPaymentLog entries to BillingLog shape
         const normalizedSubLogs = subscriptionPaymentLogs.map((s: any) => {
             const org = userToOrgMap[s.userId?.toString()];
             return {
                 _id: s._id,
-                orgId: org?._id || s.userId, // Use org._id (NOT userId) so dedup works
+                orgId: org?._id || s.userId,
                 orgName: org?.name || "Unknown Entity",
                 entityId: getEntityId(org),
                 amount: s.amount,
                 method: "razorpay",
                 paymentMode: "Razorpay",
                 periodStart: s.createdAt,
-                periodEnd: s.createdAt, // subscription logs don't have period end
+                periodEnd: s.createdAt,
                 createdAt: s.createdAt,
                 source: "subscription",
                 module: s.module,
@@ -135,8 +84,7 @@ export async function GET(req: Request) {
             };
         });
 
-        // Deduplicate: if a BillingLog already exists for the same org on the same day, skip the sub log.
-        // Both sides now use org ObjectId for consistent comparison.
+        // Deduplicate billing logs
         const billingDedup = new Set(
             billingLogs.map((b: any) => {
                 const orgIdStr = b.orgId?._id?.toString() || b.orgId?.toString();
@@ -149,7 +97,6 @@ export async function GET(req: Request) {
             return !billingDedup.has(key);
         });
 
-        // Combine and sort by date
         const allBillingLogs = [
             ...billingLogs.map((b: any) => ({ 
                 ...b, 
@@ -161,16 +108,16 @@ export async function GET(req: Request) {
             (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
 
-        // ── Derive KPIs from deduplicated billing list (single source of truth) ─
+        // ── Revenue KPIs from deduplicated billing ────────────────────────────
         const totalRevenue = allBillingLogs.reduce((sum: number, b: any) => sum + (b.amount || 0), 0);
         const mrr = allBillingLogs
             .filter((b: any) => new Date(b.createdAt) >= thirtyDaysAgo)
             .reduce((sum: number, b: any) => sum + (b.amount || 0), 0);
 
-        // ── Organization Health Table ─────────────────────────────────────────
+        // ── Organization Health Table (display only, no recalculation) ────────
         const orgHealth = allOrgs.map((o: any) => {
             let displayStatus = o.status;
-            if ((o.status === "active" || o.status === "trial") && !isOrgEffectivelyActive(o)) {
+            if ((o.status === "active" || o.status === "trial") && !o._isEffectivelyActive) {
                 displayStatus = "inactive";
             }
 
@@ -183,7 +130,6 @@ export async function GET(req: Request) {
                 risk = "yellow";
             }
 
-            // Get revenue for this org from all billing sources
             const orgBilling = allBillingLogs.filter((b: any) => b.orgId?.toString() === o._id?.toString());
             const orgRevenue = orgBilling.reduce((sum: number, b: any) => sum + (b.amount || 0), 0);
 
@@ -209,7 +155,6 @@ export async function GET(req: Request) {
             usageByCode[u.code].discountTotal += u.discountApplied || 0;
         });
 
-        // Revenue generated per code: sum of billing from orgs that used this code
         const revenueByCode: Record<string, number> = {};
         allOrgs.forEach((o: any) => {
             if (o.referralCodeUsed) {
@@ -246,11 +191,11 @@ export async function GET(req: Request) {
 
         // ── Alerts ────────────────────────────────────────────────────────────
         const alerts: { type: "warning" | "danger" | "info"; message: string }[] = [];
-        if (expiringSoon.length > 0) {
-            alerts.push({ type: "warning", message: `${expiringSoon.length} org(s) expiring within 2 days` });
+        if (kpis.expiringSoon > 0) {
+            alerts.push({ type: "warning", message: `${kpis.expiringSoon} org(s) expiring within 2 days` });
         }
-        if (expiredOrgs.length > 0) {
-            alerts.push({ type: "danger", message: `${expiredOrgs.length} org(s) currently expired` });
+        if (kpis.expiredOrgs > 0) {
+            alerts.push({ type: "danger", message: `${kpis.expiredOrgs} org(s) currently expired` });
         }
         const deadCodes = referralIntel.filter(r => r.isDead);
         if (deadCodes.length > 0) {
@@ -261,15 +206,15 @@ export async function GET(req: Request) {
             kpis: {
                 totalRevenue,
                 mrr,
-                activeOrgs: activeOrgs.length,
-                trialOrgs: trialOrgs.length,
-                expiringSoon: expiringSoon.length,
-                expiredOrgs: expiredOrgs.length,
-                totalPools,
-                totalHostels,
-                totalBusinesses,
-                totalMembers,
-                conversionRate,
+                activeOrgs: kpis.activeOrgs,
+                trialOrgs: kpis.trialOrgs,
+                expiringSoon: kpis.expiringSoon,
+                expiredOrgs: kpis.expiredOrgs,
+                totalPools: kpis.totalPools,
+                totalHostels: kpis.totalHostels,
+                totalBusinesses: kpis.totalBusinesses,
+                totalMembers: kpis.totalMembers,
+                conversionRate: kpis.conversionRate,
             },
             orgHealth,
             referralIntel,
@@ -277,8 +222,6 @@ export async function GET(req: Request) {
             dailySignups,
             alerts,
         }, {
-            // M-7 FIX: private = browser can cache but CDN/proxy cannot.
-            // Prevents sensitive revenue data leaking via shared cache.
             headers: { "Cache-Control": "private, max-age=30, must-revalidate" }
         });
 
