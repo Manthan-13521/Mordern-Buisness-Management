@@ -134,12 +134,13 @@ export async function POST(req: Request) {
             counter++;
         }
 
-        const durationDays: Record<string, number> = { quarterly: 90, yearly: 365 };
+        const durationDays: Record<string, number> = { trial: 7, quarterly: 90, yearly: 365 };
         const days = durationDays[pending.planType] || 90;
         const now = new Date();
         const subscriptionEndsAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+        const isTrial = pending.planType === "trial";
 
-        const priceKey = getPriceKey(pending.planType as any, "business");
+        const priceKey = isTrial ? "trial" : getPriceKey(pending.planType as any, "business");
         const amountPaid = priceKey ? SUBSCRIPTION_PRICES[priceKey] : 0;
 
         try {
@@ -170,8 +171,9 @@ export async function POST(req: Request) {
                     pricePaid: amountPaid,
                     startDate: now,
                     expiryDate: subscriptionEndsAt,
-                    status: "active",
+                    status: isTrial ? "trial" : "active",
                 },
+                ...(isTrial ? { trial: { isUsed: true, startDate: now, endDate: subscriptionEndsAt } } : {}),
             });
             await newAdmin.save();
 
@@ -182,7 +184,7 @@ export async function POST(req: Request) {
             // Create Organization
             const { SaaSPlan } = await import("@/models/SaaSPlan");
             const planMap: Record<string, string> = {
-                quarterly: "Pro", yearly: "Enterprise",
+                trial: "Starter", quarterly: "Pro", yearly: "Enterprise",
             };
             const planSearchName = planMap[pending.planType] || "Pro";
             const planDoc = await SaaSPlan.findOne({ name: { $regex: new RegExp(planSearchName, "i") } }) || await SaaSPlan.findOne({});
@@ -193,8 +195,9 @@ export async function POST(req: Request) {
                 ownerId: newAdmin._id,
                 planId: planDoc?._id || newAdmin._id,
                 businessIds: [businessId],
-                status: "active",
+                status: isTrial ? "trial" : "active",
                 currentPeriodEnd: subscriptionEndsAt,
+                trialEndsAt: isTrial ? subscriptionEndsAt : undefined,
             });
 
             // Create BillingLog

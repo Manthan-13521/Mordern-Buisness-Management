@@ -167,36 +167,132 @@ export async function POST(req: Request) {
         }
 
         // ══════════════════════════════════════════════════════════════════════
-        // PUBLIC FLOW — Payment-first: store pending, create Razorpay order
+        // PUBLIC FLOW — MODE 2: Create Razorpay order for existing pending reg
+        // Called from /business/select-plan page with pendingId + planType
         // ══════════════════════════════════════════════════════════════════════
-        const planType = selectedPlanType || "quarterly";
-        if (planType !== "quarterly" && planType !== "yearly") {
-            return NextResponse.json({ error: "Invalid plan type. Choose quarterly or yearly." }, { status: 400 });
+        if (body.pendingId) {
+            const { pendingId, planType: orderPlanType, referralCode } = body;
+            const planType = orderPlanType || "quarterly";
+
+            if (planType !== "quarterly" && planType !== "yearly" && planType !== "trial") {
+                return NextResponse.json({ error: "Invalid plan type." }, { status: 400 });
+            }
+
+            const pending = await PendingBusinessRegistration.findById(pendingId);
+            if (!pending || pending.status !== "pending") {
+                return NextResponse.json({ error: "Registration not found or already completed. Please register again." }, { status: 404 });
+            }
+
+            // Update the planType on pending record
+            pending.planType = planType;
+            await pending.save();
+
+            // Get server-side price
+            const priceKey = planType === "trial" ? "trial" : getPriceKey(planType as any, "business");
+            if (!priceKey) {
+                return NextResponse.json({ error: "Invalid plan configuration" }, { status: 400 });
+            }
+            let amountINR = SUBSCRIPTION_PRICES[priceKey];
+
+            // Apply referral discount
+            if (referralCode && planType !== "trial") {
+                try {
+                    const { ReferralCode } = await import("@/models/ReferralCode");
+                    const codeDoc = await ReferralCode.findOne({
+                        code: referralCode.toUpperCase().trim(),
+                        isActive: true
+                    });
+                    if (codeDoc && (!codeDoc.expiresAt || new Date(codeDoc.expiresAt) > new Date()) && (codeDoc.maxUses === 0 || codeDoc.usedCount < codeDoc.maxUses)) {
+                        let discount = 0;
+                        if (codeDoc.discountType === "percentage") {
+                            discount = (amountINR * codeDoc.discountValue) / 100;
+                        } else if (codeDoc.discountType === "flat") {
+                            discount = codeDoc.discountValue;
+                        }
+                        amountINR -= discount;
+                        if (amountINR <= 0) amountINR = 1;
+                        amountINR = Math.floor(amountINR);
+                    }
+                } catch (refErr) {
+                    console.error("Referral validation failed (non-fatal):", refErr);
+                }
+            }
+
+            const amountPaise = amountINR * 100;
+
+            // Create Razorpay order (or mock)
+            if (!isRazorpayConfigured || !razorpay) {
+                const mockOrderId = `order_mock_biz_${Date.now()}`;
+                pending.razorpayOrderId = mockOrderId;
+                await pending.save();
+
+                return NextResponse.json({
+                    pendingId: pending._id.toString(),
+                    orderId: mockOrderId,
+                    amount: amountPaise,
+                    currency: "INR",
+                    isMock: true,
+                    planType,
+                    amountINR,
+                });
+            }
+
+            // Real Razorpay order
+            const shortId = pending._id.toString().slice(-8);
+            const receipt = `biz_${shortId}_${planType.slice(0, 4)}_${Date.now()}`.slice(0, 40);
+
+            const order = await razorpay.orders.create({
+                amount: amountPaise,
+                currency: "INR",
+                receipt,
+                notes: {
+                    pendingRegistrationId: pending._id.toString(),
+                    module: "business",
+                    planType,
+                    email: pending.adminEmail,
+                    referralCode: referralCode || "",
+                },
+            }) as any;
+
+            pending.razorpayOrderId = order.id;
+            await pending.save();
+
+            return NextResponse.json({
+                pendingId: pending._id.toString(),
+                orderId: order.id,
+                amount: amountPaise,
+                currency: "INR",
+                keyId: process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+                isMock: false,
+                planType,
+                amountINR,
+            });
         }
 
+        // ══════════════════════════════════════════════════════════════════════
+        // PUBLIC FLOW — MODE 1: Create pending registration (no payment yet)
+        // Called from /business/register page after form submission
+        // ══════════════════════════════════════════════════════════════════════
         // Check for existing pending registration with same email
         const existingPending = await PendingBusinessRegistration.findOne({
             adminEmail: normalizedEmail,
             status: "pending",
         });
         if (existingPending) {
-            // If there's already a pending registration, reuse or reject
+            // If there's already a pending registration, reuse it — redirect to plan page
             return NextResponse.json({ 
-                error: "A registration is already pending for this email. Please complete payment or wait 24 hours to try again." 
-            }, { status: 409 });
+                pendingId: existingPending._id.toString(),
+                businessName: existingPending.businessName,
+                email: existingPending.adminEmail,
+                name: existingPending.adminName,
+                phone: existingPending.adminPhone,
+                alreadyExists: true,
+            });
         }
 
         const passwordHash = await bcrypt.hash(password, 10);
 
-        // Get server-side price
-        const priceKey = getPriceKey(planType, "business");
-        if (!priceKey) {
-            return NextResponse.json({ error: "Invalid plan configuration" }, { status: 400 });
-        }
-        const amountINR = SUBSCRIPTION_PRICES[priceKey];
-        const amountPaise = amountINR * 100;
-
-        // Create pending registration
+        // Create pending registration (no plan yet — chosen on select-plan page)
         const pending = await PendingBusinessRegistration.create({
             businessName,
             adminName,
@@ -205,56 +301,16 @@ export async function POST(req: Request) {
             passwordHash,
             address,
             gstNumber,
-            planType,
+            planType: "quarterly", // default, will be updated on select-plan page
             status: "pending",
         });
 
-        // Create Razorpay order (or mock)
-        if (!isRazorpayConfigured || !razorpay) {
-            // Mock mode for development
-            const mockOrderId = `order_mock_biz_${Date.now()}`;
-            pending.razorpayOrderId = mockOrderId;
-            await pending.save();
-
-            return NextResponse.json({
-                pendingId: pending._id.toString(),
-                orderId: mockOrderId,
-                amount: amountPaise,
-                currency: "INR",
-                isMock: true,
-                planType,
-                amountINR,
-            });
-        }
-
-        // Real Razorpay order
-        const shortId = pending._id.toString().slice(-8);
-        const receipt = `biz_${shortId}_${planType.slice(0, 4)}_${Date.now()}`.slice(0, 40);
-
-        const order = await razorpay.orders.create({
-            amount: amountPaise,
-            currency: "INR",
-            receipt,
-            notes: {
-                pendingRegistrationId: pending._id.toString(),
-                module: "business",
-                planType,
-                email: normalizedEmail,
-            },
-        }) as any;
-
-        pending.razorpayOrderId = order.id;
-        await pending.save();
-
         return NextResponse.json({
             pendingId: pending._id.toString(),
-            orderId: order.id,
-            amount: amountPaise,
-            currency: "INR",
-            keyId: process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-            isMock: false,
-            planType,
-            amountINR,
+            businessName: pending.businessName,
+            email: pending.adminEmail,
+            name: pending.adminName,
+            phone: pending.adminPhone,
         });
 
     } catch (error: any) {

@@ -29,7 +29,7 @@ export default function RenewPlanPage() {
                     <div className="space-y-3">
                         <h1 className="text-3xl font-black text-white tracking-tight">Subscription Expired</h1>
                         <p className="text-slate-400 text-lg leading-relaxed">
-                            Access to your {session.user.hostelId ? "Hostel" : "Pool"} dashboard has been restricted. Please renew your plan to resume operations.
+                            Access to your {session.user.businessId ? "Business" : session.user.hostelId ? "Hostel" : "Pool"} dashboard has been restricted. Please renew your plan to resume operations.
                         </p>
                     </div>
 
