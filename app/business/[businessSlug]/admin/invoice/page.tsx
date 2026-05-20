@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
-import { Search, ChevronDown, Users, X, Truck } from "lucide-react";
+import { Search, ChevronDown, Users, X, Truck, Lock } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════ */
 /*  NUMBER TO WORDS (Indian system)                   */
@@ -55,11 +55,13 @@ export default function InvoicePage() {
   const bizKey = (session?.user as any)?.businessId || "default";
 
   /* ── Form State ── */
+  // Business identity fields — READ-ONLY, auto-filled from Settings DB
   const [bname, setBname] = useState("");
   const [bdesc, setBdesc] = useState("");
   const [bgst, setBgst] = useState("");
   const [baddr, setBaddr] = useState("");
-  const [dbGst, setDbGst] = useState(""); // GST from DB — used to determine read-only state
+  const [bphone, setBphone] = useState("");
+  const [bizLoaded, setBizLoaded] = useState(false); // Track if business data loaded from DB
 
   const [cname, setCname] = useState("");
   const [cbizname, setCbizname] = useState("");
@@ -144,40 +146,32 @@ export default function InvoicePage() {
       .catch(() => setAllVehicles([]));
   }, []);
 
-  // 1. Fetch real business details from DB on login
+  // 1. Fetch business identity from DB — SINGLE SOURCE OF TRUTH
+  // These fields are NEVER editable on the invoice page.
   useEffect(() => {
     fetch("/api/business/info", { cache: "no-store" })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (!data) return;
-        // Name and address always come from DB — user may override below
-        setBname(prev => prev || data.name || "");
-        setBaddr(prev => prev || data.address || "");
-        // GST from DB takes priority — auto-fill and lock
-        if (data.gstNumber) {
-          setBgst(data.gstNumber);
-          setDbGst(data.gstNumber);
-        }
+        // Always use DB values — no localStorage override for business identity
+        setBname(data.name || "");
+        setBaddr(data.address || "");
+        setBgst(data.gstNumber || "");
+        setBphone(data.phone || "");
+        setBizLoaded(true);
       })
       .catch(() => {});
   }, []);
 
   // 2. Load per-business persisted invoice settings from localStorage
+  // NOTE: Business identity (bname, bgst, baddr, bphone) is NOT loaded from localStorage.
+  // Only per-invoice settings (description, tax rates, bank details) are persisted locally.
   useEffect(() => {
     if (!bizKey) return;
     const k = bizKey;
 
-    const savedBname = localStorage.getItem(`inv_${k}_bname`);
-    if (savedBname !== null) setBname(savedBname);
-
     const savedBdesc = localStorage.getItem(`inv_${k}_bdesc`);
     if (savedBdesc !== null) setBdesc(savedBdesc);
-
-    const savedBgst = localStorage.getItem(`inv_${k}_bgst`);
-    if (savedBgst !== null) setBgst(savedBgst);
-
-    const savedBaddr = localStorage.getItem(`inv_${k}_baddr`);
-    if (savedBaddr !== null) setBaddr(savedBaddr);
 
     const savedCgst = localStorage.getItem(`inv_${k}_cgstRate`);
     if (savedCgst) setCgstRate(Number(savedCgst));
@@ -203,13 +197,11 @@ export default function InvoicePage() {
   }, [bizKey]);
 
   // 3. Save to per-business localStorage on every change
+  // NOTE: Business identity fields are NOT saved to localStorage — DB is the only source of truth.
   useEffect(() => {
     if (!bizKey) return;
     const k = bizKey;
-    localStorage.setItem(`inv_${k}_bname`, bname);
     localStorage.setItem(`inv_${k}_bdesc`, bdesc);
-    localStorage.setItem(`inv_${k}_bgst`, bgst);
-    localStorage.setItem(`inv_${k}_baddr`, baddr);
     localStorage.setItem(`inv_${k}_cgstRate`, cgstRate.toString());
     localStorage.setItem(`inv_${k}_sgstRate`, sgstRate.toString());
     localStorage.setItem(`inv_${k}_igstRate`, igstRate.toString());
@@ -217,7 +209,7 @@ export default function InvoicePage() {
     localStorage.setItem(`inv_${k}_branch`, branch);
     localStorage.setItem(`inv_${k}_acc`, acc);
     localStorage.setItem(`inv_${k}_ifsc`, ifsc);
-  }, [bizKey, bname, bdesc, bgst, baddr, cgstRate, sgstRate, igstRate, bank, branch, acc, ifsc]);
+  }, [bizKey, bdesc, cgstRate, sgstRate, igstRate, bank, branch, acc, ifsc]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -336,16 +328,24 @@ export default function InvoicePage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* BUSINESS DETAILS */}
+            {/* BUSINESS DETAILS — READ-ONLY, AUTO-FILLED FROM SETTINGS */}
             <div className="bg-[#0b1220] border border-[#1f2937] rounded-2xl p-6 space-y-4">
-              <h3 className="text-[10px] font-bold text-[#ffd200] uppercase tracking-widest flex items-center gap-2">
-                <span className="text-base">🏢</span> Business Details
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-[10px] font-bold text-[#ffd200] uppercase tracking-widest flex items-center gap-2">
+                  <span className="text-base">🏢</span> Business Details
+                </h3>
+                <span className="text-[8px] font-bold text-[#22c55e] bg-[#22c55e]/10 px-2 py-1 rounded-md border border-[#22c55e]/20 flex items-center gap-1">
+                  <Lock className="w-2.5 h-2.5" /> MANAGED FROM SETTINGS
+                </span>
+              </div>
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest">Business Name</label>
-                  <input value={bname} onChange={(e) => setBname(e.target.value)}
-                    className="w-full bg-[#020617] border border-[#1f2937] rounded-xl px-4 py-3 text-sm font-medium text-[#f9fafb] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all" />
+                  <label className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest flex items-center gap-2">
+                    Business Name
+                    <span className="text-[9px] text-[#22c55e] bg-[#22c55e]/10 px-2 py-0.5 rounded-md border border-[#22c55e]/20">Auto-filled from Settings</span>
+                  </label>
+                  <input value={bname} readOnly disabled tabIndex={-1}
+                    className="w-full bg-[#111827] border border-[#22c55e]/20 rounded-xl px-4 py-3 text-sm font-medium text-[#f9fafb]/80 cursor-not-allowed opacity-80 focus:outline-none" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest">Description</label>
@@ -355,21 +355,31 @@ export default function InvoicePage() {
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest flex items-center gap-2">
                     GST Number
-                    {dbGst && <span className="text-[9px] text-[#22c55e] bg-[#22c55e]/10 px-2 py-0.5 rounded-md border border-[#22c55e]/20">Auto-filled from Settings</span>}
+                    <span className="text-[9px] text-[#22c55e] bg-[#22c55e]/10 px-2 py-0.5 rounded-md border border-[#22c55e]/20">Auto-filled from Settings</span>
                   </label>
-                  <input value={bgst} onChange={(e) => { if (!dbGst) setBgst(e.target.value); }}
-                    readOnly={!!dbGst}
-                    className={`w-full border rounded-xl px-4 py-3 text-sm font-medium text-[#f9fafb] focus:outline-none transition-all ${
-                      dbGst
-                        ? 'bg-[#111827] border-[#22c55e]/30 cursor-not-allowed opacity-80'
-                        : 'bg-[#020617] border-[#1f2937] focus:ring-2 focus:ring-[#8b5cf6]'
-                    }`} />
+                  <input value={bgst} readOnly disabled tabIndex={-1}
+                    className="w-full bg-[#111827] border border-[#22c55e]/20 rounded-xl px-4 py-3 text-sm font-medium text-[#f9fafb]/80 cursor-not-allowed opacity-80 focus:outline-none" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest">Address</label>
-                  <input value={baddr} onChange={(e) => setBaddr(e.target.value)}
-                    className="w-full bg-[#020617] border border-[#1f2937] rounded-xl px-4 py-3 text-sm font-medium text-[#f9fafb] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all" />
+                  <label className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest flex items-center gap-2">
+                    Address
+                    <span className="text-[9px] text-[#22c55e] bg-[#22c55e]/10 px-2 py-0.5 rounded-md border border-[#22c55e]/20">Auto-filled from Settings</span>
+                  </label>
+                  <input value={baddr} readOnly disabled tabIndex={-1}
+                    className="w-full bg-[#111827] border border-[#22c55e]/20 rounded-xl px-4 py-3 text-sm font-medium text-[#f9fafb]/80 cursor-not-allowed opacity-80 focus:outline-none" />
                 </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest flex items-center gap-2">
+                    Phone Number
+                    <span className="text-[9px] text-[#22c55e] bg-[#22c55e]/10 px-2 py-0.5 rounded-md border border-[#22c55e]/20">Auto-filled from Settings</span>
+                  </label>
+                  <input value={bphone} readOnly disabled tabIndex={-1}
+                    className="w-full bg-[#111827] border border-[#22c55e]/20 rounded-xl px-4 py-3 text-sm font-medium text-[#f9fafb]/80 cursor-not-allowed opacity-80 focus:outline-none" />
+                </div>
+                <p className="text-[9px] text-[#374151] flex items-center gap-1 pt-1">
+                  <Lock className="w-2.5 h-2.5" />
+                  To edit business details, go to Settings → Enterprise Overview
+                </p>
               </div>
             </div>
 

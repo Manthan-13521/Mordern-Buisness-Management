@@ -1,12 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Settings, Save, Download, HardDrive, Server, Sun, Moon, Monitor, Sparkles, Zap, ArrowRight, Building2 } from "lucide-react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { Settings, Save, Download, HardDrive, Server, Sun, Moon, Monitor, Sparkles, Zap, ArrowRight, Building2, Check, AlertTriangle, Lock, Pencil, X } from "lucide-react";
 import Link from "next/link";
 
 type BusinessInfo = { name: string; slug: string; address: string; phone: string; gstNumber?: string; adminEmail?: string; };
-const INPUT = "w-full rounded-xl border border-[#1f2937] bg-[#0b1220] px-3 py-2 text-sm text-[#f9fafb] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6]";
-const LABEL = "block text-xs font-medium text-[#9ca3af] mb-1";
+
+const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+
+function Toast({ message, type, onClose }: { message: string; type: "success" | "error"; onClose: () => void }) {
+    useEffect(() => {
+        const t = setTimeout(onClose, 4000);
+        return () => clearTimeout(t);
+    }, [onClose]);
+    return (
+        <div className={`fixed top-6 right-6 z-[9999] flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-2xl border text-sm font-semibold animate-in slide-in-from-right duration-300 ${
+            type === "success"
+                ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
+                : "bg-rose-500/15 border-rose-500/30 text-rose-400"
+        }`}>
+            {type === "success" ? <Check className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+            {message}
+            <button onClick={onClose} className="ml-2 opacity-60 hover:opacity-100 transition-opacity">
+                <X className="w-3.5 h-3.5" />
+            </button>
+        </div>
+    );
+}
 
 export default function SettingsPage() {
     const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
@@ -14,8 +34,16 @@ export default function SettingsPage() {
     const [subStatus, setSubStatus] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
-    const [excelLoading, setExcelLoading] = useState(false);
-    const [awsBackupLoading, setAwsBackupLoading] = useState(false);
+    /* ── Editable business details state ── */
+    const [isEditing, setIsEditing] = useState(false);
+    const [editName, setEditName] = useState("");
+    const [editPhone, setEditPhone] = useState("");
+    const [editGst, setEditGst] = useState("");
+    const [editAddress, setEditAddress] = useState("");
+    const [saving, setSaving] = useState(false);
+    const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+    const [gstError, setGstError] = useState("");
+    const saveRef = useRef(false); // Prevent concurrent saves
 
     const applyTheme = (newTheme: "light" | "dark" | "system") => {
         const root = window.document.documentElement;
@@ -51,10 +79,109 @@ export default function SettingsPage() {
         alert("Backup feature for the Business module is coming soon in the next update. Please contact support for immediate manual exports.");
     };
 
+    /* ── Start editing ── */
+    const startEditing = useCallback(() => {
+        if (!info) return;
+        setEditName(info.name || "");
+        setEditPhone(info.phone || "");
+        setEditGst(info.gstNumber || "");
+        setEditAddress(info.address || "");
+        setGstError("");
+        setIsEditing(true);
+    }, [info]);
+
+    const cancelEditing = useCallback(() => {
+        setIsEditing(false);
+        setGstError("");
+    }, []);
+
+    /* ── Validate GST on change ── */
+    const handleGstChange = useCallback((value: string) => {
+        const normalized = value.toUpperCase().trim().replace(/\s+/g, "");
+        setEditGst(normalized);
+        if (normalized.length === 0) {
+            setGstError("");
+        } else if (normalized.length !== 15) {
+            setGstError("GST number must be exactly 15 characters");
+        } else if (!GST_REGEX.test(normalized)) {
+            setGstError("Invalid GST format. Expected: 22AAAAA0000A1Z5");
+        } else {
+            setGstError("");
+        }
+    }, []);
+
+    /* ── Save business details ── */
+    const handleSave = useCallback(async () => {
+        // Prevent concurrent saves
+        if (saveRef.current || saving) return;
+        saveRef.current = true;
+        setSaving(true);
+
+        // Frontend validation
+        if (!editName.trim()) {
+            setToast({ message: "Business name cannot be empty", type: "error" });
+            setSaving(false);
+            saveRef.current = false;
+            return;
+        }
+        if (gstError) {
+            setToast({ message: gstError, type: "error" });
+            setSaving(false);
+            saveRef.current = false;
+            return;
+        }
+
+        try {
+            const res = await fetch("/api/business/info", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: editName.trim(),
+                    phone: editPhone.trim(),
+                    gstNumber: editGst.trim(),
+                    address: editAddress.trim(),
+                }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                const errorMsg = data.details?.join(", ") || data.error || "Failed to save";
+                setToast({ message: errorMsg, type: "error" });
+                return;
+            }
+
+            // Update local state with server response
+            setInfo({
+                name: data.name || "",
+                slug: data.slug || "",
+                address: data.address || "",
+                phone: data.phone || "",
+                gstNumber: data.gstNumber || "",
+            });
+
+            setIsEditing(false);
+            setToast({
+                message: data.changesApplied > 0
+                    ? `${data.changesApplied} field${data.changesApplied > 1 ? "s" : ""} updated successfully`
+                    : "No changes detected",
+                type: "success"
+            });
+        } catch (err) {
+            setToast({ message: "Network error — please try again", type: "error" });
+        } finally {
+            setSaving(false);
+            saveRef.current = false;
+        }
+    }, [editName, editPhone, editGst, editAddress, gstError, saving]);
+
     if (loading) return <div className="py-16 text-center text-[#6b7280]">Loading…</div>;
 
     return (
         <div className="space-y-8 max-w-2xl">
+            {/* Toast notification */}
+            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
             <div>
                 <h1 className="text-2xl font-bold text-[#f9fafb] flex items-center gap-2">
                     <Settings className="h-6 w-6 text-[#6b7280]"/>
@@ -63,34 +190,134 @@ export default function SettingsPage() {
                 <p className="text-sm text-[#6b7280]">Manage your business profile and enterprise configuration</p>
             </div>
 
-            {/* Account info (read-only) */}
+            {/* ═══ Enterprise Overview — EDITABLE ═══ */}
             <div className="rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm p-6 space-y-4">
-                <h2 className="text-sm font-semibold text-[#9ca3af] uppercase tracking-wider flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-[#8b5cf6]" />
-                    Enterprise Overview
-                </h2>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                        <p className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider">Business Name</p>
-                        <p className="font-bold text-[#f9fafb] mt-1">{info?.name || "—"}</p>
-                    </div>
-                    <div>
-                        <p className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider">Business Slug</p>
-                        <p className="font-mono text-[#f9fafb] mt-1">{info?.slug || "—"}</p>
-                    </div>
-                    <div>
-                        <p className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider">Phone Number</p>
-                        <p className="font-medium text-[#f9fafb] mt-1">{info?.phone || "—"}</p>
-                    </div>
-                    <div>
-                        <p className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider">GST Number</p>
-                        <p className="font-medium text-[#f9fafb] mt-1">{info?.gstNumber || <span className="text-[#6b7280] italic">Not set</span>}</p>
-                    </div>
-                    <div className="col-span-2">
-                        <p className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider">Address</p>
-                        <p className="font-medium text-[#f9fafb] mt-1 line-clamp-2" title={info?.address}>{info?.address || "—"}</p>
-                    </div>
+                <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-semibold text-[#9ca3af] uppercase tracking-wider flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-[#8b5cf6]" />
+                        Enterprise Overview
+                    </h2>
+                    {!isEditing ? (
+                        <button
+                            onClick={startEditing}
+                            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#8b5cf6] hover:text-[#a78bfa] bg-[#8b5cf6]/10 hover:bg-[#8b5cf6]/20 px-3 py-1.5 rounded-lg border border-[#8b5cf6]/20 transition-all"
+                        >
+                            <Pencil className="w-3 h-3" /> Edit Details
+                        </button>
+                    ) : (
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={cancelEditing}
+                                disabled={saving}
+                                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#9ca3af] hover:text-[#f9fafb] bg-[#111827] hover:bg-[#1f2937] px-3 py-1.5 rounded-lg border border-[#1f2937] transition-all disabled:opacity-40"
+                            >
+                                <X className="w-3 h-3" /> Cancel
+                            </button>
+                            <button
+                                onClick={handleSave}
+                                disabled={saving || !!gstError}
+                                className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-[#8b5cf6] hover:bg-[#7c3aed] px-4 py-1.5 rounded-lg shadow-lg shadow-[#8b5cf6]/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                {saving ? (
+                                    <>
+                                        <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        Saving…
+                                    </>
+                                ) : (
+                                    <>
+                                        <Save className="w-3 h-3" /> Save Changes
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    )}
                 </div>
+
+                {!isEditing ? (
+                    /* ── Read-only view ── */
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <p className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider">Business Name</p>
+                            <p className="font-bold text-[#f9fafb] mt-1">{info?.name || "—"}</p>
+                        </div>
+                        <div>
+                            <p className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider">Business Slug</p>
+                            <p className="font-mono text-[#f9fafb] mt-1">{info?.slug || "—"}</p>
+                        </div>
+                        <div>
+                            <p className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider">Phone Number</p>
+                            <p className="font-medium text-[#f9fafb] mt-1">{info?.phone || "—"}</p>
+                        </div>
+                        <div>
+                            <p className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider">GST Number</p>
+                            <p className="font-medium text-[#f9fafb] mt-1">{info?.gstNumber || <span className="text-[#6b7280] italic">Not set</span>}</p>
+                        </div>
+                        <div className="col-span-2">
+                            <p className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider">Address</p>
+                            <p className="font-medium text-[#f9fafb] mt-1 line-clamp-2" title={info?.address}>{info?.address || "—"}</p>
+                        </div>
+                    </div>
+                ) : (
+                    /* ── Edit form ── */
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="space-y-1">
+                            <label className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider">Business Name <span className="text-rose-400">*</span></label>
+                            <input
+                                value={editName}
+                                onChange={(e) => setEditName(e.target.value)}
+                                className="w-full rounded-xl border border-[#8b5cf6]/30 bg-[#020617] px-3 py-2.5 text-sm font-medium text-[#f9fafb] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
+                                placeholder="Enter business name"
+                            />
+                            {!editName.trim() && <p className="text-[9px] text-rose-400 font-medium mt-0.5">Required field</p>}
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider">Business Slug</label>
+                            <div className="w-full rounded-xl border border-[#1f2937] bg-[#111827] px-3 py-2.5 text-sm font-mono text-[#6b7280] cursor-not-allowed flex items-center gap-2">
+                                <Lock className="w-3 h-3 text-[#374151]" />
+                                {info?.slug || "—"}
+                            </div>
+                            <p className="text-[9px] text-[#374151] font-medium mt-0.5">Cannot be changed</p>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider">Phone Number</label>
+                            <input
+                                value={editPhone}
+                                onChange={(e) => setEditPhone(e.target.value)}
+                                className="w-full rounded-xl border border-[#8b5cf6]/30 bg-[#020617] px-3 py-2.5 text-sm font-medium text-[#f9fafb] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
+                                placeholder="e.g. 9876543210"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider">GST Number</label>
+                            <input
+                                value={editGst}
+                                onChange={(e) => handleGstChange(e.target.value)}
+                                maxLength={15}
+                                className={`w-full rounded-xl border bg-[#020617] px-3 py-2.5 text-sm font-medium text-[#f9fafb] focus:outline-none focus:ring-2 transition-all uppercase ${
+                                    gstError ? "border-rose-500/50 focus:ring-rose-500" : "border-[#8b5cf6]/30 focus:ring-[#8b5cf6]"
+                                }`}
+                                placeholder="e.g. 22AAAAA0000A1Z5"
+                            />
+                            {gstError && <p className="text-[9px] text-rose-400 font-medium mt-0.5">{gstError}</p>}
+                        </div>
+                        <div className="col-span-2 space-y-1">
+                            <label className="text-[#6b7280] text-xs font-semibold uppercase tracking-wider">Address</label>
+                            <textarea
+                                value={editAddress}
+                                onChange={(e) => setEditAddress(e.target.value)}
+                                rows={2}
+                                className="w-full rounded-xl border border-[#8b5cf6]/30 bg-[#020617] px-3 py-2.5 text-sm font-medium text-[#f9fafb] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all resize-none"
+                                placeholder="Enter business address"
+                            />
+                        </div>
+                        <div className="col-span-2">
+                            <p className="text-[10px] text-[#374151] flex items-center gap-1.5">
+                                <Lock className="w-3 h-3" />
+                                Changes here will auto-sync to the Invoice Generator and all official documents
+                            </p>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Subscription Section */}
