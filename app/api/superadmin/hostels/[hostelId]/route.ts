@@ -21,7 +21,30 @@ export async function GET(req: Request, { params }: { params: Promise<{ hostelId
         if (!hostel) return NextResponse.json({ error: "Hostel not found" }, { status: 404 });
 
         const adminUser = await User.findOne({ hostelId, role: "hostel_admin" }).select("name email isActive").lean();
-        return NextResponse.json({ ...hostel, adminUser });
+
+        const [memberCount, paymentCount] = await Promise.all([
+            (async () => {
+                try {
+                    const { HostelMember } = await import("@/models/HostelMember");
+                    return await HostelMember.countDocuments({ hostelId });
+                } catch { return 0; }
+            })(),
+            (async () => {
+                try {
+                    const { HostelPayment } = await import("@/models/HostelPayment");
+                    return await HostelPayment.countDocuments({ hostelId });
+                } catch { return 0; }
+            })()
+        ]);
+
+        return NextResponse.json({
+            ...hostel,
+            adminUser,
+            stats: {
+                members: memberCount,
+                payments: paymentCount
+            }
+        });
     } catch (error) {
         console.error("[GET /api/superadmin/hostels/[hostelId]]", error);
         return NextResponse.json({ error: "Server error" }, { status: 500 });

@@ -15,8 +15,8 @@ export default async function PendingRegistrationsPage() {
 
     await dbConnect();
 
-    // Fetch all pending registrations, sorted by newest first
-    const pendingList = await PendingBusinessRegistration.find({}).sort({ createdAt: -1 }).lean();
+    // Fetch all pending registrations (excluding completed ones), sorted by newest first
+    const pendingList = await PendingBusinessRegistration.find({ status: { $ne: "completed" } }).sort({ createdAt: -1 }).lean();
 
     return (
         <div className="p-6 md:p-10 space-y-6 max-w-7xl mx-auto">

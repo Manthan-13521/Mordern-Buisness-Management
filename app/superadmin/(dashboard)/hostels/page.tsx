@@ -2,20 +2,30 @@
 
 import { useEffect, useState, useCallback } from "react";
 import {
-    Search, Plus, ShieldCheck, KeyRound, Play, Pause, X, CheckCircle, AlertCircle, RefreshCw, Trash2
+    Search, Plus, ShieldCheck, KeyRound, Play, Pause, XCircle, CheckCircle2, AlertTriangle, Info, Loader2, Trash2, Building2, UserCircle, ExternalLink
 } from "lucide-react";
 import Link from "next/link";
+import { toast } from "react-hot-toast";
 
 type Hostel = {
-    hostelId: string; hostelName: string; slug: string; city: string;
-    adminEmail: string; adminPhone?: string; numberOfBlocks: number;
-    status: string; plan: string; subscriptionStatus: string;
-    isTwilioConnected: boolean; createdAt: string; memberCounter: number;
+    hostelId: string; 
+    hostelName: string; 
+    slug: string; 
+    city: string;
+    adminEmail: string; 
+    adminPhone?: string; 
+    numberOfBlocks: number;
+    status: string; 
+    plan: string; 
+    subscriptionStatus: string;
+    isTwilioConnected: boolean; 
+    createdAt: string; 
+    memberCounter: number;
+    stats?: {
+        members: number;
+        payments: number;
+    };
 };
-
-const INPUT = "bg-slate-950/50 border border-[#1f2937] text-white text-sm rounded-xl focus:ring-[#8b5cf6] focus:border-blue-500 block w-full pl-9 p-2.5 placeholder-slate-500 transition-all";
-const MODAL_INPUT = "w-full rounded-xl border border-[#1f2937] bg-slate-950/50 px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all";
-const LABEL = "block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wider";
 
 export default function SuperAdminHostelsPage() {
     const [hostels, setHostels] = useState<Hostel[]>([]);
@@ -24,188 +34,265 @@ export default function SuperAdminHostelsPage() {
     const [search, setSearch] = useState("");
     const [loading, setLoading] = useState(true);
 
-    // Reset password modal
+    // Modals
+    const [selectedHostel, setSelectedHostel] = useState<Hostel | null>(null);
+    const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
     const [resetTarget, setResetTarget] = useState<Hostel | null>(null);
     const [newPassword, setNewPassword] = useState("");
     const [showPass, setShowPass] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
-    const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+    const [isActionLoading, setIsActionLoading] = useState(false);
+
     const limit = 20;
 
     const fetchHostels = useCallback(async () => {
         setLoading(true);
-        const r = await fetch(`/api/superadmin/hostels?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
-        const d = await r.json();
-        setHostels(d.data || []);
-        setTotal(d.total || 0);
-        setLoading(false);
+        try {
+            const r = await fetch(`/api/superadmin/hostels?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
+            const d = await r.json();
+            if (r.ok) {
+                setHostels(d.data || []);
+                setTotal(d.total || 0);
+            } else {
+                toast.error(d.error || "Failed to load hostels");
+            }
+        } catch (error) {
+            toast.error("Network error loading hostels");
+        } finally {
+            setLoading(false);
+        }
     }, [page, search]);
 
-    useEffect(() => { fetchHostels(); }, [fetchHostels]);
+    useEffect(() => { 
+        fetchHostels(); 
+    }, [fetchHostels]);
 
     const toggleStatus = async (h: Hostel) => {
-        if (!confirm(`${h.status === "ACTIVE" ? "Suspend" : "Activate"} ${h.hostelName}?`)) return;
-        const r = await fetch(`/api/superadmin/hostels/${h.hostelId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "toggle-status" }),
-        });
-        const d = await r.json();
-        if (!r.ok) { setMessage({ type: "error", text: d.error }); return; }
-        setMessage({ type: "success", text: `${h.hostelName} is now ${d.status === "ACTIVE" ? "active" : "suspended"}` });
-        fetchHostels();
+        setIsActionLoading(true);
+        try {
+            const r = await fetch(`/api/superadmin/hostels/${h.hostelId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "toggle-status" }),
+            });
+            const d = await r.json();
+            if (r.ok) {
+                toast.success(`Hostel ${d.status === "ACTIVE" ? "resumed" : "suspended"} successfully`);
+                fetchHostels();
+            } else {
+                toast.error(d.error || "Failed to toggle status");
+            }
+        } catch (error) {
+            toast.error("Network error toggling status");
+        } finally {
+            setIsActionLoading(false);
+        }
     };
 
     const handleResetPassword = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!resetTarget) return;
-        setSubmitting(true); setMessage(null);
-        const r = await fetch(`/api/superadmin/hostels/${resetTarget.hostelId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "reset-password", newPassword }),
-        });
-        const d = await r.json();
-        if (!r.ok) { setMessage({ type: "error", text: d.error }); setSubmitting(false); return; }
-        setMessage({ type: "success", text: `Password reset for ${resetTarget.hostelName}. All sessions invalidated.` });
-        setResetTarget(null); setNewPassword(""); setSubmitting(false);
+        if (newPassword.length < 8) {
+            toast.error("Password must be at least 8 characters");
+            return;
+        }
+        setIsActionLoading(true);
+        try {
+            const r = await fetch(`/api/superadmin/hostels/${resetTarget.hostelId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "reset-password", newPassword }),
+            });
+            const d = await r.json();
+            if (r.ok) {
+                toast.success("Password reset securely. All active sessions invalidated.");
+                setResetTarget(null);
+                setNewPassword("");
+            } else {
+                toast.error(d.error || "Failed to reset password");
+            }
+        } catch (error) {
+            toast.error("Network error resetting password");
+        } finally {
+            setIsActionLoading(false);
+        }
     };
 
-    const handleDelete = async (h: Hostel) => {
-        if (!confirm(`Are you absolutely sure you want to delete ${h.hostelName}? This action is irreversible and will delete all associated data.`)) return;
-        
+    const deleteHostel = async (hostelId: string) => {
+        setIsActionLoading(true);
         try {
-            const r = await fetch(`/api/superadmin/hostels/${h.hostelId}`, {
+            const r = await fetch(`/api/superadmin/hostels/${hostelId}`, {
                 method: "DELETE",
             });
             const d = await r.json();
-            
-            if (!r.ok) {
-                setMessage({ type: "error", text: d.error || "Failed to delete hostel" });
-                return;
+            if (r.ok) {
+                toast.success("Hostel and all data deleted permanently");
+                fetchHostels();
+                setShowDeleteModal(null);
+            } else {
+                toast.error(d.error || "Failed to delete hostel");
             }
-            
-            setMessage({ type: "success", text: d.message });
-            fetchHostels();
-        } catch (error: any) {
-            setMessage({ type: "error", text: "Server error deleting hostel" });
+        } catch (error) {
+            toast.error("Network error deleting hostel");
+        } finally {
+            setIsActionLoading(false);
+        }
+    };
+
+    const fetchDetails = async (h: Hostel) => {
+        try {
+            const r = await fetch(`/api/superadmin/hostels/${h.hostelId}`);
+            const d = await r.json();
+            if (r.ok) {
+                setSelectedHostel(d);
+            } else {
+                toast.error(d.error || "Failed to load hostel details");
+            }
+        } catch (error) {
+            toast.error("Failed to load details");
         }
     };
 
     const totalPages = Math.ceil(total / limit);
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Manage Tenants</h1>
-                    <p className="text-[#6b7280]">View, monitor, and provision hostels across the platform.</p>
+                    <h1 className="text-3xl font-black text-white flex items-center gap-3">
+                        <Building2 className="h-8 w-8 text-rose-500" />
+                        Hostel Management
+                    </h1>
+                    <p className="text-[#9ca3af] mt-1">Manage SaaS hostel tenants, monitor activity, and control access.</p>
                 </div>
-                <a href="/hostel/register?admin=true" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 border-0 text-white px-4 py-2 font-bold rounded-xl shadow-lg transition flex items-center gap-2">
+                
+                <a href="/hostel/register?admin=true" className="bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 border-0 text-white px-4 py-2 font-bold rounded-xl shadow-lg transition flex items-center gap-2 whitespace-nowrap">
                     <Plus className="w-5 h-5"/> Add Hostel manually
                 </a>
+                
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6b7280]" />
+                    <input 
+                        type="text" 
+                        placeholder="Search hostels..." 
+                        value={search}
+                        onChange={e => { setSearch(e.target.value); setPage(1); }}
+                        className="bg-[#0b1220] border border-neutral-800 rounded-xl pl-10 pr-4 py-2.5 w-full md:w-80 text-sm focus:ring-2 focus:ring-[#8b5cf6] focus:outline-none transition-all"
+                    />
+                </div>
             </div>
 
-            {message && (
-                <div className={`flex items-start gap-3 rounded-xl p-4 border text-sm ${message.type === "success" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-rose-500/10 border-rose-500/20 text-rose-400"}`}>
-                    {message.type === "success" ? <CheckCircle className="h-5 w-5 flex-shrink-0" /> : <AlertCircle className="h-5 w-5 flex-shrink-0" />}
-                    <p>{message.text}</p>
-                    <button onClick={() => setMessage(null)} className="ml-auto"><X className="h-4 w-4" /></button>
-                </div>
-            )}
-
-            <div className="bg-slate-900 border border-[#1f2937] rounded-2xl overflow-hidden mt-8 shadow-2xl">
-                <div className="bg-[#0b1220] p-4 border-b border-[#1f2937] flex items-center justify-between">
-                    <div className="relative w-full max-w-sm flex items-center gap-2">
-                        <div className="relative w-full">
-                            <Search className="w-4 h-4 text-[#6b7280] absolute left-3 top-1/2 -translate-y-1/2"/>
-                            <input 
-                                type="text" 
-                                placeholder="Search hostels..." 
-                                value={search}
-                                onChange={e => { setSearch(e.target.value); setPage(1); }}
-                                className={INPUT}
-                            />
-                        </div>
-                        <button onClick={fetchHostels} className="p-2.5 rounded-xl border border-[#1f2937] hover:bg-[#0b1220] transition-all">
-                            <RefreshCw className="h-4 w-4 text-slate-400 cursor-pointer" />
-                        </button>
-                    </div>
-                </div>
-
+            {/* Hostel Table */}
+            <div className="bg-[#0b1220]/50 border border-neutral-800 rounded-2xl overflow-hidden backdrop-blur-sm shadow-xl">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left text-slate-400">
-                        <thead className="text-xs text-[#6b7280] uppercase bg-slate-950/50">
-                            <tr>
-                                <th scope="col" className="px-6 py-4">Hostel Name</th>
-                                <th scope="col" className="px-6 py-4">Domain/Slug</th>
-                                <th scope="col" className="px-6 py-4">Status</th>
-                                <th scope="col" className="px-6 py-4">Admin Credentials</th>
-                                <th scope="col" className="px-6 py-4">Joined At</th>
-                                <th scope="col" className="px-6 py-4">Actions</th>
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-[#0b1220]/50 text-[#9ca3af] text-xs uppercase tracking-wider font-bold border-b border-neutral-800">
+                                <th className="px-6 py-4">Hostel Info</th>
+                                <th className="px-6 py-4">Contact & Admin</th>
+                                <th className="px-6 py-4">Status</th>
+                                <th className="px-6 py-4">Registered</th>
+                                <th className="px-6 py-4 text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-neutral-800/50">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-8 text-center">
-                                        <RefreshCw className="w-6 h-6 animate-spin text-[#6b7280] mx-auto" />
+                                    <td colSpan={5} className="px-6 py-20 text-center">
+                                        <Loader2 className="h-8 w-8 animate-spin mx-auto text-rose-500" />
+                                        <p className="text-[#6b7280] mt-2 text-sm">Loading hostels...</p>
                                     </td>
                                 </tr>
                             ) : hostels.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-8 text-center text-[#6b7280]">
-                                        No hostels registered yet.
+                                    <td colSpan={5} className="px-6 py-20 text-center">
+                                        <div className="bg-[#0b1220]/50 h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <Building2 className="h-8 w-8 text-neutral-600" />
+                                        </div>
+                                        <p className="text-[#9ca3af] font-medium">No hostels found</p>
+                                        <p className="text-[#6b7280] text-sm mt-1">Try adjusting your search criteria</p>
                                     </td>
                                 </tr>
                             ) : hostels.map(h => (
-                                <tr key={h.hostelId} className="border-b border-neutral-800 hover:bg-[#0b1220]/30 transition-colors">
-                                    <td className="px-6 py-4 font-medium text-white whitespace-nowrap">
-                                        {h.hostelName || "Unknown"}
-                                        <div className="text-xs text-[#6b7280] font-normal">{h.hostelId}</div>
-                                    </td>
-                                    <td className="px-6 py-4 font-mono text-xs text-indigo-400">{h.slug}</td>
-                                    <td className="px-6 py-4">
-                                        <span className={`border text-xs px-2.5 py-1 rounded-full font-medium ${h.status !== "ACTIVE" ? "bg-amber-500/10 text-amber-500 border-amber-500/20" : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"}`}>
-                                            {h.status !== "ACTIVE" ? "SUSPENDED" : "ACTIVE"}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-xs">
-                                        <div className="text-[#9ca3af]"><b>Email:</b> {h.adminEmail}</div>
-                                        {h.adminPhone && (
-                                            <div className="text-[#9ca3af] mt-0.5"><b>Phone:</b> {h.adminPhone}</div>
-                                        )}
-                                        <div className="text-[#6b7280] mt-1 flex items-center gap-1.5 font-medium italic">
-                                            <ShieldCheck className="w-3.5 h-3.5 text-[#6b7280]" />
-                                            Secure (Not Viewable)
+                                <tr key={h.hostelId} className="hover:bg-[#8b5cf6]/5 transition-colors group">
+                                    <td className="px-6 py-5">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-rose-500/20 to-orange-500/20 flex items-center justify-center border border-[#1f2937] font-bold text-rose-400">
+                                                {(h.hostelName || "U").charAt(0)}
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-[#f9fafb]">{h.hostelName || "Unknown"}</div>
+                                                <div className="text-xs text-[#6b7280] font-mono">{h.hostelId} • /{h.slug}</div>
+                                            </div>
                                         </div>
-                                        <div className="mt-3 flex flex-col sm:flex-row flex-wrap gap-2">
-                                            <button
-                                                onClick={() => { setResetTarget(h); setNewPassword(""); setShowPass(false); }}
-                                                className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg bg-[#020617] text-slate-300 hover:bg-slate-700 hover:text-[#f9fafb] border border-[#1f2937] transition-all shadow-sm w-max"
+                                    </td>
+                                    <td className="px-6 py-5">
+                                        <div className="flex flex-col gap-1">
+                                            <div className="flex items-center gap-2 text-sm text-[#9ca3af]">
+                                                <UserCircle className="h-3.5 w-3.5 text-[#6b7280]" />
+                                                {h.adminEmail}
+                                            </div>
+                                            <div className="text-xs text-[#6b7280]">{h.adminPhone || "No phone provided"}</div>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-5">
+                                        {h.status === "ACTIVE" ? (
+                                            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-xs font-bold border border-emerald-500/20 max-w-max">
+                                                <CheckCircle2 className="h-3 w-3" /> Active
+                                            </span>
+                                        ) : (
+                                            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-500/10 text-orange-500 text-xs font-bold border border-orange-500/20 max-w-max">
+                                                <XCircle className="h-3 w-3" /> Suspended
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td className="px-6 py-5">
+                                        <div className="text-sm text-[#9ca3af]">
+                                            {h.createdAt ? new Date(h.createdAt).toLocaleDateString() : "Just Now"}
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-5 text-right">
+                                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button 
+                                                onClick={() => fetchDetails(h)}
+                                                className="p-2 hover:bg-[#8b5cf6]/10 rounded-lg text-[#9ca3af] hover:text-[#f9fafb] transition-all shadow-sm"
+                                                title="View Details"
                                             >
-                                                <KeyRound className="w-3.5 h-3.5 text-amber-500" />
-                                                Reset Password
+                                                <Info className="h-4 w-4" />
                                             </button>
                                             <button 
-                                                onClick={() => toggleStatus(h)} 
-                                                className={`text-xs font-semibold px-2.5 py-1.5 rounded border shadow-sm transition flex items-center gap-1.5 w-max ${h.status !== "ACTIVE" ? 'bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border-emerald-500/30' : 'bg-amber-600/20 hover:bg-amber-600/30 text-amber-500 border-amber-500/30'}`}
+                                                onClick={() => { setResetTarget(h); setNewPassword(""); setShowPass(false); }}
+                                                className="p-2 hover:bg-[#0b1220] rounded-lg text-[#9ca3af] hover:text-[#f9fafb] transition-all shadow-sm"
+                                                title="Reset Admin Password"
+                                                disabled={isActionLoading}
                                             >
-                                                {h.status !== "ACTIVE" ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
-                                                {h.status !== "ACTIVE" ? "Resume Hostel" : "Pause Subscription"}
+                                                <KeyRound className="h-4 w-4" />
                                             </button>
+                                            <button 
+                                                onClick={() => toggleStatus(h)}
+                                                className={`p-2 hover:bg-[#8b5cf6]/10 rounded-lg transition-all shadow-sm ${h.status === "ACTIVE" ? "text-orange-400" : "text-emerald-400"}`}
+                                                title={h.status === "ACTIVE" ? "Suspend Hostel" : "Resume Hostel"}
+                                                disabled={isActionLoading}
+                                            >
+                                                {h.status === "ACTIVE" ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                                            </button>
+                                            <button 
+                                                onClick={() => setShowDeleteModal(h.hostelId)}
+                                                className="p-2 hover:bg-rose-500/10 rounded-lg text-rose-400 hover:text-rose-400 transition-all shadow-sm"
+                                                title="Delete Hostel"
+                                                disabled={isActionLoading}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                            <a 
+                                                href={`/hostel/${h.slug}/admin`}
+                                                target="_blank"
+                                                className="p-2 hover:bg-[#8b5cf6]/10 rounded-lg text-rose-400 hover:text-rose-300 transition-all shadow-sm"
+                                                title="Open Dashboard"
+                                            >
+                                                <ExternalLink className="h-4 w-4" />
+                                            </a>
                                         </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {h.createdAt ? new Date(h.createdAt).toLocaleDateString() : "Just Now"}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <button
-                                            onClick={() => handleDelete(h)}
-                                            className="inline-flex max-w-max items-center gap-1.5 py-1.5 px-3 border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-red-600/20 rounded-md text-xs font-semibold transition"
-                                        >
-                                            <Trash2 className="w-3.5 h-3.5" /> Delete Hostel
-                                        </button>
                                     </td>
                                 </tr>
                             ))}
@@ -217,27 +304,137 @@ export default function SuperAdminHostelsPage() {
                     <div className="flex items-center justify-between px-6 py-4 border-t border-neutral-800 text-sm text-[#6b7280]">
                         <span>{total} hostels</span>
                         <div className="flex gap-2">
-                            <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1 rounded bg-[#0b1220] hover:bg-neutral-700 text-white disabled:opacity-40">Previous</button>
-                            <span className="px-3 py-1">Page {page} of {totalPages}</span>
-                            <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="px-3 py-1 rounded bg-[#0b1220] hover:bg-neutral-700 text-white disabled:opacity-40">Next</button>
+                            <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1.5 rounded-xl bg-[#0b1220] hover:bg-neutral-800 text-white disabled:opacity-40 transition-all">Previous</button>
+                            <span className="px-3 py-1.5 font-semibold text-white">Page {page} of {totalPages}</span>
+                            <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="px-3 py-1.5 rounded-xl bg-[#0b1220] hover:bg-neutral-800 text-white disabled:opacity-40 transition-all">Next</button>
                         </div>
                     </div>
                 )}
             </div>
 
+            {/* Details Modal */}
+            {selectedHostel && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-[#0b1220] border border-neutral-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl overflow-y-auto max-h-[90vh]">
+                        <div className="bg-gradient-to-br from-rose-600/20 to-orange-600/20 p-8 border-b border-neutral-800 relative">
+                            <button 
+                                onClick={() => setSelectedHostel(null)}
+                                className="absolute top-6 right-6 p-2 hover:bg-[#8b5cf6]/10 rounded-full transition-all"
+                            >
+                                <XCircle className="h-6 w-6 text-[#9ca3af] hover:text-[#f9fafb]" />
+                            </button>
+                            <div className="h-16 w-16 rounded-2xl bg-[#0b1220] border border-[#1f2937] flex items-center justify-center mb-4">
+                                <Building2 className="h-10 w-10 text-rose-400" />
+                            </div>
+                            <h2 className="text-2xl font-black text-white">{selectedHostel.hostelName}</h2>
+                            <p className="text-[#9ca3af] font-mono text-sm leading-relaxed">/{selectedHostel.slug}</p>
+                        </div>
+                        
+                        <div className="p-8 space-y-8">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-[#0b1220]/50 p-6 rounded-2xl border border-[#1f2937]">
+                                    <p className="text-xs font-bold text-[#6b7280] uppercase tracking-widest mb-1">Residents</p>
+                                    <p className="text-3xl font-black text-white">{selectedHostel.stats?.members ?? 0}</p>
+                                </div>
+                                <div className="bg-[#0b1220]/50 p-6 rounded-2xl border border-[#1f2937]">
+                                    <p className="text-xs font-bold text-[#6b7280] uppercase tracking-widest mb-1">Payments</p>
+                                    <p className="text-3xl font-black text-white">{selectedHostel.stats?.payments ?? 0}</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between py-3 border-b border-neutral-800 text-sm">
+                                    <span className="text-[#6b7280] font-medium">Hostel ID</span>
+                                    <span className="text-[#9ca3af] font-mono">{selectedHostel.hostelId}</span>
+                                </div>
+                                <div className="flex items-center justify-between py-3 border-b border-neutral-800 text-sm">
+                                    <span className="text-[#6b7280] font-medium">Blocks Count</span>
+                                    <span className="text-[#9ca3af]">{selectedHostel.numberOfBlocks || 0} Block(s)</span>
+                                </div>
+                                <div className="flex items-center justify-between py-3 border-b border-neutral-800 text-sm">
+                                    <span className="text-[#6b7280] font-medium">Admin Email</span>
+                                    <span className="text-[#9ca3af]">{selectedHostel.adminEmail}</span>
+                                </div>
+                                <div className="flex items-center justify-between py-3 border-b border-neutral-800 text-sm">
+                                    <span className="text-[#6b7280] font-medium">City</span>
+                                    <span className="text-[#9ca3af]">{selectedHostel.city || "N/A"}</span>
+                                </div>
+                                <div className="flex items-center justify-between py-3 border-b border-neutral-800 text-sm">
+                                    <span className="text-[#6b7280] font-medium">Join Date</span>
+                                    <span className="text-[#9ca3af]">{selectedHostel.createdAt ? new Date(selectedHostel.createdAt).toLocaleDateString() : "N/A"}</span>
+                                </div>
+                                <div className="flex items-center justify-between py-3 border-b border-neutral-800 text-sm">
+                                    <span className="text-[#6b7280] font-medium">Contact Phone</span>
+                                    <span className="text-[#9ca3af]">{selectedHostel.adminPhone || "N/A"}</span>
+                                </div>
+                            </div>
+
+                            <button 
+                                onClick={() => setSelectedHostel(null)}
+                                className="w-full py-4 text-sm font-bold bg-[#0b1220] hover:bg-neutral-700 text-white rounded-2xl transition-all border border-[#1f2937] shadow-inner"
+                            >
+                                Close View
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Cascade Delete Modal */}
+            {showDeleteModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in zoom-in-95 duration-200">
+                    <div className="bg-[#0b1220] border border-rose-500/20 rounded-3xl w-full max-w-md p-8 shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-rose-500/50" />
+                        <div className="h-16 w-16 rounded-2xl bg-rose-500/10 flex items-center justify-center mb-6 border border-rose-500/20">
+                            <AlertTriangle className="h-10 w-10 text-rose-400" />
+                        </div>
+                        <h2 className="text-2xl font-black text-white">Permanent Deletion</h2>
+                        <p className="text-[#9ca3af] mt-3 text-sm leading-relaxed">
+                            This action will **completely purge** this hostel and all its associated data including:
+                        </p>
+                        <ul className="mt-4 space-y-2 text-xs text-[#6b7280] font-medium list-disc list-inside">
+                            <li>Hostel Blocks, Floors & Rooms Layout</li>
+                            <li>Resident Profiles & Renewal History</li>
+                            <li>Staff Records & Attendance Logs</li>
+                            <li>Fee Ledgers & Synced Access Accounts</li>
+                        </ul>
+                        <div className="bg-rose-500/5 p-4 rounded-xl border border-rose-500/10 mt-6 text-rose-400 text-xs font-bold flex items-center gap-2">
+                            <Info className="h-4 w-4 shrink-0" /> IRREVERSIBLE ACTION
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3 mt-8">
+                            <button 
+                                onClick={() => setShowDeleteModal(null)}
+                                className="py-3.5 text-sm font-bold bg-[#0b1220] hover:bg-neutral-700 text-white rounded-xl transition-all"
+                                disabled={isActionLoading}
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                onClick={() => deleteHostel(showDeleteModal)}
+                                className="py-3.5 text-sm font-bold bg-red-700 hover:bg-red-600 text-white rounded-xl transition-all shadow-lg shadow-red-900/20 flex items-center justify-center gap-2 disabled:opacity-50"
+                                disabled={isActionLoading}
+                            >
+                                {isActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete System"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Reset Password Modal */}
             {resetTarget && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setResetTarget(null)} />
-                    <div className="relative bg-slate-900 border border-[#1f2937] rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => !isActionLoading && setResetTarget(null)} />
+                    <div className="relative bg-[#0b1220] border border-[#1f2937] rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
                         <div className="flex items-center justify-between border-b border-[#1f2937] pb-3">
                             <h2 className="text-lg font-bold text-white tracking-tight">Reset Password</h2>
-                            <button onClick={() => setResetTarget(null)} className="text-[#6b7280] hover:text-[#f9fafb] transition-colors"><X className="h-5 w-5" /></button>
+                            <button onClick={() => setResetTarget(null)} disabled={isActionLoading} className="text-[#6b7280] hover:text-[#f9fafb] transition-colors"><XCircle className="h-5 w-5" /></button>
                         </div>
                         <p className="text-sm text-[#6b7280]">Setting new password for <span className="font-semibold text-white">{resetTarget.hostelName}</span> ({resetTarget.adminEmail}).</p>
                         <form onSubmit={handleResetPassword} className="space-y-4 pt-2">
                             <div>
-                                <label className={LABEL}>New Password</label>
+                                <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wider">New Password</label>
                                 <div className="relative">
                                     <input
                                         required
@@ -246,16 +443,16 @@ export default function SuperAdminHostelsPage() {
                                         value={newPassword}
                                         onChange={e => setNewPassword(e.target.value)}
                                         placeholder="Min 8 characters"
-                                        className={MODAL_INPUT}
+                                        className="w-full rounded-xl border border-[#1f2937] bg-slate-950/50 px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
                                     />
                                     <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7280] hover:text-[#f9fafb]">
                                         <span className="text-xs font-semibold">{showPass ? "HIDE" : "SHOW"}</span>
                                     </button>
                                 </div>
                             </div>
-                            <button type="submit" disabled={submitting}
+                            <button type="submit" disabled={isActionLoading}
                                 className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 border-0 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-orange-500/20 disabled:opacity-50">
-                                {submitting ? "Resetting…" : "Confirm Reset"}
+                                {isActionLoading ? "Resetting…" : "Confirm Reset"}
                             </button>
                         </form>
                     </div>

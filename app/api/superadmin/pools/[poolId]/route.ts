@@ -4,6 +4,70 @@ import { dbConnect } from "@/lib/mongodb";
 import { Pool } from "@/models/Pool";
 import { Member } from "@/models/Member";
 
+export async function GET(req: Request, props: { params: Promise<{ poolId: string }> }) {
+    try {
+        await dbConnect();
+        const user = await resolveUser(req);
+        if (!user || user.role !== "superadmin") {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const { poolId } = await props.params;
+        const pool = await Pool.findOne({ poolId }).lean();
+        if (!pool) {
+            return NextResponse.json({ error: "Pool not found" }, { status: 404 });
+        }
+
+        const [memberCount, paymentCount] = await Promise.all([
+            Member.countDocuments({ poolId }),
+            (async () => {
+                try {
+                    const { Payment } = await import("@/models/Payment");
+                    return await Payment.countDocuments({ poolId });
+                } catch { return 0; }
+            })()
+        ]);
+
+        return NextResponse.json({
+            ...pool,
+            stats: {
+                members: memberCount,
+                payments: paymentCount
+            }
+        });
+    } catch (error) {
+        console.error("Fetch Pool Details Error:", error);
+        return NextResponse.json({ error: "Server error" }, { status: 500 });
+    }
+}
+
+export async function PATCH(req: Request, props: { params: Promise<{ poolId: string }> }) {
+    try {
+        await dbConnect();
+        const user = await resolveUser(req);
+        if (!user || user.role !== "superadmin") {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const { poolId } = await props.params;
+        const { action } = await req.json();
+
+        if (action === "toggle-status") {
+            const pool = await Pool.findOne({ poolId });
+            if (!pool) return NextResponse.json({ error: "Pool not found" }, { status: 404 });
+            
+            const newStatus = pool.subscriptionStatus === "paused" ? "active" : "paused";
+            pool.subscriptionStatus = newStatus;
+            await pool.save();
+            return NextResponse.json({ success: true, status: newStatus });
+        }
+
+        return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    } catch (error) {
+        return NextResponse.json({ error: "Server error" }, { status: 500 });
+    }
+}
+
 
 export async function DELETE(req: Request, props: { params: Promise<{ poolId: string }> }) {
     try {
