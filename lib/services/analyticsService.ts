@@ -146,34 +146,46 @@ export async function getEcosystemSnapshot(): Promise<EcosystemSnapshot> {
         monthMap[key] = { pool: 0, hostel: 0, business: 0, active: 0 };
     }
 
-    // Aggregate ONLY validated active subtenants bucketed by createdAt month
+    // Build sets of subtenant IDs that belong to ACTIVE (paid) orgs
+    const paidPoolIds = new Set<string>();
+    const paidHostelIds = new Set<string>();
+    const paidBusinessIds = new Set<string>();
+    
+    activeOrgs.forEach((o: any) => {
+        o.poolIds?.forEach((id: string) => paidPoolIds.add(id));
+        o.hostelIds?.forEach((id: string) => paidHostelIds.add(id));
+        o.businessIds?.forEach((id: string) => paidBusinessIds.add(id));
+    });
+
+    // Aggregate ONLY subtenants that belong to PAID subscriptions
     activePools.forEach(p => {
-        if (!p.createdAt) return;
+        if (!p.createdAt || !paidPoolIds.has(p.poolId)) return;
         const d = new Date(p.createdAt);
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-        if (monthMap[key]) monthMap[key].pool += 1;
+        if (monthMap[key]) {
+            monthMap[key].pool += 1;
+            monthMap[key].active += 1; // Add to system active users
+        }
     });
 
     activeHostels.forEach(h => {
-        if (!h.createdAt) return;
+        if (!h.createdAt || !paidHostelIds.has(h.hostelId)) return;
         const d = new Date(h.createdAt);
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-        if (monthMap[key]) monthMap[key].hostel += 1;
+        if (monthMap[key]) {
+            monthMap[key].hostel += 1;
+            monthMap[key].active += 1;
+        }
     });
 
     activeBusinesses.forEach(b => {
-        if (!b.createdAt) return;
+        if (!b.createdAt || !paidBusinessIds.has(b.businessId)) return;
         const d = new Date(b.createdAt);
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-        if (monthMap[key]) monthMap[key].business += 1;
-    });
-
-    // Calculate system active users (Organizations) by their creation date
-    activeOrgs.forEach(o => {
-        if (!o.createdAt) return;
-        const d = new Date(o.createdAt);
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-        if (monthMap[key]) monthMap[key].active += 1;
+        if (monthMap[key]) {
+            monthMap[key].business += 1;
+            monthMap[key].active += 1;
+        }
     });
 
     // Format timeline for frontend
