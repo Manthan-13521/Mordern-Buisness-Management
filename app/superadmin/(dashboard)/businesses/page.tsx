@@ -39,7 +39,9 @@ export default function ManageBusinessesPage() {
     const [search, setSearch] = useState("");
     const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
     const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
-    const [resetCreds, setResetCreds] = useState<{ email: string; pass: string } | null>(null);
+    const [resetTarget, setResetTarget] = useState<Business | null>(null);
+    const [newPassword, setNewPassword] = useState("");
+    const [showPass, setShowPass] = useState(false);
     const [isActionLoading, setIsActionLoading] = useState(false);
 
     useEffect(() => {
@@ -118,17 +120,25 @@ export default function ManageBusinessesPage() {
         }
     };
 
-    const handleResetPassword = async (businessId: string) => {
-        if (!confirm("Are you sure you want to forcibly reset the password for this business admin?")) return;
+    const handleResetPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!resetTarget) return;
+        if (newPassword.length < 8) {
+            toast.error("Password must be at least 8 characters");
+            return;
+        }
         setIsActionLoading(true);
         try {
-            const res = await fetch(`/api/superadmin/businesses/${businessId}/reset-password`, {
-                method: "POST"
+            const res = await fetch(`/api/superadmin/businesses/${resetTarget.businessId}/reset-password`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ newPassword })
             });
             const data = await res.json();
             if (res.ok) {
-                setResetCreds({ email: data.adminEmail, pass: data.newPassword });
-                toast.success("Password reset securely");
+                toast.success("Password reset securely. All active sessions invalidated.");
+                setResetTarget(null);
+                setNewPassword("");
             } else {
                 toast.error(data.error || "Failed to reset password");
             }
@@ -252,7 +262,7 @@ export default function ManageBusinessesPage() {
                                                 <Info className="h-4 w-4" />
                                             </button>
                                             <button 
-                                                onClick={() => handleResetPassword(business.businessId)}
+                                                onClick={() => { setResetTarget(business); setNewPassword(""); setShowPass(false); }}
                                                 className="p-2 hover:bg-[#0b1220] rounded-lg text-[#9ca3af] hover:text-[#f9fafb] transition-all shadow-sm"
                                                 title="Reset Admin Password"
                                                 disabled={isActionLoading}
@@ -394,40 +404,39 @@ export default function ManageBusinessesPage() {
                 </div>
             )}
 
-            {/* Reset Password Result Modal */}
-            {resetCreds && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-                    <div className="bg-[#0b1220] border border-green-500/20 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl overflow-y-auto">
-                        <div className="bg-gradient-to-br from-green-600/20 to-emerald-600/20 p-8 border-b border-neutral-800 relative">
-                            <div className="h-16 w-16 rounded-2xl bg-[#0b1220] border border-[#1f2937] flex items-center justify-center mb-4">
-                                <KeyRound className="h-10 w-10 text-green-400" />
-                            </div>
-                            <h2 className="text-2xl font-black text-white">Password Reset Successful</h2>
-                            <p className="text-[#9ca3af] text-sm mt-2">Please copy these credentials immediately. They will not be shown again.</p>
+            {/* Reset Password Modal */}
+            {resetTarget && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => !isActionLoading && setResetTarget(null)} />
+                    <div className="relative bg-[#0b1220] border border-[#1f2937] rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+                        <div className="flex items-center justify-between border-b border-[#1f2937] pb-3">
+                            <h2 className="text-lg font-bold text-white tracking-tight">Reset Password</h2>
+                            <button onClick={() => setResetTarget(null)} disabled={isActionLoading} className="text-[#6b7280] hover:text-[#f9fafb] transition-colors"><XCircle className="h-5 w-5" /></button>
                         </div>
-                        
-                        <div className="p-8 space-y-6">
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="text-xs font-bold text-[#6b7280] uppercase tracking-widest">Admin Email</label>
-                                    <div className="mt-1 p-3 bg-[#020617] border border-neutral-800 rounded-lg text-white font-mono text-sm break-all">
-                                        {resetCreds.email}
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-[#6b7280] uppercase tracking-widest">New Password</label>
-                                    <div className="mt-1 p-3 bg-[#020617] border border-neutral-800 rounded-lg text-green-400 font-mono text-xl tracking-wider text-center font-bold">
-                                        {resetCreds.pass}
-                                    </div>
+                        <p className="text-sm text-[#6b7280]">Setting new password for <span className="font-semibold text-white">{resetTarget.name}</span> ({resetTarget.adminEmail}).</p>
+                        <form onSubmit={handleResetPassword} className="space-y-4 pt-2">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wider">New Password</label>
+                                <div className="relative">
+                                    <input
+                                        required
+                                        type={showPass ? "text" : "password"}
+                                        minLength={8}
+                                        value={newPassword}
+                                        onChange={e => setNewPassword(e.target.value)}
+                                        placeholder="Min 8 characters"
+                                        className="w-full rounded-xl border border-[#1f2937] bg-slate-950/50 px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
+                                    />
+                                    <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7280] hover:text-[#f9fafb]">
+                                        <span className="text-xs font-semibold">{showPass ? "HIDE" : "SHOW"}</span>
+                                    </button>
                                 </div>
                             </div>
-                            <button 
-                                onClick={() => setResetCreds(null)}
-                                className="w-full py-4 text-sm font-bold bg-emerald-700 hover:bg-emerald-600 text-white rounded-2xl transition-all shadow-lg"
-                            >
-                                I Have Copied It
+                            <button type="submit" disabled={isActionLoading}
+                                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 border-0 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-orange-500/20 disabled:opacity-50">
+                                {isActionLoading ? "Resetting…" : "Confirm Reset"}
                             </button>
-                        </div>
+                        </form>
                     </div>
                 </div>
             )}

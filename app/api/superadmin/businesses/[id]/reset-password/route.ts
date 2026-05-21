@@ -24,16 +24,21 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         const adminUser = await User.findOne({ businessId: id, role: "business_admin" }).sort({ createdAt: 1 });
         if (!adminUser) return NextResponse.json({ error: "Business Administrator account not found" }, { status: 404 });
 
-        // Generate strong random 12 character password (hex => 12 chars)
-        const rawPassword = crypto.randomBytes(6).toString("hex");
-        const passwordHash = await bcrypt.hash(rawPassword, 10);
+        const body = await req.json();
+        const { newPassword } = body;
+        
+        if (!newPassword || newPassword.length < 8) {
+            return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
+        }
+
+        const passwordHash = await bcrypt.hash(newPassword, 10);
 
         adminUser.passwordHash = passwordHash;
         await adminUser.save();
 
         return NextResponse.json({ 
             success: true, 
-            newPassword: rawPassword,
+            message: "Password reset. All active sessions invalidated.",
             adminEmail: adminUser.email
         });
 

@@ -23,9 +23,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ poolId:
         const adminUser = await User.findOne({ poolId, role: "admin" }).sort({ createdAt: 1 });
         if (!adminUser) return NextResponse.json({ error: "Pool Administrator account not found" }, { status: 404 });
 
-        // Generate strong random 12 character password
-        const rawPassword = crypto.randomBytes(6).toString("hex");
-        const passwordHash = await bcrypt.hash(rawPassword, 10);
+        const body = await req.json();
+        const { newPassword } = body;
+        
+        if (!newPassword || newPassword.length < 8) {
+            return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
+        }
+
+        const passwordHash = await bcrypt.hash(newPassword, 10);
 
         // Mutate the user schema explicitly bypassing the missing Pool plain-text schema mapping requirement fully
         adminUser.passwordHash = passwordHash;
@@ -33,7 +38,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ poolId:
 
         return NextResponse.json({ 
             success: true, 
-            newPassword: rawPassword,
+            message: "Password reset. All active sessions invalidated.",
             adminEmail: adminUser.email
         });
 
