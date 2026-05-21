@@ -100,6 +100,24 @@ function refreshInBackground<T>(key: string, fetcher: () => Promise<T>, ttlSecon
     .finally(() => refreshLocks.delete(key));
 }
 
+export async function invalidateMembersCache(poolId: string) {
+  if (!redis) return;
+  try {
+    // We invalidate the first few pages and common limits (9 from UI, 20 from API default)
+    const keysToDel = [];
+    for (const limit of [9, 20]) {
+      for (const type of ['all', 'member', 'entertainment']) {
+        keysToDel.push(`members:${poolId}:p1:l${limit}:t${type}`);
+        keysToDel.push(`members:${poolId}:p2:l${limit}:t${type}`);
+        keysToDel.push(`members:${poolId}:p3:l${limit}:t${type}`);
+      }
+    }
+    await Promise.all(keysToDel.map(key => redis!.del(key)));
+  } catch {
+    // Non-critical
+  }
+}
+
 /**
  * Invalidate dashboard cache for a specific pool.
  * Called after mutations (payment, member creation, etc.)
@@ -118,6 +136,7 @@ export async function invalidateDashboard(poolId: string) {
       // Invalidate app-init consolidated caches (wildcard not available, use known pattern)
       redis.del(`app-init:${poolId}`),
     ]);
+    await invalidateMembersCache(poolId);
   } catch {
     // Non-critical
   }

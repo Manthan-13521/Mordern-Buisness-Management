@@ -478,10 +478,13 @@ export async function POST(req: Request) {
             savedMember = newMember.toObject ? newMember.toObject() : newMember;
         }
 
-        // No background job needed since generation is inline
-
         // Invalidate dashboard cache so new member shows immediately
-        import("@/lib/dashboardCache").then(m => m.invalidateDashboard(poolId)).catch(() => {});
+        try {
+            const { invalidateDashboard } = await import("@/lib/dashboardCache");
+            await invalidateDashboard(poolId);
+        } catch (err) {
+            console.error("Cache invalidation failed", err);
+        }
 
         return NextResponse.json(savedMember, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
