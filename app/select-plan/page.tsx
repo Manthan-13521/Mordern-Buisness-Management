@@ -191,7 +191,8 @@ export default function SelectPlanPage() {
                         planType, 
                         module, 
                         blocks,
-                        razorpayOrderId: orderData.orderId 
+                        razorpayOrderId: orderData.orderId,
+                        referralCode: orderData.referralCode || appliedReferral?.code,
                     }),
                 });
                 const verifyData = await verifyRes.json();
@@ -243,8 +244,8 @@ export default function SelectPlanPage() {
                                 razorpayOrderId: response.razorpay_order_id,
                                 razorpayPaymentId: response.razorpay_payment_id,
                                 razorpaySignature: response.razorpay_signature,
-                                // SECURITY: planType/module/blocks NOT sent.
-                                // Server derives from Razorpay order notes (source of truth).
+                                // Pass referralCode for redundancy — server also reads from Razorpay order notes
+                                referralCode: appliedReferral?.code,
                             }),
                         });
                         const verifyData = await verifyRes.json();

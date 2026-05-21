@@ -17,7 +17,7 @@ export async function POST(req: Request) {
         }
 
         const body = await req.json();
-        const { razorpayOrderId, razorpayPaymentId, razorpaySignature, isMock: rawMock, planType, module, blocks } = body;
+        const { razorpayOrderId, razorpayPaymentId, razorpaySignature, isMock: rawMock, planType, module, blocks, referralCode } = body;
 
         // SECURITY: isMock must NEVER be honored in production — prevents free subscription exploit
         const isMock = process.env.NODE_ENV !== "production" && rawMock === true;
@@ -47,6 +47,9 @@ export async function POST(req: Request) {
             planType:          isMock ? planType : (planType || "yearly"),
             module:            isMock ? module : (module || "pool"),
             blocks:            isMock ? (blocks ? parseInt(blocks) : undefined) : undefined,
+            // Pass referralCode so usage tracking works in mock mode.
+            // In real mode, activateSubscription() will prefer Razorpay order notes.
+            referralCode:      referralCode || undefined,
         });
 
         return NextResponse.json({
