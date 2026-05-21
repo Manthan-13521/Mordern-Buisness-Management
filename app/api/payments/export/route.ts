@@ -19,13 +19,32 @@ export async function GET(req: Request) {
         if (!user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         const baseMatch = user.role !== "superadmin" && user.poolId ? { poolId: user.poolId } : {};
 
-        const payments = await Payment.find({ ...baseMatch })
-            .populate("memberId", "name memberId")
-            .populate("planId", "name")
+        const rawPayments = await Payment.find({ ...baseMatch })
             .populate("recordedBy", "name")
             .sort({ date: -1 })
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             .lean() as any[];
+
+        const memberIds = rawPayments.map(p => p.memberId).filter(Boolean);
+        const planIds = rawPayments.map(p => p.planId).filter(Boolean);
+
+        const [members, entMembers, plans] = await Promise.all([
+            Member.find({ _id: { $in: memberIds } }).select("name memberId").lean(),
+            import("@/models/EntertainmentMember").then(m => m.EntertainmentMember.find({ _id: { $in: memberIds } }).select("name memberId").lean()),
+            import("@/models/Plan").then(m => m.Plan.find({ _id: { $in: planIds } }).select("name price").lean()),
+        ]);
+
+        const memberMap = new Map();
+        members.forEach((m: any) => memberMap.set(m._id.toString(), m));
+        entMembers.forEach((m: any) => memberMap.set(m._id.toString(), m));
+
+        const planMap = new Map();
+        plans.forEach((p: any) => planMap.set(p._id.toString(), p));
+
+        const payments = rawPayments.map(p => ({
+            ...p,
+            memberId: memberMap.get(p.memberId?.toString()) || { name: "N/A", memberId: "Unknown" },
+            planId: planMap.get(p.planId?.toString()) || { name: "N/A" }
+        }));
 
         const ExcelJS = (await import("exceljs")).default;
         const workbook = new ExcelJS.Workbook();

@@ -64,16 +64,39 @@ export async function GET(req: Request) {
             query.memberCollection = "entertainment_members";
         }
 
-        const [payments, total] = await Promise.all([
+        const [rawPayments, total] = await Promise.all([
             Payment.find(query)
-                .populate("memberId", "name memberId")
                 .sort({ createdAt: -1, _id: -1 })
                 .skip(skip)
                 .limit(limit)
-                .select("memberId planId amount paymentMethod status createdAt transactionId notes memberCollection recordedBy")
+                .select("memberId planId amount paymentMethod status createdAt date transactionId notes memberCollection recordedBy")
                 .lean(),
             Payment.countDocuments(query),
         ]);
+
+        // Safely manually populate to handle mixed Member/EntertainmentMember relations 
+        // without schema changes, and include Plan correctly.
+        const memberIds = rawPayments.map(p => p.memberId).filter(Boolean);
+        const planIds = rawPayments.map(p => p.planId).filter(Boolean);
+
+        const [members, entMembers, plans] = await Promise.all([
+            Member.find({ _id: { $in: memberIds } }).select("name memberId").lean(),
+            import("@/models/EntertainmentMember").then(m => m.EntertainmentMember.find({ _id: { $in: memberIds } }).select("name memberId").lean()),
+            import("@/models/Plan").then(m => m.Plan.find({ _id: { $in: planIds } }).select("name price").lean()),
+        ]);
+
+        const memberMap = new Map();
+        members.forEach((m: any) => memberMap.set(m._id.toString(), m));
+        entMembers.forEach((m: any) => memberMap.set(m._id.toString(), m));
+
+        const planMap = new Map();
+        plans.forEach((p: any) => planMap.set(p._id.toString(), p));
+
+        const payments = rawPayments.map(p => ({
+            ...p,
+            memberId: memberMap.get(p.memberId?.toString()) || { name: "N/A", memberId: "Unknown" },
+            planId: planMap.get(p.planId?.toString()) || { name: "N/A" }
+        }));
 
         const headers: Record<string, string> = process.env.NODE_ENV === "development"
             ? { "Cache-Control": "no-store, no-cache, must-revalidate, private" }

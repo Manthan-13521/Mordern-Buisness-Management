@@ -242,9 +242,8 @@ export const getCachedDashboardCounts = (poolId: string, memberType: string = "a
                     memberType: "regular",
                     createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
                 }) : 0,
-                includeEntertainment ? Member.countDocuments({
+                includeEntertainment ? EntertainmentMember.countDocuments({
                     ...memberQueryMatch,
-                    memberType: "entertainment",
                     createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
                 }) : 0,
                 // Immutable count queries

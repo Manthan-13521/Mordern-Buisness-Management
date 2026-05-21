@@ -157,6 +157,15 @@ export async function POST(req: Request) {
             .populate("planId", "name hasTokenPrint price")
             .select("memberId name phone planId planQuantity planStartDate planEndDate paidAmount balanceAmount paymentStatus photoUrl qrCodeUrl")
             .lean();
+
+        // Invalidate dashboard cache so new member shows immediately
+        try {
+            const { invalidateDashboard } = await import("@/lib/dashboardCache");
+            await invalidateDashboard(poolId);
+        } catch (err) {
+            console.error("Cache invalidation failed", err);
+        }
+
         return NextResponse.json(saved, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error) {
         console.error("[POST /api/entertainment-members]", error);
