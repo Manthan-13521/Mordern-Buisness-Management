@@ -100,18 +100,23 @@ export default function CustomerDetailPage() {
       // Staleness check: if a newer fetch was started, discard this response
       if (currentGen !== fetchGenRef.current) return true; 
 
+      let custSuccess = false;
+      let transSuccess = false;
+
       if (custRes.ok) {
         setCustomer(await custRes.json());
+        custSuccess = true;
       }
 
       if (transRes.ok) {
         const transJson = await transRes.json();
         const data = Array.isArray(transJson) ? transJson : (transJson.data || []);
         setTransactions(data);
-        return true;
+        transSuccess = true;
       }
 
-      return false; // signal that transactions fetch failed
+      // Only signal complete success if BOTH fetches succeeded
+      return custSuccess && transSuccess;
     };
 
     try {

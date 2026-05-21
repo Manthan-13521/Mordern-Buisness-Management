@@ -3,7 +3,6 @@ import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { BusinessTransaction } from "@/models/BusinessTransaction";
 import { requireBusinessId } from "@/lib/tenant";
-import { analyticsLimiter } from "@/lib/rateLimiter";
 import { logger } from "@/lib/logger";
 import mongoose from "mongoose";
 
@@ -16,12 +15,6 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        // 🟠 RATE LIMITING
-        const ip = req.headers.get("x-forwarded-for") || "unknown";
-        const rl = analyticsLimiter.checkTenant(user.businessId || "unknown", ip);
-        if (!rl.allowed) {
-            return NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429 });
-        }
 
         let businessId: string;
         try {
