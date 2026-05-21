@@ -604,6 +604,16 @@ export default function MembersPage() {
                             <div className="flex justify-between"><span>Current Balance</span><span className={`font-semibold ${renewMember.balance >= 0 ? "text-emerald-500" : "text-rose-400"}`}>₹{renewMember.balance.toLocaleString()}</span></div>
                             <div className="flex justify-between"><span>Next Due</span><span className="font-semibold text-blue-500">{renewMember.due_date ? new Date(renewMember.due_date).toLocaleDateString("en-IN") : "—"}</span></div>
                         </div>
+                        {renewMember.balance < 0 && Number(renewForm.paidAmount) > Math.abs(renewMember.balance) && (
+                            <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-2.5 text-xs text-emerald-400 flex items-center gap-2 font-medium">
+                                <span>₹{Math.abs(renewMember.balance).toLocaleString("en-IN")} clears dues + ₹{(Number(renewForm.paidAmount) - Math.abs(renewMember.balance)).toLocaleString("en-IN")} added as advance credit</span>
+                            </div>
+                        )}
+                        {renewMember.balance >= 0 && Number(renewForm.paidAmount) > 0 && (
+                            <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-2.5 text-xs text-emerald-400 flex items-center gap-2 font-medium">
+                                <span>₹{Number(renewForm.paidAmount).toLocaleString("en-IN")} added as advance credit</span>
+                            </div>
+                        )}
                         {error && <p className="text-sm text-rose-400 bg-rose-500/10/20 rounded-lg px-3 py-2">{error}</p>}
                         <form onSubmit={handleRenew} className="space-y-4">
                             <div className="grid grid-cols-2 gap-3">

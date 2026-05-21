@@ -124,7 +124,28 @@ export async function POST(req: Request) {
 
         const paymentType = (rawPaymentType as string) || "balance";
         
-        let currentBalance = member.balance + paid;
+        const previousBalance = member.balance;
+        const currentBalance = previousBalance + paid;
+        
+        // Calculate dues cleared vs advance credit
+        let duesCleared = 0;
+        let advanceCredit = 0;
+        
+        if (previousBalance < 0) {
+            // Member had dues
+            const absDues = Math.abs(previousBalance);
+            if (paid <= absDues) {
+                duesCleared = paid;
+                advanceCredit = 0;
+            } else {
+                duesCleared = absDues;
+                advanceCredit = paid - absDues;
+            }
+        } else {
+            // Member already had zero or advance balance, all goes to advance
+            duesCleared = 0;
+            advanceCredit = paid;
+        }
         
         const paymentDate = new Date();
         const yearMonth = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, "0")}`;
@@ -147,6 +168,9 @@ export async function POST(req: Request) {
             status: "success",
             paymentType,
             idempotencyKey,
+            advanceAmount: advanceCredit,
+            duesCleared: duesCleared,
+            isAdvance: advanceCredit > 0,
         });
 
         console.log("Payment created", payment._id);
@@ -180,7 +204,13 @@ export async function POST(req: Request) {
             createdBy: createdByName,
         });
 
-        return NextResponse.json(payment, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        return NextResponse.json({
+            success: true,
+            payment,
+            newBalance: currentBalance,
+            advanceCredit,
+            duesCleared
+        }, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
         // Catch duplicate key collision organically
         if (error?.code === 11000 && error?.keyPattern?.idempotencyKey) {

@@ -161,9 +161,14 @@ export default function BalancePaymentsPage() {
                     <div className="relative bg-[#0b1220] border border-[#1f2937] rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
                         <div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-[#f9fafb]">Record Payment — {payMember.name}</h2><button onClick={()=>setPayMember(null)}><X className="h-5 w-5 text-[#6b7280]"/></button></div>
                         <p className="text-sm text-[#6b7280]">Pending: <span className="font-bold text-rose-400">₹{payMember.balance.toLocaleString("en-IN")}</span></p>
+                        {Number(payForm.amount) > payMember.balance && (
+                            <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-2.5 text-xs text-emerald-400 flex items-center gap-2 font-medium">
+                                <span>₹{payMember.balance.toLocaleString("en-IN")} clears dues + ₹{(Number(payForm.amount) - payMember.balance).toLocaleString("en-IN")} added as advance credit</span>
+                            </div>
+                        )}
                         {error && <p className="text-sm text-rose-400">{error}</p>}
                         <form onSubmit={handlePay} className="space-y-4">
-                            <div><label className={LABEL}>Amount (₹)</label><input type="number" min="1" max={Math.min(payMember.balance, 9999999999)} required value={payForm.amount} onChange={e=>setPayForm(p=>({...p,amount:e.target.value}))} className={INPUT}/></div>
+                            <div><label className={LABEL}>Amount (₹)</label><input type="number" min="1" max={9999999999} required value={payForm.amount} onChange={e=>setPayForm(p=>({...p,amount:e.target.value}))} className={INPUT}/></div>
                             <div><label className={LABEL}>Payment Method</label>
                                 <select value={payForm.paymentMethod} onChange={e=>setPayForm(p=>({...p,paymentMethod:e.target.value}))} className={INPUT}>
                                     <option value="cash">Cash</option><option value="upi">UPI</option><option value="card">Card</option>
