@@ -5,10 +5,9 @@ import { ReferralCode } from "@/models/ReferralCode";
 
 export async function POST(req: Request) {
     try {
-        const user = await resolveUser(req) as any;
-        if (!user.id) {
-            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
+        const user = await resolveUser(req).catch(() => null) as any;
+        // User session is not strictly required for validating a referral code (e.g. during onboarding)
+        // We removed the `if (!user?.id)` block here.
 
         const body = await req.json();
         const { referralCode } = body as {

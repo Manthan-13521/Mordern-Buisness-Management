@@ -215,6 +215,9 @@ export async function POST(req: Request) {
                         amountINR -= discount;
                         if (amountINR <= 0) amountINR = 1;
                         amountINR = Math.floor(amountINR);
+                        
+                        // Persist validated referral code
+                        pending.referralCode = codeDoc.code;
                     }
                 } catch (refErr) {
                     console.error("Referral validation failed (non-fatal):", refErr);

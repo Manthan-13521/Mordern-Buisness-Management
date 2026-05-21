@@ -141,7 +141,37 @@ export async function POST(req: Request) {
         const isTrial = pending.planType === "trial";
 
         const priceKey = isTrial ? "trial" : getPriceKey(pending.planType as any, "business");
-        const amountPaid = priceKey ? SUBSCRIPTION_PRICES[priceKey] : 0;
+        let amountPaid = priceKey ? SUBSCRIPTION_PRICES[priceKey] : 0;
+
+        let appliedReferralCode = "";
+        let discountApplied = 0;
+
+        // Re-validate and apply referral during finalize
+        if (pending.referralCode && !isTrial) {
+            try {
+                const { ReferralCode } = await import("@/models/ReferralCode");
+                const codeDoc = await ReferralCode.findOne({
+                    code: pending.referralCode,
+                    isActive: true
+                });
+                if (codeDoc && (!codeDoc.expiresAt || new Date(codeDoc.expiresAt) > now) && (codeDoc.maxUses === 0 || codeDoc.usedCount < codeDoc.maxUses)) {
+                    if (codeDoc.discountType === "percentage") {
+                        discountApplied = (amountPaid * codeDoc.discountValue) / 100;
+                    } else {
+                        discountApplied = codeDoc.discountValue;
+                    }
+                    amountPaid -= discountApplied;
+                    if (amountPaid <= 0) amountPaid = 1;
+                    amountPaid = Math.floor(amountPaid);
+                    
+                    appliedReferralCode = codeDoc.code;
+                    codeDoc.usedCount += 1;
+                    await codeDoc.save();
+                }
+            } catch (err) {
+                logger.error("Finalize referral validation error", { error: (err as Error).message });
+            }
+        }
 
         try {
             // Create Business
@@ -199,6 +229,20 @@ export async function POST(req: Request) {
                 currentPeriodEnd: subscriptionEndsAt,
                 trialEndsAt: isTrial ? subscriptionEndsAt : undefined,
             });
+
+            // Create ReferralUsage if applied
+            if (appliedReferralCode && discountApplied > 0) {
+                try {
+                    const { ReferralUsage } = await import("@/models/ReferralUsage");
+                    await ReferralUsage.create({
+                        code: appliedReferralCode,
+                        orgId: newOrg._id,
+                        discountApplied
+                    });
+                } catch (usageErr) {
+                    console.error("ReferralUsage creation failed (non-fatal):", usageErr);
+                }
+            }
 
             // Create BillingLog
             try {

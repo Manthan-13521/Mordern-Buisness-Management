@@ -9,6 +9,7 @@ export interface IPendingBusinessRegistration extends Document {
     address?: string;
     gstNumber?: string;
     planType: "trial" | "quarterly" | "yearly";
+    referralCode?: string;
     razorpayOrderId?: string;
     status: "pending" | "completed" | "expired";
     createdAt: Date;
@@ -25,6 +26,7 @@ const pendingBusinessRegistrationSchema = new Schema<IPendingBusinessRegistratio
         address:         { type: String },
         gstNumber:       { type: String },
         planType:        { type: String, enum: ["trial", "quarterly", "yearly"], required: true },
+        referralCode:    { type: String },
         razorpayOrderId: { type: String, sparse: true, index: true },
         status: {
             type: String,
