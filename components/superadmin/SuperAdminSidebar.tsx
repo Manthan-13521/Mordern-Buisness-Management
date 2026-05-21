@@ -26,6 +26,7 @@ export function SuperAdminSidebar() {
         { name: "Feedback",     href: "/superadmin/feedback",   icon: MessageSquare },
         { name: "Billing",      href: "/superadmin/billing",    icon: CreditCard },
         { name: "Referrals",    href: "/superadmin/referrals",  icon: Gift },
+        { name: "Pending Registrations", href: "/superadmin/pending-registrations", icon: LayoutDashboard },
     ];
 
     return (

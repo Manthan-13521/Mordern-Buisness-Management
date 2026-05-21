@@ -285,6 +285,15 @@ export async function POST(req: Request) {
             status: "pending",
         });
         if (existingPending) {
+            // Update password hash just in case they used a different one for retry
+            const updatedHash = await bcrypt.hash(password, 10);
+            existingPending.passwordHash = updatedHash;
+            // Also update any other form fields in case they corrected a typo
+            existingPending.businessName = businessName;
+            existingPending.adminName = adminName;
+            existingPending.adminPhone = adminPhone;
+            await existingPending.save();
+
             // If there's already a pending registration, reuse it — redirect to plan page
             return NextResponse.json({ 
                 pendingId: existingPending._id.toString(),
