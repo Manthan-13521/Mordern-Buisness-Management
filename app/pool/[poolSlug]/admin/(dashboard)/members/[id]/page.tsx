@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Printer, Trash2, RotateCcw, Download, Package, PackageCheck } from "lucide-react";
 import { useThermalPrint } from "@/components/printing/useThermalPrint";
 import { PrinterAppsHelp } from "@/components/printing/PrinterAppsHelp";
+import { computeMemberStatus } from "@/lib/memberStatus";
 
 interface EquipmentItem {
     _id: string;
@@ -48,7 +49,11 @@ interface Member {
 }
 
 function ExpiryBanner({ member }: { member: Member }) {
-    if (member.isDeleted) {
+    const status = computeMemberStatus(member);
+    const endDate = new Date(member.planEndDate || member.expiryDate || "");
+    const dateStr = endDate.toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
+
+    if (status.verdict === "DELETED") {
         return (
             <div className="rounded-xl bg-slate-900 border border-[#1f2937] px-4 py-4 flex items-center gap-3 shadow-lg">
                 <span className="text-2xl">🗑️</span>
@@ -60,30 +65,37 @@ function ExpiryBanner({ member }: { member: Member }) {
         );
     }
 
-    const endDate = new Date(member.planEndDate || member.expiryDate || "");
-    const msLeft = endDate.getTime() - Date.now();
-    const isActuallyExpired = member.isExpired || msLeft < 0;
-    const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
-
-    if (isActuallyExpired) {
+    if (status.verdict === "BLOCKED") {
         return (
             <div className="rounded-xl bg-rose-500/10 border border-rose-500/30 px-4 py-4 flex items-center gap-3 shadow-lg">
-                <span className="text-2xl">⚠️</span>
+                <span className="text-2xl">🛑</span>
                 <div>
-                    <p className="font-bold text-rose-400">Plan Expired</p>
-                    <p className="text-sm text-rose-400/70">Expired on {endDate.toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })}</p>
+                    <p className="font-bold text-rose-400">Account Blocked</p>
+                    <p className="text-sm text-rose-400/70">{status.daysLeftLabel}</p>
                 </div>
             </div>
         );
     }
 
-    if (daysLeft <= 7) {
+    if (status.verdict === "EXPIRED") {
+        return (
+            <div className="rounded-xl bg-rose-500/10 border border-rose-500/30 px-4 py-4 flex items-center gap-3 shadow-lg">
+                <span className="text-2xl">⚠️</span>
+                <div>
+                    <p className="font-bold text-rose-400">Plan Expired</p>
+                    <p className="text-sm text-rose-400/70">Expired on {dateStr}</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (status.verdict === "EXPIRING" || status.verdict === "WARNING") {
         return (
             <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-4 flex items-center gap-3 shadow-lg">
                 <span className="text-2xl">⏰</span>
                 <div>
-                    <p className="font-bold text-amber-400">Expiring Soon — {daysLeft} day{daysLeft !== 1 ? "s" : ""} left</p>
-                    <p className="text-sm text-amber-400/70">Valid till {endDate.toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })}</p>
+                    <p className="font-bold text-amber-400">Expiring Soon — {status.daysLeftLabel}</p>
+                    <p className="text-sm text-amber-400/70">Valid till {dateStr}</p>
                 </div>
             </div>
         );
@@ -93,8 +105,8 @@ function ExpiryBanner({ member }: { member: Member }) {
         <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-4 py-4 flex items-center gap-3 shadow-lg">
             <span className="text-2xl">✅</span>
             <div>
-                <p className="font-bold text-emerald-400">Active — {daysLeft} days remaining</p>
-                <p className="text-sm text-emerald-400/70">Valid till {endDate.toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })}</p>
+                <p className="font-bold text-emerald-400">Active — {status.daysLeftLabel}</p>
+                <p className="text-sm text-emerald-400/70">Valid till {dateStr}</p>
             </div>
         </div>
     );

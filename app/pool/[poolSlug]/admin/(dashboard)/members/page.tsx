@@ -12,6 +12,7 @@ import { PRIVATE_API_STALE_MS, membersListQueryKeyPrefix } from "@/lib/apiCache"
 import { usePoolType } from "@/components/pool/PoolTypeContext";
 import { PoolTypeFilter } from "@/components/pool/PoolTypeFilter";
 import { addMemberLocal, getMembersByPoolLocal, syncUnsyncedMembers, getLastSyncedAtLocal, setLastSyncedAtLocal, cleanupLocalDB, deleteMemberLocal } from "@/lib/local-db/members.repo";
+import { computeMemberStatus } from "@/lib/memberStatus";
 
 interface Plan {
     _id: string;
@@ -227,62 +228,13 @@ export default function MembersPage() {
 
     // ── Computing view-model attributes (verdict, daysLeft) on the frontend ──
     const processedMembers = useMemo(() => {
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        const nowMs = now.getTime();
-
         return members.map((m: Member) => {
-            const endDate = new Date(m.planEndDate || m.expiryDate || 0);
-            const msLeft = endDate.getTime() - nowMs;
-            
-            let verdict: Member["verdict"] = "ACTIVE";
-            let verdictClass = "bg-green-500/10 text-green-400 ring-green-600/20";
-            let rowClass = "";
-            let daysLeftLabel = "";
-            let daysLeft = 0;
-
-            if (m.isDeleted) {
-                verdict = "DELETED";
-                verdictClass = "bg-[#0b1220] text-[#9ca3af] ring-gray-500/20 bg-[#0b1220] border border-[#1f2937] text-[#9ca3af]";
-                rowClass = "bg-rose-500/5";
-                daysLeftLabel = "Deleted";
-            } else if (m.defaulterStatus === "blocked") {
-                verdict = "BLOCKED";
-                verdictClass = "bg-red-700 text-white ring-red-600/30 shadow animate-pulse";
-                rowClass = "bg-rose-500/10 border-l-4 border-rose-500";
-                daysLeftLabel = `Blocked: ${m.overdueDays}d overdue`;
-            } else if (m.defaulterStatus === "warning") {
-                verdict = "WARNING";
-                verdictClass = "bg-rose-500/10 text-rose-400 ring-rose-600/30 font-bold border border-rose-500/20";
-                rowClass = "bg-rose-500/5 border-l-4 border-rose-400";
-                daysLeftLabel = `Warning: ${m.overdueDays}d overdue`;
-            } else if (m.isExpired || msLeft <= 0) {
-                verdict = "EXPIRED";
-                verdictClass = "bg-rose-500/10 text-rose-400 ring-red-600/20";
-                rowClass = "bg-rose-500/5";
-                daysLeftLabel = "Expired";
-            } else {
-                daysLeft = Math.ceil(msLeft / 86400000);
-                if (daysLeft <= 1) {
-                    daysLeftLabel = "Expires today";
-                } else {
-                    daysLeftLabel = `${daysLeft} days left`;
-                }
-                if (daysLeft <= 7) {
-                    verdict = "EXPIRING";
-                    verdictClass = "bg-amber-500/10 text-amber-400 ring-amber-600/20";
-                    rowClass = "bg-amber-500/5";
-                }
-            }
+            const status = computeMemberStatus(m);
 
             return {
                 ...m,
-                _endDate: endDate,
-                verdict,
-                verdictClass,
-                rowClass,
-                daysLeftLabel,
-                daysLeft
+                _endDate: new Date(m.planEndDate || m.expiryDate || 0),
+                ...status
             };
         });
     }, [members]);
