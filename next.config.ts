@@ -117,12 +117,5 @@ export default withSentryConfig(nextConfig, {
   sourcemaps: {
     disable: !process.env.SENTRY_AUTH_TOKEN,
   },
-
-  // Tree-shake unused Sentry integrations for smaller client bundles
-  disableLogger: true,
-
-  // Automatically instrument Next.js data-fetching & API routes
-  autoInstrumentServerFunctions: true,
-  autoInstrumentMiddleware: true,
 });
 
