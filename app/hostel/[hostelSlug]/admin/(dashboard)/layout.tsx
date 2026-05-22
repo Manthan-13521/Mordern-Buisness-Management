@@ -5,13 +5,15 @@ import { HostelTopbar } from "@/components/hostel/HostelTopbar";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { SubscriptionBanner } from "@/components/SubscriptionBanner";
 import { HostelBlockProvider } from "@/components/hostel/HostelBlockContext";
+import { AdProvider } from "@/components/ads/AdProvider";
 
 export default function HostelDashboardLayout({ children }: { children: React.ReactNode }) {
     return (
         <HostelBlockProvider>
-            <div className="flex h-screen bg-[#020617] flex-col">
-                <SubscriptionBanner />
-                <div className="flex flex-1 overflow-hidden">
+            <AdProvider moduleName="hostel">
+                <div className="flex h-screen bg-[#020617] flex-col">
+                    <SubscriptionBanner />
+                    <div className="flex flex-1 overflow-hidden">
                     {/* Desktop Sidebar */}
                     <aside className="hidden md:flex md:w-52 md:flex-col">
                         <HostelSidebar />
@@ -29,6 +31,7 @@ export default function HostelDashboardLayout({ children }: { children: React.Re
                 </div>
                 <FeedbackWidget />
             </div>
+            </AdProvider>
         </HostelBlockProvider>
     );
 }

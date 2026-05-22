@@ -13,6 +13,7 @@ import {
     Gift,
     LogOut,
     Shield,
+    Megaphone,
 } from "lucide-react";
 
 export function SuperAdminSidebar() {
@@ -20,6 +21,7 @@ export function SuperAdminSidebar() {
 
     const links = [
         { name: "Dashboard",    href: "/superadmin",            icon: LayoutDashboard },
+        { name: "Manage Ads",   href: "/superadmin/ads",        icon: Megaphone },
         { name: "Manage Pools", href: "/superadmin/pools",      icon: Droplets },
         { name: "Manage Hostels", href: "/superadmin/hostels",  icon: Building2 },
         { name: "Manage Businesses", href: "/superadmin/businesses", icon: Briefcase },

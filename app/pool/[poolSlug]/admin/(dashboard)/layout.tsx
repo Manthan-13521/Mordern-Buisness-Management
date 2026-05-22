@@ -3,6 +3,7 @@ import { Topbar } from "@/components/Topbar";
 import { SubscriptionBanner } from "@/components/SubscriptionBanner";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { PoolTypeProvider } from "@/components/pool/PoolTypeContext";
+import { AdProvider } from "@/components/ads/AdProvider";
 
 export const dynamic = "force-dynamic";
 
@@ -14,9 +15,10 @@ export default async function DashboardLayout({
 }) {
     return (
         <PoolTypeProvider>
-            <div className="flex h-screen bg-[#020617] flex-col">
-                <SubscriptionBanner />
-                <div className="flex flex-1 overflow-hidden">
+            <AdProvider moduleName="pool">
+                <div className="flex h-screen bg-[#020617] flex-col">
+                    <SubscriptionBanner />
+                    <div className="flex flex-1 overflow-hidden">
                     {/* Desktop Sidebar */}
                     <aside className="hidden md:flex md:w-52 md:flex-col">
                         <Sidebar />
@@ -34,6 +36,7 @@ export default async function DashboardLayout({
                 </div>
                 <FeedbackWidget />
             </div>
+            </AdProvider>
         </PoolTypeProvider>
     );
 }
