@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Image as ImageIcon, Trash2, Edit2, Loader2, X } from "lucide-react";
 import Image from "next/image";
+import toast from "react-hot-toast";
 
 export default function AdsPage() {
     const [ads, setAds] = useState<any[]>([]);
@@ -52,7 +53,16 @@ export default function AdsPage() {
         const file = e.target.files?.[0];
         if (!file) return;
 
+        // Client-side file size validation (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error("File size must be less than 5MB. Please choose a smaller image.");
+            e.target.value = "";
+            return;
+        }
+
         setIsUploading(true);
+        const toastId = toast.loading("Uploading ad banner image...");
+
         const reader = new FileReader();
         reader.onloadend = async () => {
             const base64String = reader.result as string;
@@ -62,21 +72,40 @@ export default function AdsPage() {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ file: base64String }),
                 });
-                const data = await res.json();
-                if (data.url) {
-                    setFormData({ ...formData, imageUrl: data.url });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.url) {
+                        setFormData(prev => ({ ...prev, imageUrl: data.url }));
+                        toast.success("Ad banner uploaded successfully!", { id: toastId });
+                    } else {
+                        toast.error("Failed to parse upload URL.", { id: toastId });
+                    }
+                } else {
+                    const data = await res.json();
+                    toast.error(data.details || data.error || "Upload failed. Please try again.", { id: toastId });
                 }
-            } catch (error) {
-                console.error("Upload failed", error);
+            } catch (error: any) {
+                console.error("Upload error:", error);
+                toast.error(error?.message || "Upload failed. Check your internet connection.", { id: toastId });
+            } finally {
+                setIsUploading(false);
             }
-            setIsUploading(false);
         };
         reader.readAsDataURL(file);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        if (!formData.imageUrl) {
+            toast.error("Please upload an ad banner image first.");
+            return;
+        }
+
         setIsSaving(true);
+        const toastId = toast.loading(formData._id ? "Updating ad..." : "Creating ad...");
+
         try {
             const url = formData._id ? `/api/superadmin/ads/${formData._id}` : "/api/superadmin/ads";
             const method = formData._id ? "PUT" : "POST";
@@ -91,22 +120,37 @@ export default function AdsPage() {
             });
 
             if (res.ok) {
+                toast.success(formData._id ? "Ad updated successfully!" : "Ad created successfully!", { id: toastId });
                 setIsModalOpen(false);
                 fetchAds();
+            } else {
+                const data = await res.json();
+                toast.error(data.error || "Failed to save ad. Please try again.", { id: toastId });
             }
-        } catch (error) {
-            console.error(error);
+        } catch (error: any) {
+            console.error("Save error:", error);
+            toast.error(error?.message || "Failed to save ad. Check your connection.", { id: toastId });
+        } finally {
+            setIsSaving(false);
         }
-        setIsSaving(false);
     };
 
     const handleDelete = async (id: string) => {
         if (!confirm("Are you sure you want to delete this ad?")) return;
+        
+        const toastId = toast.loading("Deleting ad...");
         try {
-            await fetch(`/api/superadmin/ads/${id}`, { method: "DELETE" });
-            fetchAds();
-        } catch (error) {
-            console.error(error);
+            const res = await fetch(`/api/superadmin/ads/${id}`, { method: "DELETE" });
+            if (res.ok) {
+                toast.success("Ad deleted successfully!", { id: toastId });
+                fetchAds();
+            } else {
+                const data = await res.json();
+                toast.error(data.error || "Failed to delete ad.", { id: toastId });
+            }
+        } catch (error: any) {
+            console.error("Delete error:", error);
+            toast.error(error?.message || "Failed to delete ad.", { id: toastId });
         }
     };
 
