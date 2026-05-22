@@ -4,6 +4,8 @@ import { Pool } from "@/models/Pool";
 import { User } from "@/models/User";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import { getPriceKey, SUBSCRIPTION_PRICES } from "@/lib/subscriptionConfig";
+import { validateAndCalculateDiscount, recordReferralUsage } from "@/lib/referral";
 
 async function getNextPoolId() {
     const lastPool = await Pool.findOne({}, { poolId: 1 }).sort({ createdAt: -1 });
@@ -51,6 +53,8 @@ export async function POST(req: Request) {
         let subscriptionStatus = "active";
         let subscriptionEndsAt: Date | undefined;
         const activePlan = adminBilling?.planType || plan || "free";
+        let usedReferralDoc = null;
+        let discountApplied = 0;
 
         if (adminBilling) {
             const now = new Date();
@@ -62,6 +66,26 @@ export async function POST(req: Request) {
             const days = durationDays[adminBilling.planType] || 30;
             subscriptionEndsAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
             subscriptionStatus = "active";
+
+            // Calculate authoritative server price
+            let amountINR = 0;
+            let priceKey = activePlan === "trial" ? "trial" : getPriceKey(activePlan as any, "pool");
+            if (priceKey && SUBSCRIPTION_PRICES[priceKey] !== undefined) {
+                amountINR = SUBSCRIPTION_PRICES[priceKey];
+            }
+
+            // Validate and apply discount
+            const validation = await validateAndCalculateDiscount(
+                adminBilling.referralCode,
+                activePlan,
+                amountINR
+            );
+            amountINR = validation.finalAmount;
+            discountApplied = validation.discountApplied;
+            usedReferralDoc = validation.usedReferralDoc;
+
+            // Override client amount
+            adminBilling.amount = amountINR;
         }
 
         const modelPlanMap: Record<string, "free" | "starter" | "pro" | "enterprise"> = {
@@ -76,100 +100,107 @@ export async function POST(req: Request) {
         const modelPlan = modelPlanMap[activePlan] || "free";
 
         try {
-            const newPool = new Pool({
-                poolId,
-                poolName,
-                slug,
-                adminEmail: normalizedEmail,
-                adminPhone,
-                location: city,
-                status: "ACTIVE",
-                plan: modelPlan,
-                capacity: modelPlan === "enterprise" ? 1000 : (modelPlan === "pro" ? 500 : 200),
-                maxMembers: modelPlan === "enterprise" ? 5000 : (modelPlan === "pro" ? 2000 : 1000),
-                maxStaff: modelPlan === "enterprise" ? 100 : (modelPlan === "pro" ? 50 : 20),
-                subscriptionStatus,
-                ...(subscriptionEndsAt ? { subscriptionEndsAt } : {}),
-            });
+            const { withTransaction } = await import("@/lib/withTransaction");
+            const result = await withTransaction(async (session) => {
+                const newPool = new Pool({
+                    poolId,
+                    poolName,
+                    slug,
+                    adminEmail: normalizedEmail,
+                    adminPhone,
+                    location: city,
+                    status: "ACTIVE",
+                    plan: modelPlan,
+                    capacity: modelPlan === "enterprise" ? 1000 : (modelPlan === "pro" ? 500 : 200),
+                    maxMembers: modelPlan === "enterprise" ? 5000 : (modelPlan === "pro" ? 2000 : 1000),
+                    maxStaff: modelPlan === "enterprise" ? 100 : (modelPlan === "pro" ? 50 : 20),
+                    subscriptionStatus,
+                    ...(subscriptionEndsAt ? { subscriptionEndsAt } : {}),
+                });
 
-            await newPool.save();
+                await newPool.save({ session });
 
-            // Create SaaSPlan lookup for Organization
-            const { SaaSPlan } = await import("@/models/SaaSPlan");
-            const planMap: Record<string, string> = {
-                trial: "Starter",
-                quarterly: "Pro",
-                yearly: "Enterprise",
-                free: "Starter",
-                pro: "Pro",
-                enterprise: "Enterprise"
-            };
-            const planSearchName = planMap[activePlan] || "Starter";
-            const planDoc = await SaaSPlan.findOne({ name: { $regex: new RegExp(planSearchName, "i") } }) || await SaaSPlan.findOne({});
+                // Create SaaSPlan lookup for Organization
+                const { SaaSPlan } = await import("@/models/SaaSPlan");
+                const planMap: Record<string, string> = {
+                    trial: "Starter",
+                    quarterly: "Pro",
+                    yearly: "Enterprise",
+                    free: "Starter",
+                    pro: "Pro",
+                    enterprise: "Enterprise"
+                };
+                const planSearchName = planMap[activePlan] || "Starter";
+                const planDoc = await SaaSPlan.findOne({ name: { $regex: new RegExp(planSearchName, "i") } }).session(session || null) || await SaaSPlan.findOne({}).session(session || null);
 
-            const newAdmin = new User({
-                name: adminName || "Pool Administrator",
-                email: normalizedEmail,
-                passwordHash,
-                role: "admin",
-                phone: adminPhone,
-                poolId: poolId,
-                // Add subscription to User for system-wide consistency
-                subscription: adminBilling ? {
-                    module: "pool",
-                    planType: adminBilling.planType,
-                    pricePaid: adminBilling.amount,
-                    startDate: new Date(),
-                    expiryDate: subscriptionEndsAt || new Date(),
-                    status: "active"
-                } : undefined
-            });
+                const newAdmin = new User({
+                    name: adminName || "Pool Administrator",
+                    email: normalizedEmail,
+                    passwordHash,
+                    role: "admin",
+                    phone: adminPhone,
+                    poolId: poolId,
+                    // Add subscription to User for system-wide consistency
+                    subscription: adminBilling ? {
+                        module: "pool",
+                        planType: adminBilling.planType,
+                        pricePaid: adminBilling.amount,
+                        startDate: new Date(),
+                        expiryDate: subscriptionEndsAt || new Date(),
+                        status: "active"
+                    } : undefined
+                });
 
-            await newAdmin.save();
+                await newAdmin.save({ session });
 
-            // Create Organization for SuperAdmin dashboard tracking
-            const { Organization } = await import("@/models/Organization");
-            const newOrg = await Organization.create({
-                name: poolName,
-                ownerId: newAdmin._id,
-                planId: planDoc?._id || newAdmin._id, // Fallback if no plan found
-                poolIds: [poolId],
-                status: subscriptionStatus === "active" ? "active" : "trial",
-                currentPeriodEnd: subscriptionEndsAt,
-                trialEndsAt: activePlan === "trial" ? subscriptionEndsAt : undefined
-            });
+                // Create Organization for SuperAdmin dashboard tracking
+                const { Organization } = await import("@/models/Organization");
+                const newOrgList = await Organization.create([{
+                    name: poolName,
+                    ownerId: newAdmin._id,
+                    planId: planDoc?._id || newAdmin._id, // Fallback if no plan found
+                    poolIds: [poolId],
+                    status: subscriptionStatus === "active" ? "active" : "trial",
+                    currentPeriodEnd: subscriptionEndsAt,
+                    trialEndsAt: activePlan === "trial" ? subscriptionEndsAt : undefined,
+                    referralCodeUsed: usedReferralDoc ? usedReferralDoc.code : undefined
+                }], { session });
+                const newOrg = newOrgList[0];
 
-            // If admin billing is present, create a BillingLog entry
-            if (adminBilling && adminBilling.amount > 0) {
-                try {
+                if (usedReferralDoc) {
+                    await recordReferralUsage(usedReferralDoc, newOrg._id, discountApplied, session);
+                }
+
+                // If admin billing is present, create a BillingLog entry
+                if (adminBilling && adminBilling.amount > 0) {
                     const { BillingLog } = await import("@/models/BillingLog");
                     const now = new Date();
                     const periodEnd = subscriptionEndsAt || now;
 
-                    await BillingLog.create({
+                    await BillingLog.create([{
                         orgId: newOrg._id, // Point to Organization instead of Pool
                         amount: adminBilling.amount,
                         method: adminBilling.paymentMode === "razorpay" ? "razorpay" : adminBilling.paymentMode === "upi" ? "upi" : adminBilling.paymentMode === "cash" ? "cash" : "manual",
                         paymentMode: `${adminBilling.paymentMode?.toUpperCase()} (Admin: ${adminBilling.payerName || "SuperAdmin"})`,
                         periodStart: now,
                         periodEnd,
-                    });
-                } catch (billingErr) {
-                    console.error("BillingLog creation failed (non-fatal):", billingErr);
+                    }], { session });
                 }
-            }
+
+                return { newPool, newAdmin };
+            });
 
             return NextResponse.json({
                 success: true,
                 pool: {
-                    poolId: newPool.poolId,
-                    poolName: newPool.poolName,
-                    slug: newPool.slug,
-                    status: newPool.status
+                    poolId: result.newPool.poolId,
+                    poolName: result.newPool.poolName,
+                    slug: result.newPool.slug,
+                    status: result.newPool.status
                 },
                 admin: {
-                    email: newAdmin.email,
-                    name: newAdmin.name
+                    email: result.newAdmin.email,
+                    name: result.newAdmin.name
                 }
             }, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         } catch (err: any) {

@@ -89,29 +89,32 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: string
             return NextResponse.json({ error: "Invalid confirmation text. Deletion aborted." }, { status: 400 });
         }
 
-        // CASCADE DELETE ALL RELATED DATA
-        const collectionsToDeleteFrom = [
-            { model: "BusinessTransaction", query: { businessId: id } },
-            { model: "BusinessCustomer", query: { businessId: id } },
-            { model: "BusinessLabour", query: { businessId: id } },
-            { model: "BusinessLabourPayment", query: { businessId: id } },
-            { model: "BusinessStock", query: { businessId: id } },
-            { model: "BusinessSale", query: { businessId: id } },
-            { model: "BusinessPayment", query: { businessId: id } },
-            { model: "BusinessAttendance", query: { businessId: id } },
-            { model: "User", query: { businessId: id } },
-        ];
+        const { withTransaction } = await import("@/lib/withTransaction");
+        await withTransaction(async (session) => {
+            // CASCADE DELETE ALL RELATED DATA
+            const collectionsToDeleteFrom = [
+                { model: "BusinessTransaction", query: { businessId: id } },
+                { model: "BusinessCustomer", query: { businessId: id } },
+                { model: "BusinessLabour", query: { businessId: id } },
+                { model: "BusinessLabourPayment", query: { businessId: id } },
+                { model: "BusinessStock", query: { businessId: id } },
+                { model: "BusinessSale", query: { businessId: id } },
+                { model: "BusinessPayment", query: { businessId: id } },
+                { model: "BusinessAttendance", query: { businessId: id } },
+                { model: "User", query: { businessId: id } },
+            ];
 
-        for (const item of collectionsToDeleteFrom) {
-            try {
-                const { [item.model]: ModelImport } = await import(`@/models/${item.model}`);
-                await ModelImport.deleteMany(item.query);
-            } catch (err) {
-                console.warn(`Could not delete from ${item.model}:`, err);
+            for (const item of collectionsToDeleteFrom) {
+                try {
+                    const { [item.model]: ModelImport } = await import(`@/models/${item.model}`);
+                    await ModelImport.deleteMany(item.query, { session });
+                } catch (err) {
+                    console.warn(`Could not delete from ${item.model}:`, err);
+                }
             }
-        }
 
-        await Business.deleteOne({ businessId: id });
+            await Business.deleteOne({ businessId: id }, { session });
+        });
 
         return NextResponse.json({ message: `Business "${business.name}" and all associated records deleted successfully` });
     } catch (error) {

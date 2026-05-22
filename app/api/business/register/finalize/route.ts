@@ -146,138 +146,132 @@ export async function POST(req: Request) {
         let appliedReferralCode = "";
         let discountApplied = 0;
 
-        // Re-validate and apply referral during finalize
-        if (pending.referralCode && !isTrial) {
-            try {
-                const { ReferralCode } = await import("@/models/ReferralCode");
-                const codeDoc = await ReferralCode.findOne({
-                    code: pending.referralCode,
-                    isActive: true
-                });
-                if (codeDoc && (!codeDoc.expiresAt || new Date(codeDoc.expiresAt) > now) && (codeDoc.maxUses === 0 || codeDoc.usedCount < codeDoc.maxUses)) {
-                    if (codeDoc.discountType === "percentage") {
-                        discountApplied = (amountPaid * codeDoc.discountValue) / 100;
-                    } else {
-                        discountApplied = codeDoc.discountValue;
-                    }
-                    amountPaid -= discountApplied;
-                    if (amountPaid <= 0) amountPaid = 1;
-                    amountPaid = Math.floor(amountPaid);
-                    
-                    appliedReferralCode = codeDoc.code;
-                    codeDoc.usedCount += 1;
-                    await codeDoc.save();
-                }
-            } catch (err) {
-                logger.error("Finalize referral validation error", { error: (err as Error).message });
-            }
-        }
-
         try {
-            // Create Business
-            const newBusiness = new Business({
-                businessId,
-                name: pending.businessName,
-                slug,
-                address: pending.address,
-                phone: pending.adminPhone,
-                gstNumber: pending.gstNumber || undefined,
-                isActive: true,
-            });
-            await newBusiness.save();
-
-            // Create User with active subscription
-            const newAdmin = new User({
-                name: pending.adminName,
-                email: pending.adminEmail,
-                passwordHash: pending.passwordHash,
-                role: "business_admin",
-                phone: pending.adminPhone,
-                businessId: businessId,
-                businessSlug: slug,
-                subscription: {
-                    module: "business",
-                    planType: pending.planType,
-                    pricePaid: amountPaid,
-                    startDate: now,
-                    expiryDate: subscriptionEndsAt,
-                    status: isTrial ? "trial" : "active",
-                },
-                ...(isTrial ? { trial: { isUsed: true, startDate: now, endDate: subscriptionEndsAt } } : {}),
-            });
-            await newAdmin.save();
-
-            // Link owner back to business
-            newBusiness.ownerId = newAdmin._id;
-            await newBusiness.save();
-
-            // Create Organization
-            const { SaaSPlan } = await import("@/models/SaaSPlan");
-            const planMap: Record<string, string> = {
-                trial: "Starter", quarterly: "Pro", yearly: "Enterprise",
-            };
-            const planSearchName = planMap[pending.planType] || "Pro";
-            const planDoc = await SaaSPlan.findOne({ name: { $regex: new RegExp(planSearchName, "i") } }) || await SaaSPlan.findOne({});
-
-            const { Organization } = await import("@/models/Organization");
-            const newOrg = await Organization.create({
-                name: pending.businessName,
-                ownerId: newAdmin._id,
-                planId: planDoc?._id || newAdmin._id,
-                businessIds: [businessId],
-                status: isTrial ? "trial" : "active",
-                currentPeriodEnd: subscriptionEndsAt,
-                trialEndsAt: isTrial ? subscriptionEndsAt : undefined,
-            });
-
-            // Create ReferralUsage if applied
-            if (appliedReferralCode && discountApplied > 0) {
-                try {
-                    const { ReferralUsage } = await import("@/models/ReferralUsage");
-                    await ReferralUsage.create({
-                        code: appliedReferralCode,
-                        orgId: newOrg._id,
-                        discountApplied
-                    });
-                } catch (usageErr) {
-                    console.error("ReferralUsage creation failed (non-fatal):", usageErr);
+            const { withTransaction } = await import("@/lib/withTransaction");
+            const result = await withTransaction(async (session) => {
+                // Re-validate and apply referral during finalize
+                if (pending.referralCode && !isTrial) {
+                    const { ReferralCode } = await import("@/models/ReferralCode");
+                    const codeDoc = await ReferralCode.findOne({
+                        code: pending.referralCode,
+                        isActive: true
+                    }).session(session || null);
+                    if (codeDoc && (!codeDoc.expiresAt || new Date(codeDoc.expiresAt) > now) && (codeDoc.maxUses === 0 || codeDoc.usedCount < codeDoc.maxUses)) {
+                        if (codeDoc.discountType === "percentage") {
+                            discountApplied = (amountPaid * codeDoc.discountValue) / 100;
+                        } else {
+                            discountApplied = codeDoc.discountValue;
+                        }
+                        amountPaid -= discountApplied;
+                        if (amountPaid <= 0) amountPaid = 1;
+                        amountPaid = Math.floor(amountPaid);
+                        
+                        appliedReferralCode = codeDoc.code;
+                    }
                 }
-            }
 
-            // Create BillingLog
-            try {
+                // Create Business
+                const newBusiness = new Business({
+                    businessId,
+                    name: pending.businessName,
+                    slug,
+                    address: pending.address,
+                    phone: pending.adminPhone,
+                    gstNumber: pending.gstNumber || undefined,
+                    isActive: true,
+                });
+                await newBusiness.save({ session });
+
+                // Create User with active subscription
+                const newAdmin = new User({
+                    name: pending.adminName,
+                    email: pending.adminEmail,
+                    passwordHash: pending.passwordHash,
+                    role: "business_admin",
+                    phone: pending.adminPhone,
+                    businessId: businessId,
+                    businessSlug: slug,
+                    subscription: {
+                        module: "business",
+                        planType: pending.planType,
+                        pricePaid: amountPaid,
+                        startDate: now,
+                        expiryDate: subscriptionEndsAt,
+                        status: isTrial ? "trial" : "active",
+                    },
+                    ...(isTrial ? { trial: { isUsed: true, startDate: now, endDate: subscriptionEndsAt } } : {}),
+                });
+                await newAdmin.save({ session });
+
+                // Link owner back to business
+                newBusiness.ownerId = newAdmin._id;
+                await newBusiness.save({ session });
+
+                // Create Organization
+                const { SaaSPlan } = await import("@/models/SaaSPlan");
+                const planMap: Record<string, string> = {
+                    trial: "Starter", quarterly: "Pro", yearly: "Enterprise",
+                };
+                const planSearchName = planMap[pending.planType] || "Pro";
+                const planDoc = await SaaSPlan.findOne({ name: { $regex: new RegExp(planSearchName, "i") } }).session(session || null) || await SaaSPlan.findOne({}).session(session || null);
+
+                const { Organization } = await import("@/models/Organization");
+                const newOrgList = await Organization.create([{
+                    name: pending.businessName,
+                    ownerId: newAdmin._id,
+                    planId: planDoc?._id || newAdmin._id,
+                    businessIds: [businessId],
+                    status: isTrial ? "trial" : "active",
+                    currentPeriodEnd: subscriptionEndsAt,
+                    trialEndsAt: isTrial ? subscriptionEndsAt : undefined,
+                    referralCodeUsed: appliedReferralCode || undefined
+                }], { session });
+
+                const newOrg = newOrgList[0];
+
+                // Create ReferralUsage if applied
+                if (appliedReferralCode && discountApplied > 0) {
+                    const { ReferralCode } = await import("@/models/ReferralCode");
+                    const codeDoc = await ReferralCode.findOne({ code: appliedReferralCode }).session(session || null);
+                    if (codeDoc) {
+                        const { recordReferralUsage } = await import("@/lib/referral");
+                        await recordReferralUsage(codeDoc, newOrg._id, discountApplied, session);
+                    }
+                }
+
+                // Create BillingLog
                 const { BillingLog } = await import("@/models/BillingLog");
-                await BillingLog.create({
+                await BillingLog.create([{
                     orgId: newOrg._id,
                     amount: amountPaid,
                     method: "razorpay",
                     paymentMode: "Razorpay (Public Registration)",
                     periodStart: now,
                     periodEnd: subscriptionEndsAt,
-                });
-            } catch (billingErr) {
-                console.error("BillingLog creation failed (non-fatal):", billingErr);
-            }
+                }], { session });
 
-            // Create SubscriptionPaymentLog
-            await SubscriptionPaymentLog.create({
-                userId: newAdmin._id,
-                businessId: businessId,
-                module: "business",
-                planType: pending.planType,
-                amount: amountPaid,
-                razorpayOrderId: razorpayOrderId || pending.razorpayOrderId || `mock_${Date.now()}`,
-                razorpayPaymentId: razorpayPaymentId || `mock_pay_${Date.now()}`,
-                status: "success",
+                // Create SubscriptionPaymentLog
+                await SubscriptionPaymentLog.create([{
+                    userId: newAdmin._id,
+                    businessId: businessId,
+                    module: "business",
+                    planType: pending.planType,
+                    amount: amountPaid,
+                    razorpayOrderId: razorpayOrderId || pending.razorpayOrderId || `mock_${Date.now()}`,
+                    razorpayPaymentId: razorpayPaymentId || `mock_pay_${Date.now()}`,
+                    status: "success",
+                }], { session });
+
+                // Mark pending as completed
+                pending.status = "completed" as any;
+                await pending.save({ session });
+
+                return { newAdmin, newBusiness };
             });
-
-            // 5. Mark pending as completed
-            pending.status = "completed" as any;
-            await pending.save();
 
             logger.audit({
                 type: "BUSINESS_REGISTERED_VIA_PAYMENT",
-                userId: newAdmin._id.toString(),
+                userId: result.newAdmin._id.toString(),
                 meta: { businessId, slug, planType: pending.planType, amountPaid },
             });
 

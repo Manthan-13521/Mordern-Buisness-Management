@@ -13,7 +13,7 @@ import mongoose from "mongoose";
  *            without a session (no transaction).
  */
 export async function withTransaction<T>(
-  fn: (session: mongoose.ClientSession | null) => Promise<T>
+  fn: (session: mongoose.ClientSession | undefined) => Promise<T>
 ): Promise<T> {
   const conn = mongoose.connection;
 
@@ -31,7 +31,7 @@ export async function withTransaction<T>(
 
   if (!supportsTransactions) {
     // ── Standalone: run without a session ───────────────────────────────
-    return fn(null);
+    return fn(undefined);
   }
 
   // ── Replica set / Atlas: full ACID transaction ───────────────────────
@@ -54,7 +54,7 @@ export async function withTransaction<T>(
 
     if (isUnsupported) {
       console.warn("[withTransaction] Transactions not supported on this tier, falling back to non-transactional write");
-      return fn(null);
+      return fn(undefined);
     }
 
     throw err;

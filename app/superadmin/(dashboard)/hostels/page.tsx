@@ -422,7 +422,8 @@ export default function SuperAdminHostelsPage() {
                                 onChange={(e) => setDeleteConfirmationText(e.target.value)}
                                 onPaste={(e) => e.preventDefault()}
                                 placeholder={expectedConfirmation}
-                                className="w-full rounded-xl border border-rose-500/30 bg-[#020617] px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-rose-500 transition-all font-mono"
+                                disabled={isActionLoading}
+                                className="w-full rounded-xl border border-rose-500/30 bg-[#020617] px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-rose-500 transition-all font-mono disabled:opacity-50 disabled:cursor-not-allowed"
                             />
                         </div>
 

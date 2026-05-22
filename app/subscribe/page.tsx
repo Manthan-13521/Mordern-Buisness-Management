@@ -2,8 +2,9 @@
 
 import { useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Waves, Eye, EyeOff, CheckCircle, Loader2, CreditCard, Banknote, Smartphone, Receipt, ArrowLeft, ShieldCheck } from "lucide-react";
+import { Waves, Eye, EyeOff, CheckCircle, Loader2, CreditCard, Banknote, Smartphone, Receipt, ArrowLeft, ShieldCheck, Sparkles } from "lucide-react";
 import { signIn } from "next-auth/react";
+import toast from "react-hot-toast";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +50,11 @@ function PoolRegisterForm() {
         remarks: "",
         planType: "quarterly",
         paymentMode: "upi",
+        referralCode: "",
     });
+    const [referral, setReferral] = useState<{ code: string, discountType: string, discountValue: number } | null>(null);
+    const [applyingReferral, setApplyingReferral] = useState(false);
+    const [referralError, setReferralError] = useState("");
 
     const selectedPlan = POOL_PLANS.find(p => p.id === billing.planType) || POOL_PLANS[1];
 
@@ -102,6 +107,7 @@ function PoolRegisterForm() {
                     amount: planInfo.price,
                     paymentMode: billingData.paymentMode,
                     duration: planInfo.duration,
+                    referralCode: referral?.code || undefined,
                 };
             }
 
@@ -138,6 +144,46 @@ function PoolRegisterForm() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleApplyReferral = async () => {
+        if (!billing.referralCode) return;
+        setApplyingReferral(true);
+        setReferralError("");
+        try {
+            const res = await fetch("/api/referral/validate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ referralCode: billing.referralCode })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setReferral({ code: data.code, discountType: data.discountType, discountValue: data.discountValue });
+                toast.success(`Referral code ${data.code} applied!`);
+            } else {
+                setReferral(null);
+                setReferralError(data.error || "Invalid referral code");
+                toast.error(data.error || "Invalid referral code");
+            }
+        } catch (error) {
+            setReferral(null);
+            setReferralError("Failed to validate referral");
+        } finally {
+            setApplyingReferral(false);
+        }
+    };
+
+    const calculateAdminTotal = () => {
+        let total = selectedPlan.price;
+        if (referral) {
+            if (referral.discountType === "percentage") {
+                total = total - (total * referral.discountValue / 100);
+            } else if (referral.discountType === "flat") {
+                total = total - referral.discountValue;
+            }
+            if (total <= 0) total = 1;
+        }
+        return Math.floor(total);
     };
 
     const handleAdminConfirm = async () => {
@@ -317,9 +363,37 @@ function PoolRegisterForm() {
                                         <span className="text-[#6b7280]">Payer</span>
                                         <span className="text-[#f9fafb] font-medium truncate ml-2">{billing.payerName || "—"}</span>
                                     </div>
+                                    
+                                    {/* Referral Code UI */}
+                                    <div className="py-2 border-b border-[#1f2937]">
+                                        <label className="block text-[#6b7280] mb-2 text-xs">Referral Code (Optional)</label>
+                                        <div className="flex gap-2">
+                                            <input 
+                                                type="text" 
+                                                value={billing.referralCode} 
+                                                onChange={e => { setBilling(b => ({ ...b, referralCode: e.target.value.toUpperCase() })); setReferral(null); setReferralError(""); }} 
+                                                placeholder="Enter code" 
+                                                className="flex-1 rounded-xl border border-[#1f2937] bg-[#020617] px-3 py-1.5 text-sm text-[#f9fafb] focus:outline-none focus:ring-1 focus:ring-[#8b5cf6] font-mono uppercase"
+                                            />
+                                            <button 
+                                                type="button" 
+                                                onClick={handleApplyReferral} 
+                                                disabled={applyingReferral || !billing.referralCode || !!referral}
+                                                className="px-3 py-1.5 bg-[#1f2937] hover:bg-[#374151] text-xs font-bold text-white rounded-xl transition disabled:opacity-50"
+                                            >
+                                                {applyingReferral ? <Loader2 className="h-4 w-4 animate-spin" /> : (referral ? "Applied" : "Apply")}
+                                            </button>
+                                        </div>
+                                        {referralError && <p className="text-xs text-rose-400 mt-1">{referralError}</p>}
+                                        {referral && <p className="text-xs text-emerald-400 mt-1 font-medium flex items-center gap-1"><Sparkles className="h-3 w-3" /> {referral.discountType === "percentage" ? `${referral.discountValue}%` : `₹${referral.discountValue}`} discount active</p>}
+                                    </div>
+                                    
                                     <div className="flex justify-between py-3 mt-2 rounded-xl bg-[#8b5cf6]/10 px-3">
                                         <span className="text-[#8b5cf6] font-bold">Total</span>
-                                        <span className="text-[#8b5cf6] font-black text-lg">₹{selectedPlan.price.toLocaleString("en-IN")}</span>
+                                        <div className="text-right">
+                                            {referral && <span className="block text-xs text-[#9ca3af] line-through font-normal">₹{selectedPlan.price.toLocaleString("en-IN")}</span>}
+                                            <span className="text-[#8b5cf6] font-black text-lg">₹{calculateAdminTotal().toLocaleString("en-IN")}</span>
+                                        </div>
                                     </div>
                                 </div>
 

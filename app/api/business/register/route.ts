@@ -7,6 +7,7 @@ import { logger } from "@/lib/logger";
 import { getPriceKey, SUBSCRIPTION_PRICES } from "@/lib/subscriptionConfig";
 import { razorpay, isRazorpayConfigured } from "@/lib/razorpay";
 import bcrypt from "bcryptjs";
+import { validateAndCalculateDiscount, recordReferralUsage } from "@/lib/referral";
 
 async function getNextBusinessId() {
     const lastBusiness = await Business.findOne({}, { businessId: 1 }).sort({ createdAt: -1 });
@@ -67,152 +68,125 @@ export async function POST(req: Request) {
             const subscriptionEndsAt = adminBilling ? new Date(Date.now() + days * 24 * 60 * 60 * 1000) : undefined;
 
             try {
-                const newBusiness = new Business({
-                    businessId,
-                    name: businessName,
-                    slug,
-                    address,
-                    phone: adminPhone,
-                    gstNumber: gstNumber || undefined,
-                    isActive: true,
-                });
+                const { withTransaction } = await import("@/lib/withTransaction");
+                const result = await withTransaction(async (session) => {
+                    const newBusiness = new Business({
+                        businessId,
+                        name: businessName,
+                        slug,
+                        address,
+                        phone: adminPhone,
+                        gstNumber: gstNumber || undefined,
+                        isActive: true,
+                    });
 
-                await newBusiness.save();
+                    await newBusiness.save({ session });
 
-                // Create SaaSPlan lookup for Organization
-                const { SaaSPlan } = await import("@/models/SaaSPlan");
-                const planMap: Record<string, string> = {
-                    quarterly: "Pro",
-                    yearly: "Enterprise",
-                    free: "Starter",
-                    pro: "Pro",
-                    enterprise: "Enterprise"
-                };
-                const planSearchName = planMap[activePlan] || "Starter";
-                const planDoc = await SaaSPlan.findOne({ name: { $regex: new RegExp(planSearchName, "i") } }) || await SaaSPlan.findOne({});
+                    // Create SaaSPlan lookup for Organization
+                    const { SaaSPlan } = await import("@/models/SaaSPlan");
+                    const planMap: Record<string, string> = {
+                        quarterly: "Pro",
+                        yearly: "Enterprise",
+                        free: "Starter",
+                        pro: "Pro",
+                        enterprise: "Enterprise"
+                    };
+                    const planSearchName = planMap[activePlan] || "Starter";
+                    const planDoc = await SaaSPlan.findOne({ name: { $regex: new RegExp(planSearchName, "i") } }).session(session || null) || await SaaSPlan.findOne({}).session(session || null);
 
-                const newAdmin = new User({
-                    name: adminName,
-                    email: normalizedEmail,
-                    passwordHash,
-                    role: "business_admin",
-                    phone: adminPhone,
-                    businessId: businessId,
-                    businessSlug: slug,
-                    // Business SaaS guard uses User.subscription
-                    subscription: adminBilling ? {
-                        module: "business",
-                        planType: adminBilling.planType,
-                        pricePaid: adminBilling.amount,
-                        startDate: new Date(),
-                        expiryDate: subscriptionEndsAt || new Date(),
-                        status: "active"
-                    } : undefined
-                });
+                    const newAdmin = new User({
+                        name: adminName,
+                        email: normalizedEmail,
+                        passwordHash,
+                        role: "business_admin",
+                        phone: adminPhone,
+                        businessId: businessId,
+                        businessSlug: slug,
+                        // Business SaaS guard uses User.subscription
+                        subscription: adminBilling ? {
+                            module: "business",
+                            planType: adminBilling.planType,
+                            pricePaid: adminBilling.amount,
+                            startDate: new Date(),
+                            expiryDate: subscriptionEndsAt || new Date(),
+                            status: "active"
+                        } : undefined
+                    });
 
-                await newAdmin.save();
+                    await newAdmin.save({ session });
 
-                // Link owner back to business
-                newBusiness.ownerId = newAdmin._id;
-                await newBusiness.save();
+                    // Link owner back to business
+                    newBusiness.ownerId = newAdmin._id;
+                    await newBusiness.save({ session });
 
-                let amountINR = 0;
-                let activePlanType = adminBilling.planType as any;
-                let priceKey = activePlanType === "trial" ? "trial" : getPriceKey(activePlanType, "business");
-                if (priceKey && SUBSCRIPTION_PRICES[priceKey] !== undefined) {
-                    amountINR = SUBSCRIPTION_PRICES[priceKey];
-                }
-
-                let usedReferralDoc = null;
-                let appliedDiscount = 0;
-
-                // 2) Validate Referral & Apply Discount
-                if (adminBilling.referralCode && activePlanType !== "trial") {
-                    try {
-                        const { ReferralCode } = await import("@/models/ReferralCode");
-                        const codeDoc = await ReferralCode.findOne({
-                            code: adminBilling.referralCode.toUpperCase().trim(),
-                            isActive: true
-                        });
-                        if (codeDoc && (!codeDoc.expiresAt || new Date(codeDoc.expiresAt) > new Date()) && (codeDoc.maxUses === 0 || codeDoc.usedCount < codeDoc.maxUses)) {
-                            if (codeDoc.discountType === "percentage") {
-                                appliedDiscount = (amountINR * codeDoc.discountValue) / 100;
-                            } else if (codeDoc.discountType === "flat") {
-                                appliedDiscount = codeDoc.discountValue;
-                            }
-                            amountINR -= appliedDiscount;
-                            if (amountINR <= 0) amountINR = 1;
-                            amountINR = Math.floor(amountINR);
-                            usedReferralDoc = codeDoc;
-                        }
-                    } catch (refErr) {
-                        console.error("Referral validation failed (non-fatal):", refErr);
+                    let amountINR = 0;
+                    let activePlanType = adminBilling.planType as any;
+                    let priceKey = activePlanType === "trial" ? "trial" : getPriceKey(activePlanType, "business");
+                    if (priceKey && SUBSCRIPTION_PRICES[priceKey] !== undefined) {
+                        amountINR = SUBSCRIPTION_PRICES[priceKey];
                     }
-                }
 
-                // Override client amount with authoritative amount
-                adminBilling.amount = amountINR;
+                    // 2) Validate Referral & Apply Discount
+                    const { finalAmount, discountApplied, usedReferralDoc } = await validateAndCalculateDiscount(
+                        adminBilling.referralCode,
+                        activePlanType,
+                        amountINR
+                    );
+                    amountINR = finalAmount;
 
-                // Create Organization for SuperAdmin dashboard tracking
-                const { Organization } = await import("@/models/Organization");
-                const newOrg = await Organization.create({
-                    name: businessName,
-                    ownerId: newAdmin._id,
-                    planId: planDoc?._id || newAdmin._id,
-                    businessIds: [businessId],
-                    status: adminBilling ? "active" : "trial",
-                    currentPeriodEnd: subscriptionEndsAt,
-                    trialEndsAt: activePlan === "trial" ? subscriptionEndsAt : undefined,
-                    referralCodeUsed: usedReferralDoc ? usedReferralDoc.code : undefined,
-                });
+                    // Override client amount with authoritative amount
+                    adminBilling.amount = amountINR;
 
-                // Record usage if referral applied
-                if (usedReferralDoc) {
-                    try {
-                        const { ReferralUsage } = await import("@/models/ReferralUsage");
-                        await ReferralUsage.create({
-                            code: usedReferralDoc.code,
-                            orgId: newOrg._id,
-                            discountApplied: appliedDiscount,
-                        });
-                        usedReferralDoc.usedCount += 1;
-                        await usedReferralDoc.save();
-                    } catch (usageErr) {
-                        console.error("ReferralUsage creation failed (non-fatal):", usageErr);
+                    // Create Organization for SuperAdmin dashboard tracking
+                    const { Organization } = await import("@/models/Organization");
+                    const newOrgList = await Organization.create([{
+                        name: businessName,
+                        ownerId: newAdmin._id,
+                        planId: planDoc?._id || newAdmin._id,
+                        businessIds: [businessId],
+                        status: adminBilling ? "active" : "trial",
+                        currentPeriodEnd: subscriptionEndsAt,
+                        trialEndsAt: activePlan === "trial" ? subscriptionEndsAt : undefined,
+                        referralCodeUsed: usedReferralDoc ? usedReferralDoc.code : undefined,
+                    }], { session });
+
+                    const newOrg = newOrgList[0];
+
+                    // Record usage if referral applied
+                    if (usedReferralDoc) {
+                        await recordReferralUsage(usedReferralDoc, newOrg._id, discountApplied, session);
                     }
-                }
 
-                // If admin billing is present, create a BillingLog entry
-                if (adminBilling && adminBilling.amount > 0) {
-                    try {
+                    // If admin billing is present, create a BillingLog entry
+                    if (adminBilling && adminBilling.amount > 0) {
                         const { BillingLog } = await import("@/models/BillingLog");
                         const now = new Date();
                         const periodEnd = subscriptionEndsAt || now;
 
-                        await BillingLog.create({
+                        await BillingLog.create([{
                             orgId: newOrg._id, // Point to Organization instead of Business for unified analytics
                             amount: adminBilling.amount,
                             method: adminBilling.paymentMode === "razorpay" ? "razorpay" : adminBilling.paymentMode === "upi" ? "upi" : adminBilling.paymentMode === "cash" ? "cash" : "manual",
                             paymentMode: `${adminBilling.paymentMode?.toUpperCase()} (Admin: ${adminBilling.payerName || "SuperAdmin"})`,
                             periodStart: now,
                             periodEnd,
-                        });
-                    } catch (billingErr) {
-                        console.error("BillingLog creation failed (non-fatal):", billingErr);
+                        }], { session });
                     }
-                }
+
+                    return { newBusiness, newAdmin };
+                });
 
                 return NextResponse.json({
                     success: true,
                     business: {
-                        businessId: newBusiness.businessId,
-                        name: newBusiness.name,
-                        slug: newBusiness.slug,
-                        isActive: newBusiness.isActive
+                        businessId: result.newBusiness.businessId,
+                        name: result.newBusiness.name,
+                        slug: result.newBusiness.slug,
+                        isActive: result.newBusiness.isActive
                     },
                     admin: {
-                        email: newAdmin.email,
-                        name: newAdmin.name
+                        email: result.newAdmin.email,
+                        name: result.newAdmin.name
                     }
                 }, { status: 201 });
             } catch (err: any) {
@@ -252,30 +226,16 @@ export async function POST(req: Request) {
             let amountINR = SUBSCRIPTION_PRICES[priceKey];
 
             // Apply referral discount
-            if (referralCode && planType !== "trial") {
-                try {
-                    const { ReferralCode } = await import("@/models/ReferralCode");
-                    const codeDoc = await ReferralCode.findOne({
-                        code: referralCode.toUpperCase().trim(),
-                        isActive: true
-                    });
-                    if (codeDoc && (!codeDoc.expiresAt || new Date(codeDoc.expiresAt) > new Date()) && (codeDoc.maxUses === 0 || codeDoc.usedCount < codeDoc.maxUses)) {
-                        let discount = 0;
-                        if (codeDoc.discountType === "percentage") {
-                            discount = (amountINR * codeDoc.discountValue) / 100;
-                        } else if (codeDoc.discountType === "flat") {
-                            discount = codeDoc.discountValue;
-                        }
-                        amountINR -= discount;
-                        if (amountINR <= 0) amountINR = 1;
-                        amountINR = Math.floor(amountINR);
-                        
-                        // Persist validated referral code
-                        pending.referralCode = codeDoc.code;
-                    }
-                } catch (refErr) {
-                    console.error("Referral validation failed (non-fatal):", refErr);
-                }
+            const { finalAmount } = await validateAndCalculateDiscount(
+                referralCode,
+                planType,
+                amountINR
+            );
+            
+            if (finalAmount !== amountINR) {
+                // If a discount was applied, finalAmount will be less
+                amountINR = finalAmount;
+                pending.referralCode = referralCode.toUpperCase().trim();
             }
 
             const amountPaise = amountINR * 100;

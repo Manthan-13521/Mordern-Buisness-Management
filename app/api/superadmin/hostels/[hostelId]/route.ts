@@ -130,57 +130,60 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ hoste
             return NextResponse.json({ error: "Invalid confirmation text. Deletion aborted." }, { status: 400 });
         }
 
-        // Cascade delete
-        try {
-            const { User } = await import("@/models/User");
-            await User.deleteMany({ hostelId });
-        } catch {}
-        try {
-            const { HostelBlock } = await import("@/models/HostelBlock");
-            await HostelBlock.deleteMany({ hostelId });
-        } catch {}
-        try {
-            const { HostelFloor } = await import("@/models/HostelFloor");
-            await HostelFloor.deleteMany({ hostelId });
-        } catch {}
-        try {
-            const { HostelRoom } = await import("@/models/HostelRoom");
-            await HostelRoom.deleteMany({ hostelId });
-        } catch {}
-        try {
-            const { HostelMember } = await import("@/models/HostelMember");
-            await HostelMember.deleteMany({ hostelId });
-        } catch {}
-        try {
-            const { HostelStaff } = await import("@/models/HostelStaff");
-            await HostelStaff.deleteMany({ hostelId });
-        } catch {}
-        try {
-            const { HostelStaffAttendance } = await import("@/models/HostelStaffAttendance");
-            await HostelStaffAttendance.deleteMany({ hostelId });
-        } catch {}
-        try {
-            const { HostelPayment } = await import("@/models/HostelPayment");
-            await HostelPayment.deleteMany({ hostelId });
-        } catch {}
-        try {
-            const { HostelRenewal } = await import("@/models/HostelRenewal");
-            await HostelRenewal.deleteMany({ hostelId });
-        } catch {}
-        try {
-            const { HostelSettings } = await import("@/models/HostelSettings");
-            await HostelSettings.deleteMany({ hostelId });
-        } catch {}
-        try {
-            const { HostelLog } = await import("@/models/HostelLog");
-            await HostelLog.deleteMany({ hostelId });
-        } catch {}
-        try {
-            const { HostelPlan } = await import("@/models/HostelPlan");
-            await HostelPlan.deleteMany({ hostelId });
-        } catch {}
+        const { withTransaction } = await import("@/lib/withTransaction");
+        await withTransaction(async (session) => {
+            // Cascade delete
+            try {
+                const { User } = await import("@/models/User");
+                await User.deleteMany({ hostelId }, { session });
+            } catch {}
+            try {
+                const { HostelBlock } = await import("@/models/HostelBlock");
+                await HostelBlock.deleteMany({ hostelId }, { session });
+            } catch {}
+            try {
+                const { HostelFloor } = await import("@/models/HostelFloor");
+                await HostelFloor.deleteMany({ hostelId }, { session });
+            } catch {}
+            try {
+                const { HostelRoom } = await import("@/models/HostelRoom");
+                await HostelRoom.deleteMany({ hostelId }, { session });
+            } catch {}
+            try {
+                const { HostelMember } = await import("@/models/HostelMember");
+                await HostelMember.deleteMany({ hostelId }, { session });
+            } catch {}
+            try {
+                const { HostelStaff } = await import("@/models/HostelStaff");
+                await HostelStaff.deleteMany({ hostelId }, { session });
+            } catch {}
+            try {
+                const { HostelStaffAttendance } = await import("@/models/HostelStaffAttendance");
+                await HostelStaffAttendance.deleteMany({ hostelId }, { session });
+            } catch {}
+            try {
+                const { HostelPayment } = await import("@/models/HostelPayment");
+                await HostelPayment.deleteMany({ hostelId }, { session });
+            } catch {}
+            try {
+                const { HostelRenewal } = await import("@/models/HostelRenewal");
+                await HostelRenewal.deleteMany({ hostelId }, { session });
+            } catch {}
+            try {
+                const { HostelSettings } = await import("@/models/HostelSettings");
+                await HostelSettings.deleteMany({ hostelId }, { session });
+            } catch {}
+            try {
+                const { HostelLog } = await import("@/models/HostelLog");
+                await HostelLog.deleteMany({ hostelId }, { session });
+            } catch {}
+            try {
+                const { HostelPlan } = await import("@/models/HostelPlan");
+                await HostelPlan.deleteMany({ hostelId }, { session });
+            } catch {}
 
-        await Hostel.deleteOne({ hostelId });
+            await Hostel.deleteOne({ hostelId }, { session });
+        });
 
         return NextResponse.json({ message: `Hostel "${hostel.hostelName}" deleted successfully` });
     } catch (error: any) {
