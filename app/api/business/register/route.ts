@@ -116,6 +116,43 @@ export async function POST(req: Request) {
                 newBusiness.ownerId = newAdmin._id;
                 await newBusiness.save();
 
+                let amountINR = 0;
+                let activePlanType = adminBilling.planType as any;
+                let priceKey = activePlanType === "trial" ? "trial" : getPriceKey(activePlanType, "business");
+                if (priceKey && SUBSCRIPTION_PRICES[priceKey] !== undefined) {
+                    amountINR = SUBSCRIPTION_PRICES[priceKey];
+                }
+
+                let usedReferralDoc = null;
+                let appliedDiscount = 0;
+
+                // 2) Validate Referral & Apply Discount
+                if (adminBilling.referralCode && activePlanType !== "trial") {
+                    try {
+                        const { ReferralCode } = await import("@/models/ReferralCode");
+                        const codeDoc = await ReferralCode.findOne({
+                            code: adminBilling.referralCode.toUpperCase().trim(),
+                            isActive: true
+                        });
+                        if (codeDoc && (!codeDoc.expiresAt || new Date(codeDoc.expiresAt) > new Date()) && (codeDoc.maxUses === 0 || codeDoc.usedCount < codeDoc.maxUses)) {
+                            if (codeDoc.discountType === "percentage") {
+                                appliedDiscount = (amountINR * codeDoc.discountValue) / 100;
+                            } else if (codeDoc.discountType === "flat") {
+                                appliedDiscount = codeDoc.discountValue;
+                            }
+                            amountINR -= appliedDiscount;
+                            if (amountINR <= 0) amountINR = 1;
+                            amountINR = Math.floor(amountINR);
+                            usedReferralDoc = codeDoc;
+                        }
+                    } catch (refErr) {
+                        console.error("Referral validation failed (non-fatal):", refErr);
+                    }
+                }
+
+                // Override client amount with authoritative amount
+                adminBilling.amount = amountINR;
+
                 // Create Organization for SuperAdmin dashboard tracking
                 const { Organization } = await import("@/models/Organization");
                 const newOrg = await Organization.create({
@@ -125,8 +162,25 @@ export async function POST(req: Request) {
                     businessIds: [businessId],
                     status: adminBilling ? "active" : "trial",
                     currentPeriodEnd: subscriptionEndsAt,
-                    trialEndsAt: activePlan === "trial" ? subscriptionEndsAt : undefined
+                    trialEndsAt: activePlan === "trial" ? subscriptionEndsAt : undefined,
+                    referralCodeUsed: usedReferralDoc ? usedReferralDoc.code : undefined,
                 });
+
+                // Record usage if referral applied
+                if (usedReferralDoc) {
+                    try {
+                        const { ReferralUsage } = await import("@/models/ReferralUsage");
+                        await ReferralUsage.create({
+                            code: usedReferralDoc.code,
+                            orgId: newOrg._id,
+                            discountApplied: appliedDiscount,
+                        });
+                        usedReferralDoc.usedCount += 1;
+                        await usedReferralDoc.save();
+                    } catch (usageErr) {
+                        console.error("ReferralUsage creation failed (non-fatal):", usageErr);
+                    }
+                }
 
                 // If admin billing is present, create a BillingLog entry
                 if (adminBilling && adminBilling.amount > 0) {

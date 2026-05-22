@@ -43,6 +43,7 @@ export default function ManageBusinessesPage() {
     const [newPassword, setNewPassword] = useState("");
     const [showPass, setShowPass] = useState(false);
     const [isActionLoading, setIsActionLoading] = useState(false);
+    const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
 
     useEffect(() => {
         fetchBusinesses();
@@ -87,17 +88,20 @@ export default function ManageBusinessesPage() {
         }
     };
 
-    const deleteBusiness = async (businessId: string) => {
+    const deleteBusiness = async (businessId: string, confirmationText: string) => {
         setIsActionLoading(true);
         try {
             const res = await fetch(`/api/superadmin/businesses/${businessId}`, {
                 method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ confirmationText })
             });
             const data = await res.json();
             if (res.ok) {
                 toast.success("Business and all data deleted permanently");
                 fetchBusinesses();
                 setShowDeleteModal(null);
+                setDeleteConfirmationText("");
             } else {
                 toast.error(data.error || "Failed to delete business");
             }
@@ -278,7 +282,7 @@ export default function ManageBusinessesPage() {
                                                 {business.isActive ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                                             </button>
                                             <button 
-                                                onClick={() => setShowDeleteModal(business.businessId)}
+                                                onClick={() => { setShowDeleteModal(business.businessId); setDeleteConfirmationText(""); }}
                                                 className="p-2 hover:bg-rose-500/10 rounded-lg text-rose-400 hover:text-rose-400 transition-all shadow-sm"
                                                 title="Delete Business"
                                                 disabled={isActionLoading}
@@ -363,7 +367,13 @@ export default function ManageBusinessesPage() {
             )}
 
             {/* Cascade Delete Modal */}
-            {showDeleteModal && (
+            {showDeleteModal && (() => {
+                const businessToDelete = businesses.find(b => b.businessId === showDeleteModal);
+                if (!businessToDelete) return null;
+                const expectedConfirmation = `delete ${businessToDelete.name}`;
+                const isValid = deleteConfirmationText === expectedConfirmation;
+                
+                return (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in zoom-in-95 duration-200">
                     <div className="bg-[#0b1220] border border-rose-500/20 rounded-3xl w-full max-w-md p-8 shadow-2xl relative overflow-hidden">
                         <div className="absolute top-0 left-0 w-full h-1 bg-rose-500/50" />
@@ -384,25 +394,40 @@ export default function ManageBusinessesPage() {
                             <Info className="h-4 w-4 shrink-0" /> IRREVERSIBLE ACTION
                         </div>
                         
+                        <div className="mt-6 space-y-2">
+                            <label className="block text-xs font-bold text-slate-400 mb-1.5">
+                                Type <span className="text-rose-400 select-all font-mono bg-rose-500/10 px-1 py-0.5 rounded">{expectedConfirmation}</span> to confirm.
+                            </label>
+                            <input
+                                type="text"
+                                value={deleteConfirmationText}
+                                onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                                onPaste={(e) => e.preventDefault()}
+                                placeholder={expectedConfirmation}
+                                className="w-full rounded-xl border border-rose-500/30 bg-[#020617] px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-rose-500 transition-all font-mono"
+                            />
+                        </div>
+                        
                         <div className="grid grid-cols-2 gap-3 mt-8">
                             <button 
-                                onClick={() => setShowDeleteModal(null)}
-                                className="py-3.5 text-sm font-bold bg-[#0b1220] hover:bg-neutral-700 text-white rounded-xl transition-all"
+                                onClick={() => { setShowDeleteModal(null); setDeleteConfirmationText(""); }}
+                                className="py-3.5 text-sm font-bold bg-[#0b1220] hover:bg-neutral-700 text-white rounded-xl transition-all disabled:opacity-50"
                                 disabled={isActionLoading}
                             >
                                 Cancel
                             </button>
                             <button 
-                                onClick={() => deleteBusiness(showDeleteModal)}
-                                className="py-3.5 text-sm font-bold bg-red-700 hover:bg-red-600 text-white rounded-xl transition-all shadow-lg shadow-red-900/20 flex items-center justify-center gap-2 disabled:opacity-50"
-                                disabled={isActionLoading}
+                                onClick={() => isValid && deleteBusiness(showDeleteModal, deleteConfirmationText)}
+                                className="py-3.5 text-sm font-bold bg-red-700 hover:bg-red-600 text-white rounded-xl transition-all shadow-lg shadow-red-900/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:bg-red-700 disabled:cursor-not-allowed"
+                                disabled={isActionLoading || !isValid}
                             >
                                 {isActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete System"}
                             </button>
                         </div>
                     </div>
                 </div>
-            )}
+                );
+            })()}
 
             {/* Reset Password Modal */}
             {resetTarget && (

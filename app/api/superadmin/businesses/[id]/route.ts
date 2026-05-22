@@ -77,9 +77,16 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: string
         }
 
         const { id } = await props.params;
+        const body = await req.json().catch(() => ({}));
+        const confirmationText = body.confirmationText?.trim();
+
         const business = await Business.findOne({ businessId: id });
         if (!business) {
             return NextResponse.json({ error: "Business not found" }, { status: 404 });
+        }
+
+        if (confirmationText !== `delete ${business.name}`) {
+            return NextResponse.json({ error: "Invalid confirmation text. Deletion aborted." }, { status: 400 });
         }
 
         // CASCADE DELETE ALL RELATED DATA

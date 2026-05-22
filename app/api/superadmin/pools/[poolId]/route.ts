@@ -82,11 +82,18 @@ export async function DELETE(req: Request, props: { params: Promise<{ poolId: st
         if (!poolId) {
             return NextResponse.json({ error: "Missing pool ID" }, { status: 400 });
         }
+        
+        const body = await req.json().catch(() => ({}));
+        const confirmationText = body.confirmationText?.trim();
 
         // Find the pool first
         const pool = await Pool.findOne({ poolId });
         if (!pool) {
             return NextResponse.json({ error: "Pool not found" }, { status: 404 });
+        }
+
+        if (confirmationText !== `delete ${pool.poolName}`) {
+            return NextResponse.json({ error: "Invalid confirmation text. Deletion aborted." }, { status: 400 });
         }
 
         // ── Cascade delete ALL tenant-scoped data ────────────────────────

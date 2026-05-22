@@ -105,7 +105,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ hostel
     }
 }
 
-// DELETE /api/superadmin/hostels/[hostelId] — cascade delete hostel and all associated data
 export async function DELETE(req: Request, { params }: { params: Promise<{ hostelId: string }> }) {
     try {
         const [user, { hostelId }] = await Promise.all([resolveUser(req), params]);
@@ -115,6 +114,9 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ hoste
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
+        const body = await req.json().catch(() => ({}));
+        const confirmationText = body.confirmationText?.trim();
+
         if (!hostelId) {
             return NextResponse.json({ error: "Missing hostel ID" }, { status: 400 });
         }
@@ -122,6 +124,10 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ hoste
         const hostel = await Hostel.findOne({ hostelId });
         if (!hostel) {
             return NextResponse.json({ error: "Hostel not found" }, { status: 404 });
+        }
+
+        if (confirmationText !== `delete ${hostel.hostelName}`) {
+            return NextResponse.json({ error: "Invalid confirmation text. Deletion aborted." }, { status: 400 });
         }
 
         // Cascade delete
