@@ -26,7 +26,7 @@ export async function GET(req: Request) {
         }).lean<IAd[]>();
 
         if (!activeAds || activeAds.length === 0) {
-            return NextResponse.json({ cornerAd: null, popupAd: null });
+            return NextResponse.json({ cornerAd: null, popupAds: [] });
         }
 
         // Group ads by type (corner, popup, both)
@@ -46,11 +46,11 @@ export async function GET(req: Request) {
         };
 
         const topCornerAd = pickTopAd(cornerAds);
-        const topPopupAd = pickTopAd(popupAds);
+        const sortedPopupAds = popupAds.sort((a, b) => b.priority - a.priority);
 
         return NextResponse.json({
             cornerAd: topCornerAd,
-            popupAd: topPopupAd,
+            popupAds: sortedPopupAds,
         }, {
             headers: {
                 "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120"

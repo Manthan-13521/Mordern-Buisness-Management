@@ -9,7 +9,7 @@ import { AdModal } from "./AdModal";
 export function AdProvider({ children, moduleName }: { children: React.ReactNode; moduleName: string }) {
     const pathname = usePathname();
     const [cornerAd, setCornerAd] = useState<any>(null);
-    const [popupAd, setPopupAd] = useState<any>(null);
+    const [popupAds, setPopupAds] = useState<any[]>([]);
     const [activeModalAd, setActiveModalAd] = useState<any>(null);
     
     // Determine the page from the pathname
@@ -61,29 +61,30 @@ export function AdProvider({ children, moduleName }: { children: React.ReactNode
                     setCornerAd(null);
                 }
 
-                if (data.popupAd) {
-                    // Check cooldown
-                    const cooldownKey = `ad_popup_dismissed_${data.popupAd._id}`;
-                    const lastDismissed = localStorage.getItem(cooldownKey);
-                    let shouldShow = true;
-
-                    if (lastDismissed) {
-                        const dismissedAt = new Date(lastDismissed).getTime();
-                        const now = new Date().getTime();
-                        const intervalMs = (data.popupAd.displayIntervalMinutes || 30) * 60 * 1000;
-                        if (now - dismissedAt < intervalMs) {
-                            shouldShow = false;
+                if (data.popupAds && data.popupAds.length > 0) {
+                    const now = new Date().getTime();
+                    const validAds = data.popupAds.filter((ad: any) => {
+                        const cooldownKey = `ad_popup_dismissed_${ad._id}`;
+                        const lastDismissed = localStorage.getItem(cooldownKey);
+                        if (lastDismissed) {
+                            const dismissedAt = new Date(lastDismissed).getTime();
+                            const intervalMs = (ad.displayIntervalMinutes || 30) * 60 * 1000;
+                            if (now - dismissedAt < intervalMs) {
+                                return false;
+                            }
                         }
-                    }
+                        return true;
+                    });
 
-                    if (shouldShow) {
-                        setPopupAd(data.popupAd);
-                        trackEvent(data.popupAd._id, "impression");
+                    if (validAds.length > 0) {
+                        setPopupAds(validAds);
+                        // Track impression for the first ad initially. The PopupAd component will handle subsequent impressions if there are multiple.
+                        trackEvent(validAds[0]._id, "impression");
                     } else {
-                        setPopupAd(null);
+                        setPopupAds([]);
                     }
                 } else {
-                    setPopupAd(null);
+                    setPopupAds([]);
                 }
             } catch (error) {
                 console.error("Error fetching ads", error);
@@ -97,19 +98,25 @@ export function AdProvider({ children, moduleName }: { children: React.ReactNode
         };
     }, [pathname, moduleName, getPageName, trackEvent]);
 
-    const handlePopupDismiss = useCallback(() => {
-        if (popupAd) {
-            localStorage.setItem(`ad_popup_dismissed_${popupAd._id}`, new Date().toISOString());
-            setPopupAd(null);
+    const handlePopupDismiss = useCallback((adId?: string) => {
+        if (!adId) {
+            // Dismiss all currently shown ads if no ID provided (e.g., closing the modal)
+            popupAds.forEach(ad => {
+                localStorage.setItem(`ad_popup_dismissed_${ad._id}`, new Date().toISOString());
+            });
+            setPopupAds([]);
+        } else {
+            localStorage.setItem(`ad_popup_dismissed_${adId}`, new Date().toISOString());
+            setPopupAds(prev => prev.filter(a => a._id !== adId));
         }
-    }, [popupAd]);
+    }, [popupAds]);
 
     const handleAdClick = useCallback((ad: any) => {
         trackEvent(ad._id, "click");
         setActiveModalAd(ad);
         if (ad.type === "popup" || ad.type === "both") {
-             // Also treat click as dismiss for the popup so it doesn't stay behind the modal
-             handlePopupDismiss();
+             // Treat click as dismiss for this specific ad
+             handlePopupDismiss(ad._id);
         }
     }, [trackEvent, handlePopupDismiss]);
 
@@ -124,11 +131,13 @@ export function AdProvider({ children, moduleName }: { children: React.ReactNode
                 />
             )}
             
-            {popupAd && (
+            {popupAds.length > 0 && (
                 <PopupAd 
-                    ad={popupAd} 
-                    onDismiss={handlePopupDismiss} 
-                    onClick={() => handleAdClick(popupAd)} 
+                    ads={popupAds} 
+                    onDismiss={() => handlePopupDismiss()} 
+                    onAdDismiss={(adId) => handlePopupDismiss(adId)}
+                    onClick={handleAdClick}
+                    onImpression={(adId) => trackEvent(adId, "impression")}
                 />
             )}
 
