@@ -4,7 +4,7 @@ import { Ad } from "@/models/Ad";
 import mongoose from "mongoose";
 
 // Naive in-memory deduplication cache for serverless environments
-// Structure: { "ip-adId-event": timestamp }
+// Structure: { "ip-adId-slot-device-event": timestamp }
 const trackingCache = new Map<string, number>();
 
 // Clean up cache every 15 minutes to prevent memory leaks
@@ -20,7 +20,7 @@ setInterval(() => {
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { adId, event, sessionId } = body;
+        const { adId, event, sessionId, slotName, deviceType = "desktop" } = body;
 
         if (!adId || !event || !["impression", "click", "dismissal"].includes(event)) {
             return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
@@ -34,15 +34,15 @@ export async function POST(req: Request) {
         // Use sessionId provided by client, fallback to x-forwarded-for IP
         const ip = req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown-ip";
         const identifier = sessionId || ip;
-        const cacheKey = `${identifier}-${adId}-${event}`;
+        const cacheKey = `${identifier}-${adId}-${slotName || 'global'}-${deviceType}-${event}`;
         const now = Date.now();
 
         const lastTracked = trackingCache.get(cacheKey);
         if (lastTracked) {
             // Deduplication thresholds:
-            // Impressions: once per 5 minutes per user per ad
-            // Clicks: once per 1 minute per user per ad
-            // Dismissals: once per 10 minutes per user per ad
+            // Impressions: once per 5 minutes per user per ad per slot
+            // Clicks: once per 1 minute per user per ad per slot
+            // Dismissals: once per 10 minutes per user per ad per slot
             const thresholds: Record<string, number> = {
                 impression: 5 * 60 * 1000,
                 click: 60 * 1000,
@@ -60,16 +60,57 @@ export async function POST(req: Request) {
         trackingCache.set(cacheKey, now);
 
         await dbConnect();
-
-        // Use atomic $inc to prevent race conditions during high concurrency
-        let update = {};
-        if (event === "impression") update = { $inc: { impressions: 1 } };
-        else if (event === "click") update = { $inc: { clicks: 1 } };
-        else if (event === "dismissal") update = { $inc: { dismissals: 1 } };
         
-        await Ad.updateOne({ _id: adId }, update);
+        // Find the ad to update
+        const ad = await Ad.findById(adId);
+        if (!ad) {
+            return NextResponse.json({ error: "Ad not found" }, { status: 404 });
+        }
 
-        return NextResponse.json({ success: true });
+        // Increment global metrics
+        ad[event as "impressions" | "clicks" | "dismissals"] += 1;
+        
+        // Find or create slot analytics
+        let slotIndex = ad.slotAnalytics.findIndex((s: any) => s.slotName === slotName);
+        if (slotIndex === -1 && slotName) {
+            ad.slotAnalytics.push({
+                slotName: slotName,
+                impressions: 0,
+                clicks: 0,
+                dismissals: 0,
+                ctr: 0,
+                deviceAnalytics: {
+                    desktop: { impressions: 0, clicks: 0 },
+                    tablet: { impressions: 0, clicks: 0 },
+                    mobile: { impressions: 0, clicks: 0 }
+                }
+            });
+            slotIndex = ad.slotAnalytics.length - 1;
+        }
+
+        if (slotIndex !== -1) {
+            // Increment slot-specific metrics
+            const slotData = ad.slotAnalytics[slotIndex];
+            if (event === "impression") slotData.impressions += 1;
+            if (event === "click") slotData.clicks += 1;
+            if (event === "dismissal") slotData.dismissals += 1;
+
+            // Recalculate slot CTR
+            if (slotData.impressions > 0) {
+                slotData.ctr = slotData.clicks / slotData.impressions;
+            }
+
+            // Increment device metrics
+            const validDevices = ["desktop", "tablet", "mobile"];
+            const device = validDevices.includes(deviceType) ? deviceType as "desktop" | "tablet" | "mobile" : "desktop";
+            if (event === "impression") slotData.deviceAnalytics[device].impressions += 1;
+            if (event === "click") slotData.deviceAnalytics[device].clicks += 1;
+        }
+
+        // Save doc
+        await ad.save();
+
+        return NextResponse.json({ success: true, cacheKey });
     } catch (error) {
         console.error("POST /api/ads/track error:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

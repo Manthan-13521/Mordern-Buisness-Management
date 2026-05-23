@@ -4,11 +4,26 @@ import { useEffect, useState, useCallback, createContext, useContext } from "rea
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { AdSlotName } from "@/lib/ad-slots";
-import { v4 as uuidv4 } from "uuid";
+
+type DeviceType = "mobile" | "tablet" | "desktop";
+
+function getDeviceType(): DeviceType {
+    const width = window.innerWidth;
+    if (width < 768) return "mobile";
+    if (width < 1024) return "tablet";
+    return "desktop";
+}
+
+function generateId(): string {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
 
 interface AdContextType {
     slots: Record<string, any | any[]>;
-    trackEvent: (adId: string, event: "impression" | "click" | "dismissal") => void;
+    trackEvent: (adId: string, event: "impression" | "click" | "dismissal", slotName?: string) => void;
 }
 
 const AdContext = createContext<AdContextType>({
@@ -21,23 +36,26 @@ export function useAdSlot(slotName: AdSlotName) {
     return context.slots[slotName] || null;
 }
 
+export function useAdTrack() {
+    const context = useContext(AdContext);
+    return context.trackEvent;
+}
+
 export function AdProvider({ children, moduleName }: { children: React.ReactNode; moduleName: string }) {
     const pathname = usePathname();
     const { data: session } = useSession();
     const [slots, setSlots] = useState<Record<string, any | any[]>>({});
     const [sessionId, setSessionId] = useState<string>("");
 
-    // Initialize an anonymous session ID for tracking/deduplication
     useEffect(() => {
         let sid = localStorage.getItem("ad_session_id");
         if (!sid) {
-            sid = uuidv4();
+            sid = generateId();
             localStorage.setItem("ad_session_id", sid);
         }
         setSessionId(sid);
     }, []);
     
-    // Determine the page from the pathname
     const getPageName = useCallback(() => {
         if (!pathname) return "dashboard";
         const parts = pathname.split("/").filter(Boolean);
@@ -46,14 +64,15 @@ export function AdProvider({ children, moduleName }: { children: React.ReactNode
         return lastPart;
     }, [pathname, moduleName]);
 
-    const trackEvent = useCallback(async (adId: string, event: "impression" | "click" | "dismissal") => {
+    const trackEvent = useCallback(async (adId: string, event: "impression" | "click" | "dismissal", slotName?: string) => {
         try {
             if (!sessionId) return;
+            const deviceType = getDeviceType();
             const track = () => {
                 fetch("/api/ads/track", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ adId, event, sessionId }),
+                    body: JSON.stringify({ adId, event, sessionId, slotName, deviceType }),
                 }).catch(() => {});
             };
             if ("requestIdleCallback" in window) {
@@ -70,7 +89,6 @@ export function AdProvider({ children, moduleName }: { children: React.ReactNode
 
         async function fetchAds() {
             try {
-                // Extract targeting data from session
                 const org = (session?.user as any)?.organizationId || "";
                 const role = (session?.user as any)?.role || "";
                 const city = (session?.user as any)?.city || "";
@@ -91,15 +109,12 @@ export function AdProvider({ children, moduleName }: { children: React.ReactNode
                 
                 if (!mounted) return;
 
-                // Handle frequency capping locally
                 const filteredSlots: Record<string, any> = {};
                 for (const [slotName, slotData] of Object.entries(data.slots || {})) {
                     if (Array.isArray(slotData)) {
                         filteredSlots[slotName] = slotData.filter(ad => {
                             const views = parseInt(localStorage.getItem(`ad_views_${ad._id}`) || "0");
                             if (ad.frequencyCap > 0 && views >= ad.frequencyCap) return false;
-                            
-                            // Check cooldown interval for popup/carousel
                             const lastDismissed = localStorage.getItem(`ad_popup_dismissed_${ad._id}`);
                             if (lastDismissed) {
                                 const dismissedAt = new Date(lastDismissed).getTime();
@@ -117,7 +132,6 @@ export function AdProvider({ children, moduleName }: { children: React.ReactNode
                 }
 
                 setSlots(filteredSlots);
-
             } catch (error) {
                 console.error("Error fetching ads", error);
             }

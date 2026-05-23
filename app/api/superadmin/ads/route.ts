@@ -3,6 +3,7 @@ import { dbConnect } from "@/lib/mongodb";
 import { Ad } from "@/models/Ad";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { SLOT_CONFIGS, AdSlotName } from "@/lib/ad-slots";
 
 export async function GET() {
     try {
@@ -12,7 +13,6 @@ export async function GET() {
         }
 
         await dbConnect();
-        // Fetch all ads for the superadmin dashboard, sorted by creation date descending
         const ads = await Ad.find().sort({ createdAt: -1 }).lean();
         return NextResponse.json(ads);
     } catch (error) {
@@ -29,17 +29,52 @@ export async function POST(req: Request) {
         }
 
         const body = await req.json();
-        
-        // Basic validation — placementSlot is now required
-        if (!body.title || !body.imageUrl || !body.startDate || !body.endDate || !body.targetModules || !body.targetPages || !body.placementSlot) {
-            return NextResponse.json({ error: "Missing required fields (title, imageUrl, startDate, endDate, targetModules, targetPages, placementSlot)" }, { status: 400 });
+
+        if (
+            !body.title ||
+            !body.imageUrl ||
+            !body.startDate ||
+            !body.endDate ||
+            !body.targetModules ||
+            !body.targetPages ||
+            !Array.isArray(body.placementSlots) ||
+            body.placementSlots.length === 0
+        ) {
+            return NextResponse.json(
+                { error: "Missing required fields (title, imageUrl, startDate, endDate, targetModules, targetPages, placementSlots)" },
+                { status: 400 }
+            );
         }
-        
-        // Default type to "native" for new slot-based ads if not provided
+
+        const selectedSlots: AdSlotName[] = body.placementSlots;
+        const seenGroups = new Map<string, string>();
+        for (const slot of selectedSlots) {
+            const config = SLOT_CONFIGS[slot];
+            if (!config) {
+                return NextResponse.json(
+                    { error: `Invalid slot: ${slot}` },
+                    { status: 400 }
+                );
+            }
+            for (const group of config.conflictGroups) {
+                const existing = seenGroups.get(group);
+                if (existing) {
+                    return NextResponse.json(
+                        { error: `Slot conflict: "${slot}" and "${existing}" share conflict group "${group}"` },
+                        { status: 400 }
+                    );
+                }
+                seenGroups.set(group, slot);
+            }
+        }
+
         if (!body.type) body.type = "native";
+        if (!body.status) body.status = "active";
+        if (!body.deliveryStrategy) body.deliveryStrategy = "single";
+        if (!body.slotAnalytics) body.slotAnalytics = [];
 
         await dbConnect();
-        
+
         const newAd = new Ad({
             ...body,
             createdBy: session.user.id,

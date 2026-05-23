@@ -47,6 +47,127 @@ export const AD_SLOT_LABELS: Record<AdSlotName, string> = {
   [AD_SLOTS.ANALYTICS_BOTTOM]: "Analytics — Bottom",
 };
 
+export const SLOT_GROUPS: Record<string, AdSlotName[]> = {
+  Dashboard: [AD_SLOTS.DASHBOARD_INLINE, AD_SLOTS.DASHBOARD_SIDEBAR],
+  Members: [AD_SLOTS.MEMBERS_TOP, AD_SLOTS.MEMBERS_INLINE],
+  Global: [AD_SLOTS.SIDEBAR, AD_SLOTS.TOP_STRIP, AD_SLOTS.POPUP, AD_SLOTS.BOTTOM_SHEET],
+  Analytics: [AD_SLOTS.ANALYTICS_BOTTOM],
+};
+
+export interface SlotConfig {
+  supportsVideo: boolean;
+  supportsCarousel: boolean;
+  mobileVisible: boolean;
+  desktopVisible: boolean;
+  recommendedAspectRatio: string;
+  maxAdsPerSlot: number;
+  conflictGroups: string[];
+  description: string;
+  iconName: string;
+}
+
+export const SLOT_CONFIGS: Record<AdSlotName, SlotConfig> = {
+  [AD_SLOTS.DASHBOARD_INLINE]: {
+    supportsVideo: true,
+    supportsCarousel: true,
+    mobileVisible: true,
+    desktopVisible: true,
+    recommendedAspectRatio: "16:6",
+    maxAdsPerSlot: 1,
+    conflictGroups: [],
+    description: "Native card inside dashboard analytics grid",
+    iconName: "LayoutGrid"
+  },
+  [AD_SLOTS.DASHBOARD_SIDEBAR]: {
+    supportsVideo: true,
+    supportsCarousel: false,
+    mobileVisible: false,
+    desktopVisible: true,
+    recommendedAspectRatio: "1:1",
+    maxAdsPerSlot: 1,
+    conflictGroups: [],
+    description: "Fixed placement in dashboard sidebar",
+    iconName: "Sidebar"
+  },
+  [AD_SLOTS.MEMBERS_TOP]: {
+    supportsVideo: false,
+    supportsCarousel: false,
+    mobileVisible: true,
+    desktopVisible: true,
+    recommendedAspectRatio: "21:3",
+    maxAdsPerSlot: 1,
+    conflictGroups: ["top-banner"],
+    description: "Slim strip above members table",
+    iconName: "PanelTop"
+  },
+  [AD_SLOTS.MEMBERS_INLINE]: {
+    supportsVideo: true,
+    supportsCarousel: true,
+    mobileVisible: true,
+    desktopVisible: true,
+    recommendedAspectRatio: "16:6",
+    maxAdsPerSlot: 1,
+    conflictGroups: [],
+    description: "Card inside members list layout",
+    iconName: "List"
+  },
+  [AD_SLOTS.SIDEBAR]: {
+    supportsVideo: true,
+    supportsCarousel: false,
+    mobileVisible: false,
+    desktopVisible: true,
+    recommendedAspectRatio: "1:1",
+    maxAdsPerSlot: 1,
+    conflictGroups: [],
+    description: "Global sidebar placement",
+    iconName: "Sidebar"
+  },
+  [AD_SLOTS.TOP_STRIP]: {
+    supportsVideo: false,
+    supportsCarousel: false,
+    mobileVisible: true,
+    desktopVisible: true,
+    recommendedAspectRatio: "21:3",
+    maxAdsPerSlot: 1,
+    conflictGroups: ["top-banner"],
+    description: "Global top navigation strip",
+    iconName: "PanelTop"
+  },
+  [AD_SLOTS.BOTTOM_SHEET]: {
+    supportsVideo: true,
+    supportsCarousel: false,
+    mobileVisible: true,
+    desktopVisible: false,
+    recommendedAspectRatio: "16:9",
+    maxAdsPerSlot: 1,
+    conflictGroups: ["mobile-overlay"],
+    description: "Mobile sliding bottom sheet",
+    iconName: "PanelBottom"
+  },
+  [AD_SLOTS.POPUP]: {
+    supportsVideo: true,
+    supportsCarousel: true,
+    mobileVisible: true,
+    desktopVisible: true,
+    recommendedAspectRatio: "1:1",
+    maxAdsPerSlot: 5,
+    conflictGroups: ["mobile-overlay", "fullscreen"],
+    description: "Immersive fullscreen popup",
+    iconName: "Maximize"
+  },
+  [AD_SLOTS.ANALYTICS_BOTTOM]: {
+    supportsVideo: true,
+    supportsCarousel: false,
+    mobileVisible: false,
+    desktopVisible: true,
+    recommendedAspectRatio: "16:6",
+    maxAdsPerSlot: 1,
+    conflictGroups: [],
+    description: "Banner at the bottom of analytics",
+    iconName: "BarChart"
+  },
+};
+
 /**
  * Layout safety constraints per slot.
  * Components use these to decide whether to render or hide.

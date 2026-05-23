@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
-import { Ad, IAd } from "@/models/Ad";
-import { AD_SLOT_LIST } from "@/lib/ad-slots";
+import { Ad } from "@/models/Ad";
 
 export async function GET(req: Request) {
     try {
@@ -24,13 +23,15 @@ export async function GET(req: Request) {
         const now = new Date();
 
         // 1. Fetch ALL active ads for this module/page combination
+        // Note: Legacy ads without status fallback to isActive in migration, but here we query by status.
+        // Also support older ads using an $or for backward compatibility if migration hasn't run.
         const activeAds = await Ad.find({
-            isActive: true,
+            $or: [{ status: "active" }, { isActive: true }],
             startDate: { $lte: now },
             endDate: { $gte: now },
             targetModules: module,
             targetPages: page,
-        }).lean<IAd[]>();
+        }).lean<any[]>();
 
         if (!activeAds || activeAds.length === 0) {
             return NextResponse.json({ slots: {} });
@@ -78,19 +79,27 @@ export async function GET(req: Request) {
         const slotsMap: Record<string, any[]> = {};
         
         for (const ad of scoredAds) {
-            const slot = ad.placementSlot || ad.type; // Fallback to type for older ads
-            if (!slotsMap[slot]) slotsMap[slot] = [];
-            slotsMap[slot].push(ad);
+            const slots = ad.placementSlots && ad.placementSlots.length > 0 
+                ? ad.placementSlots 
+                : (ad.placementSlot ? [ad.placementSlot] : [ad.type]); // Fallback for old ads
+            
+            for (const slot of slots) {
+                if (!slotsMap[slot]) slotsMap[slot] = [];
+                slotsMap[slot].push(ad);
+            }
         }
 
-        // 4. Resolve the best ad(s) for each slot
+        // 4. Resolve the best ad(s) for each slot based on delivery strategy
         const resolvedSlots: Record<string, any | any[]> = {};
 
         for (const slot of Object.keys(slotsMap)) {
             // Sort by score descending
             const adsInSlot = slotsMap[slot].sort((a, b) => b.score - a.score);
             
-            if (slot === "carousel" || slot === "popup") {
+            // Provide multiple ads if the slot or strategy supports it
+            const hasMultipleStrategy = adsInSlot.some(a => ["rotate", "weighted", "sequential"].includes(a.deliveryStrategy));
+
+            if (slot === "carousel" || slot === "popup" || hasMultipleStrategy) {
                 // Return array for slots that support multiple rotating ads
                 resolvedSlots[slot] = adsInSlot;
             } else {

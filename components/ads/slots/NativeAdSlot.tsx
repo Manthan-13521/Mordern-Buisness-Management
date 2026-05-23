@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { ArrowUpRight, Volume2, VolumeX } from "lucide-react";
-import { useAdSlot } from "../AdProvider";
+import { useAdSlot, useAdTrack } from "../AdProvider";
 import { AdSlotName, SLOT_CONSTRAINTS } from "@/lib/ad-slots";
 import { AdSlotSkeleton } from "./AdSlotSkeleton";
 import { CarouselAd } from "./CarouselAd";
@@ -15,16 +15,18 @@ interface NativeAdSlotProps {
 
 export function NativeAdSlot({ slotName, className = "" }: NativeAdSlotProps) {
     const context = useAdSlot(slotName);
+    const trackEvent = useAdTrack();
     const [isMounted, setIsMounted] = useState(false);
     const [isVisible, setIsVisible] = useState(true);
     const [isMuted, setIsMuted] = useState(true);
     const adRef = useRef<HTMLDivElement>(null);
+    const impressionFired = useRef(false);
+    const viewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const constraints = SLOT_CONSTRAINTS[slotName];
 
     useEffect(() => {
         setIsMounted(true);
 
-        // Hide on mobile if constrained
         if (constraints.hideOnMobile && window.innerWidth < 640) {
             setIsVisible(false);
         }
@@ -40,37 +42,52 @@ export function NativeAdSlot({ slotName, className = "" }: NativeAdSlotProps) {
         };
 
         window.addEventListener("resize", handleResize);
-        handleResize(); // Initial check
+        handleResize();
 
         return () => window.removeEventListener("resize", handleResize);
     }, [constraints]);
 
-    // Handle viewport intersection for tracking and lazy loading
     useEffect(() => {
         if (!context || !isVisible || !adRef.current) return;
-        
-        // Don't track here if it's an array (Carousel will handle its own tracking per slide)
         if (Array.isArray(context)) return;
+
+        const ad = context;
+        impressionFired.current = false;
 
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
-                    // It's in view! We could fire trackEvent("impression") here 
-                    // but the context exposes it from the provider.
-                    // For now, we trust the AdProvider tracked the initial load.
-                    // If we want true viewable impressions, we need to pass trackEvent down.
+                    if (!impressionFired.current && !viewTimerRef.current) {
+                        viewTimerRef.current = setTimeout(() => {
+                            if (!impressionFired.current) {
+                                impressionFired.current = true;
+                                trackEvent(ad._id, "impression", slotName);
+                            }
+                            viewTimerRef.current = null;
+                        }, 1000);
+                    }
+                } else {
+                    if (viewTimerRef.current) {
+                        clearTimeout(viewTimerRef.current);
+                        viewTimerRef.current = null;
+                    }
                 }
             });
         }, { threshold: 0.5 });
 
         observer.observe(adRef.current);
-        return () => observer.disconnect();
-    }, [context, isVisible]);
+        return () => {
+            observer.disconnect();
+            if (viewTimerRef.current) {
+                clearTimeout(viewTimerRef.current);
+                viewTimerRef.current = null;
+            }
+        };
+    }, [context, isVisible, trackEvent, slotName]);
 
     if (!isMounted) return <AdSlotSkeleton slotName={slotName} className={className} />;
-    if (!isVisible || !context) return null; // No ad to show or hidden by constraints
+    if (!isVisible || !context) return null;
 
-    // If array, delegate to Carousel
     if (Array.isArray(context)) {
         return <CarouselAd slotName={slotName} ads={context} className={className} />;
     }
@@ -79,12 +96,12 @@ export function NativeAdSlot({ slotName, className = "" }: NativeAdSlotProps) {
     const isVideo = ad.videoUrl && ad.videoUrl.length > 0;
 
     const handleAdClick = () => {
+        trackEvent(ad._id, "click", slotName);
         if (ad.targetUrl) {
             window.open(ad.targetUrl, "_blank", "noopener,noreferrer");
         }
     };
 
-    // Design Mode Classes
     const baseClasses = `w-full rounded-2xl border overflow-hidden flex flex-col group relative transition-all duration-300 ${className}`;
     let modeClasses = "";
     
@@ -101,21 +118,19 @@ export function NativeAdSlot({ slotName, className = "" }: NativeAdSlotProps) {
         case "compact":
             modeClasses = "bg-[#020617] border-[#1e293b] hover:border-[#334155]";
             break;
-        default: // standard
+        default:
             modeClasses = "bg-[#0b1220] border-[#1f2937] hover:border-[#374151]";
             break;
     }
 
     return (
         <div ref={adRef} className={`${baseClasses} ${modeClasses}`} onClick={handleAdClick}>
-            {/* SPONSORED BADGE */}
             <div className="absolute top-3 left-3 z-20">
                 <span className="px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-white/90 bg-black/40 backdrop-blur-md rounded-md border border-white/10">
                     Sponsored
                 </span>
             </div>
 
-            {/* MEDIA ASSET */}
             <div className="relative w-full overflow-hidden cursor-pointer bg-black" style={{ minHeight: `${Math.max(constraints.minHeight - 80, 100)}px` }}>
                 {isVideo ? (
                     <div className="relative w-full h-full">
@@ -143,11 +158,9 @@ export function NativeAdSlot({ slotName, className = "" }: NativeAdSlotProps) {
                         sizes="(max-width: 768px) 100vw, 33vw"
                     />
                 )}
-                {/* Gradient overlay for text readability */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </div>
 
-            {/* CONTENT BANNER */}
             {(ad.designMode || constraints.designMode) !== "minimal" && (
                 <div className="p-4 flex items-end justify-between cursor-pointer border-t border-white/5 relative z-10 bg-inherit">
                     <div className="flex-1 min-w-0 pr-4">
