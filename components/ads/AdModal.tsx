@@ -21,7 +21,11 @@ export function AdModal({ isOpen, onClose, ad }: AdModalProps) {
 
     const handleAdClick = () => {
         if (ad.targetUrl) {
-            window.open(ad.targetUrl, "_blank", "noopener,noreferrer");
+            let url = ad.targetUrl;
+            if (!/^https?:\/\//i.test(url) && !url.startsWith('/')) {
+                url = 'https://' + url;
+            }
+            window.open(url, "_blank", "noopener,noreferrer");
         }
     };
 
