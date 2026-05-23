@@ -273,19 +273,10 @@ export default function AdsPage() {
         deliveryStrategy: "single" as string,
         startDate: "",
         endDate: "",
-        targetModules: [] as string[],
-        targetPages: [] as string[],
-        targetOrganizations: "",
-        targetPlans: "",
-        targetCities: "",
-        targetRoles: "",
         displayIntervalMinutes: 30,
         frequencyCap: 0,
         priority: 0,
     });
-
-    const modules = ["pool", "hostel", "business"];
-    const pages = ["dashboard", "members", "staff", "entry", "overview", "customers", "labour", "payments", "analytics"];
 
     useEffect(() => { fetchAds(); }, []);
 
@@ -356,10 +347,6 @@ export default function AdsPage() {
             const method = formData._id ? "PUT" : "POST";
             const payload = {
                 ...formData,
-                targetOrganizations: formData.targetOrganizations ? formData.targetOrganizations.split(",").map(s => s.trim()) : [],
-                targetPlans: formData.targetPlans ? formData.targetPlans.split(",").map(s => s.trim()) : [],
-                targetCities: formData.targetCities ? formData.targetCities.split(",").map(s => s.trim()) : [],
-                targetRoles: formData.targetRoles ? formData.targetRoles.split(",").map(s => s.trim()) : [],
             };
             if (!payload._id) delete (payload as any)._id;
 
@@ -409,12 +396,6 @@ export default function AdsPage() {
             deliveryStrategy: "single",
             startDate: new Date().toISOString().slice(0, 16),
             endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
-            targetModules: ["business"],
-            targetPages: ["dashboard"],
-            targetOrganizations: "",
-            targetPlans: "",
-            targetCities: "",
-            targetRoles: "",
             displayIntervalMinutes: 30,
             frequencyCap: 0,
             priority: 0,
@@ -425,31 +406,28 @@ export default function AdsPage() {
 
     const openEditModal = (ad: any) => {
         setFormData({
-            ...ad,
-            // Legacy migration: placementSlot -> placementSlots
+            _id: ad._id,
+            title: ad.title || "",
+            description: ad.description || "",
+            imageUrl: ad.imageUrl || "",
+            videoUrl: ad.videoUrl || "",
+            targetUrl: ad.targetUrl || "",
+            ctaText: ad.ctaText || "Learn More",
+            type: ad.type || "native",
             placementSlots: ad.placementSlots && ad.placementSlots.length > 0
                 ? ad.placementSlots
                 : ad.placementSlot ? [ad.placementSlot] : [],
-            // Legacy migration: isActive -> status
+            designMode: ad.designMode || "standard",
             status: ad.status || (ad.isActive ? "active" : "paused"),
             deliveryStrategy: ad.deliveryStrategy || "single",
-            targetOrganizations: ad.targetOrganizations?.join(", ") || "",
-            targetPlans: ad.targetPlans?.join(", ") || "",
-            targetCities: ad.targetCities?.join(", ") || "",
-            targetRoles: ad.targetRoles?.join(", ") || "",
             startDate: new Date(ad.startDate).toISOString().slice(0, 16),
             endDate: new Date(ad.endDate).toISOString().slice(0, 16),
+            displayIntervalMinutes: ad.displayIntervalMinutes || 30,
+            frequencyCap: ad.frequencyCap || 0,
+            priority: ad.priority || 0,
         });
         setSlotSearch("");
         setIsModalOpen(true);
-    };
-
-    const toggleArrayItem = (array: string[], item: string, key: "targetModules" | "targetPages") => {
-        if (array.includes(item)) {
-            setFormData({ ...formData, [key]: array.filter((i) => i !== item) });
-        } else {
-            setFormData({ ...formData, [key]: [...array, item] });
-        }
     };
 
     const toggleSlot = (slot: string) => {
@@ -806,47 +784,8 @@ export default function AdsPage() {
 
                                 {/* ══════ RIGHT COLUMN ══════ */}
                                 <div className="space-y-6">
-                                    {/* Targeting */}
-                                    <div className="space-y-4">
-                                        <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-wider border-b border-[#1e293b] pb-2">Targeting</h3>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-[10px] uppercase font-bold text-[#9ca3af] mb-1">Target Cities</label>
-                                                <input type="text" placeholder="e.g. Mumbai, Delhi" value={formData.targetCities} onChange={(e) => setFormData({ ...formData, targetCities: e.target.value })} className="w-full bg-[#020617] border border-[#1e293b] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#8b5cf6]" />
-                                            </div>
-                                            <div>
-                                                <label className="block text-[10px] uppercase font-bold text-[#9ca3af] mb-1">Target Plans</label>
-                                                <input type="text" placeholder="e.g. Premium, Pro" value={formData.targetPlans} onChange={(e) => setFormData({ ...formData, targetPlans: e.target.value })} className="w-full bg-[#020617] border border-[#1e293b] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#8b5cf6]" />
-                                            </div>
-                                            <div>
-                                                <label className="block text-[10px] uppercase font-bold text-[#9ca3af] mb-1">Target Roles</label>
-                                                <input type="text" placeholder="e.g. Admin, Manager" value={formData.targetRoles} onChange={(e) => setFormData({ ...formData, targetRoles: e.target.value })} className="w-full bg-[#020617] border border-[#1e293b] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#8b5cf6]" />
-                                            </div>
-                                            <div>
-                                                <label className="block text-[10px] uppercase font-bold text-[#9ca3af] mb-1">Target Orgs</label>
-                                                <input type="text" placeholder="e.g. org123, org456" value={formData.targetOrganizations} onChange={(e) => setFormData({ ...formData, targetOrganizations: e.target.value })} className="w-full bg-[#020617] border border-[#1e293b] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#8b5cf6]" />
-                                            </div>
-                                        </div>
-                                        <div className="pt-2">
-                                            <label className="block text-[10px] uppercase font-bold text-[#9ca3af] mb-2">Target Modules</label>
-                                            <div className="flex flex-wrap gap-2">
-                                                {modules.map((m) => (
-                                                    <button type="button" key={m} onClick={() => toggleArrayItem(formData.targetModules, m, "targetModules")} className={`px-2 py-1 rounded text-xs font-bold transition-colors border ${formData.targetModules.includes(m) ? "bg-[#8b5cf6]/20 border-[#8b5cf6] text-[#8b5cf6]" : "bg-[#020617] border-[#1e293b] text-[#9ca3af]"}`}>{m}</button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <div className="pt-2">
-                                            <label className="block text-[10px] uppercase font-bold text-[#9ca3af] mb-2">Target Pages</label>
-                                            <div className="flex flex-wrap gap-2">
-                                                {pages.map((p) => (
-                                                    <button type="button" key={p} onClick={() => toggleArrayItem(formData.targetPages, p, "targetPages")} className={`px-2 py-1 rounded text-xs font-bold transition-colors border ${formData.targetPages.includes(p) ? "bg-[#10b981]/20 border-[#10b981] text-[#10b981]" : "bg-[#020617] border-[#1e293b] text-[#9ca3af]"}`}>{p}</button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-
                                     {/* Rules & Schedule */}
-                                    <div className="space-y-4 pt-4">
+                                    <div className="space-y-4">
                                         <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-wider border-b border-[#1e293b] pb-2">Rules & Schedule</h3>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
@@ -901,7 +840,7 @@ export default function AdsPage() {
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={isSaving || !formData.imageUrl || formData.targetModules.length === 0 || formData.placementSlots.length === 0 || !!slotConflictWarning}
+                                    disabled={isSaving || !formData.imageUrl || formData.placementSlots.length === 0 || !!slotConflictWarning}
                                     className="px-6 py-2.5 text-sm font-bold bg-[#8b5cf6] hover:bg-[#7c3aed] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2 shadow-lg shadow-[#8b5cf6]/20"
                                 >
                                     {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}

@@ -4,76 +4,39 @@ import { Ad } from "@/models/Ad";
 
 export async function GET(req: Request) {
     try {
-        const { searchParams } = new URL(req.url);
-        const module = searchParams.get("module");
-        const page = searchParams.get("page");
-        
-        // Advanced targeting params
-        const org = searchParams.get("org")?.toLowerCase() || "";
-        const city = searchParams.get("city")?.toLowerCase() || "";
-        const role = searchParams.get("role")?.toLowerCase() || "";
-        const plan = searchParams.get("plan")?.toLowerCase() || "";
-
-        if (!module || !page) {
-            return NextResponse.json({ error: "Missing module or page" }, { status: 400 });
-        }
-
         await dbConnect();
 
         const now = new Date();
 
-        // 1. Fetch ALL active ads for this module/page combination
+        // 1. Fetch ALL active ads
         // Note: Legacy ads without status fallback to isActive in migration, but here we query by status.
         // Also support older ads using an $or for backward compatibility if migration hasn't run.
         const activeAds = await Ad.find({
             $or: [{ status: "active" }, { isActive: true }],
             startDate: { $lte: now },
             endDate: { $gte: now },
-            targetModules: module,
-            targetPages: page,
         }).lean<any[]>();
 
         if (!activeAds || activeAds.length === 0) {
             return NextResponse.json({ slots: {} });
         }
 
-        // 2. Score and filter ads based on targeting match
+        // 2. Score ads based on priority, performance (CTR) and recency
         const scoredAds = activeAds.map(ad => {
-            let score = ad.priority * 10; // Base score from manual priority
-            let isGlobal = true;
-            let targetingMatch = true;
+            let score = (ad.priority || 0) * 10; // Base score from manual priority
 
-            // Helper to check 'includes' logic
-            const checkTarget = (targetArray: string[], userValue: string) => {
-                if (!targetArray || targetArray.length === 0) return true; // Global for this criteria
-                isGlobal = false;
-                if (!userValue) return false; // Ad requires target, user has none
-                return targetArray.some(t => userValue.includes(t.toLowerCase()));
-            };
-
-            const orgMatch = checkTarget(ad.targetOrganizations, org);
-            const cityMatch = checkTarget(ad.targetCities, city);
-            const roleMatch = checkTarget(ad.targetRoles, role);
-            const planMatch = checkTarget(ad.targetPlans, plan);
-
-            targetingMatch = orgMatch && cityMatch && roleMatch && planMatch;
-
-            if (targetingMatch) {
-                if (!isGlobal) score += 50; // Targeted ads get a huge boost over global ads
-                
-                // Add CTR to score (impressions > 0)
-                if (ad.impressions > 100) {
-                    const ctr = ad.clicks / ad.impressions;
-                    score += ctr * 20; // High CTR boosts score
-                }
-
-                // Add recency to score (newer campaigns get slight boost)
-                const daysOld = (now.getTime() - new Date(ad.createdAt).getTime()) / (1000 * 3600 * 24);
-                if (daysOld < 7) score += 5; 
+            // Add CTR to score (impressions > 100)
+            if (ad.impressions > 100) {
+                const ctr = ad.clicks / ad.impressions;
+                score += ctr * 20; // High CTR boosts score
             }
 
-            return { ...ad, score, targetingMatch };
-        }).filter(ad => ad.targetingMatch); // Keep only ads where targeting matched
+            // Add recency to score (newer campaigns get slight boost)
+            const daysOld = (now.getTime() - new Date(ad.createdAt).getTime()) / (1000 * 3600 * 24);
+            if (daysOld < 7) score += 5;
+
+            return { ...ad, score };
+        });
 
         // 3. Group by Slot
         const slotsMap: Record<string, any[]> = {};

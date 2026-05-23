@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, createContext, useContext } from "react";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { AdSlotName } from "@/lib/ad-slots";
 
 type DeviceType = "mobile" | "tablet" | "desktop";
@@ -43,7 +42,6 @@ export function useAdTrack() {
 
 export function AdProvider({ children, moduleName }: { children: React.ReactNode; moduleName: string }) {
     const pathname = usePathname();
-    const { data: session } = useSession();
     const [slots, setSlots] = useState<Record<string, any | any[]>>({});
     const [sessionId, setSessionId] = useState<string>("");
 
@@ -56,14 +54,6 @@ export function AdProvider({ children, moduleName }: { children: React.ReactNode
         setSessionId(sid);
     }, []);
     
-    const getPageName = useCallback(() => {
-        if (!pathname) return "dashboard";
-        const parts = pathname.split("/").filter(Boolean);
-        const lastPart = parts[parts.length - 1];
-        if (lastPart === "admin" || lastPart === moduleName) return "dashboard";
-        return lastPart;
-    }, [pathname, moduleName]);
-
     const trackEvent = useCallback(async (adId: string, event: "impression" | "click" | "dismissal", slotName?: string) => {
         try {
             if (!sessionId) return;
@@ -84,26 +74,11 @@ export function AdProvider({ children, moduleName }: { children: React.ReactNode
     }, [sessionId]);
 
     useEffect(() => {
-        const page = getPageName();
         let mounted = true;
 
         async function fetchAds() {
             try {
-                const org = (session?.user as any)?.organizationId || "";
-                const role = (session?.user as any)?.role || "";
-                const city = (session?.user as any)?.city || "";
-                const plan = (session?.user as any)?.plan || "";
-
-                const query = new URLSearchParams({
-                    module: moduleName,
-                    page,
-                    org,
-                    role,
-                    city,
-                    plan
-                });
-
-                const res = await fetch(`/api/ads/active?${query.toString()}`);
+                const res = await fetch("/api/ads/active");
                 if (!res.ok) return;
                 const data = await res.json();
                 
@@ -144,7 +119,7 @@ export function AdProvider({ children, moduleName }: { children: React.ReactNode
         return () => {
             mounted = false;
         };
-    }, [pathname, moduleName, getPageName, session, sessionId]);
+    }, [pathname, sessionId]);
 
     return (
         <AdContext.Provider value={{ slots, trackEvent }}>

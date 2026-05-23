@@ -35,13 +35,11 @@ export async function POST(req: Request) {
             !body.imageUrl ||
             !body.startDate ||
             !body.endDate ||
-            !body.targetModules ||
-            !body.targetPages ||
             !Array.isArray(body.placementSlots) ||
             body.placementSlots.length === 0
         ) {
             return NextResponse.json(
-                { error: "Missing required fields (title, imageUrl, startDate, endDate, targetModules, targetPages, placementSlots)" },
+                { error: "Missing required fields (title, imageUrl, startDate, endDate, placementSlots)" },
                 { status: 400 }
             );
         }
@@ -72,6 +70,12 @@ export async function POST(req: Request) {
         if (!body.status) body.status = "active";
         if (!body.deliveryStrategy) body.deliveryStrategy = "single";
         if (!body.slotAnalytics) body.slotAnalytics = [];
+        if (!body.targetModules) body.targetModules = [];
+        if (!body.targetPages) body.targetPages = [];
+        if (!body.targetOrganizations) body.targetOrganizations = [];
+        if (!body.targetPlans) body.targetPlans = [];
+        if (!body.targetCities) body.targetCities = [];
+        if (!body.targetRoles) body.targetRoles = [];
 
         await dbConnect();
 
