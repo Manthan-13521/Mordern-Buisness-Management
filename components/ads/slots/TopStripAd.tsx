@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { ArrowRight, X } from "lucide-react";
 import { useAdSlot } from "../AdProvider";
 import { AD_SLOTS } from "@/lib/ad-slots";
+import { AdModal } from "../AdModal";
 
 export function TopStripAd() {
     const context = useAdSlot(AD_SLOTS.TOP_STRIP);
     const [isVisible, setIsVisible] = useState(true);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     if (!context || !isVisible) return null;
 
@@ -16,16 +18,11 @@ export function TopStripAd() {
     if (!ad) return null;
 
     const handleAdClick = () => {
-        if (ad.targetUrl) {
-            let url = ad.targetUrl;
-            if (!/^https?:\/\//i.test(url) && !url.startsWith('/')) {
-                url = 'https://' + url;
-            }
-            window.open(url, "_blank", "noopener,noreferrer");
-        }
+        setIsModalOpen(true);
     };
 
     return (
+        <>
         <div className="w-full bg-gradient-to-r from-[#8b5cf6]/20 via-[#3b82f6]/20 to-[#8b5cf6]/20 border-b border-[#8b5cf6]/30 px-4 py-2 flex items-center justify-center gap-4 relative animate-in slide-in-from-top duration-300 backdrop-blur-sm group cursor-pointer" onClick={handleAdClick}>
             
             <div className="flex items-center gap-3">
@@ -46,5 +43,7 @@ export function TopStripAd() {
                 <X className="w-4 h-4" />
             </button>
         </div>
+        <AdModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} ad={ad} />
+        </>
     );
 }

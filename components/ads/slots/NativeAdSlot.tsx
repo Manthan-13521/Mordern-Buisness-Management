@@ -7,6 +7,7 @@ import { useAdSlot, useAdTrack } from "../AdProvider";
 import { AdSlotName, SLOT_CONSTRAINTS } from "@/lib/ad-slots";
 import { AdSlotSkeleton } from "./AdSlotSkeleton";
 import { CarouselAd } from "./CarouselAd";
+import { AdModal } from "../AdModal";
 
 interface NativeAdSlotProps {
     slotName: AdSlotName;
@@ -22,6 +23,7 @@ export function NativeAdSlot({ slotName, className = "" }: NativeAdSlotProps) {
     const adRef = useRef<HTMLDivElement>(null);
     const impressionFired = useRef(false);
     const viewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const constraints = SLOT_CONSTRAINTS[slotName];
 
     useEffect(() => {
@@ -97,13 +99,7 @@ export function NativeAdSlot({ slotName, className = "" }: NativeAdSlotProps) {
 
     const handleAdClick = () => {
         trackEvent(ad._id, "click", slotName);
-        if (ad.targetUrl) {
-            let url = ad.targetUrl;
-            if (!/^https?:\/\//i.test(url) && !url.startsWith('/')) {
-                url = 'https://' + url;
-            }
-            window.open(url, "_blank", "noopener,noreferrer");
-        }
+        setIsModalOpen(true);
     };
 
     const baseClasses = `w-full rounded-2xl border overflow-hidden flex flex-col group relative transition-all duration-300 ${className}`;
@@ -179,6 +175,7 @@ export function NativeAdSlot({ slotName, className = "" }: NativeAdSlotProps) {
                     </button>
                 </div>
             )}
+            <AdModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} ad={ad} />
         </div>
     );
 }

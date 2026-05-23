@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { ArrowUpRight, Volume2, VolumeX, ChevronLeft, ChevronRight } from "lucide-react";
 import { AdSlotName, SLOT_CONSTRAINTS } from "@/lib/ad-slots";
+import { AdModal } from "../AdModal";
 
 interface CarouselAdProps {
     slotName: AdSlotName;
@@ -15,6 +16,7 @@ export function CarouselAd({ slotName, ads, className = "" }: CarouselAdProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isMuted, setIsMuted] = useState(true);
     const [isPaused, setIsPaused] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const constraints = SLOT_CONSTRAINTS[slotName];
 
     useEffect(() => {
@@ -33,13 +35,7 @@ export function CarouselAd({ slotName, ads, className = "" }: CarouselAdProps) {
     const isVideo = ad.videoUrl && ad.videoUrl.length > 0;
 
     const handleAdClick = () => {
-        if (ad.targetUrl) {
-            let url = ad.targetUrl;
-            if (!/^https?:\/\//i.test(url) && !url.startsWith('/')) {
-                url = 'https://' + url;
-            }
-            window.open(url, "_blank", "noopener,noreferrer");
-        }
+        setIsModalOpen(true);
     };
 
     const nextAd = (e: React.MouseEvent) => {
@@ -168,6 +164,7 @@ export function CarouselAd({ slotName, ads, className = "" }: CarouselAdProps) {
                     style={{ width: isPaused ? '100%' : '100%', left: isPaused ? '0' : '-100%', transform: isPaused ? 'none' : 'translateX(100%)' }}
                 />
             )}
+            <AdModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} ad={ad} />
         </div>
     );
 }

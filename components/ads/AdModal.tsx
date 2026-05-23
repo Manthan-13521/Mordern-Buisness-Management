@@ -12,6 +12,7 @@ interface AdModalProps {
         title: string;
         description?: string;
         imageUrl: string;
+        videoUrl?: string;
         targetUrl?: string;
     } | null;
 }
@@ -37,13 +38,19 @@ export function AdModal({ isOpen, onClose, ad }: AdModalProps) {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
                 className="fixed inset-0 z-[120] flex items-center justify-center bg-black/90 backdrop-blur-md p-2 sm:p-4"
+                onClick={(e) => {
+                    // Close if they click the backdrop
+                    if (e.target === e.currentTarget) {
+                        onClose();
+                    }
+                }}
             >
                 <motion.div
                     initial={{ scale: 0.95, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.95, opacity: 0 }}
                     transition={{ duration: 0.3, ease: "easeOut" }}
-                    className="relative w-[98vw] h-[98vh] bg-[#09090b] rounded-[1.5rem] sm:rounded-[2rem] overflow-hidden shadow-2xl border border-white/10 flex flex-col items-center justify-center cursor-pointer"
+                    className="relative w-[85vw] h-[85vh] bg-[#09090b] rounded-[1.5rem] sm:rounded-[2rem] overflow-hidden shadow-2xl border border-white/10 flex flex-col items-center justify-center cursor-pointer"
                     onClick={handleAdClick}
                 >
                     {/* Close Button inside the card for sleek design & positioning */}
@@ -58,16 +65,20 @@ export function AdModal({ isOpen, onClose, ad }: AdModalProps) {
                         <X className="w-6 h-6" />
                     </button>
 
-                    {/* Full screen Ad Image */}
-                    <div className="relative w-full h-full">
-                        <Image
-                            src={ad.imageUrl}
-                            alt={ad.title}
-                            fill
-                            className="object-contain"
-                            priority
-                            sizes="98vw"
-                        />
+                    {/* Full screen Ad Image or Video */}
+                    <div className="relative w-full h-full flex items-center justify-center">
+                        {ad.videoUrl && ad.videoUrl.length > 0 ? (
+                            <video src={ad.videoUrl} autoPlay loop muted playsInline className="w-full h-full object-contain" />
+                        ) : (
+                            <Image
+                                src={ad.imageUrl}
+                                alt={ad.title}
+                                fill
+                                className="object-contain"
+                                priority
+                                sizes="85vw"
+                            />
+                        )}
                     </div>
 
                     {/* Tiny "Click to learn more" hint at the bottom center if targetUrl exists */}
