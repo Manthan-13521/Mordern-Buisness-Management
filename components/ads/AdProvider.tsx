@@ -113,7 +113,11 @@ export function AdProvider({ children, moduleName }: { children: React.ReactNode
 
     const handleAdClick = useCallback((ad: any) => {
         trackEvent(ad._id, "click");
-        setActiveModalAd(ad);
+        if (ad.targetUrl) {
+            window.open(ad.targetUrl, "_blank", "noopener,noreferrer");
+        } else {
+            setActiveModalAd(ad);
+        }
         if (ad.type === "popup" || ad.type === "both") {
              // Treat click as dismiss for this specific ad
              handlePopupDismiss(ad._id);
