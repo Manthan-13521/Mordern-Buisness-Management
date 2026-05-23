@@ -76,19 +76,10 @@ export function PopupAd({ ads, onDismiss, onAdDismiss, onClick, onImpression }: 
                 transition={{ duration: 0.4, ease: "easeOut" }}
                 className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
             >
-                <div className="relative w-full max-w-[420px] aspect-[4/5] sm:aspect-[3/4] flex flex-col items-center justify-center">
-                    {/* Close Button */}
-                    <button
-                        onClick={handleDismiss}
-                        className="absolute -top-12 right-0 z-[110] p-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full text-white transition-colors"
-                        aria-label="Close"
-                    >
-                        <X className="w-6 h-6" />
-                    </button>
-
+                <div className="relative w-[90vw] max-w-[840px] h-[80vh] max-h-[720px] flex flex-col items-center justify-center">
                     {/* Progress indicators if multiple ads */}
                     {ads.length > 1 && (
-                        <div className="absolute top-4 left-0 right-0 z-[110] flex justify-center gap-2 px-6">
+                        <div className="absolute top-6 left-0 right-0 z-[110] flex justify-center gap-2 px-8">
                             {ads.map((ad, idx) => (
                                 <div
                                     key={ad._id}
@@ -110,6 +101,15 @@ export function PopupAd({ ads, onDismiss, onAdDismiss, onClick, onImpression }: 
                             className="relative w-full h-full bg-[#09090b] rounded-[2rem] overflow-hidden shadow-2xl cursor-pointer border border-white/10"
                             onClick={() => onClick(currentAd)}
                         >
+                            {/* Close Button inside the card for sleek design & positioning */}
+                            <button
+                                onClick={handleDismiss}
+                                className="absolute top-6 right-6 z-[110] p-2 bg-black/40 hover:bg-black/60 backdrop-blur-md rounded-full text-white transition-colors border border-white/10"
+                                aria-label="Close"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
+
                             {/* Background Image Layer */}
                             <div className="absolute inset-0">
                                 <Image
@@ -118,32 +118,33 @@ export function PopupAd({ ads, onDismiss, onAdDismiss, onClick, onImpression }: 
                                     fill
                                     className="object-cover"
                                     priority
-                                    sizes="(max-width: 480px) 100vw, 420px"
+                                    sizes="(max-width: 768px) 100vw, 840px"
                                 />
                                 {/* Gradient Overlay */}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent" />
                             </div>
 
                             {/* Content Layer */}
-                            <div className="absolute inset-0 p-8 flex flex-col justify-end">
+                            <div className="absolute inset-0 p-6 sm:p-12 flex flex-col justify-end">
                                 <motion.div
                                     initial={{ y: 20, opacity: 0 }}
                                     animate={{ y: 0, opacity: 1 }}
                                     transition={{ delay: 0.2, duration: 0.4 }}
+                                    className="max-w-2xl"
                                 >
-                                    <span className="inline-block px-3 py-1 mb-4 text-xs font-bold tracking-wider text-white uppercase bg-white/20 backdrop-blur-md rounded-full">
+                                    <span className="inline-block px-4 py-1.5 mb-4 text-xs sm:text-sm font-bold tracking-wider text-white uppercase bg-white/10 backdrop-blur-md rounded-full border border-white/10">
                                         Sponsored
                                     </span>
-                                    <h2 className="text-3xl font-extrabold text-white leading-tight mb-3">
+                                    <h2 className="text-3xl sm:text-5xl font-extrabold text-white leading-tight mb-4 tracking-tight">
                                         {currentAd.title}
                                     </h2>
                                     {currentAd.description && (
-                                        <p className="text-base text-gray-300 mb-6 line-clamp-3">
+                                        <p className="text-sm sm:text-lg text-gray-300 mb-6 sm:mb-8 line-clamp-3 leading-relaxed">
                                             {currentAd.description}
                                         </p>
                                     )}
                                     <button
-                                        className="w-full py-4 text-sm font-bold text-black uppercase bg-white rounded-full hover:scale-[1.02] active:scale-95 transition-transform"
+                                        className="w-full sm:w-auto px-8 py-4 text-xs sm:text-sm font-bold text-black uppercase bg-white rounded-full hover:scale-[1.02] active:scale-95 transition-transform"
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             onClick(currentAd);
