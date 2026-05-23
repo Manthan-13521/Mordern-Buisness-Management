@@ -59,7 +59,7 @@ export default function PaymentsPage() {
             const data = await r.json();
             const list = Array.isArray(data) ? data : (data.data ?? []);
             setPayments(list);
-            setTotal(data.total ?? 0);
+            setTotal(data.meta?.total ?? data.total ?? 0);
         } catch (err: any) {
             if (err?.name === "AbortError") return; // ← don't clear data on cancel
             console.error("Payment fetch error:", err);
