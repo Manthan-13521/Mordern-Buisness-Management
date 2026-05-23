@@ -12,6 +12,9 @@ import {
  Package
 } from "lucide-react";
 import { useDashboardStats } from "@/hooks/useAnalytics";
+import { NativeAdSlot } from "@/components/ads/slots/NativeAdSlot";
+import { TopStripAd } from "@/components/ads/slots/TopStripAd";
+import { AD_SLOTS } from "@/lib/ad-slots";
 
 export default function BusinessDashboard() {
   const { data: dashboardData, isLoading: loading } = useDashboardStats();
@@ -59,7 +62,12 @@ export default function BusinessDashboard() {
   ];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-6 animate-in fade-in duration-300 relative">
+      {/* Top Strip Ad Injection */}
+      <div className="mb-6">
+        <TopStripAd />
+      </div>
+
       {/* Welcome Header */}
       <div>
         <h2 className="text-2xl font-bold text-[#f9fafb] tracking-tight">Business Command Center</h2>
@@ -84,71 +92,81 @@ export default function BusinessDashboard() {
       {/* Lower Grid: Mixed Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Activity Table */}
-        <div className="lg:col-span-2 rounded-2xl bg-[#0b1220] border border-[#1f2937] overflow-hidden shadow-sm">
-          <div className="px-6 py-5 border-b border-[#1f2937] flex items-center justify-between bg-[#0b1220]">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-[#8b5cf6]" />
-              <h3 className="text-sm font-bold text-[#f9fafb]">Recent Sales</h3>
+        <div className="lg:col-span-2 rounded-2xl bg-[#0b1220] border border-[#1f2937] overflow-hidden shadow-sm flex flex-col space-y-6">
+          <div>
+            <div className="px-6 py-5 border-b border-[#1f2937] flex items-center justify-between bg-[#0b1220]">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-[#8b5cf6]" />
+                <h3 className="text-sm font-bold text-[#f9fafb]">Recent Sales</h3>
+              </div>
+              <button className="text-[10px] font-bold text-[#8b5cf6] hover:text-[#7c3aed] uppercase tracking-widest transition-colors">View Ledger</button>
             </div>
-            <button className="text-[10px] font-bold text-[#8b5cf6] hover:text-[#7c3aed] uppercase tracking-widest transition-colors">View Ledger</button>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-[#0b1220] border-b border-[#1f2937]">
+                    <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide">Customer</th>
+                    <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide">Items</th>
+                    <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide text-right">Amount</th>
+                    <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#1f2937]">
+                  {recentSales.length > 0 ? recentSales.map((sale: any, i: number) => (
+                    <tr key={i} className="hover:bg-[#8b5cf6]/5 transition-colors group border-b border-slate-800 last:border-0">
+                      <td className="px-6 py-5">
+                        <p className="text-base font-semibold text-white">{sale.customerId?.name || "N/A"}</p>
+                        <p className="text-sm font-medium text-slate-400 mt-0.5">{new Date(sale.date).toLocaleDateString()}</p>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center -space-x-1.5 overflow-hidden">
+                          {sale.items?.slice(0, 3).map((item: any, idx: number) => (
+                            <div key={idx} className="h-10 w-10 rounded-xl bg-[#111827] border border-[#1f2937] flex items-center justify-center text-xs font-bold text-white ring-2 ring-[#0b1220]">
+                              {item.name[0]}
+                            </div>
+                          ))}
+                          {sale.items?.length > 3 && (
+                            <div className="h-10 w-10 rounded-xl bg-[#8b5cf6]/20 border border-[#8b5cf6]/30 flex items-center justify-center text-xs font-bold text-[#8b5cf6] ring-2 ring-[#0b1220]">
+                              +{sale.items.length - 3}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-5 text-right">
+                        <p className="text-lg font-semibold text-[#f9fafb]">₹{sale.amount.toLocaleString()}</p>
+                      </td>
+                      <td className="px-6 py-5 text-right">
+                        <span className="inline-flex items-center px-4 py-1.5 rounded-md text-xs font-semibold bg-[#8b5cf6]/10 text-[#8b5cf6] border border-[#8b5cf6]/20 uppercase tracking-wider">
+                          Processed
+                        </span>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-12 text-center">
+                        <div className="flex flex-col items-center">
+                          <ShoppingBag className="w-8 h-8 text-[#9ca3af] mb-3" />
+                          <p className="text-sm text-[#9ca3af] font-medium">No sales transactions on record.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-[#0b1220] border-b border-[#1f2937]">
-                  <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide">Customer</th>
-                  <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide">Items</th>
-                  <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide text-right">Amount</th>
-                  <th className="px-6 py-5 text-sm font-semibold text-[#9ca3af] uppercase tracking-wide text-right">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#1f2937]">
-                {recentSales.length > 0 ? recentSales.map((sale: any, i: number) => (
-                  <tr key={i} className="hover:bg-[#8b5cf6]/5 transition-colors group border-b border-slate-800 last:border-0">
-                    <td className="px-6 py-5">
-                      <p className="text-base font-semibold text-white">{sale.customerId?.name || "N/A"}</p>
-                      <p className="text-sm font-medium text-slate-400 mt-0.5">{new Date(sale.date).toLocaleDateString()}</p>
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="flex items-center -space-x-1.5 overflow-hidden">
-                        {sale.items?.slice(0, 3).map((item: any, idx: number) => (
-                          <div key={idx} className="h-10 w-10 rounded-xl bg-[#111827] border border-[#1f2937] flex items-center justify-center text-xs font-bold text-white ring-2 ring-[#0b1220]">
-                            {item.name[0]}
-                          </div>
-                        ))}
-                        {sale.items?.length > 3 && (
-                          <div className="h-10 w-10 rounded-xl bg-[#8b5cf6]/20 border border-[#8b5cf6]/30 flex items-center justify-center text-xs font-bold text-[#8b5cf6] ring-2 ring-[#0b1220]">
-                            +{sale.items.length - 3}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-5 text-right">
-                      <p className="text-lg font-semibold text-[#f9fafb]">₹{sale.amount.toLocaleString()}</p>
-                    </td>
-                    <td className="px-6 py-5 text-right">
-                      <span className="inline-flex items-center px-4 py-1.5 rounded-md text-xs font-semibold bg-[#8b5cf6]/10 text-[#8b5cf6] border border-[#8b5cf6]/20 uppercase tracking-wider">
-                        Processed
-                      </span>
-                    </td>
-                  </tr>
-                )) : (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center">
-                      <div className="flex flex-col items-center">
-                        <ShoppingBag className="w-8 h-8 text-[#9ca3af] mb-3" />
-                        <p className="text-sm text-[#9ca3af] font-medium">No sales transactions on record.</p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+          
+          {/* Dashboard Inline Ad Injection */}
+          <div className="p-6 pt-0">
+            <NativeAdSlot slotName={AD_SLOTS.DASHBOARD_INLINE} />
           </div>
         </div>
 
         {/* Quick Shortcuts / Insights */}
         <div className="space-y-6">
+          {/* Dashboard Sidebar Ad Injection */}
+          <NativeAdSlot slotName={AD_SLOTS.DASHBOARD_SIDEBAR} />
+
           <div className="p-6 rounded-2xl bg-[#8b5cf6] shadow-lg relative overflow-hidden group">
             <div className="relative z-10">
               <h4 className="text-sm font-bold text-white mb-2">Inventory Alert</h4>

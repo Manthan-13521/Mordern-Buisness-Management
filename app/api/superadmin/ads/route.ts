@@ -30,10 +30,13 @@ export async function POST(req: Request) {
 
         const body = await req.json();
         
-        // Basic validation
-        if (!body.title || !body.imageUrl || !body.type || !body.startDate || !body.endDate || !body.targetModules || !body.targetPages) {
-            return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+        // Basic validation — placementSlot is now required
+        if (!body.title || !body.imageUrl || !body.startDate || !body.endDate || !body.targetModules || !body.targetPages || !body.placementSlot) {
+            return NextResponse.json({ error: "Missing required fields (title, imageUrl, startDate, endDate, targetModules, targetPages, placementSlot)" }, { status: 400 });
         }
+        
+        // Default type to "native" for new slot-based ads if not provided
+        if (!body.type) body.type = "native";
 
         await dbConnect();
         

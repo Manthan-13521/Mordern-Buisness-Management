@@ -7,6 +7,9 @@ import { getCachedDashboardCounts, getCachedAnalyticsSummary } from "@/lib/queri
 import { Member } from "@/models/Member";
 import { dbConnect } from "@/lib/mongodb";
 import { PoolTypeFilter } from "@/components/pool/PoolTypeFilter";
+import { NativeAdSlot } from "@/components/ads/slots/NativeAdSlot";
+import { TopStripAd } from "@/components/ads/slots/TopStripAd";
+import { AD_SLOTS } from "@/lib/ad-slots";
 
 // Stats Component (Server)
 async function DashboardStats({ poolId, isAdmin, memberType }: { poolId: string, isAdmin: boolean, memberType: string }) {
@@ -305,7 +308,12 @@ export default async function DashboardPage(props: { searchParams?: Promise<any>
     const memberType = resolvedSearchParams?.type || "all";
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 relative">
+            {/* Top Strip Ad Injection */}
+            <div className="mb-4">
+                <TopStripAd />
+            </div>
+
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-[#f9fafb]">Dashboard Overview</h1>
@@ -334,21 +342,33 @@ export default async function DashboardPage(props: { searchParams?: Promise<any>
                 </Suspense>
             )}
 
+            {/* Dashboard Inline Ad Injection */}
+            <div className="w-full">
+                <NativeAdSlot slotName={AD_SLOTS.DASHBOARD_INLINE} />
+            </div>
+
             {/* Priority 3: Charts / Recharts components (deferred via dynamic import above) */}
             {/* {isAdmin && <RevenueChart poolId={poolId} />} */}
 
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-                {/* Priority 4: Defaulters list (deferred) */}
-                {isAdmin && (
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+                <div className="lg:col-span-2 space-y-8">
+                    {/* Priority 4: Defaulters list (deferred) */}
+                    {isAdmin && (
+                        <Suspense fallback={<div className="h-48 bg-[#0b1220] rounded-xl animate-pulse" />}>
+                            <TopDefaulters poolId={poolId} />
+                        </Suspense>
+                    )}
+                    
+                    {/* Priority 5: Notifications / Alerts panel (deferred) */}
                     <Suspense fallback={<div className="h-48 bg-[#0b1220] rounded-xl animate-pulse" />}>
-                        <TopDefaulters poolId={poolId} />
+                        <ExpiryAlerts poolId={poolId} />
                     </Suspense>
-                )}
+                </div>
                 
-                {/* Priority 5: Notifications / Alerts panel (deferred) */}
-                <Suspense fallback={<div className="h-48 bg-[#0b1220] rounded-xl animate-pulse" />}>
-                    <ExpiryAlerts poolId={poolId} />
-                </Suspense>
+                {/* Dashboard Sidebar Ad Injection */}
+                <div className="space-y-8 lg:col-span-1">
+                    <NativeAdSlot slotName={AD_SLOTS.DASHBOARD_SIDEBAR} />
+                </div>
             </div>
         </div>
     );

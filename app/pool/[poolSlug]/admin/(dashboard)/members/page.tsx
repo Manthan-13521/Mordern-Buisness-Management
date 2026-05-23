@@ -13,6 +13,9 @@ import { usePoolType } from "@/components/pool/PoolTypeContext";
 import { PoolTypeFilter } from "@/components/pool/PoolTypeFilter";
 import { addMemberLocal, getMembersByPoolLocal, syncUnsyncedMembers, getLastSyncedAtLocal, setLastSyncedAtLocal, cleanupLocalDB, deleteMemberLocal } from "@/lib/local-db/members.repo";
 import { computeMemberStatus } from "@/lib/memberStatus";
+import { NativeAdSlot } from "@/components/ads/slots/NativeAdSlot";
+import { TopStripAd } from "@/components/ads/slots/TopStripAd";
+import { AD_SLOTS } from "@/lib/ad-slots";
 
 interface Plan {
     _id: string;
@@ -334,7 +337,12 @@ export default function MembersPage() {
     const totalPages = Math.max(1, Math.ceil(total / LIMIT));
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 relative">
+            {/* Top Strip Ad Injection */}
+            <div className="mb-4">
+                <TopStripAd />
+            </div>
+
             {/* Header */}
             <div className="sm:flex sm:items-center sm:justify-between">
                 <div>
@@ -401,6 +409,11 @@ export default function MembersPage() {
                     {(error as Error).message || "Could not load members."}
                 </p>
             )}
+
+            {/* Members Page Inline Ad Injection */}
+            <div className="w-full">
+                <NativeAdSlot slotName={AD_SLOTS.MEMBERS_INLINE} />
+            </div>
 
             {/* Table */}
             <div className="flow-root">

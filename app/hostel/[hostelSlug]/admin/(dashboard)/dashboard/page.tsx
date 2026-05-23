@@ -7,6 +7,9 @@ import {
 } from "lucide-react";
 import { useHostelBlock } from "@/components/hostel/HostelBlockContext";
 import { HostelBlockFilter } from "@/components/hostel/HostelBlockFilter";
+import { NativeAdSlot } from "@/components/ads/slots/NativeAdSlot";
+import { TopStripAd } from "@/components/ads/slots/TopStripAd";
+import { AD_SLOTS } from "@/lib/ad-slots";
 
 type DashData = {
     monthlyJoined: number;
@@ -89,7 +92,12 @@ export default function HostelDashboardPage() {
     const blockLabel = selectedBlock !== "all" ? ` · Block ${selectedBlock}` : "";
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 relative">
+            {/* Top Strip Ad Injection */}
+            <div className="mb-4">
+                <TopStripAd />
+            </div>
+
             {/* Title */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
@@ -137,6 +145,11 @@ export default function HostelDashboardPage() {
                     <StatCard icon={IndianRupee} label="Monthly Income"  value={fmt(data.monthlyIncome)}        sub={`This ${monthName}`}      accent="bg-emerald-500" />
                     <StatCard icon={TrendingUp}  label="Yearly Income"   value={fmt(data.yearlyIncome)}         sub={String(year)}             accent="bg-sky-500" />
                 </div>
+            </div>
+
+            {/* Dashboard Inline Ad Injection */}
+            <div className="w-full">
+                <NativeAdSlot slotName={AD_SLOTS.DASHBOARD_INLINE} />
             </div>
 
             {/* ── SUPPLEMENTAL STATS ── */}

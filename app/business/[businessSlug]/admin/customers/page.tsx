@@ -23,6 +23,9 @@ import { usePathname } from "next/navigation";
 import toast from "react-hot-toast";
 import clsx from "clsx";
 import { useBusinessCustomers } from "@/hooks/useAnalytics";
+import { NativeAdSlot } from "@/components/ads/slots/NativeAdSlot";
+import { TopStripAd } from "@/components/ads/slots/TopStripAd";
+import { AD_SLOTS } from "@/lib/ad-slots";
 
 export default function CustomersPage() {
   const [search, setSearch] = useState("");
@@ -177,7 +180,12 @@ export default function CustomersPage() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300 max-w-7xl mx-auto">
+    <div className="space-y-6 animate-in fade-in duration-300 max-w-7xl mx-auto relative">
+      {/* Top Strip Ad Injection */}
+      <div className="mb-4">
+        <TopStripAd />
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#0b1220] p-6 rounded-2xl border border-[#1f2937] shadow-sm">
         <div>
@@ -225,6 +233,11 @@ export default function CustomersPage() {
             Has Dues
           </button>
         </div>
+      </div>
+
+      {/* Members Page Inline Ad Injection */}
+      <div className="w-full">
+        <NativeAdSlot slotName={AD_SLOTS.MEMBERS_INLINE} />
       </div>
 
       {/* Premium SaaS Table */}

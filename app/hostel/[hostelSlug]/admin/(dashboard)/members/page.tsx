@@ -8,6 +8,9 @@ import {
 } from "lucide-react";
 import { useHostelBlock } from "@/components/hostel/HostelBlockContext";
 import { HostelBlockFilter } from "@/components/hostel/HostelBlockFilter";
+import { NativeAdSlot } from "@/components/ads/slots/NativeAdSlot";
+import { TopStripAd } from "@/components/ads/slots/TopStripAd";
+import { AD_SLOTS } from "@/lib/ad-slots";
 
 type Room = { roomNo: string; capacity: number; isOccupied: boolean; vacantCount?: number };
 type Floor = { floorNo: string; rooms: Room[] };
@@ -264,7 +267,12 @@ export default function MembersPage() {
     const floors = selectedBlock?.floors || [];
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 relative">
+            {/* Top Strip Ad Injection */}
+            <div className="mb-4">
+                <TopStripAd />
+            </div>
+
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
@@ -291,6 +299,11 @@ export default function MembersPage() {
                         <Plus className="h-4 w-4" />Add Member
                     </button>
                 </div>
+            </div>
+
+            {/* Members Page Inline Ad Injection */}
+            <div className="w-full">
+                <NativeAdSlot slotName={AD_SLOTS.MEMBERS_INLINE} />
             </div>
 
             {/* Table */}
