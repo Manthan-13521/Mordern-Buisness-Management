@@ -7,7 +7,7 @@ export function SABadge({
     className
 }: {
     children: React.ReactNode;
-    variant?: "success" | "warning" | "danger" | "info" | "neutral" | "accent";
+    variant?: "success" | "warning" | "danger" | "info" | "neutral" | "accent" | "primary";
     className?: string;
 }) {
     const variants = {
@@ -17,6 +17,7 @@ export function SABadge({
         info: "bg-[var(--sa-info-muted)] text-[var(--sa-info)] border border-[var(--sa-info-muted)]",
         neutral: "bg-[var(--sa-bg-elevated)] text-[var(--sa-text-muted)] border border-[var(--sa-border)]",
         accent: "bg-[var(--sa-accent-muted)] text-[var(--sa-accent)] border border-[var(--sa-accent-muted)]",
+        primary: "bg-[var(--sa-accent-muted)] text-[var(--sa-accent)] border border-[var(--sa-accent-muted)]",
     };
 
     return (
