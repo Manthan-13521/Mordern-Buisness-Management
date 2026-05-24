@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { Ad } from "@/models/Ad";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request) {
     try {
         await dbConnect();
@@ -75,7 +77,7 @@ export async function GET(req: Request) {
             slots: resolvedSlots,
         }, {
             headers: {
-                "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60" // Shorter cache for dynamic rotation
+                "Cache-Control": "no-store, no-cache, must-revalidate, private"
             }
         });
     } catch (error) {

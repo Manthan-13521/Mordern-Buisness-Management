@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, createContext, useContext } from "react";
 import { usePathname } from "next/navigation";
 import { AdSlotName } from "@/lib/ad-slots";
+import { PopupAd } from "./PopupAd";
 
 type DeviceType = "mobile" | "tablet" | "desktop";
 
@@ -121,9 +122,40 @@ export function AdProvider({ children, moduleName }: { children: React.ReactNode
         };
     }, [pathname, sessionId]);
 
+    const popupAds = slots["popup"];
+    
     return (
         <AdContext.Provider value={{ slots, trackEvent }}>
             {children}
+            {popupAds && (Array.isArray(popupAds) ? popupAds.length > 0 : true) && (
+                <PopupAd
+                    ads={Array.isArray(popupAds) ? popupAds : [popupAds]}
+                    onDismiss={() => {
+                        const adsToDismiss = Array.isArray(popupAds) ? popupAds : [popupAds];
+                        adsToDismiss.forEach((ad: any) => {
+                            localStorage.setItem(`ad_popup_dismissed_${ad._id}`, new Date().toISOString());
+                            trackEvent(ad._id, "dismissal", "popup");
+                        });
+                    }}
+                    onAdDismiss={(adId) => {
+                        localStorage.setItem(`ad_popup_dismissed_${adId}`, new Date().toISOString());
+                        trackEvent(adId, "dismissal", "popup");
+                    }}
+                    onClick={(ad) => {
+                        trackEvent(ad._id, "click", "popup");
+                        if (ad.targetUrl) {
+                            let url = ad.targetUrl;
+                            if (!/^https?:\/\//i.test(url) && !url.startsWith('/')) url = 'https://' + url;
+                            window.open(url, "_blank", "noopener,noreferrer");
+                        }
+                    }}
+                    onImpression={(adId) => {
+                        trackEvent(adId, "impression", "popup");
+                        const views = parseInt(localStorage.getItem(`ad_views_${adId}`) || "0");
+                        localStorage.setItem(`ad_views_${adId}`, (views + 1).toString());
+                    }}
+                />
+            )}
         </AdContext.Provider>
     );
 }
