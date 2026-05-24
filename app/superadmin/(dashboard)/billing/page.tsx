@@ -79,12 +79,14 @@ export default function PlatformBillingDashboard() {
                                 <th className="text-right px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#9ca3af]">Amount</th>
                                 <th className="text-center px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#9ca3af]">Method</th>
                                 <th className="text-left px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#9ca3af]">Payer</th>
+                                <th className="text-left px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#9ca3af]">Ref Code</th>
+                                <th className="text-right px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#9ca3af]">Discount</th>
                                 <th className="text-left px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#9ca3af]">Billing Period</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {loading && <tr><td colSpan={7} className="text-center py-12 text-[#6b7280]">Loading...</td></tr>}
-                            {!loading && logs.length === 0 && <tr><td colSpan={7} className="text-center py-12 text-[#6b7280]">No billing records yet. Revenue will appear here after first subscription activation.</td></tr>}
+                            {loading && <tr><td colSpan={9} className="text-center py-12 text-[#6b7280]">Loading...</td></tr>}
+                            {!loading && logs.length === 0 && <tr><td colSpan={9} className="text-center py-12 text-[#6b7280]">No billing records yet. Revenue will appear here after first subscription activation.</td></tr>}
                             {!loading && logs.map((b, i) => {
                                 // Extract payer name from paymentMode like "UPI (Admin: John Doe)"
                                 const payerMatch = b.paymentMode?.match(/\(Admin:\s*(.+?)\)/);
@@ -125,6 +127,18 @@ export default function PlatformBillingDashboard() {
                                             ) : (
                                                 <span className="text-[#6b7280]">—</span>
                                             )}
+                                        </td>
+                                        <td className="px-6 py-4 text-xs">
+                                            {b.referralCodeUsed ? (
+                                                <span className="bg-[#8b5cf6]/10 text-[#8b5cf6] px-2 py-1 rounded font-mono font-bold tracking-wider">
+                                                    {b.referralCodeUsed}
+                                                </span>
+                                            ) : (
+                                                <span className="text-[#6b7280]">—</span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 text-right text-xs font-bold text-rose-400">
+                                            {b.discountApplied ? `-₹${b.discountApplied.toLocaleString("en-IN")}` : <span className="text-[#6b7280] font-normal">—</span>}
                                         </td>
                                         <td className="px-6 py-4 text-[#9ca3af] text-xs">
                                             {new Date(b.periodStart).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}

@@ -84,6 +84,8 @@ export async function GET(req: Request) {
                 source: "subscription",
                 module: s.module,
                 planType: s.planType,
+                referralCodeUsed: org?.referralCodeUsed || null,
+                discountApplied: org?.discountApplied || 0,
             };
         });
 
@@ -104,7 +106,9 @@ export async function GET(req: Request) {
             ...billingLogs.map((b: any) => ({ 
                 ...b, 
                 orgName: b.orgId?.name || "Unknown Business",
-                entityId: getEntityId(b.orgId)
+                entityId: getEntityId(b.orgId),
+                referralCodeUsed: b.orgId?.referralCodeUsed || null,
+                discountApplied: b.orgId?.discountApplied || 0,
             })), 
             ...uniqueSubLogs
         ].sort(
