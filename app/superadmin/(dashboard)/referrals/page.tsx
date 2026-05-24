@@ -208,7 +208,7 @@ export default function ReferralsAdminPage() {
                                 </SATBody>
                             </SATable>
                         </div>
-                    </SATTableContainer>
+                    </SATableContainer>
                 </div>
 
                 {/* Generator Section */}
