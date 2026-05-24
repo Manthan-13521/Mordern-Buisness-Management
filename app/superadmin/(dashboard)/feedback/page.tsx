@@ -2,13 +2,6 @@
 
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { MessageSquare, Bug, Lightbulb, Search, Filter } from "lucide-react";
-
-import { SAPageHeader } from "@/components/superadmin/ui/SAPageHeader";
-import { SACard } from "@/components/superadmin/ui/SACard";
-import { SAKpiCard } from "@/components/superadmin/ui/SAKpiCard";
-import { SABadge } from "@/components/superadmin/ui/SABadge";
-import { SAInput } from "@/components/superadmin/ui/SAInput";
 
 type Feedback = {
     _id: string;
@@ -64,17 +57,21 @@ export default function SuperAdminFeedbackPage() {
     };
 
     const StatusBadge = ({ status }: { status: string }) => {
-        if (status === "open") return <SABadge variant="danger">Open</SABadge>;
-        if (status === "in-progress") return <SABadge variant="warning">In Progress</SABadge>;
-        if (status === "resolved") return <SABadge variant="success">Resolved</SABadge>;
-        return <SABadge>{status}</SABadge>;
+        const colors = {
+            "open": "bg-rose-500/20 text-rose-400 border border-rose-500/30",
+            "in-progress": "bg-amber-500/20 text-amber-400 border border-amber-500/30",
+            "resolved": "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30",
+        } as any;
+        return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors[status]}`}>{status}</span>;
     };
 
     const TypeBadge = ({ type }: { type: string }) => {
-        if (type === "bug") return <SABadge variant="danger" icon={<Bug className="w-3 h-3" />}>Bug</SABadge>;
-        if (type === "feature") return <SABadge variant="primary" icon={<Lightbulb className="w-3 h-3" />}>Feature</SABadge>;
-        if (type === "feedback") return <SABadge variant="info" icon={<MessageSquare className="w-3 h-3" />}>Feedback</SABadge>;
-        return <SABadge>{type}</SABadge>;
+        const colors = {
+            "bug": "bg-rose-500/20 text-rose-400",
+            "feature": "bg-purple-500/20 text-purple-400",
+            "feedback": "bg-blue-500/20 text-blue-400",
+        } as any;
+        return <span className={`px-2 py-1 rounded text-xs font-semibold uppercase ${colors[type]}`}>{type}</span>;
     };
 
     const filteredFeedbacks = feedbacks.filter(fb => 
@@ -90,104 +87,88 @@ export default function SuperAdminFeedbackPage() {
     };
 
     return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
-            <SAPageHeader 
-                title="User Reports & Feedback"
-                description="Manage incoming bug reports, feature requests, and feedback."
-                icon={<MessageSquare className="w-6 h-6 text-[var(--sa-accent)]" />}
-            />
+        <div className="flex flex-col gap-8 pb-10">
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight text-white mb-2">User Reports & Feedback</h1>
+                <p className="text-[#9ca3af]">Manage incoming bug reports, feature requests, and feedback.</p>
+            </div>
 
             {/* Analytics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <SAKpiCard 
-                    title="Open Bugs" 
-                    value={analytics.openBugs} 
-                    icon={<Bug className="w-6 h-6 text-[var(--sa-danger)]" />}
-                    trend={{ value: 0, label: "needs attention", isPositive: false }}
-                />
-                <SAKpiCard 
-                    title="Feature Requests" 
-                    value={analytics.featureRequests} 
-                    icon={<Lightbulb className="w-6 h-6 text-[var(--sa-accent)]" />}
-                />
-                <SAKpiCard 
-                    title="Total Resolved" 
-                    value={analytics.totalResolved} 
-                    icon={<MessageSquare className="w-6 h-6 text-[var(--sa-success)]" />}
-                />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-[#0b1220] backdrop-blur-md border border-[#1f2937] p-6 rounded-2xl">
+                    <p className="text-sm text-[#9ca3af] font-medium mb-1">Open Bugs</p>
+                    <p className="text-3xl font-bold text-rose-400">{analytics.openBugs}</p>
+                </div>
+                <div className="bg-[#0b1220] backdrop-blur-md border border-[#1f2937] p-6 rounded-2xl">
+                    <p className="text-sm text-[#9ca3af] font-medium mb-1">Feature Requests</p>
+                    <p className="text-3xl font-bold text-purple-400">{analytics.featureRequests}</p>
+                </div>
+                <div className="bg-[#0b1220] backdrop-blur-md border border-[#1f2937] p-6 rounded-2xl">
+                    <p className="text-sm text-[#9ca3af] font-medium mb-1">Total Resolved</p>
+                    <p className="text-3xl font-bold text-emerald-400">{analytics.totalResolved}</p>
+                </div>
             </div>
 
             {/* Filters */}
-            <div className="bg-[var(--sa-bg-card)] border border-[var(--sa-border)] rounded-2xl p-4 flex flex-col md:flex-row gap-4 justify-between items-center shadow-sm">
-                <div className="relative w-full md:w-96">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--sa-text-muted)]" />
-                    <SAInput 
-                        type="text" 
-                        placeholder="Search messages or users..." 
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="pl-10 w-full"
-                    />
-                </div>
+            <div className="bg-[#0b1220] border border-[#1f2937] rounded-2xl p-4 flex flex-col md:flex-row gap-4 justify-between items-center backdrop-blur-md">
+                <input 
+                    type="text" 
+                    placeholder="Search messages or users..." 
+                    className="w-full md:w-96 bg-black/40 border border-[#1f2937] rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                />
                 
-                <div className="flex gap-4 w-full md:w-auto">
-                    <div className="relative flex-1 md:flex-none">
-                        <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--sa-text-muted)]" />
-                        <select 
-                            className="w-full md:w-40 appearance-none bg-[var(--sa-bg-elevated)] border border-[var(--sa-border)] rounded-xl pl-10 pr-4 py-2.5 text-sm text-[var(--sa-text-primary)] font-medium focus:outline-none focus:ring-2 focus:ring-[var(--sa-accent)] focus:border-transparent transition-all"
-                            value={filterType}
-                            onChange={(e) => setFilterType(e.target.value)}
-                        >
-                            <option value="all">All Types</option>
-                            <option value="bug">Bugs Only</option>
-                            <option value="feature">Features Only</option>
-                            <option value="feedback">Feedback Only</option>
-                        </select>
-                    </div>
+                <div className="flex gap-4">
+                    <select 
+                        className="bg-black/40 border border-[#1f2937] rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                        value={filterType}
+                        onChange={(e) => setFilterType(e.target.value)}
+                    >
+                        <option value="all">All Types</option>
+                        <option value="bug">Bugs Only</option>
+                        <option value="feature">Features Only</option>
+                        <option value="feedback">Feedback Only</option>
+                    </select>
 
-                    <div className="relative flex-1 md:flex-none">
-                        <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--sa-text-muted)]" />
-                        <select 
-                            className="w-full md:w-40 appearance-none bg-[var(--sa-bg-elevated)] border border-[var(--sa-border)] rounded-xl pl-10 pr-4 py-2.5 text-sm text-[var(--sa-text-primary)] font-medium focus:outline-none focus:ring-2 focus:ring-[var(--sa-accent)] focus:border-transparent transition-all"
-                            value={filterStatus}
-                            onChange={(e) => setFilterStatus(e.target.value)}
-                        >
-                            <option value="all">All Status</option>
-                            <option value="open">Open</option>
-                            <option value="in-progress">In Progress</option>
-                            <option value="resolved">Resolved</option>
-                        </select>
-                    </div>
+                    <select 
+                        className="bg-black/40 border border-[#1f2937] rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value)}
+                    >
+                        <option value="all">All Status</option>
+                        <option value="open">Open</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="resolved">Resolved</option>
+                    </select>
                 </div>
             </div>
 
             {/* List */}
             <div className="flex flex-col gap-4">
                 {loading ? (
-                    <div className="text-[var(--sa-text-muted)] text-center py-10 font-medium">Loading reports...</div>
+                    <div className="text-[#9ca3af] text-center py-10">Loading reports...</div>
                 ) : filteredFeedbacks.length === 0 ? (
-                    <div className="text-[var(--sa-text-muted)] text-center py-10 bg-[var(--sa-bg-card)] border border-[var(--sa-border)] rounded-2xl shadow-sm font-medium">No reports found.</div>
+                    <div className="text-[#9ca3af] text-center py-10 bg-[#0b1220] border border-[#1f2937] rounded-2xl">No reports found.</div>
                 ) : (
                     filteredFeedbacks.map((fb) => (
-                        <SACard key={fb._id} padding="lg" className="transition-all hover:border-[var(--sa-accent)] hover:shadow-md">
+                        <div key={fb._id} className="bg-[#0b1220] backdrop-blur-md border border-[#1f2937] rounded-2xl p-6 transition-all hover:bg-[#8b5cf6]/10">
                             <div className="flex justify-between items-start mb-4">
                                 <div className="flex gap-3 items-center">
                                     <TypeBadge type={fb.type} />
-                                    <h3 className="font-bold text-[var(--sa-text-primary)] text-lg">{fb.userName}</h3>
-                                    <span className="text-xs text-[var(--sa-text-muted)] font-medium">{new Date(fb.createdAt).toLocaleString()}</span>
+                                    <h3 className="font-medium text-white">{fb.userName}</h3>
+                                    <span className="text-xs text-[#6b7280]">{new Date(fb.createdAt).toLocaleString()}</span>
                                 </div>
                                 <StatusBadge status={fb.status} />
                             </div>
                             
-                            <p className="text-[var(--sa-text-secondary)] text-sm mb-6 bg-[var(--sa-bg-elevated)] p-4 rounded-xl border border-[var(--sa-border-subtle)] leading-relaxed">
-                                {fb.message}
-                            </p>
+                            <p className="text-[#9ca3af] text-sm mb-4 bg-black/30 p-4 rounded-xl border border-[#1f2937]">{fb.message}</p>
                             
-                            <div className="flex justify-between items-center text-sm border-t border-[var(--sa-border-subtle)] pt-4">
-                                <div className="flex gap-4 items-center">
-                                    <span className="text-[var(--sa-text-muted)] font-medium">Page: <span className="text-[var(--sa-text-primary)]">{fb.page}</span></span>
+                            <div className="flex justify-between items-center text-sm">
+                                <div className="flex gap-4">
+                                    <span className="text-[#6b7280]">Page: <span className="text-[#9ca3af]">{fb.page}</span></span>
                                     {fb.screenshot && (
-                                        <a href={fb.screenshot} target="_blank" rel="noreferrer" className="text-[var(--sa-info)] hover:text-[var(--sa-info-hover)] font-semibold underline underline-offset-4 transition-colors">
+                                        <a href={fb.screenshot} target="_blank" rel="noreferrer" className="text-blue-400 hover:text-blue-300 underline underline-offset-2">
                                             View Screenshot
                                         </a>
                                     )}
@@ -195,7 +176,7 @@ export default function SuperAdminFeedbackPage() {
                                 
                                 <div className="flex items-center gap-3">
                                     <select 
-                                        className="bg-[var(--sa-bg-elevated)] border border-[var(--sa-border)] rounded-lg px-3 py-1.5 text-xs font-bold text-[var(--sa-text-primary)] focus:outline-none focus:border-[var(--sa-accent)] cursor-pointer transition-colors"
+                                        className="bg-black/60 border border-[#1f2937] rounded-lg px-2 py-1 text-xs text-[#9ca3af] focus:outline-none focus:border-blue-500"
                                         value={fb.status}
                                         onChange={(e) => handleUpdate(fb._id, { status: e.target.value })}
                                     >
@@ -205,7 +186,7 @@ export default function SuperAdminFeedbackPage() {
                                     </select>
                                 </div>
                             </div>
-                        </SACard>
+                        </div>
                     ))
                 )}
             </div>
