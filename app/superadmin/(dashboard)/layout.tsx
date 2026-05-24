@@ -12,9 +12,9 @@ export default function SuperAdminLayout({
     children: React.ReactNode;
 }) {
     return (
-        <div className="flex h-screen bg-[#020617]">
+        <div className="flex h-screen bg-[var(--sa-bg)] transition-colors duration-300">
             {/* Desktop Sidebar */}
-            <aside className="hidden md:flex md:w-52 md:flex-col">
+            <aside className="hidden md:flex md:w-64 md:flex-col shrink-0">
                 <SuperAdminSidebar />
             </aside>
 

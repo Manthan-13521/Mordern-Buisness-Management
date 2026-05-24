@@ -15,6 +15,7 @@ import {
     Shield,
     Megaphone,
 } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function SuperAdminSidebar() {
     const pathname = usePathname();
@@ -32,15 +33,15 @@ export function SuperAdminSidebar() {
     ];
 
     return (
-        <div className="flex h-full w-52 flex-col bg-[#020617] text-[#f9fafb] border-r border-[#1f2937]">
+        <div className="flex h-full w-64 flex-col bg-[var(--sa-bg)] text-[var(--sa-text-primary)] border-r border-[var(--sa-border)] transition-colors duration-300">
             {/* Logo area */}
-            <div className="flex h-16 items-center px-4 gap-3 border-b border-[#1f2937]">
-                <div className="w-8 h-8 rounded-xl bg-[#0b1220] flex items-center justify-center border border-[#1f2937]">
-                    <Shield className="w-4 h-4 text-[#8b5cf6]" />
+            <div className="flex h-16 items-center px-6 gap-3 border-b border-[var(--sa-border)] shrink-0">
+                <div className="w-8 h-8 rounded-xl bg-[var(--sa-bg-elevated)] flex items-center justify-center border border-[var(--sa-border)]">
+                    <Shield className="w-4 h-4 text-[var(--sa-accent)]" />
                 </div>
                 <div className="overflow-hidden">
-                    <h1 className="text-sm font-bold truncate text-[#f9fafb]">AquaSync</h1>
-                    <p className="text-[10px] text-[#9ca3af] font-semibold tracking-wide uppercase">Platform Control</p>
+                    <h1 className="text-base font-bold truncate text-[var(--sa-text-primary)]">AquaSync</h1>
+                    <p className="text-[10px] text-[var(--sa-text-muted)] font-semibold tracking-wide uppercase">Platform Control</p>
                 </div>
             </div>
 
@@ -55,38 +56,41 @@ export function SuperAdminSidebar() {
                             key={item.name}
                             href={item.href}
                             className={clsx(
-                                "group flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 border-l-[3px]",
+                                "group flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 font-medium",
                                 isActive
-                                    ? "bg-[#8b5cf6]/10 text-white border-[#8b5cf6]"
-                                    : "text-[#9ca3af] border-transparent hover:text-white hover:bg-[#8b5cf6]/5"
+                                    ? "bg-[var(--sa-accent-muted)] text-[var(--sa-accent)]"
+                                    : "text-[var(--sa-text-secondary)] hover:text-[var(--sa-text-primary)] hover:bg-[var(--sa-bg-card-hover)]"
                             )}
                         >
                             <item.icon
                                 className={clsx(
                                     "w-4 h-4 transition-colors duration-200",
-                                    isActive ? "text-white" : "text-[#9ca3af] group-hover:text-white"
+                                    isActive ? "text-[var(--sa-accent)]" : "text-[var(--sa-text-muted)] group-hover:text-[var(--sa-text-primary)]"
                                 )}
                             />
-                            <span className="text-sm font-medium tracking-tight">{item.name}</span>
+                            <span className="text-sm tracking-tight">{item.name}</span>
                         </Link>
                     );
                 })}
             </nav>
 
             {/* Bottom Section */}
-            <div className="p-3 border-t border-[#1f2937] bg-[#020617]">
-                <div className="flex items-center gap-2 px-2 py-1.5 mb-2">
-                    <div className="w-7 h-7 rounded-full bg-[#0b1220] flex items-center justify-center border border-[#1f2937]">
-                        <span className="text-[10px] font-bold text-[#f9fafb]">S</span>
+            <div className="p-4 border-t border-[var(--sa-border)] bg-[var(--sa-bg)] shrink-0">
+                <div className="mb-2">
+                    <ThemeToggle />
+                </div>
+                <div className="flex items-center gap-3 px-2 py-2 mb-2 bg-[var(--sa-bg-card)] rounded-xl border border-[var(--sa-border)]">
+                    <div className="w-8 h-8 rounded-lg bg-[var(--sa-bg-elevated)] flex items-center justify-center border border-[var(--sa-border)]">
+                        <span className="text-xs font-bold text-[var(--sa-text-primary)]">S</span>
                     </div>
-                    <div className="overflow-hidden">
-                        <p className="text-[10px] font-bold truncate text-[#f9fafb]">Super Admin</p>
-                        <p className="text-[9px] text-[#9ca3af] truncate">Platform Owner</p>
+                    <div className="overflow-hidden flex-1">
+                        <p className="text-sm font-bold truncate text-[var(--sa-text-primary)] leading-tight">Super Admin</p>
+                        <p className="text-[10px] text-[var(--sa-text-muted)] truncate font-medium">Platform Owner</p>
                     </div>
                 </div>
                 <button
                     onClick={() => { window.location.href = "/superadmin/login"; }}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-[#9ca3af] hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-[var(--sa-text-muted)] hover:text-[var(--sa-danger)] hover:bg-[var(--sa-danger-muted)] rounded-lg transition-all"
                 >
                     <LogOut className="w-4 h-4" />
                     <span>Log Out</span>

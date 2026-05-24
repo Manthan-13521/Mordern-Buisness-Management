@@ -76,7 +76,7 @@ export function PopupAd({ ads, onDismiss, onAdDismiss, onClick, onImpression }: 
                 transition={{ duration: 0.4, ease: "easeOut" }}
                 className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-2 sm:p-4"
             >
-                <div className="relative w-[98vw] h-[98vh] flex flex-col items-center justify-center">
+                <div className="relative w-[85vw] h-[85vh] flex flex-col items-center justify-center">
                     {/* Close Button */}
                     <button
                         onClick={handleDismiss}
@@ -118,7 +118,7 @@ export function PopupAd({ ads, onDismiss, onAdDismiss, onClick, onImpression }: 
                                     fill
                                     className="object-contain"
                                     priority
-                                    sizes="98vw"
+                                    sizes="85vw"
                                 />
                             </div>
 

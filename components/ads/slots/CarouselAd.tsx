@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { ArrowUpRight, Volume2, VolumeX, ChevronLeft, ChevronRight } from "lucide-react";
 import { AdSlotName, SLOT_CONSTRAINTS } from "@/lib/ad-slots";
+import { useAdTrack } from "../AdProvider";
 import { AdModal } from "../AdModal";
 
 interface CarouselAdProps {
@@ -34,7 +35,10 @@ export function CarouselAd({ slotName, ads, className = "" }: CarouselAdProps) {
     const ad = ads[currentIndex];
     const isVideo = ad.videoUrl && ad.videoUrl.length > 0;
 
+    const trackEvent = useAdTrack();
+
     const handleAdClick = () => {
+        trackEvent(ad._id, "click", slotName);
         setIsModalOpen(true);
     };
 

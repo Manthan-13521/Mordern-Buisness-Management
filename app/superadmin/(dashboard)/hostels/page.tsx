@@ -2,10 +2,19 @@
 
 import { useEffect, useState, useCallback } from "react";
 import {
-    Search, Plus, ShieldCheck, KeyRound, Play, Pause, XCircle, CheckCircle2, AlertTriangle, Info, Loader2, Trash2, Building2, UserCircle, ExternalLink
+    Search, Plus, KeyRound, Play, Pause, XCircle, CheckCircle2, AlertTriangle, Info, Loader2, Trash2, Building2, UserCircle, ExternalLink
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
+
+import { SACard } from "@/components/superadmin/ui/SACard";
+import { SABadge } from "@/components/superadmin/ui/SABadge";
+import { SATable, SATableContainer, SATHead, SATH, SATBody, SATR, SATD } from "@/components/superadmin/ui/SATable";
+import { SAPageHeader } from "@/components/superadmin/ui/SAPageHeader";
+import { SAButton } from "@/components/superadmin/ui/SAButton";
+import { SAModal } from "@/components/superadmin/ui/SAModal";
+import { SAInput, SALabel } from "@/components/superadmin/ui/SAInput";
+import { SAEmptyState } from "@/components/superadmin/ui/SAEmptyState";
 
 type Hostel = {
     hostelId: string; 
@@ -161,228 +170,220 @@ export default function SuperAdminHostelsPage() {
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-black text-white flex items-center gap-3">
-                        <Building2 className="h-8 w-8 text-rose-500" />
-                        Hostel Management
-                    </h1>
-                    <p className="text-[#9ca3af] mt-1">Manage SaaS hostel tenants, monitor activity, and control access.</p>
-                </div>
-                
-                <a href="/hostel/register?admin=true" className="bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 border-0 text-white px-4 py-2 font-bold rounded-xl shadow-lg transition flex items-center gap-2 whitespace-nowrap">
-                    <Plus className="w-5 h-5"/> Add Hostel manually
-                </a>
-                
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6b7280]" />
-                    <input 
-                        type="text" 
-                        placeholder="Search hostels..." 
-                        value={search}
-                        onChange={e => { setSearch(e.target.value); setPage(1); }}
-                        className="bg-[#0b1220] border border-neutral-800 rounded-xl pl-10 pr-4 py-2.5 w-full md:w-80 text-sm focus:ring-2 focus:ring-[#8b5cf6] focus:outline-none transition-all"
-                    />
-                </div>
-            </div>
+            <SAPageHeader 
+                title="Hostel Management"
+                description="Manage SaaS hostel tenants, monitor activity, and control access."
+                icon={<Building2 className="w-6 h-6 text-[var(--sa-accent)]" />}
+                actions={
+                    <div className="flex items-center gap-4">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--sa-text-muted)]" />
+                            <SAInput 
+                                type="text" 
+                                placeholder="Search hostels..." 
+                                value={search}
+                                onChange={e => { setSearch(e.target.value); setPage(1); }}
+                                className="pl-10 w-full md:w-64"
+                            />
+                        </div>
+                        <a href="/hostel/register?admin=true">
+                            <SAButton>
+                                <Plus className="w-4 h-4"/> Add Hostel
+                            </SAButton>
+                        </a>
+                    </div>
+                }
+            />
 
             {/* Hostel Table */}
-            <div className="bg-[#0b1220]/50 border border-neutral-800 rounded-2xl overflow-hidden backdrop-blur-sm shadow-xl">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-[#0b1220]/50 text-[#9ca3af] text-xs uppercase tracking-wider font-bold border-b border-neutral-800">
-                                <th className="px-6 py-4">Hostel Info</th>
-                                <th className="px-6 py-4">Contact & Admin</th>
-                                <th className="px-6 py-4">Status</th>
-                                <th className="px-6 py-4">Registered</th>
-                                <th className="px-6 py-4 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-neutral-800/50">
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={5} className="px-6 py-20 text-center">
-                                        <Loader2 className="h-8 w-8 animate-spin mx-auto text-rose-500" />
-                                        <p className="text-[#6b7280] mt-2 text-sm">Loading hostels...</p>
-                                    </td>
-                                </tr>
-                            ) : hostels.length === 0 ? (
-                                <tr>
-                                    <td colSpan={5} className="px-6 py-20 text-center">
-                                        <div className="bg-[#0b1220]/50 h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                                            <Building2 className="h-8 w-8 text-neutral-600" />
+            <SATableContainer>
+                <SATable>
+                    <SATHead>
+                        <SATR>
+                            <SATH>Hostel Info</SATH>
+                            <SATH>Contact & Admin</SATH>
+                            <SATH>Status</SATH>
+                            <SATH>Registered</SATH>
+                            <SATH className="text-right">Actions</SATH>
+                        </SATR>
+                    </SATHead>
+                    <SATBody>
+                        {loading ? (
+                            <SATR>
+                                <SATD colSpan={5} className="text-center py-20">
+                                    <Loader2 className="h-8 w-8 animate-spin mx-auto text-[var(--sa-accent)]" />
+                                    <p className="text-[var(--sa-text-muted)] mt-2 text-sm">Loading hostels...</p>
+                                </SATD>
+                            </SATR>
+                        ) : hostels.length === 0 ? (
+                            <SATR>
+                                <SATD colSpan={5}>
+                                    <SAEmptyState 
+                                        title="No hostels found" 
+                                        description="Try adjusting your search criteria."
+                                        icon={<Building2 className="w-6 h-6" />}
+                                    />
+                                </SATD>
+                            </SATR>
+                        ) : hostels.map(h => (
+                            <SATR key={h.hostelId}>
+                                <SATD>
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-10 w-10 rounded-xl bg-[var(--sa-bg-elevated)] flex items-center justify-center border border-[var(--sa-border)] font-bold text-[var(--sa-text-primary)]">
+                                            {(h.hostelName || "U").charAt(0)}
                                         </div>
-                                        <p className="text-[#9ca3af] font-medium">No hostels found</p>
-                                        <p className="text-[#6b7280] text-sm mt-1">Try adjusting your search criteria</p>
-                                    </td>
-                                </tr>
-                            ) : hostels.map(h => (
-                                <tr key={h.hostelId} className="hover:bg-[#8b5cf6]/5 transition-colors group">
-                                    <td className="px-6 py-5">
-                                        <div className="flex items-center gap-3">
-                                            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-rose-500/20 to-orange-500/20 flex items-center justify-center border border-[#1f2937] font-bold text-rose-400">
-                                                {(h.hostelName || "U").charAt(0)}
-                                            </div>
-                                            <div>
-                                                <div className="font-bold text-[#f9fafb]">{h.hostelName || "Unknown"}</div>
-                                                <div className="text-xs text-[#6b7280] font-mono">{h.hostelId} • /{h.slug}</div>
-                                            </div>
+                                        <div>
+                                            <div className="font-bold text-[var(--sa-text-primary)]">{h.hostelName || "Unknown"}</div>
+                                            <div className="text-xs text-[var(--sa-text-muted)] font-mono">{h.hostelId} • /{h.slug}</div>
                                         </div>
-                                    </td>
-                                    <td className="px-6 py-5">
-                                        <div className="flex flex-col gap-1">
-                                            <div className="flex items-center gap-2 text-sm text-[#9ca3af]">
-                                                <UserCircle className="h-3.5 w-3.5 text-[#6b7280]" />
-                                                {h.adminEmail}
-                                            </div>
-                                            <div className="text-xs text-[#6b7280]">{h.adminPhone || "No phone provided"}</div>
+                                    </div>
+                                </SATD>
+                                <SATD>
+                                    <div className="flex flex-col gap-1">
+                                        <div className="flex items-center gap-2 text-sm text-[var(--sa-text-secondary)] font-medium">
+                                            <UserCircle className="h-3.5 w-3.5 text-[var(--sa-text-muted)]" />
+                                            {h.adminEmail}
                                         </div>
-                                    </td>
-                                    <td className="px-6 py-5">
-                                        {h.status === "ACTIVE" ? (
-                                            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-xs font-bold border border-emerald-500/20 max-w-max">
-                                                <CheckCircle2 className="h-3 w-3" /> Active
-                                            </span>
-                                        ) : (
-                                            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-500/10 text-orange-500 text-xs font-bold border border-orange-500/20 max-w-max">
-                                                <XCircle className="h-3 w-3" /> Suspended
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td className="px-6 py-5">
-                                        <div className="text-sm text-[#9ca3af]">
-                                            {h.createdAt ? new Date(h.createdAt).toLocaleDateString() : "Just Now"}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-5 text-right">
-                                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button 
-                                                onClick={() => fetchDetails(h)}
-                                                className="p-2 hover:bg-[#8b5cf6]/10 rounded-lg text-[#9ca3af] hover:text-[#f9fafb] transition-all shadow-sm"
-                                                title="View Details"
-                                            >
-                                                <Info className="h-4 w-4" />
-                                            </button>
-                                            <button 
-                                                onClick={() => { setResetTarget(h); setNewPassword(""); setShowPass(false); }}
-                                                className="p-2 hover:bg-[#0b1220] rounded-lg text-[#9ca3af] hover:text-[#f9fafb] transition-all shadow-sm"
-                                                title="Reset Admin Password"
-                                                disabled={isActionLoading}
-                                            >
-                                                <KeyRound className="h-4 w-4" />
-                                            </button>
-                                            <button 
-                                                onClick={() => toggleStatus(h)}
-                                                className={`p-2 hover:bg-[#8b5cf6]/10 rounded-lg transition-all shadow-sm ${h.status === "ACTIVE" ? "text-orange-400" : "text-emerald-400"}`}
-                                                title={h.status === "ACTIVE" ? "Suspend Hostel" : "Resume Hostel"}
-                                                disabled={isActionLoading}
-                                            >
-                                                {h.status === "ACTIVE" ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                                            </button>
-                                            <button 
-                                                onClick={() => { setShowDeleteModal(h.hostelId); setDeleteConfirmationText(""); }}
-                                                className="p-2 hover:bg-rose-500/10 rounded-lg text-rose-400 hover:text-rose-400 transition-all shadow-sm"
-                                                title="Delete Hostel"
-                                                disabled={isActionLoading}
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </button>
-                                            <a 
-                                                href={`/hostel/${h.slug}/admin`}
-                                                target="_blank"
-                                                className="p-2 hover:bg-[#8b5cf6]/10 rounded-lg text-rose-400 hover:text-rose-300 transition-all shadow-sm"
-                                                title="Open Dashboard"
-                                            >
-                                                <ExternalLink className="h-4 w-4" />
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                                        <div className="text-xs text-[var(--sa-text-muted)]">{h.adminPhone || "No phone provided"}</div>
+                                    </div>
+                                </SATD>
+                                <SATD>
+                                    {h.status === "ACTIVE" ? (
+                                        <SABadge variant="success">Active</SABadge>
+                                    ) : (
+                                        <SABadge variant="warning">Suspended</SABadge>
+                                    )}
+                                </SATD>
+                                <SATD>
+                                    <div className="text-sm text-[var(--sa-text-secondary)] font-medium">
+                                        {h.createdAt ? new Date(h.createdAt).toLocaleDateString() : "Just Now"}
+                                    </div>
+                                </SATD>
+                                <SATD className="text-right">
+                                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button 
+                                            onClick={() => fetchDetails(h)}
+                                            className="p-2 hover:bg-[var(--sa-bg-card-hover)] rounded-lg text-[var(--sa-text-muted)] hover:text-[var(--sa-text-primary)] transition-all shadow-sm"
+                                            title="View Details"
+                                        >
+                                            <Info className="h-4 w-4" />
+                                        </button>
+                                        <button 
+                                            onClick={() => { setResetTarget(h); setNewPassword(""); setShowPass(false); }}
+                                            className="p-2 hover:bg-[var(--sa-bg-card-hover)] rounded-lg text-[var(--sa-text-muted)] hover:text-[var(--sa-text-primary)] transition-all shadow-sm"
+                                            title="Reset Admin Password"
+                                            disabled={isActionLoading}
+                                        >
+                                            <KeyRound className="h-4 w-4" />
+                                        </button>
+                                        <button 
+                                            onClick={() => toggleStatus(h)}
+                                            className={`p-2 hover:bg-[var(--sa-bg-card-hover)] rounded-lg transition-all shadow-sm ${h.status === "ACTIVE" ? "text-[var(--sa-warning)]" : "text-[var(--sa-success)]"}`}
+                                            title={h.status === "ACTIVE" ? "Suspend Hostel" : "Resume Hostel"}
+                                            disabled={isActionLoading}
+                                        >
+                                            {h.status === "ACTIVE" ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                                        </button>
+                                        <button 
+                                            onClick={() => { setShowDeleteModal(h.hostelId); setDeleteConfirmationText(""); }}
+                                            className="p-2 hover:bg-[var(--sa-danger-muted)] rounded-lg text-[var(--sa-danger)] transition-all shadow-sm"
+                                            title="Delete Hostel"
+                                            disabled={isActionLoading}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+                                        <a 
+                                            href={`/hostel/${h.slug}/admin`}
+                                            target="_blank"
+                                            className="p-2 hover:bg-[var(--sa-info-muted)] rounded-lg text-[var(--sa-info)] transition-all shadow-sm"
+                                            title="Open Dashboard"
+                                        >
+                                            <ExternalLink className="h-4 w-4" />
+                                        </a>
+                                    </div>
+                                </SATD>
+                            </SATR>
+                        ))}
+                    </SATBody>
+                </SATable>
 
                 {totalPages > 1 && (
-                    <div className="flex items-center justify-between px-6 py-4 border-t border-neutral-800 text-sm text-[#6b7280]">
+                    <div className="flex items-center justify-between px-6 py-4 border-t border-[var(--sa-border)] text-sm text-[var(--sa-text-muted)]">
                         <span>{total} hostels</span>
-                        <div className="flex gap-2">
-                            <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1.5 rounded-xl bg-[#0b1220] hover:bg-neutral-800 text-white disabled:opacity-40 transition-all">Previous</button>
-                            <span className="px-3 py-1.5 font-semibold text-white">Page {page} of {totalPages}</span>
-                            <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="px-3 py-1.5 rounded-xl bg-[#0b1220] hover:bg-neutral-800 text-white disabled:opacity-40 transition-all">Next</button>
+                        <div className="flex gap-2 items-center">
+                            <SAButton variant="secondary" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Previous</SAButton>
+                            <span className="px-3 py-1.5 font-semibold text-[var(--sa-text-primary)]">Page {page} of {totalPages}</span>
+                            <SAButton variant="secondary" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Next</SAButton>
                         </div>
                     </div>
                 )}
-            </div>
+            </SATableContainer>
 
             {/* Details Modal */}
-            {selectedHostel && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-                    <div className="bg-[#0b1220] border border-neutral-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl overflow-y-auto max-h-[90vh]">
-                        <div className="bg-gradient-to-br from-rose-600/20 to-orange-600/20 p-8 border-b border-neutral-800 relative">
-                            <button 
-                                onClick={() => setSelectedHostel(null)}
-                                className="absolute top-6 right-6 p-2 hover:bg-[#8b5cf6]/10 rounded-full transition-all"
-                            >
-                                <XCircle className="h-6 w-6 text-[#9ca3af] hover:text-[#f9fafb]" />
-                            </button>
-                            <div className="h-16 w-16 rounded-2xl bg-[#0b1220] border border-[#1f2937] flex items-center justify-center mb-4">
-                                <Building2 className="h-10 w-10 text-rose-400" />
+            <SAModal
+                isOpen={!!selectedHostel}
+                onClose={() => setSelectedHostel(null)}
+                title="Hostel Details"
+                maxWidth="md"
+            >
+                {selectedHostel && (
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-4">
+                            <div className="h-16 w-16 rounded-2xl bg-[var(--sa-bg-elevated)] border border-[var(--sa-border)] flex items-center justify-center">
+                                <Building2 className="h-8 w-8 text-[var(--sa-accent)]" />
                             </div>
-                            <h2 className="text-2xl font-black text-white">{selectedHostel.hostelName}</h2>
-                            <p className="text-[#9ca3af] font-mono text-sm leading-relaxed">/{selectedHostel.slug}</p>
+                            <div>
+                                <h2 className="text-xl font-bold text-[var(--sa-text-primary)]">{selectedHostel.hostelName}</h2>
+                                <p className="text-[var(--sa-text-muted)] font-mono text-sm">/{selectedHostel.slug}</p>
+                            </div>
                         </div>
                         
-                        <div className="p-8 space-y-8">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-[#0b1220]/50 p-6 rounded-2xl border border-[#1f2937]">
-                                    <p className="text-xs font-bold text-[#6b7280] uppercase tracking-widest mb-1">Residents</p>
-                                    <p className="text-3xl font-black text-white">{selectedHostel.stats?.members ?? 0}</p>
-                                </div>
-                                <div className="bg-[#0b1220]/50 p-6 rounded-2xl border border-[#1f2937]">
-                                    <p className="text-xs font-bold text-[#6b7280] uppercase tracking-widest mb-1">Payments</p>
-                                    <p className="text-3xl font-black text-white">{selectedHostel.stats?.payments ?? 0}</p>
-                                </div>
-                            </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <SACard padding="sm" className="text-center">
+                                <p className="text-xs font-bold text-[var(--sa-text-muted)] uppercase tracking-widest mb-1">Residents</p>
+                                <p className="text-2xl font-bold text-[var(--sa-text-primary)]">{selectedHostel.stats?.members ?? 0}</p>
+                            </SACard>
+                            <SACard padding="sm" className="text-center">
+                                <p className="text-xs font-bold text-[var(--sa-text-muted)] uppercase tracking-widest mb-1">Payments</p>
+                                <p className="text-2xl font-bold text-[var(--sa-text-primary)]">{selectedHostel.stats?.payments ?? 0}</p>
+                            </SACard>
+                        </div>
 
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between py-3 border-b border-neutral-800 text-sm">
-                                    <span className="text-[#6b7280] font-medium">Hostel ID</span>
-                                    <span className="text-[#9ca3af] font-mono">{selectedHostel.hostelId}</span>
-                                </div>
-                                <div className="flex items-center justify-between py-3 border-b border-neutral-800 text-sm">
-                                    <span className="text-[#6b7280] font-medium">Blocks Count</span>
-                                    <span className="text-[#9ca3af]">{selectedHostel.numberOfBlocks || 0} Block(s)</span>
-                                </div>
-                                <div className="flex items-center justify-between py-3 border-b border-neutral-800 text-sm">
-                                    <span className="text-[#6b7280] font-medium">Admin Email</span>
-                                    <span className="text-[#9ca3af]">{selectedHostel.adminEmail}</span>
-                                </div>
-                                <div className="flex items-center justify-between py-3 border-b border-neutral-800 text-sm">
-                                    <span className="text-[#6b7280] font-medium">City</span>
-                                    <span className="text-[#9ca3af]">{selectedHostel.city || "N/A"}</span>
-                                </div>
-                                <div className="flex items-center justify-between py-3 border-b border-neutral-800 text-sm">
-                                    <span className="text-[#6b7280] font-medium">Join Date</span>
-                                    <span className="text-[#9ca3af]">{selectedHostel.createdAt ? new Date(selectedHostel.createdAt).toLocaleDateString() : "N/A"}</span>
-                                </div>
-                                <div className="flex items-center justify-between py-3 border-b border-neutral-800 text-sm">
-                                    <span className="text-[#6b7280] font-medium">Contact Phone</span>
-                                    <span className="text-[#9ca3af]">{selectedHostel.adminPhone || "N/A"}</span>
-                                </div>
+                        <div className="space-y-0 divide-y divide-[var(--sa-border-subtle)]">
+                            <div className="flex items-center justify-between py-3 text-sm">
+                                <span className="text-[var(--sa-text-muted)] font-medium">Hostel ID</span>
+                                <span className="text-[var(--sa-text-primary)] font-mono">{selectedHostel.hostelId}</span>
                             </div>
+                            <div className="flex items-center justify-between py-3 text-sm">
+                                <span className="text-[var(--sa-text-muted)] font-medium">Blocks Count</span>
+                                <span className="text-[var(--sa-text-primary)]">{selectedHostel.numberOfBlocks || 0} Block(s)</span>
+                            </div>
+                            <div className="flex items-center justify-between py-3 text-sm">
+                                <span className="text-[var(--sa-text-muted)] font-medium">Admin Email</span>
+                                <span className="text-[var(--sa-text-primary)]">{selectedHostel.adminEmail}</span>
+                            </div>
+                            <div className="flex items-center justify-between py-3 text-sm">
+                                <span className="text-[var(--sa-text-muted)] font-medium">City</span>
+                                <span className="text-[var(--sa-text-primary)]">{selectedHostel.city || "N/A"}</span>
+                            </div>
+                            <div className="flex items-center justify-between py-3 text-sm">
+                                <span className="text-[var(--sa-text-muted)] font-medium">Join Date</span>
+                                <span className="text-[var(--sa-text-primary)]">{selectedHostel.createdAt ? new Date(selectedHostel.createdAt).toLocaleDateString() : "N/A"}</span>
+                            </div>
+                            <div className="flex items-center justify-between py-3 text-sm">
+                                <span className="text-[var(--sa-text-muted)] font-medium">Contact Phone</span>
+                                <span className="text-[var(--sa-text-primary)]">{selectedHostel.adminPhone || "N/A"}</span>
+                            </div>
+                        </div>
 
-                            <button 
-                                onClick={() => setSelectedHostel(null)}
-                                className="w-full py-4 text-sm font-bold bg-[#0b1220] hover:bg-neutral-700 text-white rounded-2xl transition-all border border-[#1f2937] shadow-inner"
-                            >
-                                Close View
-                            </button>
+                        <div className="pt-4 flex justify-end">
+                            <SAButton variant="secondary" onClick={() => setSelectedHostel(null)} className="w-full">
+                                Close
+                            </SAButton>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </SAModal>
 
             {/* Cascade Delete Modal */}
             {showDeleteModal && (() => {
@@ -392,97 +393,86 @@ export default function SuperAdminHostelsPage() {
                 const isValid = deleteConfirmationText === expectedConfirmation;
 
                 return (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in zoom-in-95 duration-200">
-                    <div className="bg-[#0b1220] border border-rose-500/20 rounded-3xl w-full max-w-md p-8 shadow-2xl relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-rose-500/50" />
-                        <div className="h-16 w-16 rounded-2xl bg-rose-500/10 flex items-center justify-center mb-6 border border-rose-500/20">
-                            <AlertTriangle className="h-10 w-10 text-rose-400" />
-                        </div>
-                        <h2 className="text-2xl font-black text-white">Permanent Deletion</h2>
-                        <p className="text-[#9ca3af] mt-3 text-sm leading-relaxed">
-                            This action will **completely purge** this hostel and all its associated data including:
-                        </p>
-                        <ul className="mt-4 space-y-2 text-xs text-[#6b7280] font-medium list-disc list-inside">
-                            <li>Hostel Blocks, Floors & Rooms Layout</li>
-                            <li>Resident Profiles & Renewal History</li>
-                            <li>Staff Records & Attendance Logs</li>
-                            <li>Fee Ledgers & Synced Access Accounts</li>
-                        </ul>
-                        <div className="bg-rose-500/5 p-4 rounded-xl border border-rose-500/10 mt-6 text-rose-400 text-xs font-bold flex items-center gap-2">
-                            <Info className="h-4 w-4 shrink-0" /> IRREVERSIBLE ACTION
-                        </div>
-                        
-                        <div className="mt-6 space-y-2">
-                            <label className="block text-xs font-bold text-slate-400 mb-1.5">
-                                Type <span className="text-rose-400 select-all font-mono bg-rose-500/10 px-1 py-0.5 rounded">{expectedConfirmation}</span> to confirm.
-                            </label>
-                            <input
-                                type="text"
-                                value={deleteConfirmationText}
-                                onChange={(e) => setDeleteConfirmationText(e.target.value)}
-                                onPaste={(e) => e.preventDefault()}
-                                placeholder={expectedConfirmation}
-                                disabled={isActionLoading}
-                                className="w-full rounded-xl border border-rose-500/30 bg-[#020617] px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-rose-500 transition-all font-mono disabled:opacity-50 disabled:cursor-not-allowed"
-                            />
-                        </div>
+                    <SAModal
+                        isOpen={!!showDeleteModal}
+                        onClose={() => { setShowDeleteModal(null); setDeleteConfirmationText(""); }}
+                        title="Permanent Deletion"
+                        maxWidth="md"
+                    >
+                        <div className="space-y-6">
+                            <div className="bg-[var(--sa-danger-muted)] text-[var(--sa-danger)] p-4 rounded-xl flex gap-3 text-sm font-medium border border-[var(--sa-danger)]/20">
+                                <AlertTriangle className="w-5 h-5 shrink-0" />
+                                <div>
+                                    <p className="font-bold mb-1">IRREVERSIBLE ACTION</p>
+                                    <p>This action will completely purge this hostel and all its associated data including layout, residents, staff, and payments.</p>
+                                </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <SALabel>
+                                    Type <span className="text-[var(--sa-danger)] select-all font-mono bg-[var(--sa-danger-muted)] px-1 py-0.5 rounded">{expectedConfirmation}</span> to confirm.
+                                </SALabel>
+                                <SAInput
+                                    type="text"
+                                    value={deleteConfirmationText}
+                                    onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                                    onPaste={(e) => e.preventDefault()}
+                                    placeholder={expectedConfirmation}
+                                    disabled={isActionLoading}
+                                    className="font-mono text-[var(--sa-danger)]"
+                                />
+                            </div>
 
-                        <div className="grid grid-cols-2 gap-3 mt-8">
-                            <button 
-                                onClick={() => { setShowDeleteModal(null); setDeleteConfirmationText(""); }}
-                                className="py-3.5 text-sm font-bold bg-[#0b1220] hover:bg-neutral-700 text-white rounded-xl transition-all disabled:opacity-50"
-                                disabled={isActionLoading}
-                            >
-                                Cancel
-                            </button>
-                            <button 
-                                onClick={() => isValid && deleteHostel(showDeleteModal, deleteConfirmationText)}
-                                className="py-3.5 text-sm font-bold bg-red-700 hover:bg-red-600 text-white rounded-xl transition-all shadow-lg shadow-red-900/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:bg-red-700 disabled:cursor-not-allowed"
-                                disabled={isActionLoading || !isValid}
-                            >
-                                {isActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete System"}
-                            </button>
+                            <div className="flex justify-end gap-3 pt-4 border-t border-[var(--sa-border-subtle)]">
+                                <SAButton variant="secondary" onClick={() => { setShowDeleteModal(null); setDeleteConfirmationText(""); }} disabled={isActionLoading}>
+                                    Cancel
+                                </SAButton>
+                                <SAButton variant="danger" onClick={() => isValid && deleteHostel(showDeleteModal, deleteConfirmationText)} disabled={isActionLoading || !isValid}>
+                                    {isActionLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                                    Delete System
+                                </SAButton>
+                            </div>
                         </div>
-                    </div>
-                </div>
+                    </SAModal>
                 );
             })()}
 
             {/* Reset Password Modal */}
             {resetTarget && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => !isActionLoading && setResetTarget(null)} />
-                    <div className="relative bg-[#0b1220] border border-[#1f2937] rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
-                        <div className="flex items-center justify-between border-b border-[#1f2937] pb-3">
-                            <h2 className="text-lg font-bold text-white tracking-tight">Reset Password</h2>
-                            <button onClick={() => setResetTarget(null)} disabled={isActionLoading} className="text-[#6b7280] hover:text-[#f9fafb] transition-colors"><XCircle className="h-5 w-5" /></button>
-                        </div>
-                        <p className="text-sm text-[#6b7280]">Setting new password for <span className="font-semibold text-white">{resetTarget.hostelName}</span> ({resetTarget.adminEmail}).</p>
+                <SAModal
+                    isOpen={!!resetTarget}
+                    onClose={() => !isActionLoading && setResetTarget(null)}
+                    title="Reset Password"
+                    maxWidth="sm"
+                >
+                    <div className="space-y-4">
+                        <p className="text-sm text-[var(--sa-text-secondary)]">
+                            Setting new password for <span className="font-semibold text-[var(--sa-text-primary)]">{resetTarget.hostelName}</span> ({resetTarget.adminEmail}).
+                        </p>
                         <form onSubmit={handleResetPassword} className="space-y-4 pt-2">
                             <div>
-                                <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wider">New Password</label>
+                                <SALabel>New Password</SALabel>
                                 <div className="relative">
-                                    <input
+                                    <SAInput
                                         required
                                         type={showPass ? "text" : "password"}
                                         minLength={8}
                                         value={newPassword}
                                         onChange={e => setNewPassword(e.target.value)}
                                         placeholder="Min 8 characters"
-                                        className="w-full rounded-xl border border-[#1f2937] bg-slate-950/50 px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
+                                        className="pr-16"
                                     />
-                                    <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7280] hover:text-[#f9fafb]">
+                                    <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--sa-text-muted)] hover:text-[var(--sa-text-primary)]">
                                         <span className="text-xs font-semibold">{showPass ? "HIDE" : "SHOW"}</span>
                                     </button>
                                 </div>
                             </div>
-                            <button type="submit" disabled={isActionLoading}
-                                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 border-0 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-orange-500/20 disabled:opacity-50">
+                            <SAButton type="submit" variant="primary" disabled={isActionLoading} className="w-full">
                                 {isActionLoading ? "Resetting…" : "Confirm Reset"}
-                            </button>
+                            </SAButton>
                         </form>
                     </div>
-                </div>
+                </SAModal>
             )}
         </div>
     );
