@@ -2,8 +2,10 @@
 
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Store, Menu, X } from "lucide-react";
+import { Store, Menu, X, Calculator } from "lucide-react";
 import { useSidebar } from "@/components/providers/SidebarProvider";
+import { useState } from "react";
+import { CalculatorWidget } from "@/components/CalculatorWidget";
 
 const PAGE_TITLES: Record<string, string> = {
  "/dashboard": "Intelligence Dashboard",
@@ -21,6 +23,7 @@ export function BusinessTopbar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const { open, toggle } = useSidebar();
+  const [showCalculator, setShowCalculator] = useState(false);
 
   const suffix = Object.keys(PAGE_TITLES).find((k) => pathname.endsWith(k)) ?? "";
   const title = PAGE_TITLES[suffix] ?? "Business Admin";
@@ -48,6 +51,19 @@ export function BusinessTopbar() {
 
       {/* Right: Actions + User */}
       <div className="flex items-center gap-4">
+        <button
+          onClick={() => setShowCalculator(!showCalculator)}
+          className={`hidden sm:flex h-10 w-10 items-center justify-center rounded-xl border transition-all ${
+            showCalculator 
+              ? "bg-[#8b5cf6]/20 border-[#8b5cf6]/50 text-[#8b5cf6]" 
+              : "bg-[#0b1220] border-[#1f2937] text-[#9ca3af] hover:text-[#f9fafb] hover:border-[#374151]"
+          }`}
+          aria-label="Toggle Calculator"
+          title="Calculator"
+        >
+          <Calculator className="h-4 w-4" />
+        </button>
+
         <div className="h-10 w-px bg-[#1f2937] mx-1 hidden sm:block" />
 
         <div className="flex items-center gap-3 pl-1">
@@ -66,6 +82,8 @@ export function BusinessTopbar() {
           </div>
         </div>
       </div>
+
+      {showCalculator && <CalculatorWidget onClose={() => setShowCalculator(false)} />}
     </header>
   );
 }
