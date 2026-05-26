@@ -8,9 +8,13 @@ export function CalculatorWidget({ onClose }: { onClose: () => void }) {
   const [equation, setEquation] = useState("");
 
   const handleInput = (val: string) => {
+    if (display === "Error") {
+      setDisplay(val === "." ? "0." : val);
+      return;
+    }
+    if (val === "." && display.includes(".")) return;
+    
     if (display === "0" && val !== ".") {
-      setDisplay(val);
-    } else if (display === "Error") {
       setDisplay(val);
     } else {
       setDisplay(display + val);
@@ -23,19 +27,41 @@ export function CalculatorWidget({ onClose }: { onClose: () => void }) {
       setEquation("");
       return;
     }
-    setEquation(display + " " + op + " ");
-    setDisplay("0");
+    
+    if (equation && display !== "0" && display !== "0.") {
+      try {
+        const formatted = equation.replace(/×/g, "*").replace(/÷/g, "/").replace(/−/g, "-");
+        const result = new Function("return " + formatted + display)();
+        let safeResult = String(result);
+        if (safeResult === "Infinity" || safeResult === "-Infinity" || safeResult === "NaN") throw new Error();
+        setEquation(safeResult + " " + op + " ");
+        setDisplay("0");
+      } catch (e) {
+        setDisplay("Error");
+        setEquation("");
+      }
+    } else if (equation && (display === "0" || display === "0.")) {
+      setEquation(equation.slice(0, -2) + op + " ");
+      setDisplay("0");
+    } else {
+      setEquation(display + " " + op + " ");
+      setDisplay("0");
+    }
   };
 
   const calculate = () => {
-    if (!equation) return;
+    if (!equation || display === "Error") return;
     try {
       const formattedEquation = equation.replace(/×/g, "*").replace(/÷/g, "/").replace(/−/g, "-");
       const result = new Function("return " + formattedEquation + display)();
       
       let finalResult = String(result);
+      if (finalResult === "Infinity" || finalResult === "-Infinity" || finalResult === "NaN") {
+        throw new Error();
+      }
+      
       if (finalResult.includes(".")) {
-          finalResult = parseFloat(result).toFixed(2).replace(/\.00$/, "");
+          finalResult = parseFloat(parseFloat(result).toFixed(4)).toString();
       }
       
       setDisplay(finalResult);
