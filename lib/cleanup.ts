@@ -3,14 +3,24 @@ import { dbConnect } from "./mongodb";
 import { decrOccupancy } from "./redisOccupancy";
 import { redis } from "./redis";
 
+// ── Concurrency guard: prevent parallel cleanup runs from stacking ──────
+let _cleanupRunning = false;
+
 export async function runOccupancyCleanupInBackground() {
+    // Skip if another cleanup is already in progress (prevents N parallel scans
+    // when N dashboard requests arrive simultaneously)
+    if (_cleanupRunning) return;
+    _cleanupRunning = true;
+
     try {
         await dbConnect();
         const now = new Date();
         const expiredSessions = await PoolSession.find({
             status: "active",
             expiryTime: { $lte: now }
-        }).lean();
+        }).limit(500).lean();
+
+        if (expiredSessions.length === 0) return;
 
         const sessionIds = expiredSessions.map(s => s._id);
         const decrPromises = expiredSessions.map(s => 
@@ -23,6 +33,8 @@ export async function runOccupancyCleanupInBackground() {
         ]);
     } catch (error) {
         console.error("Cleanup error in background:", error);
+    } finally {
+        _cleanupRunning = false;
     }
 }
 

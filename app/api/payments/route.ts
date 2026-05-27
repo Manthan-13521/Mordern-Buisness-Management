@@ -198,7 +198,7 @@ export async function POST(req: Request) {
                         userId: user.id,
                         meta: { clientId, idempotencyKey, existingPaymentId: (existing as any)._id },
                     });
-                    console.log("Duplicate prevented", { clientId, idempotencyKey });
+                    logger.info("Duplicate prevented", { clientId, idempotencyKey });
                     return NextResponse.json({ message: "Duplicate request — payment already recorded.", payment: existing }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
                 }
             } catch (err) {
@@ -258,7 +258,7 @@ export async function POST(req: Request) {
                         }).lean();
                         
                         if (existing) {
-                            console.log("[Payment] Duplicate prevented", { clientId, idempotencyKey });
+                            logger.info("[Payment] Duplicate prevented", { clientId, idempotencyKey });
                             return NextResponse.json({ message: "Duplicate request — payment already recorded.", payment: existing }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
                         }
                     }

@@ -13,67 +13,81 @@ async function executeRentCycle() {
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
 
-    // Fetch members natively
-    const activeMembersDue = await HostelMember.find({
-        status: "active",
-        isDeleted: false,
-        due_date: { $lte: new Date(today.getTime() + 24 * 60 * 60 * 1000) } // Include today
-    });
-
     let processed = 0;
-    const transactions = [];
+    const allTransactions: any[] = [];
+    const BATCH_SIZE = 500;
 
-    for (const member of activeMembersDue) {
-        let nextDue = new Date(member.due_date);
-        let currentBalance = member.balance;
-        let deductionsMade = 0;
+    // ── Batch loop: process 500 members at a time to prevent Vercel timeouts ──
+    let hasMore = true;
+    while (hasMore) {
+        const activeMembersDue = await HostelMember.find({
+            status: "active",
+            isDeleted: false,
+            due_date: { $lte: new Date(today.getTime() + 24 * 60 * 60 * 1000) }
+        }).limit(BATCH_SIZE);
 
-        // Safe loop: while today is >= due_date
-        while (today.getTime() >= nextDue.getTime()) {
-            // Absolute Duplicate Protection
-            if (member.last_rent_processed_date && member.last_rent_processed_date.getTime() >= nextDue.getTime()) {
-                console.warn(`[CRON SAFETY] Skipped duplicate rent generation for ${member._id} at ${nextDue}`);
-                break;
-            }
-
-            currentBalance -= member.rent_amount;
-            deductionsMade += 1;
-            member.last_rent_processed_date = new Date();
-            
-            transactions.push({
-                hostelId: member.hostelId,
-                memberId: member._id,
-                memberName: member.name,
-                amount: -member.rent_amount,
-                paymentType: "rent",
-                payment_date: new Date(nextDue),
-                createdBy: "SYSTEM_CRON"
-            });
-
-            nextDue.setMonth(nextDue.getMonth() + 1);
+        if (activeMembersDue.length === 0) {
+            hasMore = false;
+            break;
         }
 
-        // Save updates
-        if (deductionsMade > 0) {
-            member.balance = currentBalance;
-            member.due_date = nextDue;
-            
-            // Defaulter conversion matrix explicitly injected here natively
-            if (currentBalance < 0 && member.status === "active") {
-                member.status = "defaulter";
+        for (const member of activeMembersDue) {
+            let nextDue = new Date(member.due_date);
+            let currentBalance = member.balance;
+            let deductionsMade = 0;
+
+            // Safe loop: while today is >= due_date
+            while (today.getTime() >= nextDue.getTime()) {
+                // Absolute Duplicate Protection
+                if (member.last_rent_processed_date && member.last_rent_processed_date.getTime() >= nextDue.getTime()) {
+                    console.warn(`[CRON SAFETY] Skipped duplicate rent generation for ${member._id} at ${nextDue}`);
+                    break;
+                }
+
+                currentBalance -= member.rent_amount;
+                deductionsMade += 1;
+                member.last_rent_processed_date = new Date();
+                
+                allTransactions.push({
+                    hostelId: member.hostelId,
+                    memberId: member._id,
+                    memberName: member.name,
+                    amount: -member.rent_amount,
+                    paymentType: "rent",
+                    payment_date: new Date(nextDue),
+                    createdBy: "SYSTEM_CRON"
+                });
+
+                nextDue.setMonth(nextDue.getMonth() + 1);
             }
-            
-            member.last_rent_processed_date = new Date();
-            await member.save();
-            processed++;
+
+            // Save updates
+            if (deductionsMade > 0) {
+                member.balance = currentBalance;
+                member.due_date = nextDue;
+                
+                // Defaulter conversion matrix explicitly injected here natively
+                if (currentBalance < 0 && member.status === "active") {
+                    member.status = "defaulter";
+                }
+                
+                member.last_rent_processed_date = new Date();
+                await member.save();
+                processed++;
+            }
+        }
+
+        // If we got fewer than BATCH_SIZE, we've processed all
+        if (activeMembersDue.length < BATCH_SIZE) {
+            hasMore = false;
         }
     }
 
-    if (transactions.length > 0) {
-        await HostelPaymentLog.insertMany(transactions);
+    if (allTransactions.length > 0) {
+        await HostelPaymentLog.insertMany(allTransactions);
     }
 
-    return { processed, transactions: transactions.length };
+    return { processed, transactions: allTransactions.length };
 }
 
 export async function GET(req: Request) {

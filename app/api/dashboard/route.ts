@@ -44,7 +44,8 @@ export async function GET(req: Request) {
         ]);
         if (!user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         
-        runOccupancyCleanupInBackground();
+        // Fire-and-forget: cleanup runs in background, does NOT block dashboard response
+        void runOccupancyCleanupInBackground().catch(() => {});
 
         const { startOfDayIST, endOfDayIST, startOfMonthIST, now } = getISTDayBounds();
 

@@ -13,11 +13,11 @@ export const dynamic = "force-dynamic";
 async function resolveTenant(slug: string, type: "pool" | "hostel") {
   await dbConnect();
   if (type === "pool") {
-    const pool = await Pool.findOne({ slug });
+    const pool = await Pool.findOne({ slug }).lean();
     if (!pool) throw new Error("Pool not found");
     return pool.poolId;
   } else {
-    const hostel = await Hostel.findOne({ slug });
+    const hostel = await Hostel.findOne({ slug }).lean();
     if (!hostel) throw new Error("Hostel not found");
     return hostel.hostelId;
   }
@@ -35,7 +35,7 @@ export async function GET(req: Request, props: { params: Promise<{ hostelSlug: s
       return NextResponse.json({ error: "Access denied: hostel mismatch" }, { status: 403 });
     }
 
-    const staff = await HostelStaff.findOne({ _id: staffId, hostelId: tenantId });
+    const staff = await HostelStaff.findOne({ _id: staffId, hostelId: tenantId }).lean();
     if (!staff) return NextResponse.json({ error: "Staff not found" }, { status: 404 });
 
     const now = new Date();

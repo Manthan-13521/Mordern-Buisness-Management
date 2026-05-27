@@ -32,7 +32,7 @@ export async function POST(req: Request) {
 
         // ── IDEMPOTENCY: Prevent double rent-cycle within 30 seconds ──
         const dedupeKey = `rent-cycle:${hostelId}`;
-        if (isDuplicate(dedupeKey, 30_000)) {
+        if (await isDuplicate(dedupeKey, 30_000)) {
             return NextResponse.json(
                 { error: "Rent cycle already running. Please wait before retrying." },
                 { status: 429 }

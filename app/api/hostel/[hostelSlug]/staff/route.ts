@@ -14,11 +14,11 @@ export const dynamic = "force-dynamic";
 async function resolveTenant(slug: string, type: "pool" | "hostel") {
   await dbConnect();
   if (type === "pool") {
-    const pool = await Pool.findOne({ slug });
+    const pool = await Pool.findOne({ slug }).lean();
     if (!pool) throw new Error("Pool not found");
     return pool.poolId;
   } else {
-    const hostel = await Hostel.findOne({ slug });
+    const hostel = await Hostel.findOne({ slug }).lean();
     if (!hostel) throw new Error("Hostel not found");
     return hostel.hostelId;
   }

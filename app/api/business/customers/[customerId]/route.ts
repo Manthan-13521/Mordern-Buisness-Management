@@ -18,7 +18,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ customer
         await dbConnect();
         const businessId = user.businessId;
 
-        const customer = await BusinessCustomer.findOne({ _id: customerId, businessId });
+        const customer = await BusinessCustomer.findOne({ _id: customerId, businessId }).lean();
         if (!customer) {
             return NextResponse.json({ error: "Customer not found" }, { status: 404 });
         }
@@ -73,9 +73,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ customer
 
         const currentBalance = (productSent - productReceived) - (paymentReceived - paymentGiven);
 
-        const customerObj = customer.toObject();
         return NextResponse.json({
-            ...customerObj,
+            ...customer,
             financials: {
                 productSent,
                 productReceived,

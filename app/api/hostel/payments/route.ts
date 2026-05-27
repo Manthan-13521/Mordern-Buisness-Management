@@ -11,6 +11,7 @@ import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { HostelPlan } from "@/models/HostelPlan"; // CRITICAL: Fixes populate("planId") crashing due to MissingSchemaError
 import { isDuplicate } from "@/lib/idempotency";
 import { checkRateLimit, getClientIp, rateLimitHeaders } from "@/lib/rateLimit";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -102,7 +103,7 @@ export async function POST(req: Request) {
 
         // ── IN-MEMORY IDEMPOTENCY: Prevent double-click duplication (5s window) ──
         const dedupeKey = `payment:${hostelId}:${memberId}:${paid}`;
-        if (isDuplicate(dedupeKey, 5_000)) {
+        if (await isDuplicate(dedupeKey, 5_000)) {
             return NextResponse.json(
                 { message: "Duplicate payment detected. Please wait before retrying." },
                 { status: 200 }
@@ -173,7 +174,7 @@ export async function POST(req: Request) {
             isAdvance: advanceCredit > 0,
         });
 
-        console.log("Payment created", payment._id);
+        logger.info("Payment created", { paymentId: payment._id });
 
         const finalStatus = (currentBalance >= 0 && member.status === "defaulter") ? "active" : member.status;
 
@@ -181,7 +182,7 @@ export async function POST(req: Request) {
             { _id: member._id, hostelId },
             { $inc: { balance: paid }, $set: { status: finalStatus } }
         );
-        console.log("Balance updated by amount:", paid);
+        logger.info("Balance updated", { memberId: member._id, amount: paid });
 
         try {
             await HostelAnalytics.updateOne(

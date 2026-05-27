@@ -130,7 +130,7 @@ export async function POST(req: Request) {
 
         // ── IDEMPOTENCY: Prevent double member creation (10s window) ──
         const dedupeKey = `member-create:${hostelId}:${phone}`;
-        if (isDuplicate(dedupeKey, 10_000)) {
+        if (await isDuplicate(dedupeKey, 10_000)) {
             return NextResponse.json(
                 { message: "Member registration already in progress. Please wait." },
                 { status: 200 }

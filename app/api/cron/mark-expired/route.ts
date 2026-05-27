@@ -27,11 +27,11 @@ export async function GET(req: Request) {
             Member.updateMany(
                 { expiryDate: { $lt: startOfToday }, status: "active" },
                 { $set: { status: "expired", isExpired: true } }
-            ),
+            ).maxTimeMS(30_000),
             EntertainmentMember.updateMany(
                 { expiryDate: { $lt: startOfToday }, status: "active" },
                 { $set: { status: "expired", isExpired: true } }
-            )
+            ).maxTimeMS(30_000)
         ]);
 
         log.status = "success";
