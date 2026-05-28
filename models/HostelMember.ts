@@ -146,9 +146,8 @@ hostelMemberSchema.post("updateOne", async function (this: any) {
 });
 // ──────────────────────────────────────────────────────────────
 
-// In Next.js, forcefully overwrite the model so schema changes take effect on HMR instead of using cached model
-if (mongoose.models.HostelMember) {
-    delete mongoose.models.HostelMember;
-}
+// Phase 2A FIX 6: Standard singleton pattern — avoids force-delete race condition
+// in production while still working correctly with HMR in development.
+export const HostelMember: Model<IHostelMember> =
+    mongoose.models.HostelMember || mongoose.model<IHostelMember>("HostelMember", hostelMemberSchema);
 
-export const HostelMember: Model<IHostelMember> = mongoose.model<IHostelMember>("HostelMember", hostelMemberSchema);

@@ -10,7 +10,15 @@
     "app/api/cron/cleanup/route.ts":               { "maxDuration": 30 },
     "app/api/cron/hostel-cleanup/route.ts":        { "maxDuration": 30 },
     "app/api/cron/expiry-alerts/route.ts":         { "maxDuration": 30 },
-    "app/api/cron/next-day-alerts/route.ts":       { "maxDuration": 30 }
+    "app/api/cron/next-day-alerts/route.ts":       { "maxDuration": 30 },
+    "app/api/cron/mark-expired/route.ts":             { "maxDuration": 60 },
+    "app/api/cron/hostel-expiry-alerts/route.ts":     { "maxDuration": 30 },
+    "app/api/cron/hostel-payment-cleanup/route.ts":   { "maxDuration": 30 },
+    "app/api/cron/hostel-whatsapp-reminder/route.ts": { "maxDuration": 60 },
+    "app/api/cron/backup-s3/route.ts":                { "maxDuration": 60 },
+    "app/api/cron/occupancy-sync/route.ts":           { "maxDuration": 30 },
+    "app/api/cron/auto-block/route.ts":               { "maxDuration": 30 },
+    "app/api/cron/system-stats-sync/route.ts":        { "maxDuration": 30 }
   },
   "crons": [
     {
@@ -52,6 +60,38 @@
     {
       "path": "/api/cron/notifications",
       "schedule": "15 4 * * *"
+    },
+    {
+      "path": "/api/cron/mark-expired",
+      "schedule": "30 1 * * *"
+    },
+    {
+      "path": "/api/cron/hostel-expiry-alerts",
+      "schedule": "45 2 * * *"
+    },
+    {
+      "path": "/api/cron/hostel-payment-cleanup",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/hostel-whatsapp-reminder",
+      "schedule": "30 9 * * *"
+    },
+    {
+      "path": "/api/cron/backup-s3",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/occupancy-sync",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/auto-block",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/system-stats-sync",
+      "schedule": "0 23 * * *"
     }
   ]
 }

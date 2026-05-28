@@ -237,15 +237,28 @@ export async function processDueAlerts(poolId?: string) {
     const upcomingSubs = await Subscription.find(subQuery).lean();
     if (upcomingSubs.length === 0) return { sent: 0, skipped: 0 };
 
+    // ── Phase 2A FIX 4: Batch-fetch members and plans to eliminate N+1 queries ──
+    // Previously: Member.findById() and Plan.findById() called inside the for-loop.
+    const memberIds = [...new Set(upcomingSubs.map((s: any) => s.memberId))];
+    const planIds = [...new Set(upcomingSubs.map((s: any) => s.planId).filter(Boolean))];
+
+    const [allMembers, allPlans] = await Promise.all([
+        Member.find({ _id: { $in: memberIds } }).select("name phone").lean(),
+        Plan.find({ _id: { $in: planIds } }).select("name price").lean(),
+    ]);
+
+    const memberMap = new Map((allMembers as any[]).map(m => [m._id.toString(), m]));
+    const planMap = new Map((allPlans as any[]).map(p => [p._id.toString(), p]));
+
     let sent = 0, skipped = 0;
 
     for (const sub of upcomingSubs as any[]) {
         if (await alreadySentToday(sub.memberId, "due_alert")) { skipped++; continue; }
 
-        const member = await Member.findById(sub.memberId).select("name phone").lean();
+        const member = memberMap.get(sub.memberId.toString());
         if (!member?.phone) { skipped++; continue; }
 
-        const plan = await Plan.findById(sub.planId).select("name price").lean();
+        const plan = sub.planId ? planMap.get(sub.planId.toString()) : null;
         const daysUntil = Math.ceil((new Date(sub.nextDueDate).getTime() - now.getTime()) / 86400000);
         const dayText = daysUntil <= 0 ? "today" : daysUntil === 1 ? "tomorrow" : `in ${daysUntil} days`;
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { processIndividualBilling } from "@/lib/billingEngine";
 import mongoose from "mongoose";
+import { verifyQStashSignature } from "@/lib/verifyQStash";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,10 @@ export const dynamic = "force-dynamic";
  * Atomic, transaction-aware, and scale-safe.
  */
 export async function POST(req: Request) {
+    // ── QStash Signature Verification (Phase 2A FIX 1) ──
+    const authErr = await verifyQStashSignature(req);
+    if (authErr) return authErr;
+
     try {
         const body = await req.json();
         const { subscriptionId } = body;

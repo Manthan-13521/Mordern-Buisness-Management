@@ -9,6 +9,21 @@ export const SECURITY_HEADERS: Record<string, string> = {
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(self 'https://checkout.razorpay.com'), usb=(), interest-cohort=()",
     "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
+    // Phase 2B FIX 1: HSTS — 2 year max-age with subdomains and preload
+    "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+    // Phase 2B FIX 1: Content-Security-Policy
+    // Allows: Razorpay checkout popup, Cloudinary/CloudFront images, Sentry error reporting,
+    // Google Fonts, Vercel Insights, and inline styles/scripts (Next.js requires unsafe-inline).
+    "Content-Security-Policy": [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://cdn.razorpay.com",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com",
+        "img-src 'self' data: blob: https://res.cloudinary.com https://*.cloudfront.net",
+        "connect-src 'self' https://api.razorpay.com https://sentry.io https://*.sentry.io https://vitals.vercel-insights.com",
+        "frame-src https://api.razorpay.com https://checkout.razorpay.com",
+        "report-uri /api/csp-report",
+    ].join("; "),
 };
 
 const ALLOWED_ORIGINS = new Set(
@@ -22,8 +37,10 @@ const ALLOWED_ORIGINS = new Set(
 
 export function applyCORS(req: NextRequestWithAuth, res: NextResponse) {
     const origin = req.headers.get("origin") || "";
-    if (ALLOWED_ORIGINS.has(origin) || !origin) {
-        res.headers.set("Access-Control-Allow-Origin", origin || "*");
+    // Phase 2A FIX 8: Only set CORS header when origin is present and explicitly allowed.
+    // Previously fell back to "*" when no Origin header was present.
+    if (origin && ALLOWED_ORIGINS.has(origin)) {
+        res.headers.set("Access-Control-Allow-Origin", origin);
     }
     res.headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
     res.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, x-csrf-token");

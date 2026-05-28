@@ -29,7 +29,7 @@ export async function GET() {
         const alerts: Alert[] = [];
 
         // ── 1. API P95 Latency ────────────────────────────────────────
-        const httpMetric = metrics.find(m => m.name === "http_request_duration_seconds");
+        const httpMetric = metrics.find((m: any) => m.name === "http_request_duration_seconds");
         let p95Latency = 0;
         if (httpMetric && "values" in httpMetric) {
             const values = (httpMetric as any).values || [];
@@ -53,8 +53,8 @@ export async function GET() {
         });
 
         // ── 2. Error Rate ─────────────────────────────────────────────
-        const errorMetric = metrics.find(m => m.name === "api_errors_total");
-        const httpReqMetric = metrics.find(m => m.name === "http_request_duration_seconds");
+        const errorMetric = metrics.find((m: any) => m.name === "api_errors_total");
+        const httpReqMetric = metrics.find((m: any) => m.name === "http_request_duration_seconds");
         let errorRate = 0;
         if (errorMetric && "values" in errorMetric && httpReqMetric && "values" in httpReqMetric) {
             const totalErrors = ((errorMetric as any).values || []).reduce((acc: number, v: any) => acc + (v.value || 0), 0);
@@ -78,7 +78,7 @@ export async function GET() {
         });
 
         // ── 3. Cache Hit Rate ─────────────────────────────────────────
-        const cacheMetric = metrics.find(m => m.name === "cache_operations_total");
+        const cacheMetric = metrics.find((m: any) => m.name === "cache_operations_total");
         let cacheHitRate = 100;
         if (cacheMetric && "values" in cacheMetric) {
             const values = (cacheMetric as any).values || [];
@@ -97,7 +97,7 @@ export async function GET() {
         });
 
         // ── 4. Circuit Breaker ─────────────────────────────────────────
-        const breakerMetric = metrics.find(m => m.name === "circuit_breaker_state");
+        const breakerMetric = metrics.find((m: any) => m.name === "circuit_breaker_state");
         let razorpayBreakerOpen = false;
         if (breakerMetric && "values" in breakerMetric) {
             const values = (breakerMetric as any).values || [];

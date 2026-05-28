@@ -16,6 +16,11 @@ export const runtime = "nodejs";
  * Secret: RAZORPAY_WEBHOOK_SECRET env var.
  */
 export async function POST(req: Request) {
+    // Phase 2B FIX 3: Fail fast if environment is misconfigured
+    if ((globalThis as any).__ENV_INVALID) {
+        return Response.json({ error: "Service misconfigured" }, { status: 503 });
+    }
+
     try {
         const rawBody = await req.text();
         const signature = req.headers.get("x-razorpay-signature") || "";

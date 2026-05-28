@@ -1,12 +1,17 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { UnifiedUser } from "@/models/UnifiedUser";
+import { verifyQStashSignature } from "@/lib/verifyQStash";
 
 /**
  * QStash Worker Endpoint for Dual-Write Synchronization.
  * Called asynchronously when the primary sync hook fails.
  */
 export async function POST(req: Request) {
+    // ── QStash Signature Verification (Phase 2A FIX 1) ──
+    const authErr = await verifyQStashSignature(req);
+    if (authErr) return authErr;
+
     try {
         // QStash payload parsing
         const body = await req.json();

@@ -115,19 +115,23 @@ const memberSchema = new Schema<IMember>(
             required: true,
             default: () => crypto.randomUUID(),
         },
+        // Phase 2C FIX 1: Removed standalone index — covered by compound { poolId: 1, isDeleted: 1, isExpired: 1 }
         cardStatus: { 
             type: String, 
             enum: ['pending', 'ready'], 
             default: 'pending',
-            index: true
+            // index: true — REMOVED: low-cardinality field, standalone index wasteful
         },
         lastScannedAt: { type: Date },
         // Lifecycle — new boolean model (replaces status string)
         isActive: { type: Boolean, default: true, index: true },
-        isExpired: { type: Boolean, default: false, index: true },
-        expiryAlertNextDaySent: { type: Boolean, default: false, index: true },
+        // Phase 2C FIX 1: Removed standalone index — covered by { poolId: 1, isDeleted: 1, isExpired: 1 }
+        isExpired: { type: Boolean, default: false },
+        // Phase 2C FIX 1: Removed standalone index — rarely queried standalone
+        expiryAlertNextDaySent: { type: Boolean, default: false },
         expiredAt: { type: Date },
-        isDeleted: { type: Boolean, default: false, index: true },
+        // Phase 2C FIX 1: Removed standalone index — covered by { poolId: 1, isDeleted: 1, isExpired: 1 }
+        isDeleted: { type: Boolean, default: false },
         deletedAt: { type: Date },
         deletedBy: { type: Schema.Types.ObjectId, ref: "User" },
         deleteReason: {
@@ -180,7 +184,7 @@ memberSchema.index({ poolId: 1, planEndDate: 1 });
 memberSchema.index({ poolId: 1, balanceAmount: 1 });
 memberSchema.index({ poolId: 1, createdAt: -1 });
 memberSchema.index({ poolId: 1, isDeleted: 1, isExpired: 1 });
-memberSchema.index({ poolId: 1, isDeleted: 1 });
+// Phase 2C FIX 1: Removed { poolId: 1, isDeleted: 1 } — it's a prefix subset of { poolId: 1, isDeleted: 1, isExpired: 1 }
 memberSchema.index({ poolId: 1, memberType: 1 }); // Fast type filtering without $regex
 memberSchema.index({ poolId: 1, expiryDate: 1 }); // Dashboard expiry queries use $or on planEndDate + expiryDate
 
@@ -201,6 +205,9 @@ memberSchema.methods.rotateQrToken = async function () {
 };
 
 // ── Dual Write Hook for UnifiedUser (Prompt 3.1) ──────────────
+// Phase 2C FIX 3: Fields that trigger sync — skip for status-only updates
+const SYNC_FIELDS = new Set(["name", "phone", "email", "photo", "photoUrl"]);
+
 async function syncToUnifiedUser(doc: any) {
     if (!doc) return;
     try {
@@ -223,29 +230,56 @@ async function syncToUnifiedUser(doc: any) {
     } catch (e: any) {
         console.error("Failed to sync UnifiedUser for Member, enqueuing to QStash:", e?.message || e);
         try {
+            // Phase 2C FIX 3: Await QStash enqueue instead of fire-and-forget
             const { enqueueJob } = await import("@/lib/queue");
-            // Forward to QStash for background retries
             await enqueueJob("sync", { memberId: doc._id, type: "pool", data: doc });
         } catch (queueErr) {
-            console.error("Failed to enqueue sync job:", queueErr);
+            // Phase 2C FIX 3: Final fallback — write to FailedJob collection
+            console.error("Failed to enqueue sync job, writing to FailedJob:", queueErr);
+            try {
+                const { FailedJob } = await import("@/models/FailedJob");
+                await FailedJob.create({
+                    jobType: "sync",
+                    payload: { memberId: doc._id?.toString(), type: "pool" },
+                    error: String(queueErr).slice(0, 1000),
+                    retryCount: 0,
+                });
+            } catch {
+                // Truly fatal — nothing more we can do
+            }
         }
     }
 }
 
-memberSchema.post("save", function (doc) {
-    syncToUnifiedUser(doc);
+// Phase 2C FIX 3: Make hooks properly async with await
+memberSchema.post("save", async function (doc) {
+    await syncToUnifiedUser(doc);
 });
 
-memberSchema.post("findOneAndUpdate", function (doc) {
-    syncToUnifiedUser(doc);
+memberSchema.post("findOneAndUpdate", async function (doc) {
+    await syncToUnifiedUser(doc);
 });
 
+// Phase 2C FIX 2: Avoid expensive re-query in updateOne post-hook
+// Previously did: Member.findOne(docQuery).lean() — an extra DB round-trip on every updateOne.
+// Now reconstructs the doc from getFilter() + getUpdate().$set, and only triggers sync
+// if user-facing fields (name, phone, email, photo) were changed.
 memberSchema.post("updateOne", async function (this: any) {
-    const docQuery = this.getQuery();
-    const doc = await this.model.findOne(docQuery).lean();
-    syncToUnifiedUser(doc);
+    const update = this.getUpdate?.();
+    const filter = this.getFilter?.();
+    const setFields = update?.$set || {};
+
+    // Only sync if user-facing fields were updated
+    const updatedKeys = Object.keys(setFields);
+    const needsSync = updatedKeys.some(k => SYNC_FIELDS.has(k));
+    if (!needsSync) return;
+
+    // Reconstruct a minimal doc from filter + $set (avoids DB re-query)
+    const doc = { ...filter, ...setFields, _id: filter?._id };
+    await syncToUnifiedUser(doc);
 });
 // ──────────────────────────────────────────────────────────────
 
 export const Member: Model<IMember> =
     mongoose.models.Member || mongoose.model<IMember>("Member", memberSchema);
+

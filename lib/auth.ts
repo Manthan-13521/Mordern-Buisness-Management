@@ -10,19 +10,63 @@ import bcrypt from "bcryptjs";
 import { DefaultSession } from "next-auth";
 import { logger } from "./logger";
 
-// Basic in-memory rate limiter to prevent brute force attacks (e.g. 5 attempts / 15 mins)
+// ── Phase 2B FIX 2: Redis-backed login lockout ──────────────────────────────
+// Survives Vercel cold starts unlike the previous in-memory Map.
+// Falls back to in-memory if Redis is unavailable.
 const MAX_ATTEMPTS = 5;
-const LOCKOUT_MINUTES = 15;
+const LOCKOUT_SECONDS = 15 * 60; // 15 minutes
+
+// In-memory fallback for when Redis is unavailable
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
-function checkRateLimit(key: string) {
+async function getRedis() {
+    try {
+        const { redis } = await import("@/lib/redis");
+        return redis;
+    } catch {
+        return null;
+    }
+}
+
+async function checkRateLimit(key: string) {
+    const redis = await getRedis();
+
+    if (redis) {
+        try {
+            // Check if account is locked
+            const locked = await redis.get(`auth:locked:${key}`);
+            if (locked) {
+                const ttl = await redis.ttl(`auth:locked:${key}`);
+                const minsLeft = Math.max(1, Math.ceil(ttl / 60));
+                throw new Error(`Too many login attempts. Please try again in ${minsLeft} minutes.`);
+            }
+
+            // Increment failure counter
+            const failures = await redis.incr(`auth:failures:${key}`);
+            if (failures === 1) {
+                // First failure — set TTL
+                await redis.expire(`auth:failures:${key}`, LOCKOUT_SECONDS);
+            }
+
+            if (failures >= MAX_ATTEMPTS) {
+                // Lock the account
+                await redis.set(`auth:locked:${key}`, "1", { ex: LOCKOUT_SECONDS });
+                throw new Error(`Too many login attempts. Please try again in ${Math.ceil(LOCKOUT_SECONDS / 60)} minutes.`);
+            }
+            return;
+        } catch (e: any) {
+            // If it's our own lockout error, rethrow
+            if (e.message?.includes("Too many login attempts")) throw e;
+            // Redis error — fall through to in-memory
+        }
+    }
+
+    // In-memory fallback
     const now = Date.now();
     const record = rateLimitMap.get(key);
-
     if (record) {
         if (now > record.resetAt) {
-            // Expired lockout, reset
-            rateLimitMap.set(key, { count: 1, resetAt: now + LOCKOUT_MINUTES * 60 * 1000 });
+            rateLimitMap.set(key, { count: 1, resetAt: now + LOCKOUT_SECONDS * 1000 });
         } else if (record.count >= MAX_ATTEMPTS) {
             const minsLeft = Math.ceil((record.resetAt - now) / 60000);
             throw new Error(`Too many login attempts. Please try again in ${minsLeft} minutes.`);
@@ -30,11 +74,24 @@ function checkRateLimit(key: string) {
             record.count += 1;
         }
     } else {
-        rateLimitMap.set(key, { count: 1, resetAt: now + LOCKOUT_MINUTES * 60 * 1000 });
+        rateLimitMap.set(key, { count: 1, resetAt: now + LOCKOUT_SECONDS * 1000 });
     }
 }
 
-function clearRateLimit(key: string) {
+async function clearRateLimit(key: string) {
+    // Clear Redis keys
+    const redis = await getRedis();
+    if (redis) {
+        try {
+            await Promise.all([
+                redis.del(`auth:failures:${key}`),
+                redis.del(`auth:locked:${key}`),
+            ]);
+        } catch {
+            // Non-critical — keys will expire naturally
+        }
+    }
+    // Also clear in-memory
     rateLimitMap.delete(key);
 }
 
@@ -130,7 +187,7 @@ export const authOptions: NextAuthOptions = {
                 const clientIp = (req?.headers as any)?.["x-forwarded-for"] || "unknown_ip";
                 const rlKey = `${clientIp}_${credentials.username.toLowerCase()}`;
                 
-                checkRateLimit(rlKey);
+                await checkRateLimit(rlKey);
 
                 // Normalize email to lowercase for case-insensitive matching
                 const normalizedUsername = credentials.username.trim().toLowerCase();
@@ -142,7 +199,7 @@ export const authOptions: NextAuthOptions = {
                     if (platformAdmin) {
                         const isMatch = await bcrypt.compare(credentials.password, platformAdmin.passwordHash);
                         if (isMatch) {
-                            clearRateLimit(rlKey);
+                            await clearRateLimit(rlKey);
                             logger.audit({
                                 type: "LOGIN_SUCCESS",
                                 userId: platformAdmin._id.toString(),
@@ -208,7 +265,7 @@ export const authOptions: NextAuthOptions = {
                         ip: clientIp,
                         meta: { role: user.role }
                     });
-                    clearRateLimit(rlKey);
+                    await clearRateLimit(rlKey);
 
                     return {
                         id: user._id.toString(),
@@ -265,7 +322,7 @@ export const authOptions: NextAuthOptions = {
                     meta: { role: user.role }
                 });
 
-                clearRateLimit(rlKey);
+                await clearRateLimit(rlKey);
 
                 // If logged in via generic route, lookup the Pool to get the slug for session
                 let effectiveSlug = undefined;
@@ -289,7 +346,7 @@ export const authOptions: NextAuthOptions = {
                 // ── Hostel admin path (additive — pool flow untouched above) ──
                 if (user.role === "hostel_admin" && user.hostelId) {
                     const hostel = await Hostel.findOne({ hostelId: user.hostelId }).lean();
-                    clearRateLimit(rlKey);
+                    await clearRateLimit(rlKey);
                     return {
                         id: user._id.toString(),
                         name: user.name,
@@ -306,7 +363,7 @@ export const authOptions: NextAuthOptions = {
                 // ── Business admin path (additive) ──
                 if (user.role === "business_admin" && user.businessId) {
                     const business = await Business.findOne({ businessId: user.businessId }).lean();
-                    clearRateLimit(rlKey);
+                    await clearRateLimit(rlKey);
                     return {
                         id: user._id.toString(),
                         name: user.name,

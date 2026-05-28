@@ -69,12 +69,22 @@ const ENDPOINT_LIMITS: Record<string, number> = {
     'POST:/api/business/attendance': 100,
 };
 
-// Global defaults
-const DEFAULT_LIMIT_PER_USER = 60;   // 60 req/min per authenticated user
-const DEFAULT_LIMIT_PER_IP = 120;    // 120 req/min per IP (unauthenticated)
+// ── Corrective Fix: Deterministic tier-based global limits ────────────────
+// Read tier from saasGuard Redis cache (NOT from JWT).
+// Reflects subscription changes immediately without requiring JWT refresh.
+type RateTier = "FREE_TRIAL" | "THREE_MONTH_PLAN" | "YEARLY_PLAN" | "ENTERPRISE";
+
+const TIER_LIMITS: Record<RateTier, number> = {
+    FREE_TRIAL:       60,
+    THREE_MONTH_PLAN: 360,
+    YEARLY_PLAN:      560,
+    ENTERPRISE:       9999, // Extremely high limit to act as exemption
+};
+
 const WINDOW_SECONDS = 60;           // 1 minute sliding window
 const BURST_MULTIPLIER = 2;          // Allow 2× burst
 const BURST_WINDOW_SECONDS = 10;     // Burst window duration
+const DEFAULT_LIMIT_PER_IP = 120;    // 120 req/min per IP (unauthenticated)
 
 export function getIp(req: NextRequestWithAuth): string {
     return (
@@ -86,12 +96,82 @@ export function getIp(req: NextRequestWithAuth): string {
 }
 
 /**
+ * Resolve the subscription tier from the saasGuard Redis cache.
+ * Uses ONLY existing cache keys — NEVER queries the database.
+ * Maps plan names deterministically to defined tiers.
+ *
+ * Cache keys used:
+ *   Pool/Hostel tenants: saasGuard:poolMap:{tenantId} → orgId, then org:{orgId}:plan → SaaSContext
+ *   Business tenants:    biz:sub:{businessId} → BusinessSaaSContext
+ *
+ * Returns "FREE_TRIAL" on any cache miss or Redis error (fail-closed).
+ */
+async function resolveTier(
+    poolId?: string,
+    hostelId?: string,
+    businessId?: string
+): Promise<RateTier> {
+    if (!redis) return "FREE_TRIAL"; // No Redis → default to FREE_TRIAL (fail-closed)
+
+    try {
+        // ── Pool / Hostel tenants: use org:{orgId}:plan cache ──
+        const tenantId = poolId || hostelId;
+        if (tenantId) {
+            const orgId = await redis.get<string>(`saasGuard:poolMap:${tenantId}`);
+            if (!orgId) return "FREE_TRIAL"; // Cache miss → FREE_TRIAL
+
+            const cached = await redis.get<any>(`org:${orgId}:plan`);
+            if (!cached) return "FREE_TRIAL"; // Cache miss → FREE_TRIAL
+
+            const ctx = typeof cached === "string" ? JSON.parse(cached) : cached;
+
+            if (ctx.status !== "active") return "FREE_TRIAL";
+            if (ctx.features?.prioritySupport) return "ENTERPRISE";
+            
+            // Map plan based on available string indicators
+            const planString = String(ctx.planName || ctx.planType || ctx.name || ctx.plan?.name || "").toLowerCase();
+            if (planString.includes("enterprise")) return "ENTERPRISE";
+            if (planString.includes("yearly") || planString.includes("annual") || planString.includes("12month")) return "YEARLY_PLAN";
+            if (planString.includes("quarterly") || planString.includes("3month") || planString.includes("90day")) return "THREE_MONTH_PLAN";
+            
+            // Unrecognized active plan -> default fail-safe
+            return "FREE_TRIAL";
+        }
+
+        // ── Business tenants: use biz:sub:{businessId} cache ──
+        if (businessId) {
+            const cached = await redis.get<any>(`biz:sub:${businessId}`);
+            if (!cached) return "FREE_TRIAL"; // Cache miss → FREE_TRIAL
+
+            const ctx = typeof cached === "string" ? JSON.parse(cached) : cached;
+            const isExpired = ctx.expiryDate
+                ? new Date(ctx.expiryDate).getTime() < Date.now()
+                : true;
+
+            if (isExpired || ctx.status !== "active") return "FREE_TRIAL";
+            
+            // Map business planType
+            const planString = String(ctx.planType || ctx.planName || ctx.name || "").toLowerCase();
+            if (planString.includes("enterprise")) return "ENTERPRISE";
+            if (planString.includes("yearly") || planString.includes("annual") || planString.includes("12month")) return "YEARLY_PLAN";
+            if (planString.includes("quarterly") || planString.includes("3month") || planString.includes("90day")) return "THREE_MONTH_PLAN";
+            
+            return "FREE_TRIAL";
+        }
+    } catch {
+        // Redis error → fail-closed to FREE_TRIAL
+    }
+
+    return "FREE_TRIAL";
+}
+
+/**
  * Sliding Window Rate Limiter with Burst Support.
- * 
+ *
  * Uses two Redis keys per identifier:
  *   - rate:{key}:main  → main window counter (60s TTL)
  *   - rate:{key}:burst → burst window counter (10s TTL)
- * 
+ *
  * Algorithm:
  *   1. Check burst window first — allow up to 2× limit in 10s
  *   2. Check main window — allow up to limit in 60s
@@ -101,11 +181,14 @@ export async function checkRateLimit(
     ip: string,
     userId: string,
     method: string,
-    path: string
+    path: string,
+    tier: RateTier = "FREE_TRIAL"
 ): Promise<{ allowed: boolean; limit: number; remaining: number; retryAfter: number }> {
     const normalized = path.replace(/\/[a-f0-9]{24}/g, "").replace(/\/[^/]+\/admin/, "");
     const endpointKey = `${method}:${normalized}`;
-    const limit = ENDPOINT_LIMITS[endpointKey] || (userId !== "guest" ? DEFAULT_LIMIT_PER_USER : DEFAULT_LIMIT_PER_IP);
+    const tierDefault = TIER_LIMITS[tier];
+    // Per-endpoint limit takes precedence; fallback to tier-based global limit
+    const limit = ENDPOINT_LIMITS[endpointKey] || (userId !== "guest" ? tierDefault : DEFAULT_LIMIT_PER_IP);
     const burstLimit = Math.ceil(limit * BURST_MULTIPLIER / (WINDOW_SECONDS / BURST_WINDOW_SECONDS));
 
     // Prefer user ID for auth'd users, fall back to IP.
@@ -222,7 +305,15 @@ export async function withRateLimit(
         return { rl: { limit: 9999, remaining: 9999 } };
     }
 
-    const rl = await checkRateLimit(ip, userId, method, path);
+    // Corrective Fix: Resolve tier from saasGuard Redis cache (NOT JWT).
+    // Maps exactly to Free (60), 3-Month (360), Yearly (900), Enterprise (9999).
+    // Subscription upgrades/downgrades reflect immediately without re-login.
+    const poolId = req.nextauth?.token?.poolId as string | undefined;
+    const hostelId = req.nextauth?.token?.hostelId as string | undefined;
+    const businessId = req.nextauth?.token?.businessId as string | undefined;
+    const tier = await resolveTier(poolId, hostelId, businessId);
+
+    const rl = await checkRateLimit(ip, userId, method, path, tier);
 
     if (!rl.allowed) {
         const res = NextResponse.json(

@@ -18,6 +18,7 @@ import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { isDuplicate } from "@/lib/idempotency";
 import { checkRateLimit, getClientIp, rateLimitHeaders } from "@/lib/rateLimit";
 import { logger } from "@/lib/logger";
+import { HostelMemberCreateSchema } from "@/lib/validators";
 export const dynamic = "force-dynamic";
 
 // ─── GET: list members (paginated + search + filters) ────────────────────────
@@ -126,7 +127,16 @@ export async function POST(req: Request) {
             body = await req.json();
         }
 
-        const { name, phone, planId, blockNo, floorNo, roomNo, paymentMode, paidAmount, notes, collegeName, bedNo: explicitBedNo } = body;
+        // Phase 2A FIX 7: Validate input with Zod schema (same pattern as pool routes)
+        const parsed = HostelMemberCreateSchema.safeParse(body);
+        if (!parsed.success) {
+            return NextResponse.json(
+                { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
+                { status: 400, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }
+            );
+        }
+
+        const { name, phone, planId, blockNo, floorNo, roomNo, paymentMode, paidAmount, notes, collegeName, bedNo: explicitBedNo } = parsed.data;
 
         // ── IDEMPOTENCY: Prevent double member creation (10s window) ──
         const dedupeKey = `member-create:${hostelId}:${phone}`;
@@ -135,10 +145,6 @@ export async function POST(req: Request) {
                 { message: "Member registration already in progress. Please wait." },
                 { status: 200 }
             );
-        }
-
-        if (!name || !phone || !planId || !blockNo || !floorNo || !roomNo) {
-            return NextResponse.json({ error: "Missing required fields: name, phone, planId, blockNo, floorNo, roomNo" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
         // Validate plan
@@ -176,7 +182,7 @@ export async function POST(req: Request) {
             let finalBedNo: number;
 
             if (explicitBedNo) {
-                finalBedNo = parseInt(explicitBedNo, 10);
+                finalBedNo = explicitBedNo;
                 if (finalBedNo < 1 || finalBedNo > (roomObj.capacity || 1)) {
                     return NextResponse.json({ error: `Bed ${finalBedNo} is outside room capacity (Max ${roomObj.capacity}).` }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
                 }

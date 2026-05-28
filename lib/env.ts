@@ -42,6 +42,8 @@ const envSchema = z.object({
 
   // Background queues
   QSTASH_TOKEN: z.string().min(1).optional(),
+  QSTASH_CURRENT_SIGNING_KEY: z.string().min(1).optional(),
+  QSTASH_NEXT_SIGNING_KEY: z.string().min(1).optional(),
   CRON_SECRET: z.string().min(1, "Missing CRON_SECRET").optional(),
 }).superRefine((data, ctx) => {
   // CRON_SECRET must exist in production to prevent unauthenticated cron execution
@@ -117,8 +119,25 @@ if (!isBuild) {
         parsedEnv = envSchema.parse(process.env) as any;
     } catch (e: any) {
         if (e instanceof z.ZodError) {
-            console.error("❌ Environment validation failed:", e.flatten().fieldErrors);
-            // We don't exit(1) anymore to prevent total downtime on Vercel
+            // Phase 2B FIX 3: Report env validation failure to Sentry + set global flag
+            const flatErrors = e.flatten().fieldErrors;
+            console.error("❌ Environment validation failed:", flatErrors);
+
+            // Report to Sentry so ops team gets alerted
+            try {
+                const Sentry = require("@sentry/nextjs");
+                Sentry.captureException(e, {
+                    tags: { env_invalid: true },
+                    extra: { fieldErrors: flatErrors },
+                });
+            } catch {
+                // Sentry itself may not be configured — non-critical
+            }
+
+            // Set global flag so critical routes can fail fast with 503
+            (globalThis as any).__ENV_INVALID = true;
+
+            // We don't exit(1) to prevent total downtime on Vercel
             // when new vars are introduced.
         } else {
             throw e;
@@ -127,3 +146,4 @@ if (!isBuild) {
 }
 
 export const env = parsedEnv;
+

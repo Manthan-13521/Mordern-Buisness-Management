@@ -12,6 +12,7 @@ import { HostelPlan } from "@/models/HostelPlan"; // CRITICAL: Fixes populate("p
 import { isDuplicate } from "@/lib/idempotency";
 import { checkRateLimit, getClientIp, rateLimitHeaders } from "@/lib/rateLimit";
 import { logger } from "@/lib/logger";
+import { HostelPaymentSchema } from "@/lib/validators";
 
 export const dynamic = "force-dynamic";
 
@@ -84,12 +85,18 @@ export async function POST(req: Request) {
         const hostelId = user.hostelId as string;
         if (!hostelId) return NextResponse.json({ error: "Forbidden" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
-        const { memberId, amount, paymentMethod, transactionId, notes, paymentType: rawPaymentType, idempotencyKey } = body;
+        // Phase 2A FIX 7: Validate input with Zod schema
+        const parsed = HostelPaymentSchema.safeParse(body);
+        if (!parsed.success) {
+            return NextResponse.json(
+                { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
+                { status: 400, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }
+            );
+        }
+
+        const { memberId, amount, paymentMethod, transactionId, notes, paymentType: rawPaymentType, idempotencyKey } = parsed.data;
         
         const paid = Number(amount);
-        if (!memberId || !Number.isFinite(paid) || paid <= 0 || paid > 9_999_999_999) {
-            return NextResponse.json({ error: "Invalid payment amount or member info" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
 
         // ── RATE LIMITING ──
         const ip = getClientIp(req);

@@ -11,6 +11,11 @@ import { savePhoto } from "@/lib/savePhoto";
 import { signQRToken } from "@/lib/qrSigner";
 
 export async function POST(req: Request) {
+    // Phase 2B FIX 3: Fail fast if environment is misconfigured
+    if ((globalThis as any).__ENV_INVALID) {
+        return Response.json({ error: "Service misconfigured" }, { status: 503 });
+    }
+
     try {
         const { razorpay_order_id, razorpay_payment_id, razorpay_signature, memberData } =
             await req.json();

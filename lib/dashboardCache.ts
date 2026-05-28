@@ -59,23 +59,59 @@ export async function getCachedDashboard<T>(
     }
   }
 
-  // L2: Compute fresh
-  const data = await fetcher();
+  // ── Phase 2A FIX 3: Distributed lock to prevent query storms on cache miss ──
+  // Only one Vercel instance runs the expensive fetcher; others get stale data.
+  const lockKey = `lock:${key}`;
+  let lockAcquired = false;
 
-  // Populate cache with jittered TTL (prevents stampede)
   if (redis) {
     try {
-      const ttl = jitteredTTL(ttlSeconds);
-      await Promise.all([
-        redis.set(key, JSON.stringify(data), { ex: ttl }),
-        redis.set(`${key}:ts`, String(Date.now()), { ex: ttl + 5 }),
-      ]);
+      // SET NX PX 30000 — acquire lock for 30 seconds max
+      const lockResult = await redis.set(lockKey, "1", { nx: true, px: 30000 });
+      lockAcquired = lockResult === "OK";
     } catch {
-      // Non-critical — next request will retry
+      // Redis down — proceed without lock
+      lockAcquired = true; // fallback: allow fetch
+    }
+
+    if (!lockAcquired) {
+      // Another instance is already computing — try to serve stale data
+      try {
+        const stale = await withTimeout(redis.get<string>(key), 200);
+        if (stale !== null && stale !== undefined) {
+          cacheHitCounter.inc({ layer: "redis", result: "stale" });
+          return typeof stale === "string" ? JSON.parse(stale) : stale as T;
+        }
+      } catch {
+        // No stale data available — must compute
+      }
     }
   }
 
-  return data;
+  // L2: Compute fresh
+  try {
+    const data = await fetcher();
+
+    // Populate cache with jittered TTL (prevents stampede)
+    if (redis) {
+      try {
+        const ttl = jitteredTTL(ttlSeconds);
+        await Promise.all([
+          redis.set(key, JSON.stringify(data), { ex: ttl }),
+          redis.set(`${key}:ts`, String(Date.now()), { ex: ttl + 5 }),
+        ]);
+      } catch {
+        // Non-critical — next request will retry
+      }
+    }
+
+    return data;
+  } finally {
+    // Release lock regardless of success/failure
+    if (redis && lockAcquired) {
+      try { await redis.del(lockKey); } catch { /* non-critical */ }
+    }
+  }
 }
 
 /** Background refresh — non-blocking, doesn't affect response time */

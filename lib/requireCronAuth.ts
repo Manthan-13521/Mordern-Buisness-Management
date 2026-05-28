@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 
 /**
  * Centralized cron authentication helper.
@@ -16,10 +17,20 @@ export function requireCronAuth(req: Request): NextResponse | null {
 
     const authHeader = req.headers.get("authorization");
     const headerSecret = req.headers.get("x-cron-secret");
-    
-    if (authHeader === `Bearer ${secret}` || headerSecret === secret) {
-        return null; // Authorized
+
+    // Phase 2A FIX 5: Use constant-time comparison to prevent timing side-channel attacks
+    const candidateSecret = authHeader?.startsWith("Bearer ")
+        ? authHeader.slice(7)
+        : headerSecret;
+
+    if (candidateSecret && candidateSecret.length === secret.length) {
+        const isValid = crypto.timingSafeEqual(
+            Buffer.from(candidateSecret, "utf8"),
+            Buffer.from(secret, "utf8")
+        );
+        if (isValid) return null; // Authorized
     }
 
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 }
+

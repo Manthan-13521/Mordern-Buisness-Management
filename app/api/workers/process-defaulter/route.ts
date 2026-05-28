@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { resolveDefaulterState } from "@/lib/defaulterEngine";
+import { verifyQStashSignature } from "@/lib/verifyQStash";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,10 @@ export const dynamic = "force-dynamic";
  * Consumes a single memberId from the queue and computes defaulter state.
  */
 export async function POST(req: Request) {
+    // ── QStash Signature Verification (Phase 2A FIX 1) ──
+    const authErr = await verifyQStashSignature(req);
+    if (authErr) return authErr;
+
     try {
         const body = await req.json();
         const { memberId } = body;

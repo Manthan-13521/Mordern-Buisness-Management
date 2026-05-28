@@ -115,3 +115,61 @@ export const TwilioConnectSchema = z.object({
   whatsappNumber: z.string().min(1).max(30),
   testPhone: z.string().min(10).max(20),
 })
+
+// ── Phase 2A FIX 7: Hostel & Business Zod Schemas ────────────────────────────
+// These follow the same patterns as existing pool schemas above.
+
+/** ObjectId format: 24-character hex string */
+const objectId = z.string().regex(/^[a-f\d]{24}$/i, 'Must be a valid ObjectId')
+
+export const HostelMemberCreateSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters').max(100).trim(),
+  phone: z.string().regex(/^\d{10,15}$/, 'Phone must be 10-15 digits'),
+  planId: objectId,
+  blockNo: z.string().min(1).max(50),
+  floorNo: z.coerce.string().min(1).max(50),
+  roomNo: z.coerce.string().min(1).max(50),
+  bedNo: z.coerce.number().int().min(1).max(50).optional(),
+  paymentMode: z.enum(['cash', 'upi', 'bank_transfer', 'card', 'online']).optional().default('cash'),
+  paidAmount: safeAmount().optional().default(0),
+  notes: z.string().max(500).optional(),
+  collegeName: z.string().max(200).optional(),
+})
+
+export const HostelPaymentSchema = z.object({
+  memberId: objectId,
+  amount: safeAmount(1), // Must be at least ₹1
+  paymentMethod: z.enum(['cash', 'upi', 'bank_transfer', 'card', 'online']).optional().default('cash'),
+  transactionId: z.string().max(100).optional(),
+  notes: z.string().max(500).optional(),
+  paymentType: z.enum(['initial', 'renewal', 'balance', 'advance', 'refund']).optional().default('balance'),
+  idempotencyKey: z.string().max(100).optional(),
+})
+
+export const BusinessCustomerSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(100).trim(),
+  phone: z.string().regex(/^\d{10,15}$/).optional(),
+  businessName: z.string().max(200).optional(),
+  address: z.string().max(500).optional(),
+  gstNumber: z.string().regex(
+    /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/,
+    'Invalid GST number format'
+  ).optional(),
+})
+
+export const BusinessTransactionSchema = z.object({
+  customerId: objectId,
+  amount: safeAmount(0),
+  category: z.enum(['SALE', 'PAYMENT']),
+  transactionType: z.enum(['sent', 'received', 'paid']),
+  paymentMethod: z.enum(['cash', 'upi', 'bank_transfer', 'card', 'online']).optional(),
+  paidAmount: safeAmount().optional().default(0),
+  description: z.string().max(500).optional(),
+  notes: z.string().max(500).optional(),
+  items: z.array(z.object({
+    name: z.string().max(200),
+    quantity: z.number().min(0).max(999999),
+    price: safeAmount(),
+  })).max(100).optional(),
+})
+

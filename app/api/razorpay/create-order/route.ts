@@ -17,6 +17,11 @@ const razorpayBreaker = createBreaker(
 );
 
 export async function POST(req: Request) {
+    // Phase 2B FIX 3: Fail fast if environment is misconfigured
+    if ((globalThis as any).__ENV_INVALID) {
+        return Response.json({ error: "Service misconfigured" }, { status: 503 });
+    }
+
     const startTime = Date.now();
     try {
         const body = await req.json();
