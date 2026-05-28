@@ -80,13 +80,12 @@ export default function PlatformBillingDashboard() {
                                 <th className="text-center px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#9ca3af]">Method</th>
                                 <th className="text-left px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#9ca3af]">Payer</th>
                                 <th className="text-left px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#9ca3af]">Ref Code</th>
-                                <th className="text-right px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#9ca3af]">Discount</th>
                                 <th className="text-left px-6 py-4 text-xs font-bold uppercase tracking-wider text-[#9ca3af]">Billing Period</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {loading && <tr><td colSpan={9} className="text-center py-12 text-[#6b7280]">Loading...</td></tr>}
-                            {!loading && logs.length === 0 && <tr><td colSpan={9} className="text-center py-12 text-[#6b7280]">No billing records yet. Revenue will appear here after first subscription activation.</td></tr>}
+                            {loading && <tr><td colSpan={8} className="text-center py-12 text-[#6b7280]">Loading...</td></tr>}
+                            {!loading && logs.length === 0 && <tr><td colSpan={8} className="text-center py-12 text-[#6b7280]">No billing records yet. Revenue will appear here after first subscription activation.</td></tr>}
                             {!loading && logs.map((b, i) => {
                                 // Extract payer name from paymentMode like "UPI (Admin: John Doe)"
                                 const payerMatch = b.paymentMode?.match(/\(Admin:\s*(.+?)\)/);
@@ -100,7 +99,14 @@ export default function PlatformBillingDashboard() {
                                             {new Date(b.createdAt).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                                         </td>
                                         <td className="px-6 py-4 text-[#9ca3af] font-mono text-xs font-bold">{b.entityId || "N/A"}</td>
-                                        <td className="px-6 py-4 text-[#f9fafb] font-bold text-xs uppercase tracking-tight">{b.orgName || "—"}</td>
+                                        <td className="px-6 py-4 text-[#f9fafb] font-bold text-xs uppercase tracking-tight">
+                                            {b.orgName || "—"}
+                                            {b.isRenewal && (
+                                                <span className="ml-1.5 px-1.5 py-0.5 rounded text-[9px] font-black tracking-widest uppercase bg-[#8b5cf6]/10 text-[#8b5cf6] border border-[#8b5cf6]/20">
+                                                    Renew
+                                                </span>
+                                            )}
+                                        </td>
                                         <td className="px-6 py-4 text-right font-bold text-emerald-400">₹{b.amount?.toLocaleString("en-IN")}</td>
                                         <td className="px-6 py-4 text-center">
                                             <span className={`text-xs font-bold uppercase px-2.5 py-1 rounded-md border ${
@@ -136,9 +142,6 @@ export default function PlatformBillingDashboard() {
                                             ) : (
                                                 <span className="text-[#6b7280]">—</span>
                                             )}
-                                        </td>
-                                        <td className="px-6 py-4 text-right text-xs font-bold text-rose-400">
-                                            {b.discountApplied ? `-₹${b.discountApplied.toLocaleString("en-IN")}` : <span className="text-[#6b7280] font-normal">—</span>}
                                         </td>
                                         <td className="px-6 py-4 text-[#9ca3af] text-xs">
                                             {new Date(b.periodStart).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}

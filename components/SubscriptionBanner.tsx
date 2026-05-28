@@ -25,11 +25,10 @@ export function SubscriptionBanner() {
 
     const { daysLeft, status: subStatus } = status;
 
-    // Logic:
-    // 1. Expired (status === "expired") → Strong red banner with read-only message
+    // 1. Grace (status === "grace" or "expired") → Strong red banner with read-only message
     // 2. Expiring soon (daysLeft <= 3) → Yellow warning banner
     // 3. Otherwise → Hidden
-    const isExpired = subStatus === "expired";
+    const isExpired = subStatus === "expired" || subStatus === "grace";
     const isExpiringSoon = daysLeft !== null && daysLeft <= 3 && daysLeft > 0;
 
     if (!isExpired && !isExpiringSoon) return null;
@@ -51,7 +50,7 @@ export function SubscriptionBanner() {
                 </div>
 
                 <Link 
-                    href="/select-plan"
+                    href="/renew-plan"
                     className="px-4 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-widest border bg-white text-red-600 border-white hover:bg-red-50 transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
                 >
                     Renew Now <ArrowRight className="h-3 w-3" />
@@ -72,7 +71,7 @@ export function SubscriptionBanner() {
             </span>
 
             <Link 
-                href="/select-plan"
+                href="/renew-plan"
                 className="px-3 py-1 rounded-lg font-black text-[10px] uppercase tracking-widest border bg-slate-950 text-amber-400 border-slate-950 shadow-amber-900/20 transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
             >
                 Renew Plan <ArrowRight className="h-3 w-3" />

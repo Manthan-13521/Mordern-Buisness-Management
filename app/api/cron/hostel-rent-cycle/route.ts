@@ -3,6 +3,8 @@ import { dbConnect } from "@/lib/mongodb";
 import { HostelMember } from "@/models/HostelMember";
 import { HostelPaymentLog } from "@/models/HostelPaymentLog";
 import { CronLog } from "@/models/CronLog";
+import { User } from "@/models/User";
+import { resolveSubscriptionState, isReadOnlyMode, isSubscriptionLocked } from "@/lib/subscriptionState";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +21,8 @@ async function executeRentCycle() {
 
     // ── Batch loop: process 500 members at a time to prevent Vercel timeouts ──
     let hasMore = true;
+    const hostelSubscriptionCache = new Map<string, boolean>();
+
     while (hasMore) {
         const activeMembersDue = await HostelMember.find({
             status: "active",
@@ -32,6 +36,21 @@ async function executeRentCycle() {
         }
 
         for (const member of activeMembersDue) {
+            // ── SUBSCRIPTION LOCKDOWN CHECK ──
+            if (!hostelSubscriptionCache.has(member.hostelId)) {
+                const admin = await User.findOne({ hostelId: member.hostelId, role: "hostel_admin" }).select("subscription").lean() as any;
+                let canMutate = false;
+                if (admin && admin.subscription) {
+                    const state = resolveSubscriptionState(admin.subscription.expiryDate, admin.subscription.status);
+                    canMutate = !isReadOnlyMode(state) && !isSubscriptionLocked(state);
+                }
+                hostelSubscriptionCache.set(member.hostelId, canMutate);
+            }
+            
+            if (!hostelSubscriptionCache.get(member.hostelId)) {
+                continue; // Skip mutation for read-only or locked tenants
+            }
+
             let nextDue = new Date(member.due_date);
             let currentBalance = member.balance;
             let deductionsMade = 0;

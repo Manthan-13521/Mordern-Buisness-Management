@@ -1,5 +1,6 @@
 import { dbConnect } from "./mongodb";
 import { computeDefaulterStatus } from "./defaulterEngine";
+import { checkTenantMutability } from "./subscriptionGuard";
 
 /**
  * ── Step 10: Notification Engine ─────────────────────────────────────────────
@@ -165,9 +166,20 @@ export async function processDefaulterReminders(poolId?: string) {
         : [];
     const memberMap = new Map((allMembers as any[]).map(m => [m._id.toString(), m]));
 
+    const mutabilityCache = new Map<string, boolean>();
+
     for (const ledger of dueLedgers as any[]) {
         const sub = subMap.get(ledger.memberId.toString());
         if (!sub) continue;
+
+        // ── SUBSCRIPTION LOCKDOWN CHECK ──
+        const tenantId = ledger.poolId || (sub as any).poolId;
+        if (!mutabilityCache.has(tenantId)) {
+            mutabilityCache.set(tenantId, await checkTenantMutability(tenantId, "pool"));
+        }
+        if (!mutabilityCache.get(tenantId)) {
+            skipped++; continue;
+        }
 
         const msDue = now.getTime() - new Date((sub as any).nextDueDate).getTime();
         const overdueDays = Math.floor(msDue / 86400000);
@@ -251,9 +263,19 @@ export async function processDueAlerts(poolId?: string) {
     const planMap = new Map((allPlans as any[]).map(p => [p._id.toString(), p]));
 
     let sent = 0, skipped = 0;
+    const mutabilityCache = new Map<string, boolean>();
 
     for (const sub of upcomingSubs as any[]) {
         if (await alreadySentToday(sub.memberId, "due_alert")) { skipped++; continue; }
+
+        // ── SUBSCRIPTION LOCKDOWN CHECK ──
+        const tenantId = sub.poolId;
+        if (!mutabilityCache.has(tenantId)) {
+            mutabilityCache.set(tenantId, await checkTenantMutability(tenantId, "pool"));
+        }
+        if (!mutabilityCache.get(tenantId)) {
+            skipped++; continue;
+        }
 
         const member = memberMap.get(sub.memberId.toString());
         if (!member?.phone) { skipped++; continue; }
@@ -303,6 +325,10 @@ export async function sendPaymentConfirmation(params: {
     phone: string;
     amount: number;
 }) {
+    // ── SUBSCRIPTION LOCKDOWN CHECK ──
+    const canMutate = await checkTenantMutability(params.poolId, "pool");
+    if (!canMutate) return false;
+
     // Dedup check — only 1 confirmation per member per day (handles retries)
     if (await alreadySentToday(params.memberId, "payment_confirmation")) return false;
 

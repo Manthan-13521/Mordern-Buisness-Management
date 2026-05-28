@@ -12,6 +12,8 @@ import { dbConnect } from "@/lib/mongodb";
 import { User, IUserSubscription } from "@/models/User";
 import { logger } from "@/lib/logger";
 import type { AuthUser } from "@/lib/authHelper";
+import { resolveSubscriptionState, isReadOnlyMode, isSubscriptionLocked } from "@/lib/subscriptionState";
+import { enforceSaaSGuard } from "@/lib/saasGuard";
 
 // ── Grace period: 3 days of read-only access after expiry ────────────────
 const GRACE_PERIOD_DAYS = 3;
@@ -53,28 +55,26 @@ export async function checkSubscription(userId: string): Promise<SubscriptionChe
     const expiry = new Date(sub.expiryDate);
     const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-    // Check suspended/cancelled first
-    if (sub.status === "suspended") {
-        return { status: "suspended", subscription: sub, isActive: false, isGrace: false, isReadOnly: true, daysLeft };
-    }
-    if (sub.status === "cancelled") {
-        return { status: "cancelled", subscription: sub, isActive: false, isGrace: false, isReadOnly: true, daysLeft };
-    }
+    const state = resolveSubscriptionState(sub.expiryDate, sub.status);
 
-    // Active or trial — not yet expired
-    if (now <= expiry) {
+    if (state === "ACTIVE") {
         const effectiveStatus = sub.status === "trial" ? "trial" : "active";
         return { status: effectiveStatus, subscription: sub, isActive: true, isGrace: false, isReadOnly: false, daysLeft };
     }
-
-    // Expired — check grace period
-    const graceEnd = new Date(expiry.getTime() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
-    if (now <= graceEnd) {
+    
+    if (state === "EXPIRED_GRACE_PERIOD") {
         return { status: "grace", subscription: sub, isActive: false, isGrace: true, isReadOnly: true, daysLeft };
     }
+    
+    if (state === "EXPIRED_LOCKED") {
+        return { status: "expired", subscription: sub, isActive: false, isGrace: false, isReadOnly: true, daysLeft };
+    }
 
-    // Hard expired
-    return { status: "expired", subscription: sub, isActive: false, isGrace: false, isReadOnly: true, daysLeft };
+    if (state === "SUSPENDED" || state === "CANCELLED") {
+        return { status: state.toLowerCase() as any, subscription: sub, isActive: false, isGrace: false, isReadOnly: true, daysLeft };
+    }
+
+    return { status: "none", subscription: sub, isActive: false, isGrace: false, isReadOnly: true, daysLeft };
 }
 
 /**
@@ -109,7 +109,9 @@ export async function requireActiveSubscription(user: AuthUser | null): Promise<
 
     const check = await checkSubscription(user.id);
 
-    if (check.isActive) return null; // Access granted
+    // Allow access if active or in read-only grace period.
+    // Write protection is handled separately by requireWriteAccess.
+    if (check.isActive || check.isGrace) return null; 
 
     logger.warn("[SubscriptionGuard] Access denied", {
         userId: user.id,
@@ -191,4 +193,36 @@ export async function requireWriteAccess(user: AuthUser | null): Promise<NextRes
     }
 
     return null;
+}
+
+/**
+ * Universal backend check for Cron Jobs and Workers.
+ * Returns true if the tenant is fully ACTIVE and allowed to mutate data.
+ * Returns false if the tenant is in Grace Period (read-only) or Locked.
+ */
+export async function checkTenantMutability(
+    tenantId: string, 
+    tenantType: "pool" | "hostel" | "business"
+): Promise<boolean> {
+    try {
+        if (tenantType === "hostel") {
+            const admin = await User.findOne({ hostelId: tenantId, role: "hostel_admin" }).select("subscription").lean() as any;
+            if (!admin || !admin.subscription) return false;
+            const state = resolveSubscriptionState(admin.subscription.expiryDate, admin.subscription.status);
+            return !isReadOnlyMode(state) && !isSubscriptionLocked(state);
+        } else if (tenantType === "business") {
+            const admin = await User.findOne({ businessId: tenantId, role: "business_admin" }).select("subscription").lean() as any;
+            if (!admin || !admin.subscription) return false;
+            const state = resolveSubscriptionState(admin.subscription.expiryDate, admin.subscription.status);
+            return !isReadOnlyMode(state) && !isSubscriptionLocked(state);
+        } else {
+            // Pool uses Organization via SaaSGuard
+            const ctx = await enforceSaaSGuard(tenantId);
+            const state = resolveSubscriptionState(null, ctx.status); // SaaSGuard handles the 3-day logic natively now
+            return !isReadOnlyMode(state) && !isSubscriptionLocked(state) && !ctx.isHardExpired;
+        }
+    } catch (e) {
+        logger.warn(`[checkTenantMutability] Error checking tenant ${tenantId} (${tenantType})`, { error: String(e) });
+        return false;
+    }
 }

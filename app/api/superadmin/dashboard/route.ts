@@ -112,6 +112,20 @@ export async function GET(req: Request) {
             })), 
             ...uniqueSubLogs
         ].sort(
+            (a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+
+        // Mark renewals
+        const orgPaymentCounts: Record<string, number> = {};
+        allBillingLogs.forEach(b => {
+            const orgIdStr = b.orgId?._id?.toString() || b.orgId?.toString() || b.userId?.toString();
+            if (!orgIdStr) return;
+            orgPaymentCounts[orgIdStr] = (orgPaymentCounts[orgIdStr] || 0) + 1;
+            b.isRenewal = orgPaymentCounts[orgIdStr] > 1;
+        });
+
+        // Re-sort descending for the frontend
+        allBillingLogs.sort(
             (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
 

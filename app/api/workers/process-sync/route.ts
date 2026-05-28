@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { UnifiedUser } from "@/models/UnifiedUser";
 import { verifyQStashSignature } from "@/lib/verifyQStash";
+import { checkTenantMutability } from "@/lib/subscriptionGuard";
 
 /**
  * QStash Worker Endpoint for Dual-Write Synchronization.
@@ -30,6 +31,13 @@ export async function POST(req: Request) {
         // Match hostel blocking logic
         if (type === "hostel" && doc.balance && doc.balance > 0 && doc.status === "active") {
             accessState = "blocked";
+        }
+
+        // ── SUBSCRIPTION LOCKDOWN CHECK ──
+        const canMutate = await checkTenantMutability(orgId, type as "pool" | "hostel" | "business");
+        if (!canMutate) {
+            console.warn(`[QStash Worker] Skipped sync for locked/read-only tenant: ${orgId} (${type})`);
+            return NextResponse.json({ success: true, message: "Skipped locked tenant" });
         }
 
         await UnifiedUser.findOneAndUpdate(

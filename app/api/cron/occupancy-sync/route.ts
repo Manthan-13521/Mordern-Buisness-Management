@@ -4,6 +4,7 @@ import { PoolSession } from "@/models/PoolSession";
 import { Pool } from "@/models/Pool";
 import { redis } from "@/lib/redis";
 import { logger } from "@/lib/logger";
+import { checkTenantMutability } from "@/lib/subscriptionGuard";
 
 export async function GET(req: Request) {
     const cronSecret = process.env.CRON_SECRET;
@@ -26,6 +27,10 @@ export async function GET(req: Request) {
         for (const pool of pools) {
             const poolId = pool.poolId;
             if (!poolId) continue;
+
+            // ── SUBSCRIPTION LOCKDOWN CHECK ──
+            const canMutate = await checkTenantMutability(poolId, "pool");
+            if (!canMutate) continue;
 
             const result = await PoolSession.aggregate([
                 { $match: { poolId, status: "active" } },

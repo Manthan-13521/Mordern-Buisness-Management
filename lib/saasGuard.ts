@@ -5,6 +5,7 @@ import { Member } from "@/models/Member";
 import { Pool } from "@/models/Pool";
 import { redis } from "@/lib/redis";
 import { logger } from "@/lib/logger";
+import { resolveSubscriptionState } from "@/lib/subscriptionState";
 
 // ── Force model registration ────────────────────────────────────────────
 // SaaSPlan is referenced by Organization.planId via populate().
@@ -134,8 +135,8 @@ export async function enforceSaaSGuard(poolId: string): Promise<SaaSContext> {
                 isHardExpired: false,
             };
         } else {
-            // We do NOT throw here automatically anymore, to allow read-only dashboard access.
-            // Instead we throw when specific write operations are requested.
+            // Unify logic using the new subscription state if possible.
+            // Some legacy orgs might only rely on org.graceEndsAt, but we enforce the hard 3-day rule now.
             const isHardExpired = org.status === "expired" && (!org.graceEndsAt || Date.now() > new Date(org.graceEndsAt).getTime());
 
             context = {
@@ -235,7 +236,7 @@ export interface BusinessSaaSContext {
     status: "active" | "trial" | "expired" | "suspended" | "cancelled";
     expiryDate: Date;
     isExpired: boolean;
-    isGracePeriod: boolean; // 7-day grace after expiry
+    isGracePeriod: boolean; // strict 3-day grace after expiry
 }
 
 /**
@@ -290,9 +291,9 @@ export async function enforceBusinessSubscription(
     }
 
     const expiryDate = new Date(sub.expiryDate);
-    const isExpired = expiryDate.getTime() < Date.now();
-    const gracePeriodMs = 7 * 24 * 60 * 60 * 1000; // 7 days
-    const isGracePeriod = isExpired && (Date.now() - expiryDate.getTime()) < gracePeriodMs;
+    const state = resolveSubscriptionState(expiryDate, sub.status);
+    const isExpired = state !== "ACTIVE";
+    const isGracePeriod = state === "EXPIRED_GRACE_PERIOD";
 
     const ctx: BusinessSaaSContext = {
         businessId,
