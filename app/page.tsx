@@ -8,6 +8,7 @@ import { HowItWorks } from "@/components/marketing/HowItWorks";
 import { Testimonials } from "@/components/marketing/Testimonials";
 import { Footer } from "@/components/marketing/Footer";
 import { SmartDemoModal } from "@/components/marketing/SmartDemoModal";
+import { FloatingCTA } from "@/components/marketing/FloatingCTA";
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://aquasync.in";
 
@@ -40,6 +41,7 @@ export default function SaaSMarketingLanding() {
 
       <Footer />
       <SmartDemoModal />
+      <FloatingCTA />
     </div>
   );
 }
