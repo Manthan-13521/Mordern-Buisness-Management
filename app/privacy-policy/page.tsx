@@ -5,6 +5,13 @@ import { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Privacy Policy | AquaSync SaaS",
   description: "Privacy Policy for AquaSync SaaS operations and data handling.",
+  alternates: {
+    canonical: "https://aquasync.com/privacy-policy",
+  },
+  openGraph: {
+    title: "Privacy Policy | AquaSync SaaS",
+    description: "Privacy Policy for AquaSync SaaS operations and data handling.",
+  }
 };
 
 export default function PrivacyPolicy() {

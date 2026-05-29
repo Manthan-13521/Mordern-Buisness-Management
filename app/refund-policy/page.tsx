@@ -5,6 +5,13 @@ import { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Refund & Cancellation Policy | AquaSync SaaS",
   description: "Our policies concerning refunds and subscription cancellations.",
+  alternates: {
+    canonical: "https://aquasync.com/refund-policy",
+  },
+  openGraph: {
+    title: "Refund & Cancellation Policy | AquaSync SaaS",
+    description: "Our policies concerning refunds and subscription cancellations.",
+  }
 };
 
 export default function RefundPolicy() {
