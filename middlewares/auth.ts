@@ -33,6 +33,8 @@ const SUBSCRIPTION_ALWAYS_ALLOW = [
     "/api/pool/register",
     "/api/hostel/register",
     "/api/business/register",
+    "/api/demo",
+    "/api/contact",
 ];
 
 export function withAuthRouting(req: NextRequestWithAuth): NextResponse | undefined {

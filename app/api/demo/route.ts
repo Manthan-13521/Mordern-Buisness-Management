@@ -40,6 +40,9 @@ export async function POST(req: Request) {
             status: "new",
         });
 
+        // Non-blocking notification log
+        console.log(`[NEW DEMO LEAD] ${name} (${email}) — ${businessType} — ${businessName}`);
+
         return NextResponse.json(
             { message: "Demo request submitted successfully.", id: newRequest._id },
             { status: 201 }

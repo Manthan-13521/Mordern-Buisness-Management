@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
+import { useEffect, useState } from "react";
 import {
     LayoutDashboard,
     Droplets,
@@ -19,6 +20,25 @@ import {
 
 export function SuperAdminSidebar() {
     const pathname = usePathname();
+    const [newLeadCount, setNewLeadCount] = useState(0);
+
+    // Lightweight poll for new lead count (every 60s)
+    useEffect(() => {
+        const fetchCount = async () => {
+            try {
+                const res = await fetch("/api/superadmin/demo?status=new");
+                if (res.ok) {
+                    const data = await res.json();
+                    setNewLeadCount(Array.isArray(data) ? data.length : 0);
+                }
+            } catch {
+                // Silently fail — badge is non-critical
+            }
+        };
+        fetchCount();
+        const interval = setInterval(fetchCount, 60000);
+        return () => clearInterval(interval);
+    }, []);
 
     const links = [
         { name: "Dashboard",    href: "/superadmin",            icon: LayoutDashboard },
@@ -26,7 +46,7 @@ export function SuperAdminSidebar() {
         { name: "Manage Pools", href: "/superadmin/pools",      icon: Droplets },
         { name: "Manage Hostels", href: "/superadmin/hostels",  icon: Building2 },
         { name: "Manage Businesses", href: "/superadmin/businesses", icon: Briefcase },
-        { name: "Demo Requests", href: "/superadmin/demo",     icon: Calendar },
+        { name: "Leads & Demos", href: "/superadmin/demo",     icon: Calendar, badge: newLeadCount },
         { name: "Feedback",     href: "/superadmin/feedback",   icon: MessageSquare },
         { name: "Billing",      href: "/superadmin/billing",    icon: CreditCard },
         { name: "Referrals",    href: "/superadmin/referrals",  icon: Gift },
@@ -69,7 +89,12 @@ export function SuperAdminSidebar() {
                                     isActive ? "text-white" : "text-[#9ca3af] group-hover:text-white"
                                 )}
                             />
-                            <span className="text-sm font-medium tracking-tight">{item.name}</span>
+                            <span className="text-sm font-medium tracking-tight flex-1">{item.name}</span>
+                            {(item as any).badge > 0 && (
+                                <span className="min-w-[20px] h-5 flex items-center justify-center rounded-full bg-blue-500 text-[10px] font-bold text-white px-1.5">
+                                    {(item as any).badge > 99 ? "99+" : (item as any).badge}
+                                </span>
+                            )}
                         </Link>
                     );
                 })}

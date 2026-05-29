@@ -21,6 +21,8 @@ const PUBLIC_API_PREFIXES = [
     "/api/razorpay/create-order",
     "/api/subscription/create-order",
     "/api/csp-report",
+    "/api/demo",
+    "/api/contact",
 ];
 
 // ─── PUBLIC PAGE PATHS: accessible without session ───────────────────

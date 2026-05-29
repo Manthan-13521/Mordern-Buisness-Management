@@ -10,7 +10,7 @@ const PAGE_TITLES: Record<string, string> = {
     "/superadmin/pools":     "Pool Management",
     "/superadmin/hostels":   "Hostel Management",
     "/superadmin/businesses": "Business Management",
-    "/superadmin/demo":      "Demo Requests",
+    "/superadmin/demo":      "Leads & Demos",
     "/superadmin/feedback":  "Reports & Feedback",
     "/superadmin/billing":   "Billing & Invoices",
     "/superadmin/referrals": "Growth & Referrals",
