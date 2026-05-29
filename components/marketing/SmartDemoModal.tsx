@@ -96,12 +96,29 @@ export function SmartDemoModal() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isVisible]);
 
-  if (!isVisible) return null;
+  if (session || isExcluded) return null;
 
   return (
     <>
-      {/* Backdrop */}
-      <div 
+      {/* Permanent Floating Button */}
+      <div className="fixed bottom-6 right-6 z-[90]">
+        <button
+          onClick={showModal}
+          className="group flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3.5 rounded-full font-bold shadow-xl shadow-blue-500/30 transition-all hover:scale-105 active:scale-95 ring-4 ring-blue-500/20"
+          aria-label="Book a Demo"
+        >
+          <span className="relative flex h-3 w-3 mr-1">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+          </span>
+          Book a Demo
+        </button>
+      </div>
+
+      {isVisible && (
+        <>
+          {/* Backdrop */}
+          <div 
         className="fixed inset-0 z-[99] bg-black/60 backdrop-blur-sm transition-opacity duration-300 animate-in fade-in"
         onClick={handleDismiss}
         aria-hidden="true"
@@ -177,6 +194,8 @@ export function SmartDemoModal() {
           </div>
         </div>
       </div>
+        </>
+      )}
     </>
   );
 }

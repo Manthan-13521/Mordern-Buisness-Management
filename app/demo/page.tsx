@@ -107,12 +107,11 @@ function DemoForm() {
               />
             </div>
             <div>
-              <label htmlFor="demo-email" className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Email Address *</label>
+              <label htmlFor="demo-email" className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Email Address</label>
               <input
                 id="demo-email"
                 type="email"
                 name="email"
-                required
                 value={form.email}
                 onChange={handleChange}
                 className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-white/10 bg-white dark:bg-slate-900/50 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
