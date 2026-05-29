@@ -2,43 +2,8 @@
 
 import Link from "next/link";
 import { Calendar } from "lucide-react";
-import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
 
 export function FloatingCTA() {
-  const [isVisible, setIsVisible] = useState(false);
-  const pathname = usePathname();
-  const { data: session } = useSession();
-
-  // Hide on admin/app pages, or if logged in
-  const excludedPaths = ["/demo", "/login", "/register", "/select-plan", "/renew-plan", "/subscribe", "/admin", "/superadmin"];
-  const isExcluded = excludedPaths.some(path => pathname.startsWith(path));
-
-  useEffect(() => {
-    if (session || isExcluded) {
-      setIsVisible(false);
-      return;
-    }
-
-    const handleScroll = () => {
-      // Show earlier than the smart modal so it's always accessible
-      if (window.scrollY > 200) {
-        setIsVisible(true);
-      } else {
-        setIsVisible(false);
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    // Initial check in case they refresh half-way down
-    handleScroll();
-    
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [session, isExcluded]);
-
-  if (!isVisible) return null;
-
   return (
     <div className="fixed bottom-6 right-6 z-[90] animate-in slide-in-from-bottom-5 fade-in duration-300">
       {/* Outer pulsing ring for highlight effect */}
