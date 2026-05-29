@@ -2,10 +2,14 @@
 
 import { Navbar } from "@/components/marketing/Navbar";
 import { Footer } from "@/components/marketing/Footer";
-import { useState } from "react";
+import { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { CheckCircle2, Send } from "lucide-react";
 
-export default function DemoRequestPage() {
+function DemoForm() {
+  const searchParams = useSearchParams();
+  const sourceParam = searchParams.get("source") || "demo-page";
+
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -32,7 +36,7 @@ export default function DemoRequestPage() {
       const res = await fetch("/api/demo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, source: "demo-page" }),
+        body: JSON.stringify({ ...form, source: sourceParam }),
       });
 
       if (!res.ok) {
@@ -41,6 +45,9 @@ export default function DemoRequestPage() {
       }
 
       setSubmitted(true);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("demoSubmitted", "true");
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -217,5 +224,13 @@ export default function DemoRequestPage() {
       </main>
       <Footer />
     </div>
+  );
+}
+
+export default function DemoRequestPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#020617]" />}>
+      <DemoForm />
+    </Suspense>
   );
 }
