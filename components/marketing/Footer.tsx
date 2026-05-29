@@ -5,56 +5,68 @@ export function Footer() {
   return (
     <footer className="bg-gray-50 dark:bg-[#020617] border-t border-gray-200 dark:border-white/10 pt-16 pb-8">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-8 mb-12">
           
-          <div className="col-span-1 md:col-span-1">
+          {/* Brand */}
+          <div className="col-span-1 md:col-span-2">
             <Link href="/" className="flex items-center gap-2 mb-4">
               <span className="sr-only">AquaSync</span>
               <Waves className="h-8 w-8 text-blue-500" />
               <span className="text-xl font-bold dark:text-white">AquaSync SaaS</span>
             </Link>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              The premier unified platform for managing swimming pools and hostel accommodations.
+              The premier unified platform for managing swimming pools, hostel accommodations, and business operations.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-8 md:grid-cols-4 col-span-1 md:col-span-3">
-            <div>
-              <h3 className="text-sm font-semibold leading-6 text-gray-900 dark:text-white mb-4">Product</h3>
-              <ul className="space-y-3">
-                <li><Link href="/#features" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Features</Link></li>
-                <li><Link href="/#pricing" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Pricing</Link></li>
-                <li><Link href="/login" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Admin Portal</Link></li>
-              </ul>
+          {/* Product */}
+          <div>
+            <h3 className="text-sm font-semibold leading-6 text-gray-900 dark:text-white mb-4">Product</h3>
+            <ul className="space-y-3">
+              <li><Link href="/#features" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Features</Link></li>
+              <li><Link href="/#pricing" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Pricing</Link></li>
+              <li><Link href="/login" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Admin Portal</Link></li>
+              <li><Link href="/trust" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Trust Center</Link></li>
+            </ul>
+          </div>
 
-              <h3 className="text-sm font-semibold leading-6 text-gray-900 dark:text-white mt-8 mb-4">Resources</h3>
-              <ul className="space-y-3">
-                <li><Link href="/trust" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Trust Center</Link></li>
-              </ul>
-            </div>
+          {/* Legal */}
+          <div>
+            <h3 className="text-sm font-semibold leading-6 text-gray-900 dark:text-white mb-4">Legal</h3>
+            <ul className="space-y-3">
+              <li><Link href="/privacy-policy" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Terms & Conditions</Link></li>
+              <li><Link href="/refund-policy" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Refund Policy</Link></li>
+              <li><Link href="/subscription-policy" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Subscription Policy</Link></li>
+              <li><Link href="/data-retention-policy" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Data Retention</Link></li>
+              <li><Link href="/security-policy" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Security Policy</Link></li>
+              <li><Link href="/acceptable-use-policy" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Acceptable Use</Link></li>
+            </ul>
+          </div>
 
-            <div className="col-span-2">
-              <h3 className="text-sm font-semibold leading-6 text-gray-900 dark:text-white mb-4">Legal & Compliance</h3>
-              <ul className="space-y-3 grid grid-cols-1 sm:grid-cols-2 gap-x-4">
-                <li><Link href="/privacy-policy" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Privacy Policy</Link></li>
-                <li><Link href="/terms" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Terms & Conditions</Link></li>
-                <li><Link href="/refund-policy" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Refund Policy</Link></li>
-                <li><Link href="/subscription-policy" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Subscription & Billing Policy</Link></li>
-                <li><Link href="/data-retention-policy" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Data Retention Policy</Link></li>
-                <li><Link href="/security-policy" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Security Policy</Link></li>
-                <li><Link href="/acceptable-use-policy" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Acceptable Use Policy</Link></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h3 className="text-sm font-semibold leading-6 text-gray-900 dark:text-white mb-4">Contact</h3>
-              <ul className="space-y-3">
-                <li><a href="mailto:manthanjaiswal902@gmail.com" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Support</a></li>
-                <li className="text-sm leading-6 text-gray-600 dark:text-gray-400">manthanjaiswal902@gmail.com</li>
-                <li className="text-sm leading-6 text-gray-600 dark:text-gray-400">+91 8125629601</li>
-                <li className="text-sm leading-6 text-gray-600 dark:text-gray-400 mt-2">Hyderabad, Telangana,<br/>India</li>
-              </ul>
-            </div>
+          {/* Support & Demo */}
+          <div>
+            <h3 className="text-sm font-semibold leading-6 text-gray-900 dark:text-white mb-4">Support</h3>
+            <ul className="space-y-3">
+              <li><Link href="/faq" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">FAQ</Link></li>
+              <li><Link href="/support-policy" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Support Policy</Link></li>
+              <li><a href="mailto:manthanjaiswal902@gmail.com" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Contact Us</a></li>
+            </ul>
+
+            <h3 className="text-sm font-semibold leading-6 text-gray-900 dark:text-white mt-6 mb-4">Demo</h3>
+            <ul className="space-y-3">
+              <li><Link href="/demo" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Book a Demo</Link></li>
+            </ul>
+          </div>
+
+          {/* Contact */}
+          <div>
+            <h3 className="text-sm font-semibold leading-6 text-gray-900 dark:text-white mb-4">Contact</h3>
+            <ul className="space-y-3">
+              <li className="text-sm leading-6 text-gray-600 dark:text-gray-400">manthanjaiswal902@gmail.com</li>
+              <li className="text-sm leading-6 text-gray-600 dark:text-gray-400">+91 8125629601</li>
+              <li className="text-sm leading-6 text-gray-600 dark:text-gray-400 mt-2">Hyderabad, Telangana,<br/>India</li>
+            </ul>
           </div>
         </div>
 

@@ -14,6 +14,7 @@ import {
     LogOut,
     Shield,
     Megaphone,
+    Calendar,
 } from "lucide-react";
 
 export function SuperAdminSidebar() {
@@ -25,6 +26,7 @@ export function SuperAdminSidebar() {
         { name: "Manage Pools", href: "/superadmin/pools",      icon: Droplets },
         { name: "Manage Hostels", href: "/superadmin/hostels",  icon: Building2 },
         { name: "Manage Businesses", href: "/superadmin/businesses", icon: Briefcase },
+        { name: "Demo Requests", href: "/superadmin/demo",     icon: Calendar },
         { name: "Feedback",     href: "/superadmin/feedback",   icon: MessageSquare },
         { name: "Billing",      href: "/superadmin/billing",    icon: CreditCard },
         { name: "Referrals",    href: "/superadmin/referrals",  icon: Gift },
