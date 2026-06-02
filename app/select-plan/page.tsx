@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Script from "next/script";
 import { Check, Loader2, Sparkles, Zap, Shield, Blocks, Tag, X, Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -22,6 +22,7 @@ const SELECTED_PLAN = "ring-2 ring-sky-500 border-sky-500/50 bg-sky-500/5";
 export default function SelectPlanPage() {
     const { data: session, status, update: updateSession } = useSession() as any;
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [loading, setLoading] = useState(false);
     const [pageLoading, setPageLoading] = useState(true);
     const [trialUsed, setTrialUsed] = useState(false);
@@ -150,9 +151,13 @@ export default function SelectPlanPage() {
     };
 
     const getRedirectUrl = () => {
-        if (session.user.hostelId) return `/hostel/${session.user.hostelSlug}/admin/dashboard`;
-        if (session.user.businessId) return `/business/${session.user.businessSlug}/admin/dashboard`;
-        return `/pool/${session.user.poolSlug}/admin/dashboard`;
+        const returnTo = searchParams.get("returnTo");
+        if (returnTo && returnTo.startsWith("/")) {
+            return returnTo;
+        }
+        if (session?.user?.hostelId) return `/hostel/${session.user.hostelSlug}/admin/dashboard`;
+        if (session?.user?.businessId) return `/business/${session.user.businessSlug}/admin/dashboard`;
+        return `/pool/${session?.user?.poolSlug}/admin/dashboard`;
     };
 
     const handlePayment = async (planType: SubscriptionPlanType, blocks?: number) => {

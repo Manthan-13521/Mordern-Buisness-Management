@@ -38,6 +38,21 @@ const nextConfig: NextConfig = {
     ],
   },
 
+  async redirects() {
+    return [
+      {
+        source: "/settings/billing",
+        destination: "/select-plan",
+        permanent: true,
+      },
+      {
+        source: "/:tenant*/admin/settings/billing",
+        destination: "/select-plan",
+        permanent: true,
+      }
+    ];
+  },
+
   async headers() {
     return [
       {

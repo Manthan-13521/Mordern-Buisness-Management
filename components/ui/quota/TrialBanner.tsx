@@ -2,11 +2,14 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { UPGRADE_ROUTE } from "@/lib/subscriptionConfig";
 import { X, Sparkles } from "lucide-react";
 
 export default function TrialBanner() {
     const [data, setData] = useState<any>(null);
     const [dismissed, setDismissed] = useState(false);
+    const pathname = usePathname();
 
     useEffect(() => {
         // Simple session-based dismiss (reappears on next full session/login)
@@ -41,7 +44,7 @@ export default function TrialBanner() {
                 </div>
                 
                 <Link 
-                    href="/settings/billing" 
+                    href={`${UPGRADE_ROUTE}?returnTo=${encodeURIComponent(pathname || "/")}`}  
                     className="bg-white text-[#8b5cf6] hover:bg-[#f5f3ff] px-4 py-1.5 rounded-full font-medium transition-colors text-sm shadow-sm"
                 >
                     Upgrade Now

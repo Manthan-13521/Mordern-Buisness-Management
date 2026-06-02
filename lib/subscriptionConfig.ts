@@ -1,3 +1,5 @@
+export const UPGRADE_ROUTE = "/select-plan";
+
 /**
  * Server-side pricing table for SaaS subscriptions.
  * NEVER trust frontend amounts — always derive price from this table.

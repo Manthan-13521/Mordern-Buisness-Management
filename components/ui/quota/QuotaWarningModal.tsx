@@ -4,10 +4,13 @@ import React, { useEffect, useState } from "react";
 import { quotaEvents } from "@/lib/quotaEvents";
 import { AlertTriangle, Lock, Star } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { UPGRADE_ROUTE } from "@/lib/subscriptionConfig";
 
 export default function QuotaWarningModal() {
     const [isOpen, setIsOpen] = useState(false);
     const [resourceName, setResourceName] = useState("");
+    const pathname = usePathname();
 
     useEffect(() => {
         // Subscribe to direct events
@@ -79,7 +82,7 @@ export default function QuotaWarningModal() {
                             Maybe Later
                         </button>
                         <Link
-                            href="/settings/billing"
+                            href={`${UPGRADE_ROUTE}?returnTo=${encodeURIComponent(pathname || "/")}`}
                             onClick={() => setIsOpen(false)}
                             className="flex-1 px-4 py-2.5 rounded-xl bg-[#8b5cf6] hover:bg-[#7c3aed] text-white font-medium shadow-lg shadow-[#8b5cf6]/30 transition-all active:scale-95 text-center flex items-center justify-center"
                         >
