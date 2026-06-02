@@ -70,6 +70,12 @@ export function Topbar() {
                 {/* Right: Actions + User */}
                 <div className="flex items-center gap-4">
                     
+                    {session?.user?.subscriptionStatus === "none" && session?.user?.role !== "superadmin" && (
+                        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/20 rounded-full">
+                            <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
+                            <span className="text-[10px] font-bold text-yellow-500 uppercase tracking-wider">Free Trial</span>
+                        </div>
+                    )}
                     
                     <div className="h-10 w-px bg-[#1f2937] mx-1 hidden sm:block" />
 

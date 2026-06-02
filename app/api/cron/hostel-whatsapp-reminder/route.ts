@@ -71,6 +71,11 @@ export async function GET(req: Request) {
                     continue; 
                 }
 
+                // Free Trial Guard
+                if (hostel.subscriptionStatus === "trial") {
+                    continue; // Trial users don't get automated WhatsApp integrations
+                }
+
                 // Explicit Message Dispatch Based on Type
                 const isOverdue = member._reminderType === 'overdue';
                 const message = isOverdue 

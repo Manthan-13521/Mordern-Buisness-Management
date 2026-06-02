@@ -70,6 +70,12 @@ export async function sendReminders(payload: SendReminderPayload): Promise<{
         const plan = member.planId as any;
         if (!plan?.whatsAppAlert) continue;
 
+        const { Pool } = await import("@/models/Pool");
+        const poolDoc = await Pool.findOne({ poolId: payload.poolId || (member as any).poolId }).lean() as any;
+        if (poolDoc?.subscriptionStatus === "trial") {
+            continue; // Trial pools do not get automated WhatsApp integrations
+        }
+
         const isHourly = !!plan?.durationHours;
         const durationDays = plan?.durationDays || 0;
 
@@ -121,6 +127,13 @@ export async function sendWelcome(payload: SendWelcomePayload): Promise<boolean>
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     const idCardUrl = `${baseUrl}/api/members/${payload.memberId}/pdf`;
     const welcomeMessage = `Hello ${payload.memberName}! Your registration is successful. ID Card: ${idCardUrl}\n\n- TS Pools Mgmt`;
+
+    const { Pool } = await import("@/models/Pool");
+    const poolDoc = await Pool.findOne({ poolId: payload.poolId }).lean() as any;
+    if (poolDoc?.subscriptionStatus === "trial") {
+        logger.info("[NotificationService] Welcome skipped: Trial pool", { memberId: payload.memberId });
+        return false;
+    }
 
     const success = await sendWhatsAppMessage(payload.phone, welcomeMessage);
 

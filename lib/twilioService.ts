@@ -83,6 +83,11 @@ export async function sendWhatsAppForPool(
     messageData: MessageData,
     type: "before_expiry" | "after_expiry"
 ): Promise<boolean> {
+    if (pool.subscriptionStatus === "trial") {
+        logger.info("[TwilioService] Skipped: Trial pools do not have WhatsApp access.", { poolId: pool.poolId });
+        return false;
+    }
+
     const client = getTwilioClient(pool);
     const from = pool.twilio!.whatsappNumber;
 

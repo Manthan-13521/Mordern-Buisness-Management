@@ -165,6 +165,18 @@ export function Sidebar() {
                         <p className="text-[9px] text-[#9ca3af] truncate">{session?.user?.role}</p>
                     </div>
                 </div>
+
+                {session?.user?.subscriptionStatus === "none" && session?.user?.role !== "superadmin" && (
+                    <div className="mx-2 mb-3 px-3 py-2.5 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                        <div className="flex items-center gap-2 mb-1">
+                            <Ticket className="w-4 h-4 text-yellow-500" />
+                            <p className="text-xs font-bold text-yellow-500 uppercase tracking-wider">Free Trial</p>
+                        </div>
+                        <p className="text-[10px] text-yellow-500/80 leading-tight">
+                            Upgrade to unlock unlimited features.
+                        </p>
+                    </div>
+                )}
                 
                 <button
                     onClick={() => signOut({ callbackUrl: "/login" })}
