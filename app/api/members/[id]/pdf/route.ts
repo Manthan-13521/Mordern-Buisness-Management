@@ -117,7 +117,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
                 if (imagePath.startsWith('http')) {
                     const fetchUrl = imagePath;
 
-                    console.log(`[PDF DEBUG] Final Fetch URL: ${fetchUrl}`);
+
                     const response = await fetch(fetchUrl, {
                         headers: { 'User-Agent': 'Mozilla/5.0' }
                     });
@@ -131,7 +131,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
                     const arrayBuffer = await response.arrayBuffer();
                     const bytes = Buffer.from(arrayBuffer);
                     
-                    console.log(`[PDF DEBUG] Received ${bytes.length} bytes, Content-Type: ${contentType}`);
+
                     const type = contentType?.includes('png') ? 'png' : 'jpg';
                     return { bytes, type };
                 }
@@ -139,7 +139,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
                 // Local path fallback (works locally but not on Vercel for old uploads)
                 const fullPath = path.join(process.cwd(), "public", imagePath);
                 if (fs.existsSync(fullPath)) {
-                    console.log(`[PDF DEBUG] Found local file: ${fullPath}`);
+
                     const bytes = fs.readFileSync(fullPath);
                     const type = imagePath.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
                     return { bytes, type };

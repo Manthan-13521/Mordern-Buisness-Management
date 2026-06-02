@@ -18,7 +18,7 @@ try {
 export async function sendWhatsAppMessage(toPhone: string, message: string): Promise<boolean> {
     if (!client || !twilioNumber) {
         console.warn("Twilio is not configured. Skipping WhatsApp message.");
-        console.log(`[DEBUG MOCK] To: ${toPhone} | Message: ${message}`);
+
         // Simulate success if not configured (useful for dev without credentials)
         return true;
     }

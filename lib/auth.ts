@@ -275,9 +275,14 @@ export const authOptions: NextAuthOptions = {
                         poolId: user.poolId,
                         poolSlug: pool.slug,
                         poolName: (pool as any).poolName,
-                        subscriptionStatus: user.subscription?.expiryDate
-                            ? (new Date() > new Date(user.subscription.expiryDate) ? "expired" : "active")
-                            : "none",
+                        subscriptionStatus: (function() {
+                            const sub = user.subscription;
+                            if (!sub || !sub.expiryDate) return "none";
+                            const isExpired = new Date() > new Date(sub.expiryDate);
+                            if (sub.status === "trial" || sub.planType === "trial") return isExpired ? "expired" : "none";
+                            if (sub.status === "suspended" || sub.status === "cancelled") return "expired";
+                            return isExpired ? "expired" : "active";
+                        })(),
                         subscriptionExpiryDate: user.subscription?.expiryDate
                             ? new Date(user.subscription.expiryDate).toISOString()
                             : null,
@@ -338,9 +343,14 @@ export const authOptions: NextAuthOptions = {
 
                 // ── Compute subscription status dynamically ──
                 const subExpiry = user.subscription?.expiryDate;
-                const subscriptionStatus: "active" | "expired" | "none" = subExpiry
-                    ? (new Date() > new Date(subExpiry) ? "expired" : "active")
-                    : "none";
+                const subscriptionStatus: "active" | "expired" | "none" = (function() {
+                    const sub = user.subscription;
+                    if (!sub || !sub.expiryDate) return "none";
+                    const isExpired = new Date() > new Date(sub.expiryDate);
+                    if (sub.status === "trial" || sub.planType === "trial") return isExpired ? "expired" : "none";
+                    if (sub.status === "suspended" || sub.status === "cancelled") return "expired";
+                    return isExpired ? "expired" : "active";
+                })();
                 const subscriptionExpiryDate = subExpiry ? new Date(subExpiry).toISOString() : null;
 
                 // ── Hostel admin path (additive — pool flow untouched above) ──
@@ -424,7 +434,10 @@ export const authOptions: NextAuthOptions = {
                      if (freshUser?.subscription?.expiryDate) {
                          const expiry = new Date(freshUser.subscription.expiryDate);
                          const isExpired = new Date() > expiry;
-                         token.subscriptionStatus = isExpired ? "expired" : "active";
+                         const sub = freshUser.subscription;
+                         const isTrial = sub.status === "trial" || sub.planType === "trial";
+                         const isSuspended = sub.status === "suspended" || sub.status === "cancelled";
+                         token.subscriptionStatus = (isExpired || isSuspended) ? "expired" : (isTrial ? "none" : "active");
                          token.subscriptionExpiryDate = expiry.toISOString();
                          logger.info("[Auth] JWT session refreshed from DB", {
                              userId: token.id,

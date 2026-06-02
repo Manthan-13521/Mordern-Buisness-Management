@@ -11,11 +11,9 @@ export const TRIAL_LIMITS = {
 type ModuleType = "pool" | "hostel" | "business";
 
 export function isTrial(user: AuthUser): boolean {
-    // AuthUser.subscriptionStatus is derived from subscription.expiryDate:
-    //   "active" = paid & not expired, "expired" = paid & past expiry, "none" = never subscribed (free trial)
-    // The Pool/Hostel model has "trial" on its own subscriptionStatus, but that value
-    // is never propagated to the JWT. "none" is the correct indicator of a trial user.
-    return user.subscriptionStatus === "none" && user.role !== "superadmin";
+    // Treat any non-active subscription (none, expired, or undefined) as a trial
+    // to prevent quota bypasses. Only active paid users and superadmins bypass.
+    return user.subscriptionStatus !== "active" && user.role !== "superadmin";
 }
 
 /**

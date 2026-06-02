@@ -202,13 +202,7 @@ export async function getEcosystemSnapshot(): Promise<EcosystemSnapshot> {
         };
     });
 
-    // Optional debug validation in development
-    if (process.env.NODE_ENV === "development") {
-        console.log("=== [Analytics Debug Validation] ===");
-        console.log(`Raw Orgs: ${allOrgs.length} | Deduped: ${deduplicatedOrgs.length}`);
-        console.log(`Active Orgs KPI: ${activeOrgs.length} | Trial Orgs KPI: ${trialOrgs.length}`);
-        console.log(`Active Subtenants -> Pools: ${activePools.length}, Hostels: ${activeHostels.length}, Businesses: ${activeBusinesses.length}`);
-    }
+
 
     return {
         kpis: {

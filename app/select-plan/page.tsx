@@ -221,11 +221,7 @@ export default function SelectPlanPage() {
                 return;
             }
 
-            console.log("Initializing Razorpay with order:", {
-                orderId: orderData.orderId,
-                amount: orderData.amount,
-                hasKey: !!(orderData.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID)
-            });
+
 
             const options = {
                 key: orderData.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
@@ -235,7 +231,7 @@ export default function SelectPlanPage() {
                 description: `${planType.toUpperCase()} Plan - ${module.toUpperCase()}`,
                 order_id: orderData.orderId,
                 handler: async (response: any) => {
-                    console.log("Payment success handler triggered", response);
+
                     try {
                         const verifyRes = await fetch("/api/subscription/activate", {
                             method: "POST",
@@ -271,7 +267,7 @@ export default function SelectPlanPage() {
                 },
                 modal: {
                     ondismiss: () => {
-                        console.log("Razorpay modal dismissed");
+
                         setLoading(false);
                         setSelectedPlan(null);
                     },
@@ -291,7 +287,7 @@ export default function SelectPlanPage() {
                     setLoading(false);
                     setSelectedPlan(null);
                 });
-                console.log("Opening Razorpay modal...");
+
                 rzp.open();
             } catch (rzpErr: any) {
                 console.error("Razorpay initialization error:", rzpErr);
