@@ -204,6 +204,33 @@ export async function POST(req: Request) {
             orderId: order.id, elapsed: `${elapsed}ms`,
         }, "payment");
 
+        // FIX 3: Persist PaymentIntent so orphaned payments are discoverable by recovery cron.
+        // Uses upsert to handle network retries (user clicking "Pay" twice).
+        try {
+            const { PaymentIntent } = await import("@/models/PaymentIntent");
+            await PaymentIntent.findOneAndUpdate(
+                { razorpayOrderId: order.id },
+                {
+                    $setOnInsert: {
+                        razorpayOrderId: order.id,
+                        userId: user.id,
+                        module,
+                        planType,
+                        blocks: blocks || undefined,
+                        amountPaise: amountPaise,
+                        referralCode: referralCode || undefined,
+                        status: "pending",
+                    }
+                },
+                { upsert: true, new: true }
+            );
+        } catch (intentErr: any) {
+            // Non-fatal — order is already created at Razorpay, must return it
+            if (intentErr?.code !== 11000) {
+                logger.warn("[Subscription] PaymentIntent persist failed (non-fatal)", { error: intentErr?.message });
+            }
+        }
+
         return NextResponse.json({
             orderId:  order.id,
             amount:   amountPaise,

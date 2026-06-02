@@ -57,6 +57,8 @@ export type AuditEventType =
     | "SUBSCRIPTION_WEBHOOK_INVALID_SIG"
     | "SUBSCRIPTION_AMOUNT_MISMATCH"
     | "SUBSCRIPTION_ACTIVATION_TAMPERED"
+    | "PAYMENT_RECOVERED_BY_CRON"
+    | "PAYMENT_RECOVERED_FROM_DLQ"
     // ── Staff ──────────────────────────────────────────────────
     | "STAFF_SALARY_CHANGED"
     | "STAFF_PAYMENT_RECORDED"

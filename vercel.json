@@ -18,7 +18,8 @@
     "app/api/cron/backup-s3/route.ts":                { "maxDuration": 60 },
     "app/api/cron/occupancy-sync/route.ts":           { "maxDuration": 30 },
     "app/api/cron/auto-block/route.ts":               { "maxDuration": 30 },
-    "app/api/cron/system-stats-sync/route.ts":        { "maxDuration": 30 }
+    "app/api/cron/system-stats-sync/route.ts":        { "maxDuration": 30 },
+    "app/api/cron/reconcile-payments/route.ts":        { "maxDuration": 60 }
   },
   "crons": [
     {
@@ -92,6 +93,10 @@
     {
       "path": "/api/cron/system-stats-sync",
       "schedule": "0 23 * * *"
+    },
+    {
+      "path": "/api/cron/reconcile-payments",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

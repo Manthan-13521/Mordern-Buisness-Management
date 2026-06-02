@@ -27,7 +27,7 @@ const subscriptionPaymentLogSchema = new Schema<ISubscriptionPaymentLog>(
         planType:          { type: String, enum: ["trial", "quarterly", "yearly", "block-based"], required: true },
         blocks:            { type: Number },
         amount:            { type: Number, required: true, min: 0 },
-        razorpayOrderId:   { type: String, index: true, sparse: true },
+        razorpayOrderId:   { type: String, unique: true, sparse: true },
         razorpayPaymentId: { type: String, index: true, sparse: true },
         status:            { type: String, enum: ["success", "failed", "pending"], default: "pending" },
         notes:             { type: String },

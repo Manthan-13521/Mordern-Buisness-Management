@@ -236,34 +236,56 @@ export async function activateSubscription(params: {
     await user.save();
 
     // 7. Record payment log — using VERIFIED values
-    await SubscriptionPaymentLog.create({
-        userId:            user._id,
-        poolId:            user.poolId,
-        hostelId:          user.hostelId,
-        businessId:        user.businessId,
-        module:            verifiedModule,
-        planType:          verifiedPlanType,
-        blocks:            verifiedBlocks,
-        amount:            finalAmountPaid,
-        razorpayOrderId,
-        razorpayPaymentId,
-        status:            "success",
-    });
+    // FIX 2: Wrap in duplicate-key catch for atomic idempotency.
+    // If frontend callback and webhook race past the findOne check above,
+    // the unique index on razorpayOrderId will reject the second insert.
+    try {
+        await SubscriptionPaymentLog.create({
+            userId:            user._id,
+            poolId:            user.poolId,
+            hostelId:          user.hostelId,
+            businessId:        user.businessId,
+            module:            verifiedModule,
+            planType:          verifiedPlanType,
+            blocks:            verifiedBlocks,
+            amount:            finalAmountPaid,
+            razorpayOrderId,
+            razorpayPaymentId,
+            status:            "success",
+        });
+    } catch (createErr: any) {
+        if (createErr?.code === 11000) {
+            // Duplicate key — another process already recorded this payment.
+            // This is expected during frontend+webhook race conditions.
+            logger.info("[Activation] Idempotent hit — SubscriptionPaymentLog already exists", {
+                razorpayOrderId, razorpayPaymentId,
+            }, "payment");
+            const existingUser = await User.findById(userId).lean();
+            return {
+                user: existingUser,
+                amountINR: finalAmountPaid,
+                expiryDate: (existingUser as any)?.subscription?.expiryDate ?? new Date(),
+            };
+        }
+        throw createErr; // Re-throw non-duplicate errors
+    }
 
     // 7b. CRITICAL: Also write BillingLog so dashboard/billing/analytics pick up this payment
-    // Uses razorpayOrderId-based idempotency to prevent double-counting
+    // FIX 2: Upsert keyed on razorpayOrderId (stable) instead of periodStart:now (racey).
+    // The unique sparse index on razorpayOrderId prevents duplicate billing records.
     try {
         const { BillingLog } = await import("@/models/BillingLog");
         const org = await Organization.findOne({ ownerId: user._id }).lean() as any;
         if (org) {
             await (BillingLog as any).findOneAndUpdate(
-                { orgId: org._id, method: "razorpay", periodStart: now },
+                { orgId: org._id, razorpayOrderId },
                 {
                     $setOnInsert: {
                         orgId: org._id,
                         amount: finalAmountPaid,
                         method: "razorpay",
                         paymentMode: "Razorpay",
+                        razorpayOrderId,
                         periodStart: now,
                         periodEnd: expiryDate,
                     }
@@ -370,6 +392,18 @@ export async function activateSubscription(params: {
             // Non-fatal — analytics failure shouldn't block activation
             logger.warn("[Activation] Referral recording failed (non-fatal)", { error: refErr?.message });
         }
+    }
+
+    // 10. FIX 3: Mark PaymentIntent as "success" so the recovery cron doesn't re-process it
+    try {
+        const { PaymentIntent } = await import("@/models/PaymentIntent");
+        await PaymentIntent.updateOne(
+            { razorpayOrderId },
+            { $set: { status: "success" } }
+        );
+    } catch (intentErr: any) {
+        // Non-fatal — PaymentIntent is a tracking aid, not a critical path
+        logger.warn("[Activation] PaymentIntent status update failed (non-fatal)", { error: intentErr?.message });
     }
 
     return { user: user.toObject(), amountINR: finalAmountPaid, expiryDate };
