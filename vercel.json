@@ -96,7 +96,7 @@
     },
     {
       "path": "/api/cron/reconcile-payments",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 8 * * *"
     }
   ]
 }
