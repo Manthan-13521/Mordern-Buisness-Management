@@ -18,6 +18,7 @@ export default function TwilioSetupPage() {
     const [saving, setSaving] = useState(false);
     const [disconnecting, setDisconnecting] = useState(false);
     const [showToken, setShowToken] = useState(false);
+    const [isTrial, setIsTrial] = useState(false);
     const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
     const [form, setForm] = useState({
@@ -35,8 +36,17 @@ export default function TwilioSetupPage() {
     const fetchStatus = async () => {
         setLoading(true);
         try {
-            const res = await fetch("/api/twilio/status", { cache: 'no-store' });
-            if (res.ok) setStatus(await res.json());
+            const [resTwilio, resQuota] = await Promise.all([
+                fetch("/api/twilio/status", { cache: 'no-store' }),
+                fetch("/api/quotas", { cache: 'no-store' })
+            ]);
+            
+            if (resTwilio.ok) setStatus(await resTwilio.json());
+            
+            if (resQuota.ok) {
+                const q = await resQuota.json();
+                setIsTrial(q.isTrial);
+            }
         } catch {
             // silently ignore
         } finally {
@@ -190,8 +200,9 @@ export default function TwilioSetupPage() {
                             type="text"
                             placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                             value={form.sid}
+                            disabled={isTrial}
                             onChange={e => setForm({ ...form, sid: e.target.value })}
-                            className="w-full rounded-lg border border-[#1f2937] border-[#1f2937] bg-[#0b1220] shadow-sm px-4 py-2.5 text-sm text-[#f9fafb] placeholder-gray-400 focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/20 outline-none transition"
+                            className="w-full rounded-lg border border-[#1f2937] border-[#1f2937] bg-[#0b1220] shadow-sm px-4 py-2.5 text-sm text-[#f9fafb] placeholder-gray-400 focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/20 outline-none transition disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                     </div>
 
@@ -206,13 +217,15 @@ export default function TwilioSetupPage() {
                                 type={showToken ? "text" : "password"}
                                 placeholder="Your Twilio auth token"
                                 value={form.authToken}
+                                disabled={isTrial}
                                 onChange={e => setForm({ ...form, authToken: e.target.value })}
-                                className="w-full rounded-lg border border-[#1f2937] border-[#1f2937] bg-[#0b1220] shadow-sm px-4 py-2.5 pr-11 text-sm text-[#f9fafb] placeholder-gray-400 focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/20 outline-none transition"
+                                className="w-full rounded-lg border border-[#1f2937] border-[#1f2937] bg-[#0b1220] shadow-sm px-4 py-2.5 pr-11 text-sm text-[#f9fafb] placeholder-gray-400 focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/20 outline-none transition disabled:opacity-50 disabled:cursor-not-allowed"
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowToken(!showToken)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7280] hover:text-[#9ca3af]"
+                                disabled={isTrial}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7280] hover:text-[#9ca3af] disabled:opacity-50"
                             >
                                 {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </button>
@@ -233,8 +246,9 @@ export default function TwilioSetupPage() {
                             type="text"
                             placeholder="whatsapp:+14155238886"
                             value={form.whatsappNumber}
+                            disabled={isTrial}
                             onChange={e => setForm({ ...form, whatsappNumber: e.target.value })}
-                            className="w-full rounded-lg border border-[#1f2937] border-[#1f2937] bg-[#0b1220] shadow-sm px-4 py-2.5 text-sm text-[#f9fafb] placeholder-gray-400 focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/20 outline-none transition"
+                            className="w-full rounded-lg border border-[#1f2937] border-[#1f2937] bg-[#0b1220] shadow-sm px-4 py-2.5 text-sm text-[#f9fafb] placeholder-gray-400 focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/20 outline-none transition disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                         <p className="mt-1 text-xs text-[#6b7280]">Format: <code className="bg-[#0b1220] border border-[#1f2937] border-[#1f2937] shadow-sm px-1 rounded">whatsapp:+14155238886</code> or just <code className="bg-[#0b1220] border border-[#1f2937] border-[#1f2937] shadow-sm px-1 rounded">+14155238886</code></p>
                     </div>
@@ -251,31 +265,39 @@ export default function TwilioSetupPage() {
                                 type="tel"
                                 placeholder="9876543210"
                                 value={form.testPhone}
+                                disabled={isTrial}
                                 onChange={e => setForm({ ...form, testPhone: e.target.value })}
-                                className="w-full rounded-lg border border-[#1f2937] border-[#1f2937] bg-[#0b1220] shadow-sm pl-10 pr-4 py-2.5 text-sm text-[#f9fafb] placeholder-gray-400 focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/20 outline-none transition"
+                                className="w-full rounded-lg border border-[#1f2937] border-[#1f2937] bg-[#0b1220] shadow-sm pl-10 pr-4 py-2.5 text-sm text-[#f9fafb] placeholder-gray-400 focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/20 outline-none transition disabled:opacity-50 disabled:cursor-not-allowed"
                             />
                         </div>
                     </div>
 
                     {/* Submit */}
-                    <button
-                        id="twilio-save-btn"
-                        type="submit"
-                        disabled={saving}
-                        className="w-full flex items-center justify-center gap-2 rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 px-6 py-3 text-sm font-semibold text-white shadow-sm  active:bg-indigo-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                        {saving ? (
-                            <>
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Sending test message &amp; saving…
-                            </>
-                        ) : (
-                            <>
-                                <CheckCircle className="h-4 w-4" />
-                                Test &amp; Save
-                            </>
-                        )}
-                    </button>
+                    {isTrial ? (
+                        <div className="w-full flex items-center justify-center gap-2 rounded-lg bg-[#374151] border-0 px-6 py-3 text-sm font-semibold text-white shadow-sm cursor-not-allowed">
+                            <Shield className="h-4 w-4 text-amber-500" />
+                            Available on Paid Plans
+                        </div>
+                    ) : (
+                        <button
+                            id="twilio-save-btn"
+                            type="submit"
+                            disabled={saving}
+                            className="w-full flex items-center justify-center gap-2 rounded-lg bg-[#8b5cf6] hover:bg-[#7c3aed] border-0 px-6 py-3 text-sm font-semibold text-white shadow-sm  active:bg-indigo-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                            {saving ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Sending test message &amp; saving…
+                                </>
+                            ) : (
+                                <>
+                                    <CheckCircle className="h-4 w-4" />
+                                    Test &amp; Save
+                                </>
+                            )}
+                        </button>
+                    )}
                 </form>
             </div>
 

@@ -15,6 +15,7 @@ import { useDashboardStats } from "@/hooks/useAnalytics";
 import { NativeAdSlot } from "@/components/ads/slots/NativeAdSlot";
 import { TopStripAd } from "@/components/ads/slots/TopStripAd";
 import { AD_SLOTS } from "@/lib/ad-slots";
+import UsageCounters from "@/components/ui/quota/UsageCounters";
 
 export default function BusinessDashboard() {
   const { data: dashboardData, isLoading: loading } = useDashboardStats();
@@ -73,6 +74,8 @@ export default function BusinessDashboard() {
         <h2 className="text-2xl font-bold text-[#f9fafb] tracking-tight">Business Command Center</h2>
         <p className="text-[#9ca3af] text-sm mt-1 font-medium">Real-time operational overview and fiscal performance analytics.</p>
       </div>
+
+      <UsageCounters />
 
       {/* Scorecards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

@@ -42,6 +42,18 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "name, durationDays, and price are required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
+        // Free Trial Quota Check
+        try {
+            const { enforceQuota } = await import("@/lib/quotas");
+            await enforceQuota(user, "hostel", "plans", "HostelPlan", { hostelId, isActive: true });
+        } catch (e: any) {
+            if (e.message.startsWith("QUOTA_EXCEEDED")) {
+                const { quotaExceededResponse } = await import("@/lib/quotas");
+                return quotaExceededResponse("plans");
+            }
+            throw e;
+        }
+
         const plan = await HostelPlan.create({
             hostelId,
             name,

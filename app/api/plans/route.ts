@@ -96,6 +96,18 @@ export async function POST(req: Request) {
         const poolId = user.role === "superadmin" ? bodyPoolId : user.poolId;
         if (!poolId) return NextResponse.json({ error: "Pool ID required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
+        // Free Trial Quota Check
+        try {
+            const { enforceQuota } = await import("@/lib/quotas");
+            await enforceQuota(user, "pool", "plans", "Plan", { poolId, deletedAt: null });
+        } catch (e: any) {
+            if (e.message.startsWith("QUOTA_EXCEEDED")) {
+                const { quotaExceededResponse } = await import("@/lib/quotas");
+                return quotaExceededResponse("plans");
+            }
+            throw e;
+        }
+
         // Use enableWhatsAppAlerts as canonical; fall back to whatsAppAlert for legacy
         const alertEnabled = enableWhatsAppAlerts ?? whatsAppAlert ?? false;
 

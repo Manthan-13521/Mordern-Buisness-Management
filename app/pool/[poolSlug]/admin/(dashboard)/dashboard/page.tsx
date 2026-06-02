@@ -10,6 +10,7 @@ import { PoolTypeFilter } from "@/components/pool/PoolTypeFilter";
 import { NativeAdSlot } from "@/components/ads/slots/NativeAdSlot";
 import { TopStripAd } from "@/components/ads/slots/TopStripAd";
 import { AD_SLOTS } from "@/lib/ad-slots";
+import UsageCounters from "@/components/ui/quota/UsageCounters";
 
 // Stats Component (Server)
 async function DashboardStats({ poolId, isAdmin, memberType }: { poolId: string, isAdmin: boolean, memberType: string }) {
@@ -325,6 +326,8 @@ export default async function DashboardPage(props: { searchParams?: Promise<any>
                     <PoolTypeFilter />
                 </div>
             </div>
+
+            <UsageCounters />
 
             {/* Priority 1: Member count + quick stats (render immediately / fastest) */}
             <Suspense fallback={

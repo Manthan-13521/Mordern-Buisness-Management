@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MessageSquare, Wifi, WifiOff, Unplug, CheckCircle, AlertCircle } from "lucide-react";
+import { MessageSquare, Wifi, WifiOff, Unplug, CheckCircle, AlertCircle, Shield } from "lucide-react";
 
 const INPUT = "w-full rounded-xl border border-[#1f2937] bg-[#0b1220] px-3 py-2 text-sm text-[#f9fafb] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6]";
 const LABEL = "block text-xs font-medium text-[#9ca3af] mb-1";
@@ -12,9 +12,27 @@ export default function WhatsAppPage() {
     const [form, setForm] = useState({ sid: "", authToken: "", whatsappNumber: "", testPhone: "" });
     const [connecting, setConnecting] = useState(false);
     const [disconnecting, setDisconnecting] = useState(false);
+    const [isTrial, setIsTrial] = useState(false);
     const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-    const fetchStatus = async () => { setLoading(true); const r = await fetch("/api/hostel/twilio/status", { cache: 'no-store' }); const d = await r.json(); setStatus(d); setLoading(false); };
+    const fetchStatus = async () => { 
+        setLoading(true); 
+        try {
+            const [rTwilio, rQuota] = await Promise.all([
+                fetch("/api/hostel/twilio/status", { cache: 'no-store' }),
+                fetch("/api/quotas", { cache: 'no-store' })
+            ]);
+            if (rTwilio.ok) {
+                const d = await rTwilio.json(); 
+                setStatus(d);
+            }
+            if (rQuota.ok) {
+                const q = await rQuota.json();
+                setIsTrial(q.isTrial);
+            }
+        } catch { }
+        setLoading(false); 
+    };
     useEffect(() => { fetchStatus(); }, []);
 
     const handleConnect = async (e: React.FormEvent) => {
@@ -70,14 +88,21 @@ export default function WhatsAppPage() {
                 <div className="rounded-2xl bg-[#0b1220] border border-[#1f2937] shadow-sm p-6">
                     <h2 className="text-sm font-semibold text-[#9ca3af] uppercase tracking-wider mb-4">Connect Twilio Account</h2>
                     <form onSubmit={handleConnect} className="space-y-4">
-                        <div><label className={LABEL}>Twilio Account SID</label><input required value={form.sid} onChange={e=>setForm(p=>({...p,sid:e.target.value}))} placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" className={INPUT}/></div>
-                        <div><label className={LABEL}>Auth Token</label><input required type="password" value={form.authToken} onChange={e=>setForm(p=>({...p,authToken:e.target.value}))} className={INPUT}/></div>
-                        <div><label className={LABEL}>WhatsApp Number (e.g. +14155238886)</label><input required value={form.whatsappNumber} onChange={e=>setForm(p=>({...p,whatsappNumber:e.target.value}))} placeholder="+14155238886" className={INPUT}/></div>
-                        <div><label className={LABEL}>Test Phone Number (Indian, e.g. 9876543210)</label><input required value={form.testPhone} onChange={e=>setForm(p=>({...p,testPhone:e.target.value}))} placeholder="9876543210" className={INPUT}/></div>
+                        <div><label className={LABEL}>Twilio Account SID</label><input required disabled={isTrial} value={form.sid} onChange={e=>setForm(p=>({...p,sid:e.target.value}))} placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" className={`${INPUT} disabled:opacity-50 disabled:cursor-not-allowed`}/></div>
+                        <div><label className={LABEL}>Auth Token</label><input required disabled={isTrial} type="password" value={form.authToken} onChange={e=>setForm(p=>({...p,authToken:e.target.value}))} className={`${INPUT} disabled:opacity-50 disabled:cursor-not-allowed`}/></div>
+                        <div><label className={LABEL}>WhatsApp Number (e.g. +14155238886)</label><input required disabled={isTrial} value={form.whatsappNumber} onChange={e=>setForm(p=>({...p,whatsappNumber:e.target.value}))} placeholder="+14155238886" className={`${INPUT} disabled:opacity-50 disabled:cursor-not-allowed`}/></div>
+                        <div><label className={LABEL}>Test Phone Number (Indian, e.g. 9876543210)</label><input required disabled={isTrial} value={form.testPhone} onChange={e=>setForm(p=>({...p,testPhone:e.target.value}))} placeholder="9876543210" className={`${INPUT} disabled:opacity-50 disabled:cursor-not-allowed`}/></div>
                         <p className="text-xs text-slate-400">A test WhatsApp message will be sent to verify your credentials before saving.</p>
-                        <button type="submit" disabled={connecting} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-6 py-2.5 rounded-xl shadow transition disabled:opacity-50">
-                            <Wifi className="h-4 w-4"/>{connecting ? "Connecting…" : "Connect WhatsApp"}
-                        </button>
+                        
+                        {isTrial ? (
+                            <div className="flex items-center justify-center gap-2 bg-[#374151] text-white font-semibold px-6 py-2.5 rounded-xl shadow cursor-not-allowed">
+                                <Shield className="h-4 w-4 text-amber-500" />Available on Paid Plans
+                            </div>
+                        ) : (
+                            <button type="submit" disabled={connecting} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-6 py-2.5 rounded-xl shadow transition disabled:opacity-50">
+                                <Wifi className="h-4 w-4"/>{connecting ? "Connecting…" : "Connect WhatsApp"}
+                            </button>
+                        )}
                     </form>
                 </div>
             )}

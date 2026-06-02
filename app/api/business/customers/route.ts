@@ -168,6 +168,18 @@ export async function POST(req: Request) {
             throw new Error("Tenant context lost before database operation");
         }
 
+        // Free Trial Quota Check
+        try {
+            const { enforceQuota } = await import("@/lib/quotas");
+            await enforceQuota(user, "business", "customers", "BusinessCustomer", { businessId });
+        } catch (e: any) {
+            if (e.message.startsWith("QUOTA_EXCEEDED")) {
+                const { quotaExceededResponse } = await import("@/lib/quotas");
+                return quotaExceededResponse("customers");
+            }
+            throw e;
+        }
+
         const customer = new BusinessCustomer({
             name,
             phone,

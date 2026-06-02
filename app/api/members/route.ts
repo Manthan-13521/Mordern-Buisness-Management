@@ -237,9 +237,17 @@ export async function POST(req: Request) {
         try {
             const { enforceMemberCreationLimit } = await import("@/lib/saasGuard");
             await enforceMemberCreationLimit(poolId);
+
+            // Free Trial Quota Check
+            const { enforceQuota } = await import("@/lib/quotas");
+            await enforceQuota(user, "pool", "members", "Member", { poolId, isDeleted: false });
         } catch (e: any) {
             if (e.message === "SaaS_Member_Limit_Reached") {
                 return NextResponse.json({ error: "Organization member limit reached. Please upgrade your SaaS plan." }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+            if (e.message.startsWith("QUOTA_EXCEEDED")) {
+                const { quotaExceededResponse } = await import("@/lib/quotas");
+                return quotaExceededResponse("members");
             }
             throw e; // Bubble up unexpected errors
         }

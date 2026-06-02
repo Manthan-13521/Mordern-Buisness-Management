@@ -10,6 +10,7 @@ import { HostelBlockFilter } from "@/components/hostel/HostelBlockFilter";
 import { NativeAdSlot } from "@/components/ads/slots/NativeAdSlot";
 import { TopStripAd } from "@/components/ads/slots/TopStripAd";
 import { AD_SLOTS } from "@/lib/ad-slots";
+import UsageCounters from "@/components/ui/quota/UsageCounters";
 
 type DashData = {
     monthlyJoined: number;
@@ -115,6 +116,8 @@ export default function HostelDashboardPage() {
                     <HostelBlockFilter />
                 </div>
             </div>
+
+            <UsageCounters />
 
             {/* ── OCCUPANCY BAR ── */}
             <div className="rounded-2xl bg-[#0b1220] border border-[#1f2937] p-5 shadow-sm mt-4">

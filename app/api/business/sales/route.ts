@@ -127,6 +127,27 @@ export async function POST(req: Request) {
             throw new Error("Tenant context lost before database operation");
         }
 
+        // Free Trial Quota Check
+        try {
+            const { enforceQuota, isTrial, TRIAL_LIMITS, quotaExceededResponse } = await import("@/lib/quotas");
+            if (isTrial(user)) {
+                // Enforce total invoices
+                await enforceQuota(user, "business", "invoices", "BusinessTransaction", { businessId, category: 'SALE' });
+                // Enforce per-customer limit
+                const customerCount = await mongoose.models.BusinessTransaction.countDocuments({ businessId, customerId, category: 'SALE' });
+                if (customerCount >= TRIAL_LIMITS.business.recordsPerCustomer) {
+                    return quotaExceededResponse("recordsPerCustomer");
+                }
+            }
+        } catch (e: any) {
+            if (e.message.startsWith("QUOTA_EXCEEDED")) {
+                const { quotaExceededResponse } = await import("@/lib/quotas");
+                // Extact the resource from the error string, e.g., "QUOTA_EXCEEDED:invoices"
+                return quotaExceededResponse("invoices");
+            }
+            throw e;
+        }
+
         // 🟡 IDEMPOTENCY: Prevent duplicate sale writes from retries/double-clicks
         const idempotencyKey = crypto.createHash("md5").update(`${businessId}:${customerId}:${totalAmount}:${saleType}`).digest("hex");
         if (checkIdempotency(idempotencyKey)) {

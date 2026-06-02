@@ -5,6 +5,8 @@ import "./globals.css";
 import { Providers } from "@/components/Providers";
 import { Toaster } from "react-hot-toast";
 import { LocalDBInitializer } from "@/components/LocalDBInitializer";
+import TrialBanner from "@/components/ui/quota/TrialBanner";
+import QuotaWarningModal from "@/components/ui/quota/QuotaWarningModal";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -48,8 +50,10 @@ export default function RootLayout({
       <body className={`${inter.className} bg-background`}>
         <Providers>
           <LocalDBInitializer />
+          <TrialBanner />
           {children}
           <Toaster position="bottom-right" toastOptions={{ className: 'dark:bg-[#0f172a] dark:text-white dark:border dark:border-white/10' }} />
+          <QuotaWarningModal />
         </Providers>
         <Analytics />
       </body>

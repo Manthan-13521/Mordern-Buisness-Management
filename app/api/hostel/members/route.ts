@@ -109,6 +109,18 @@ export async function POST(req: Request) {
             );
         }
 
+        // Free Trial Quota Check
+        try {
+            const { enforceQuota } = await import("@/lib/quotas");
+            await enforceQuota(user, "hostel", "members", "HostelMember", { hostelId, isDeleted: false });
+        } catch (e: any) {
+            if (e.message.startsWith("QUOTA_EXCEEDED")) {
+                const { quotaExceededResponse } = await import("@/lib/quotas");
+                return quotaExceededResponse("members");
+            }
+            throw e;
+        }
+
         // Support both JSON and FormData (photo upload)
         const contentType = req.headers.get("content-type") || "";
         let body: Record<string, any> = {};

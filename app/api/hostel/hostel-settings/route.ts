@@ -116,6 +116,18 @@ export async function PUT(req: Request) {
             return NextResponse.json({ error: `Maximum ${paidMaxBlocks} block(s) allowed by your subscription. Upgrade to add more blocks.` }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
+        // Free Trial Quota Check
+        const { isTrial, TRIAL_LIMITS, quotaExceededResponse } = await import("@/lib/quotas");
+        if (isTrial(user)) {
+            if (incomingBlocks.length > TRIAL_LIMITS.hostel.blocks) return quotaExceededResponse("blocks");
+            for (const block of incomingBlocks) {
+                if ((block.floors || []).length > TRIAL_LIMITS.hostel.floorsPerBlock) return quotaExceededResponse("floorsPerBlock");
+                for (const floor of block.floors || []) {
+                    if ((floor.rooms || []).length > TRIAL_LIMITS.hostel.roomsPerFloor) return quotaExceededResponse("roomsPerFloor");
+                }
+            }
+        }
+
         // Structural Limiter Check
         for (const block of incomingBlocks) {
             if ((block.floors || []).length > 8) return NextResponse.json({ error: `Block ${block.name} exceeds 8 floors.` }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });

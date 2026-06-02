@@ -22,6 +22,12 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
 
+        // Free Trial Lockout
+        const { isTwilioAllowed } = await import("@/lib/quotas");
+        if (!isTwilioAllowed(user)) {
+            return NextResponse.json({ error: "Twilio integration is not available on the Free Trial. Please upgrade your plan." }, { status: 403 });
+        }
+
         const body = await req.json();
         const result = TwilioConnectSchema.safeParse(body);
         if (!result.success) {
