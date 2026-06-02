@@ -60,7 +60,7 @@ export async function GET(req: Request) {
             throw new Error("Tenant context lost before query execution");
         }
 
-        const stocks = await BusinessStock.find({ businessId }).sort({ name: 1 });
+        const stocks = await BusinessStock.find({ businessId }).sort({ name: 1 }).lean();
         return NextResponse.json(stocks, {
             headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
         });

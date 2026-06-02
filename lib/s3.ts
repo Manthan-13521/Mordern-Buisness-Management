@@ -17,6 +17,9 @@ const s3Client = new S3Client({
 
 const BUCKET = process.env.AWS_S3_BUCKET_NAME || "";
 
+import { Upload } from "@aws-sdk/lib-storage";
+import { Readable } from "stream";
+
 /**
  * Uploads a buffer to S3
  */
@@ -30,6 +33,24 @@ export async function uploadBackup(buffer: Buffer, key: string, contentType: str
             ContentType: contentType,
         })
     );
+    return key;
+}
+
+/**
+ * Uploads a readable stream to S3 using multi-part chunking (memory-safe).
+ */
+export async function uploadStreamBackup(stream: Readable, key: string, contentType: string) {
+    if (!BUCKET) throw new Error("AWS_S3_BUCKET_NAME is not configured");
+    const upload = new Upload({
+        client: s3Client,
+        params: {
+            Bucket: BUCKET,
+            Key: key,
+            Body: stream,
+            ContentType: contentType,
+        },
+    });
+    await upload.done();
     return key;
 }
 

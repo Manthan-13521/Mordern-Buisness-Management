@@ -65,21 +65,22 @@ export async function GET(req: Request) {
                     dueCount: { $sum: { $cond: [{ $gt: ["$balance", 0] }, 1, 0] } }
                 }}
             ]).read('secondaryPreferred').option({ maxTimeMS: 10000 }),
-            // Defaulter Count: MongoDB pure pipeline removing JS level .map and .filter logic
-            Subscription.aggregate([
-                { $match: { poolId, status: "active", nextDueDate: { $lt: now } } },
-                {
-                    $lookup: {
-                        from: "ledgers",
-                        localField: "memberId",
-                        foreignField: "memberId",
-                        as: "ledgerInfo"
-                    }
-                },
-                { $unwind: "$ledgerInfo" },
-                { $match: { "ledgerInfo.balance": { $gt: 0 } } },
-                { $count: "total" }
-            ]).read('secondaryPreferred').option({ maxTimeMS: 10000 })
+            // Defaulter Count: Optimized index-backed queries (no cross-collection $lookup)
+            (async () => {
+                const overdueMembers = await Subscription.distinct("memberId", {
+                    poolId, status: "active", nextDueDate: { $lt: now }
+                }).read('secondaryPreferred');
+                
+                if (!overdueMembers || overdueMembers.length === 0) return [{ total: 0 }];
+                
+                const count = await Ledger.countDocuments({
+                    poolId,
+                    memberId: { $in: overdueMembers },
+                    balance: { $gt: 0 }
+                }).read('secondaryPreferred');
+                
+                return [{ total: count }];
+            })()
         ]);
 
         const defaulterCount = defaulterAgg[0]?.total || 0;

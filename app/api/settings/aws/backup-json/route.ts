@@ -7,8 +7,9 @@ import { Plan } from "@/models/Plan";
 import { EntryLog } from "@/models/EntryLog";
 import { DeletedMember } from "@/models/DeletedMember";
 
-import { uploadBackup } from "@/lib/s3";
-import { gzipSync } from "zlib";
+import { uploadStreamBackup } from "@/lib/s3";
+import { createGzip } from "zlib";
+import { Readable } from "stream";
 
 export async function POST(req: Request) {
     try {
@@ -50,7 +51,7 @@ export async function POST(req: Request) {
 
         // deduplicate if same member exists in both (rare, but possible if recently deleted)
         const memberIdsMap = new Set();
-        const uniqueMembers = [];
+        const uniqueMembers: any[] = [];
         for (const m of members) {
             memberIdsMap.add((m as any).memberId);
             uniqueMembers.push(m);
@@ -62,33 +63,57 @@ export async function POST(req: Request) {
             }
         }
 
-        // Fetch remaining associated data
-        const [payments, entries, plans] = await Promise.all([
-            Payment.find({ ...baseMatch, date: { $gte: oneYearAgo } }).lean(),
-            EntryLog.find({ ...baseMatch, scanTime: { $gte: oneYearAgo } }).lean(),
-            Plan.find({ ...baseMatch }).lean(),
-        ]);
-
-        const backupData = {
-            backupType: "last-1-year",
-            module: "pool",
-            tenantId: poolId || "superadmin",
-            generatedAt: new Date().toISOString(),
-            data: {
-                members: uniqueMembers,
-                payments,
-                entries,
-                plans
+        // Generator to stream JSON and pull cursors dynamically
+        async function* generateBackupStream() {
+            yield `{"backupType":"last-1-year","module":"pool","tenantId":"${poolId || 'superadmin'}","generatedAt":"${new Date().toISOString()}","data":{`;
+            
+            // Members
+            yield `"members":[`;
+            for (let i = 0; i < uniqueMembers.length; i++) {
+                yield JSON.stringify(uniqueMembers[i]);
+                if (i < uniqueMembers.length - 1) yield `,`;
             }
-        };
+            yield `],`;
 
-        const jsonString = JSON.stringify(backupData);
-        const compressedBuffer = gzipSync(Buffer.from(jsonString, "utf-8"));
+            // Payments (Cursor Stream)
+            yield `"payments":[`;
+            const paymentsCursor = Payment.find({ ...baseMatch, date: { $gte: oneYearAgo } }).lean().cursor();
+            let isFirstPayment = true;
+            for await (const p of paymentsCursor) {
+                if (!isFirstPayment) yield `,`;
+                yield JSON.stringify(p);
+                isFirstPayment = false;
+            }
+            yield `],`;
+
+            // Entries (Cursor Stream)
+            yield `"entries":[`;
+            const entriesCursor = EntryLog.find({ ...baseMatch, scanTime: { $gte: oneYearAgo } }).lean().cursor();
+            let isFirstEntry = true;
+            for await (const e of entriesCursor) {
+                if (!isFirstEntry) yield `,`;
+                yield JSON.stringify(e);
+                isFirstEntry = false;
+            }
+            yield `],`;
+
+            // Plans (Cursor Stream)
+            yield `"plans":[`;
+            const plansCursor = Plan.find({ ...baseMatch }).lean().cursor();
+            let isFirstPlan = true;
+            for await (const pl of plansCursor) {
+                if (!isFirstPlan) yield `,`;
+                yield JSON.stringify(pl);
+                isFirstPlan = false;
+            }
+            yield `]}}`;
+        }
 
         const dateStrDay = new Date().toISOString().split("T")[0];
         const s3Key = `backups/${poolId || "superadmin"}/pool-backup-last-1-year-${dateStrDay}.json.gz`;
 
-        await uploadBackup(compressedBuffer, s3Key, "application/gzip");
+        const gzipStream = Readable.from(generateBackupStream()).pipe(createGzip());
+        await uploadStreamBackup(gzipStream, s3Key, "application/gzip");
 
         return NextResponse.json({ success: true, key: s3Key }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     } catch (error: any) {
@@ -96,3 +121,4 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: error?.message || "Backup failed" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 }
+

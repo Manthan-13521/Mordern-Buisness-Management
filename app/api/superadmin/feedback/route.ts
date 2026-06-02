@@ -22,7 +22,7 @@ export async function GET(req: Request) {
         if (status && status !== "all") filter.status = status;
         if (type && type !== "all") filter.type = type;
 
-        const feedbacks = await Feedback.find(filter).sort({ createdAt: -1 });
+        const feedbacks = await Feedback.find(filter).sort({ createdAt: -1 }).lean();
 
         return NextResponse.json(feedbacks, { status: 200 });
     } catch (error) {

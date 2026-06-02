@@ -139,9 +139,18 @@ hostelMemberSchema.post("findOneAndUpdate", function (doc) {
     syncToUnifiedUser(doc);
 });
 
+const SYNC_FIELDS = new Set(["name", "phone", "collegeName", "photoUrl", "balance", "status"]);
+
 hostelMemberSchema.post("updateOne", async function (this: any) {
-    const docQuery = this.getQuery();
-    const doc = await this.model.findOne(docQuery).lean();
+    const update = this.getUpdate?.();
+    const filter = this.getFilter?.();
+    const setFields = update?.$set || {};
+
+    const updatedKeys = Object.keys(setFields);
+    const needsSync = updatedKeys.some(k => SYNC_FIELDS.has(k));
+    if (!needsSync) return;
+
+    const doc = { ...filter, ...setFields, _id: filter?._id };
     syncToUnifiedUser(doc);
 });
 // ──────────────────────────────────────────────────────────────
