@@ -152,7 +152,10 @@ export default function MembersPage() {
         staleTime: PRIVATE_API_STALE_MS,
         refetchOnMount: true,
         refetchInterval: 15000, // STEP 6: Real-time Polling Engine (15s incrementally pulls API changes into UI)
-        placeholderData: keepPreviousData,
+        placeholderData: (prev, prevQuery) => {
+            if (prevQuery?.queryKey[2] !== session?.user?.poolId) return undefined;
+            return prev;
+        },
         queryFn: async () => {
             const poolId = session?.user?.poolId as string;
             const lastSyncedAt = poolId ? await getLastSyncedAtLocal(poolId) : "0";
@@ -161,6 +164,7 @@ export default function MembersPage() {
                 limit: String(LIMIT),
                 type: selectedType,
                 updatedAfter: lastSyncedAt,
+                _t: Date.now().toString(), // Cache buster
                 ...(searchDebounced ? { search: searchDebounced } : {}),
             });
             const res = await fetch(`/api/members?${params}`, { cache: "no-store" });
@@ -262,6 +266,7 @@ export default function MembersPage() {
                         limit: String(LIMIT),
                         type: selectedType,
                         updatedAfter: lastSyncedAt,
+                        _t: Date.now().toString(),
                         ...(searchDebounced ? { search: searchDebounced } : {}),
                     });
                     const res = await fetch(`/api/members?${params}`, { cache: "no-store" });
