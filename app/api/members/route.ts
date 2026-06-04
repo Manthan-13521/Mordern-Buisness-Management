@@ -205,12 +205,10 @@ export async function GET(req: Request) {
             response = await withQueryTimeout(fetchMembers(), 8000);
         }
 
-        const headers: Record<string, string> = isCacheable
-            ? {
-                "Cache-Control": "public, max-age=0, s-maxage=15, stale-while-revalidate=30",
-                "X-Cache": "MEMBERS",
-              }
-            : { "Cache-Control": "no-store, no-cache, must-revalidate, private" };
+        const headers: Record<string, string> = {
+            "Cache-Control": "no-store, no-cache, must-revalidate, private",
+            ...(isCacheable ? { "X-Cache": "MEMBERS-REDIS" } : {})
+        };
 
         return NextResponse.json(response, { headers });
     } catch (error) {

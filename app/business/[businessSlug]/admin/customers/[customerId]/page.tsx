@@ -682,7 +682,12 @@ export default function CustomerDetailPage() {
                       </>
                     ) : (
                       /* Payment row */
-                      <tr className="bg-[#00ff00]/35 hover:bg-[#00ff00]/45 transition-colors border-b border-slate-800 last:border-0">
+                      <tr className={clsx(
+                        "transition-colors border-b border-slate-800 last:border-0",
+                        entry.transactionType === 'received'
+                          ? "bg-[#00ff00]/35 hover:bg-[#00ff00]/45"
+                          : "bg-[#f59e0b]/20 hover:bg-[#f59e0b]/30"
+                      )}>
                         <td className="px-6 py-5">
                           <div className="flex items-center gap-2">
                             <Calendar className="w-5 h-5 text-[#9ca3af]" />

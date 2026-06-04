@@ -104,7 +104,11 @@ export default function MembersPage() {
     const LIMIT = 9;
 
     const invalidateMembersList = () => {
-        queryClient.invalidateQueries({ queryKey: [...membersListQueryKeyPrefix] });
+        if (session?.user?.poolId) {
+            queryClient.invalidateQueries({ queryKey: [...membersListQueryKeyPrefix, session.user.poolId] });
+        } else {
+            queryClient.invalidateQueries({ queryKey: [...membersListQueryKeyPrefix] });
+        }
     };
 
     // --- STEP 4 & 6: BACKGROUND SYNC POLLING & CLEANUP ---
@@ -143,7 +147,8 @@ export default function MembersPage() {
     useEffect(() => { setPage(1); }, [searchDebounced]);
 
     const { data, isFetching, error } = useQuery({
-        queryKey: [...membersListQueryKeyPrefix, page, searchDebounced, LIMIT, selectedType],
+        queryKey: [...membersListQueryKeyPrefix, session?.user?.poolId, page, searchDebounced, LIMIT, selectedType],
+        enabled: !!session?.user?.poolId,
         staleTime: PRIVATE_API_STALE_MS,
         refetchOnMount: true,
         refetchInterval: 15000, // STEP 6: Real-time Polling Engine (15s incrementally pulls API changes into UI)
@@ -248,7 +253,7 @@ export default function MembersPage() {
         if (page < totalPages) {
             const nextPage = page + 1;
             queryClient.prefetchQuery({
-                queryKey: [...membersListQueryKeyPrefix, nextPage, searchDebounced, LIMIT, selectedType],
+                queryKey: [...membersListQueryKeyPrefix, session?.user?.poolId, nextPage, searchDebounced, LIMIT, selectedType],
                 queryFn: async () => {
                     const poolId = session?.user?.poolId as string;
                     const lastSyncedAt = poolId ? await getLastSyncedAtLocal(poolId) : "0";
