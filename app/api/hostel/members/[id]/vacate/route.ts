@@ -87,7 +87,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         
         await HostelLog.create({
             hostelId,
-            type: "status_update",
+            type: "status_update" as any,
             memberId: member.memberId,
             memberObjectId: member._id,
             memberName: member.name,

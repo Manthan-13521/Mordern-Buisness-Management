@@ -271,7 +271,7 @@ export async function POST(req: Request) {
                     memberId: member._id,
                     status: "denied",
                     reason: reasonStr,
-                    failReason: failReason,
+                    failReason: failReason as any,
                     operatorId: user.id ? new mongoose.Types.ObjectId(user.id) : undefined,
                     rawPayload: qrPayload,
                 });

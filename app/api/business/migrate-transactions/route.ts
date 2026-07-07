@@ -67,7 +67,7 @@ export async function GET(req: Request) {
                         date: tx.date, 
                         amount: tx.amount,
                         category: tx.category 
-                    },
+                    } as any,
                     tx,
                     { upsert: true, new: true }
                 );

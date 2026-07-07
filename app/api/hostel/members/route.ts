@@ -267,7 +267,7 @@ export async function POST(req: Request) {
                 planId: new mongoose.Types.ObjectId(planId),
                 rent_amount, due_date: nextDue, balance: currentBalance, last_rent_processed_date: new Date(),
                 paymentMode: paymentMode || "cash",
-                notes, photoUrl, isActive: true, isDeleted: false, status: "active",
+                notes, photoUrl, isActive: true, isDeleted: false, status: "active" as any,
                 checkInDate: new Date()
             };
 
@@ -292,7 +292,7 @@ export async function POST(req: Request) {
             if (paid > 0) {
                 await HostelPayment.create({
                     hostelId, memberId: createdMember._id, planId: createdMember.planId,
-                    amount: paid, paymentMethod: paymentMode || "cash", status: "success", paymentType: "initial"
+                    amount: paid, paymentMethod: (paymentMode || "cash") as any, status: "success", paymentType: "initial"
                 });
             }
 
