@@ -20,7 +20,7 @@ export function FloatingCTA() {
   const encodedMessage = "Hi%20AquaSync%20Team%2C%20I%27d%20like%20to%20automate%20and%20manage%20my%20business%20using%20AquaSync.%20Could%20you%20guide%20me%20through%20the%20onboarding%20process%2C%20explain%20the%20available%20features%2C%20and%20help%20me%20choose%20the%20right%20plan%20for%20my%20business%3F";
 
   return (
-    <div className="fixed bottom-6 right-6 z-[90] flex items-center gap-4 animate-in slide-in-from-bottom-5 fade-in duration-300">
+    <div className="fixed bottom-6 left-6 z-[90] flex items-center gap-4 animate-in slide-in-from-bottom-5 fade-in duration-300">
       
       {/* Book Free Demo CTA */}
       <div className="relative">
