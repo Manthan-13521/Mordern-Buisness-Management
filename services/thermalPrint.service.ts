@@ -140,9 +140,9 @@ body {
 .center { text-align:center; }
 .bold { font-weight:bold; }
 .small { font-size:${smallFont}; }
-.title { font-size:1.3em; font-weight:900; margin-bottom:2px; }
+.title { font-size:1.8em; font-weight:900; margin-bottom:4px; text-transform:uppercase; }
 .mid-banner { text-align:center; font-weight:bold; font-size:1.1em; margin:3px 0; }
-.total-row { font-weight:900; font-size:1.1em; margin:4px 0; }
+.total-row { font-weight:900; font-size:1.5em; margin:4px 0; }
 
 /* Prevent content cutoff on narrow printers */
 .receipt * {
