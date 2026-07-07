@@ -281,10 +281,22 @@ export default function InvoicePage() {
   /*  PRINT HANDLER                                     */
   /* ═══════════════════════════════════════════════════ */
   const handlePrint = () => {
-    const printContents = document.getElementById("print-section")?.innerHTML;
-    if (!printContents) return;
+    const styleContent = document.getElementById("print-section")?.querySelector("style")?.outerHTML || "";
+    const invoiceContent = document.getElementById("a4-invoice")?.outerHTML || "";
+    if (!invoiceContent) return;
+    
     const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
+    // Give iframe a fixed desktop width so layout rules do not break, but keep it hidden visually
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '210mm';
+    iframe.style.height = '297mm';
+    iframe.style.border = '0';
+    iframe.style.zIndex = '-1';
+    iframe.style.opacity = '0';
+    iframe.style.pointerEvents = 'none';
+    
     document.body.appendChild(iframe);
     const doc = iframe.contentWindow?.document;
     if (doc) {
@@ -292,8 +304,14 @@ export default function InvoicePage() {
       doc.write(`
         <!DOCTYPE html>
         <html><head><title>Invoice</title>
-        </head><body style="margin:0; padding:0; background:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
-        ${printContents}
+        ${styleContent}
+        <style>
+          @page { size: A4; margin: 0; }
+          body { margin: 0; padding: 0; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .inv-page { min-height: 100vh !important; height: auto !important; }
+        </style>
+        </head><body>
+        ${invoiceContent}
         </body></html>
       `);
       doc.close();
@@ -301,7 +319,7 @@ export default function InvoicePage() {
       setTimeout(() => {
         iframe.contentWindow?.print();
         setTimeout(() => { document.body.removeChild(iframe); }, 1000);
-      }, 500);
+      }, 800); // giving font slightly more time to load in iframe
     }
   };
 
@@ -701,17 +719,17 @@ export default function InvoicePage() {
           </div>
 
           {/* A4 Invoice */}
-          <div className="w-full flex justify-center overflow-hidden pb-10">
-            <div id="print-section" className="preview-scale" style={{ width: "210mm", height: "297mm", background: "#fff", color: "#000", boxSizing: "border-box", boxShadow: "0 10px 25px rgba(0,0,0,0.15)" }}>
+          <div className="w-full flex justify-center pb-10">
+            <div id="print-section" className="preview-scale" style={{ width: "210mm", minHeight: "297mm", background: "#fff", color: "#000", boxSizing: "border-box", boxShadow: "0 10px 25px rgba(0,0,0,0.15)" }}>
               <style dangerouslySetInnerHTML={{__html: `
-                .preview-scale { transform: scale(0.6); transform-origin: top center; margin-bottom: -115mm; }
-                @media (min-width: 640px) { .preview-scale { transform: scale(0.7); margin-bottom: -90mm; } }
-                @media (min-width: 768px) { .preview-scale { transform: scale(0.85); margin-bottom: -45mm; } }
-                @media (min-width: 1024px) { .preview-scale { transform: scale(0.95); margin-bottom: -15mm; } }
+                .preview-scale { transform: scale(0.6); transform-origin: top center; margin-bottom: -118mm; }
+                @media (min-width: 640px) { .preview-scale { transform: scale(0.7); margin-bottom: -89mm; } }
+                @media (min-width: 768px) { .preview-scale { transform: scale(0.85); margin-bottom: -44mm; } }
+                @media (min-width: 1024px) { .preview-scale { transform: scale(0.95); margin-bottom: -14mm; } }
                 @media (min-width: 1280px) { .preview-scale { transform: scale(1); margin-bottom: 0; } }
 
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-                .inv-page { font-family: 'Inter', sans-serif; padding: 12mm 15mm; color: #1e293b; display: flex; flex-direction: column; height: 297mm; box-sizing: border-box; }
+                .inv-page { font-family: 'Inter', sans-serif; padding: 12mm 15mm; color: #1e293b; display: flex; flex-direction: column; min-height: 297mm; box-sizing: border-box; }
               
               /* Header */
               .inv-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8mm; }
