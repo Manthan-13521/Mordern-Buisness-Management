@@ -20,36 +20,38 @@ export function FloatingCTA() {
   const encodedMessage = "Hi%20AquaSync%20Team%2C%20I%27d%20like%20to%20automate%20and%20manage%20my%20business%20using%20AquaSync.%20Could%20you%20guide%20me%20through%20the%20onboarding%20process%2C%20explain%20the%20available%20features%2C%20and%20help%20me%20choose%20the%20right%20plan%20for%20my%20business%3F";
 
   return (
-    <div className="fixed bottom-6 left-6 z-[90] flex items-center gap-4 animate-in slide-in-from-bottom-5 fade-in duration-300">
-      
-      {/* Book Free Demo CTA */}
-      <div className="relative">
-        <div className="absolute -inset-1 rounded-full bg-blue-500 opacity-20 blur animate-pulse" />
-        <Link 
-          href="/demo?source=floating_cta"
-          className={`${commonClasses} shadow-[0_0_20px_rgba(37,99,235,0.4)] bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border border-blue-400/30 py-3.5 px-6`}
-        >
-          <Calendar className="h-5 w-5 group-hover:rotate-12 transition-transform duration-300" />
-          <span>Book Free Demo</span>
-        </Link>
+    <>
+      {/* Book Free Demo CTA (Left) */}
+      <div className="fixed bottom-6 left-6 z-[80] animate-in slide-in-from-bottom-5 fade-in duration-300">
+        <div className="relative">
+          <div className="absolute -inset-1 rounded-full bg-blue-500 opacity-20 blur animate-pulse" />
+          <Link 
+            href="/demo?source=floating_cta"
+            className={`${commonClasses} shadow-[0_0_20px_rgba(37,99,235,0.4)] bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border border-blue-400/30 py-3.5 px-6`}
+          >
+            <Calendar className="h-5 w-5 group-hover:rotate-12 transition-transform duration-300" />
+            <span>Book Free Demo</span>
+          </Link>
+        </div>
       </div>
 
-      {/* WhatsApp CTA */}
-      <div className="relative">
-        <div className="absolute -inset-1 rounded-full bg-[#25D366] opacity-20 blur animate-pulse" />
-        <a 
-          href={`https://wa.me/918126296001?text=${encodedMessage}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Chat on WhatsApp"
-          title="Chat on WhatsApp"
-          className={`${commonClasses} shadow-[0_0_20px_rgba(37,211,102,0.4)] bg-[#25D366] hover:bg-[#128C7E] border border-[#25D366]/30 w-12 h-12 md:w-auto md:h-auto md:py-3.5 md:px-6`}
-        >
-          <WhatsAppIcon className="h-6 w-6 md:h-5 md:w-5 group-hover:scale-110 transition-transform duration-300" />
-          <span className="hidden md:inline">Chat on WhatsApp</span>
-        </a>
+      {/* WhatsApp CTA (Right) */}
+      <div className="fixed bottom-6 right-6 z-[80] animate-in slide-in-from-bottom-5 fade-in duration-300">
+        <div className="relative">
+          <div className="absolute -inset-1 rounded-full bg-[#25D366] opacity-20 blur animate-pulse" />
+          <a 
+            href={`https://wa.me/918126296001?text=${encodedMessage}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Chat on WhatsApp"
+            title="Chat on WhatsApp"
+            className={`${commonClasses} shadow-[0_0_20px_rgba(37,211,102,0.4)] bg-[#25D366] hover:bg-[#128C7E] border border-[#25D366]/30 py-3.5 px-6`}
+          >
+            <WhatsAppIcon className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
+            <span>Chat on WhatsApp</span>
+          </a>
+        </div>
       </div>
-
-    </div>
+    </>
   );
 }
