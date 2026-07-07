@@ -232,9 +232,13 @@ export default function MemberDetailPage() {
                             </div>
                             {/* Action buttons */}
                             <div className="flex items-center gap-2 flex-wrap">
+                                <a href={`/pool/${params.poolSlug}/admin/members/${memberId}/card`}
+                                    className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#4FC3F7] to-[#1976D2] border border-[#1976D2] px-3 py-1.5 text-xs font-bold text-white shadow-md hover:shadow-lg transition">
+                                    <Printer className="h-3.5 w-3.5" /> Premium ID Card
+                                </a>
                                 <a href={`/api/members/${memberId}/pdf`} download
                                     className="inline-flex items-center gap-1.5 rounded-lg bg-[#0b1220] border border-[#1f2937] px-3 py-1.5 text-xs font-bold text-slate-300 shadow-md hover:bg-[#8b5cf6]/10 transition">
-                                    <Download className="h-3.5 w-3.5" /> ID Card
+                                    <Download className="h-3.5 w-3.5" /> Legacy PDF
                                 </a>
                                 {member.planId?.hasTokenPrint && (
                                     <button onClick={handleReprint}
