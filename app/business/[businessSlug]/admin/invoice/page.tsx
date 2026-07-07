@@ -1031,6 +1031,7 @@ export default function InvoicePage() {
               </div>
             </div>
           </div>
+          </div>
         </>
       )}
     </div>
