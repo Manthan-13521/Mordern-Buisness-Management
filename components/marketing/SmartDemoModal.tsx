@@ -178,6 +178,12 @@ export function SmartDemoModal() {
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
+                  onClick={handleDismiss}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-gray-700 dark:text-white font-medium py-3.5 px-6 rounded-xl transition-all active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600"
+                >
+                  Not Now
+                </button>
+                <button
                   onClick={handleBookDemo}
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 px-6 rounded-xl transition-all shadow-lg shadow-blue-500/30 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-[#0b1220]"
                 >
@@ -194,12 +200,6 @@ export function SmartDemoModal() {
                   </svg>
                   WhatsApp
                 </a>
-                <button
-                  onClick={handleDismiss}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-gray-700 dark:text-white font-medium py-3.5 px-6 rounded-xl transition-all active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600"
-                >
-                  Not Now
-                </button>
               </div>
             </div>
           </div>
