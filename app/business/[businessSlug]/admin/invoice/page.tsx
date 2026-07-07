@@ -89,6 +89,8 @@ export default function InvoicePage() {
   const [ifsc, setIfsc] = useState("");
 
   const [showInvoice, setShowInvoice] = useState(false);
+  const [previewScale, setPreviewScale] = useState(1);
+  const invoiceRef = useRef<HTMLDivElement>(null);
 
   /* ── Customer dropdown state ── */
   const [allCustomers, setAllCustomers] = useState<any[]>([]);
@@ -277,6 +279,23 @@ export default function InvoicePage() {
 
   const MIN_ROWS = 15;
 
+  useEffect(() => {
+    if (!showInvoice) return;
+    const calculateScale = () => {
+      // 150px reserved for the top navbar + edit/print buttons padding
+      const availableHeight = window.innerHeight - 150;
+      // 297mm in pixels is approx 1123px. We use scrollHeight to adapt if content overflows.
+      const elHeight = invoiceRef.current?.scrollHeight || 1123;
+      const scale = Math.max(0.3, Math.min(1, availableHeight / elHeight));
+      setPreviewScale(scale);
+    };
+    calculateScale();
+    // small delay to let font load and recalculate
+    setTimeout(calculateScale, 100);
+    window.addEventListener('resize', calculateScale);
+    return () => window.removeEventListener('resize', calculateScale);
+  }, [showInvoice]);
+
   /* ═══════════════════════════════════════════════════ */
   /*  PRINT HANDLER                                     */
   /* ═══════════════════════════════════════════════════ */
@@ -307,8 +326,8 @@ export default function InvoicePage() {
         ${styleContent}
         <style>
           @page { size: A4; margin: 0; }
-          body { margin: 0; padding: 0; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          .inv-page { min-height: 100vh !important; height: auto !important; }
+          body { margin: 0; padding: 0; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; overflow: hidden; width: 210mm; height: 297mm; }
+          .inv-page { min-height: 297mm !important; height: 297mm !important; max-height: 297mm !important; overflow: hidden !important; box-sizing: border-box; page-break-after: avoid; }
         </style>
         </head><body>
         ${invoiceContent}
@@ -720,14 +739,27 @@ export default function InvoicePage() {
 
           {/* A4 Invoice */}
           <div className="w-full flex justify-center pb-10">
-            <div id="print-section" className="preview-scale" style={{ width: "210mm", minHeight: "297mm", background: "#fff", color: "#000", boxSizing: "border-box", boxShadow: "0 10px 25px rgba(0,0,0,0.15)" }}>
+            <div 
+              style={{ 
+                width: `calc(210mm * ${previewScale})`,
+                height: `calc(297mm * ${previewScale})`
+              }}
+            >
+              <div 
+                id="print-section" 
+                ref={invoiceRef}
+                style={{ 
+                  width: "210mm", 
+                  minHeight: "297mm", 
+                  background: "#fff", 
+                  color: "#000", 
+                  boxSizing: "border-box", 
+                  boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
+                  transform: `scale(${previewScale})`,
+                  transformOrigin: "top left"
+                }}
+              >
               <style dangerouslySetInnerHTML={{__html: `
-                .preview-scale { transform: scale(0.6); transform-origin: top center; margin-bottom: -118mm; }
-                @media (min-width: 640px) { .preview-scale { transform: scale(0.7); margin-bottom: -89mm; } }
-                @media (min-width: 768px) { .preview-scale { transform: scale(0.85); margin-bottom: -44mm; } }
-                @media (min-width: 1024px) { .preview-scale { transform: scale(0.95); margin-bottom: -14mm; } }
-                @media (min-width: 1280px) { .preview-scale { transform: scale(1); margin-bottom: 0; } }
-
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
                 .inv-page { font-family: 'Inter', sans-serif; padding: 12mm 15mm; color: #1e293b; display: flex; flex-direction: column; min-height: 297mm; box-sizing: border-box; }
               
@@ -996,8 +1028,8 @@ export default function InvoicePage() {
                 </div>
               </div>
               
+              </div>
             </div>
-          </div>
           </div>
         </>
       )}
