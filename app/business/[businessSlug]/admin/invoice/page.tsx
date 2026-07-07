@@ -281,33 +281,28 @@ export default function InvoicePage() {
   /*  PRINT HANDLER                                     */
   /* ═══════════════════════════════════════════════════ */
   const handlePrint = () => {
-    const printContents = document.getElementById("a4-invoice")?.innerHTML;
+    const printContents = document.getElementById("print-section")?.innerHTML;
     if (!printContents) return;
-    const win = window.open("", "_blank");
-    if (!win) return;
-    win.document.write(`
-      <!DOCTYPE html>
-      <html><head><title>Tax Invoice</title>
-      <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Times New Roman', Times, serif; font-size: 11.5px; color: #000; }
-        @page { size: A4; margin: 0; }
-        .a4-page { width: 210mm; height: 297mm; padding: 5mm 8mm; }
-        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        td, th { border: 1px solid #000; padding: 3px 5px; font-size: 11.5px; vertical-align: top; word-wrap: break-word; }
-        th { background: #f5f5f5; font-weight: bold; text-align: center; }
-        .center { text-align: center; }
-        .right { text-align: right; }
-        .bold { font-weight: bold; }
-        .product-row td { height: 22px; }
-      </style>
-      </head><body>
-      <div class="a4-page">${printContents}</div>
-      </body></html>
-    `);
-    win.document.close();
-    win.focus();
-    setTimeout(() => { win.print(); win.close(); }, 300);
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+    const doc = iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(`
+        <!DOCTYPE html>
+        <html><head><title>Invoice</title>
+        </head><body style="margin:0; padding:0; background:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+        ${printContents}
+        </body></html>
+      `);
+      doc.close();
+      iframe.contentWindow?.focus();
+      setTimeout(() => {
+        iframe.contentWindow?.print();
+        setTimeout(() => { document.body.removeChild(iframe); }, 1000);
+      }, 500);
+    }
   };
 
   /* ═══════════════════════════════════════════════════ */
@@ -706,10 +701,17 @@ export default function InvoicePage() {
           </div>
 
           {/* A4 Invoice */}
-          <div className="mx-auto" style={{ width: "210mm", minHeight: "297mm", background: "#fff", color: "#000", boxSizing: "border-box" }}>
-            <style dangerouslySetInnerHTML={{__html: `
-              @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-              .inv-page { font-family: 'Inter', sans-serif; padding: 12mm 15mm; color: #1e293b; display: flex; flex-direction: column; min-height: 297mm; box-sizing: border-box; }
+          <div className="w-full flex justify-center overflow-hidden pb-10">
+            <div id="print-section" className="preview-scale" style={{ width: "210mm", height: "297mm", background: "#fff", color: "#000", boxSizing: "border-box", boxShadow: "0 10px 25px rgba(0,0,0,0.15)" }}>
+              <style dangerouslySetInnerHTML={{__html: `
+                .preview-scale { transform: scale(0.6); transform-origin: top center; margin-bottom: -115mm; }
+                @media (min-width: 640px) { .preview-scale { transform: scale(0.7); margin-bottom: -90mm; } }
+                @media (min-width: 768px) { .preview-scale { transform: scale(0.85); margin-bottom: -45mm; } }
+                @media (min-width: 1024px) { .preview-scale { transform: scale(0.95); margin-bottom: -15mm; } }
+                @media (min-width: 1280px) { .preview-scale { transform: scale(1); margin-bottom: 0; } }
+
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+                .inv-page { font-family: 'Inter', sans-serif; padding: 12mm 15mm; color: #1e293b; display: flex; flex-direction: column; height: 297mm; box-sizing: border-box; }
               
               /* Header */
               .inv-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8mm; }
@@ -977,6 +979,7 @@ export default function InvoicePage() {
               </div>
               
             </div>
+          </div>
           </div>
         </>
       )}
