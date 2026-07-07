@@ -728,7 +728,7 @@ export default function InvoicePage() {
               .inv-title { font-size: 40px; font-weight: 800; color: #0f172a; letter-spacing: 1px; line-height: 1; margin-top: -5px; }
               .inv-title-line { width: 60px; height: 2px; background: #94a3b8; margin: 10px 0 20px auto; }
               
-              .inv-meta-grid { display: grid; grid-template-columns: auto auto auto; gap: 4px 15px; font-size: 10.5px; font-weight: 600; text-align: left; }
+              .inv-meta-grid { display: grid; grid-template-columns: 14px 75px 10px auto; gap: 5px 4px; align-items: center; font-size: 10.5px; font-weight: 600; text-align: left; }
               .inv-meta-val { font-weight: 400; color: #475569; }
               
               .inv-divider { height: 1px; background: #0f172a; margin: 0 0 8mm 0; width: 100%; }
@@ -737,6 +737,7 @@ export default function InvoicePage() {
               .inv-billed-section { display: flex; justify-content: space-between; margin-bottom: 8mm; }
               .inv-billed-tab { display: inline-flex; align-items: center; background: #e0e7ff; padding: 6px 30px 6px 12px; border-radius: 6px 20px 20px 6px; font-weight: 700; font-size: 12px; margin-bottom: 12px; color: #0f172a; }
               .inv-billed-icon { width: 22px; height: 22px; background: #0f172a; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; }
+              .inv-billed-icon svg { width: 12px; height: 12px; fill: #ffffff; }
               .inv-customer-name { font-size: 16px; font-weight: 800; color: #0f172a; margin-bottom: 8px; }
               .inv-customer-address { font-size: 12px; font-weight: 500; color: #475569; line-height: 1.6; }
               
@@ -792,9 +793,7 @@ export default function InvoicePage() {
                 <div className="inv-company-info">
                   <div className="inv-logo-box">
                     <div className="inv-logo-inner">
-                      <span className="inv-logo-text">
-                        {bname ? bname.split(" ").map(w => w[0]).join("").substring(0, 2).toUpperCase() : "MB"}
-                      </span>
+                      <span className="inv-logo-text">MB</span>
                     </div>
                   </div>
                   <div>
@@ -819,24 +818,29 @@ export default function InvoicePage() {
                   <div className="inv-title-line"></div>
                   <div className="inv-meta-grid">
                     <svg className="inv-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                    <span>Invoice No.</span> <span className="inv-meta-val">: &nbsp;{inv}</span>
+                    <span>Invoice No.</span> <span>:</span> <span className="inv-meta-val">{inv}</span>
+                    
                     <svg className="inv-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                    <span>Invoice Date</span> <span className="inv-meta-val">: &nbsp;{formatDate(invdate)}</span>
+                    <span>Invoice Date</span> <span>:</span> <span className="inv-meta-val">{formatDate(invdate)}</span>
+                    
                     {dcno && <>
                       <svg className="inv-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                      <span>DC No.</span> <span className="inv-meta-val">: &nbsp;{dcno}</span>
+                      <span>DC No.</span> <span>:</span> <span className="inv-meta-val">{dcno}</span>
                     </>}
+                    
                     {orderno && <>
                       <svg className="inv-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                      <span>Order No.</span> <span className="inv-meta-val">: &nbsp;{orderno}</span>
+                      <span>Order No.</span> <span>:</span> <span className="inv-meta-val">{orderno}</span>
                     </>}
+                    
                     {vehicle && <>
                       <svg className="inv-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
-                      <span>Vehicle No.</span> <span className="inv-meta-val">: &nbsp;{vehicle}</span>
+                      <span>Vehicle No.</span> <span>:</span> <span className="inv-meta-val">{vehicle}</span>
                     </>}
+                    
                     {waybill && <>
                       <svg className="inv-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                      <span>Way Bill No.</span> <span className="inv-meta-val">: &nbsp;{waybill}</span>
+                      <span>Way Bill No.</span> <span>:</span> <span className="inv-meta-val">{waybill}</span>
                     </>}
                   </div>
                 </div>
@@ -849,7 +853,7 @@ export default function InvoicePage() {
                 <div>
                   <div className="inv-billed-tab">
                     <div className="inv-billed-icon">
-                      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path></svg>
                     </div>
                     BILLED TO
                   </div>
@@ -941,7 +945,7 @@ export default function InvoicePage() {
               {/* BANK DETAILS */}
               <div className="inv-bank-box">
                 <div className="inv-bank-icon">
-                  <svg viewBox="0 0 24 24"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"></path></svg>
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 21h20v2H2v-2zm10-20l10 5v2H2V6l10-5zm-1 8h2v7h-2V9zm-5 0h2v7H6V9zm10 0h2v7h-2V9z"></path></svg>
                 </div>
                 <div>
                   <div className="inv-bank-title">BANK DETAILS</div>
@@ -968,7 +972,7 @@ export default function InvoicePage() {
                   <div className="inv-phone-circle">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
                   </div>
-                  {bphone || "8125629601"}
+                  8125629601
                 </div>
               </div>
               
