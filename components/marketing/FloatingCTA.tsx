@@ -40,7 +40,7 @@ export function FloatingCTA() {
         <div className="relative">
           <div className="absolute -inset-1 rounded-full bg-[#25D366] opacity-20 blur animate-pulse" />
           <a 
-            href={`https://wa.me/918126296001?text=${encodedMessage}`}
+            href={`https://wa.me/918125629601?text=${encodedMessage}`}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Chat on WhatsApp"
