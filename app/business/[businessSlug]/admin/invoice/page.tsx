@@ -706,158 +706,272 @@ export default function InvoicePage() {
           </div>
 
           {/* A4 Invoice */}
-          <div className="mx-auto" style={{ width: "210mm", minHeight: "297mm", padding: "10mm", background: "#fff", color: "#000", boxSizing: "border-box" }}>
+          <div className="mx-auto" style={{ width: "210mm", minHeight: "297mm", background: "#fff", color: "#000", boxSizing: "border-box" }}>
             <style dangerouslySetInnerHTML={{__html: `
-              .inv-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-              .inv-table td, .inv-table th { padding: 6px; font-size: 13.5px; word-wrap: break-word; }
-              .inv-border { border: 2px solid black; }
-              .inv-border td, .inv-border th { border: 1px solid black; }
-              .inv-center { text-align: center; }
-              .inv-right { text-align: right; }
-              .inv-bold { font-weight: bold; }
-              .inv-h2 { margin: 5px 0; font-size: 24px; font-weight: bold; }
+              @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+              .inv-page { font-family: 'Inter', sans-serif; padding: 12mm 15mm; color: #1e293b; display: flex; flex-direction: column; min-height: 297mm; box-sizing: border-box; }
+              
+              /* Header */
+              .inv-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8mm; }
+              .inv-logo-box { width: 75px; height: 85px; background-color: #0f172a; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); display: flex; align-items: center; justify-content: center; margin-right: 20px; flex-shrink: 0; }
+              .inv-logo-inner { width: 63px; height: 73px; border: 2px solid #ffffff; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); display: flex; align-items: center; justify-content: center; }
+              .inv-logo-text { color: #ffffff; font-size: 28px; font-weight: 800; letter-spacing: -1px; }
+              
+              .inv-company-info { display: flex; }
+              .inv-company-name { font-size: 26px; font-weight: 800; color: #0f172a; line-height: 1.1; text-transform: uppercase; }
+              .inv-company-desc { font-size: 14px; font-weight: 500; color: #475569; margin-bottom: 12px; letter-spacing: 0.5px; }
+              
+              .inv-contact-row { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px; font-size: 11px; color: #334155; font-weight: 500; }
+              .inv-icon { width: 14px; height: 14px; color: #0f172a; flex-shrink: 0; margin-top: 0px; }
+              
+              .inv-title-sec { text-align: right; }
+              .inv-title { font-size: 40px; font-weight: 800; color: #0f172a; letter-spacing: 1px; line-height: 1; margin-top: -5px; }
+              .inv-title-line { width: 60px; height: 2px; background: #94a3b8; margin: 10px 0 20px auto; }
+              
+              .inv-meta-grid { display: grid; grid-template-columns: auto auto auto; gap: 4px 15px; font-size: 10.5px; font-weight: 600; text-align: left; }
+              .inv-meta-val { font-weight: 400; color: #475569; }
+              
+              .inv-divider { height: 1px; background: #0f172a; margin: 0 0 8mm 0; width: 100%; }
+              
+              /* Billed To */
+              .inv-billed-section { display: flex; justify-content: space-between; margin-bottom: 8mm; }
+              .inv-billed-tab { display: inline-flex; align-items: center; background: #e0e7ff; padding: 6px 30px 6px 12px; border-radius: 6px 20px 20px 6px; font-weight: 700; font-size: 12px; margin-bottom: 12px; color: #0f172a; }
+              .inv-billed-icon { width: 22px; height: 22px; background: #0f172a; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; }
+              .inv-customer-name { font-size: 16px; font-weight: 800; color: #0f172a; margin-bottom: 8px; }
+              .inv-customer-address { font-size: 12px; font-weight: 500; color: #475569; line-height: 1.6; }
+              
+              /* Decor */
+              .inv-decor-doc { width: 120px; opacity: 0.9; }
+              
+              /* Table */
+              .inv-table { width: 100%; border-collapse: collapse; margin-bottom: 6mm; border-radius: 8px; overflow: hidden; box-shadow: 0 0 0 1px #e2e8f0; }
+              .inv-table th { background: #0f172a; color: #ffffff; font-size: 10px; font-weight: 600; text-transform: uppercase; padding: 12px 10px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1); }
+              .inv-table th:last-child { border-right: none; }
+              .inv-table td { padding: 14px 10px; font-size: 11.5px; font-weight: 500; color: #334155; text-align: center; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; }
+              .inv-table td:last-child { border-right: none; }
+              .inv-table td.desc-col { text-align: left; font-weight: 600; color: #0f172a; }
+              
+              /* Bottom Section */
+              .inv-bottom-grid { display: flex; justify-content: space-between; align-items: stretch; gap: 25px; margin-bottom: auto; }
+              
+              /* Amount in Words */
+              .inv-words-box { flex: 1.2; border: 1px solid #cbd5e1; border-radius: 8px; padding: 18px; display: flex; align-items: flex-start; gap: 15px; }
+              .inv-rupee-circle { width: 36px; height: 36px; background: #0f172a; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #fff; font-size: 18px; font-weight: bold; }
+              .inv-words-title { font-size: 11px; font-weight: 800; color: #0f172a; margin-bottom: 6px; }
+              .inv-words-text { font-size: 12px; color: #475569; font-weight: 500; line-height: 1.5; }
+              
+              /* Totals */
+              .inv-totals-box { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+              .inv-total-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 10px; padding: 0 10px; color: #0f172a; font-weight: 600; }
+              .inv-grand-total { background: #0f172a; color: #ffffff; border-radius: 6px; padding: 12px 15px; display: flex; justify-content: space-between; font-size: 14px; font-weight: 800; margin-top: auto; }
+              
+              /* Bank Details */
+              .inv-bank-box { background: #f1f5f9; border-radius: 8px; padding: 15px 25px; display: flex; align-items: center; gap: 25px; margin-top: 6mm; margin-bottom: 6mm; }
+              .inv-bank-icon { width: 70px; border-right: 1px solid #cbd5e1; padding-right: 25px; }
+              .inv-bank-title { font-size: 11px; font-weight: 800; color: #0f172a; margin-bottom: 8px; text-transform: uppercase; }
+              .inv-bank-grid { display: grid; grid-template-columns: 110px 10px auto; gap: 6px; font-size: 10.5px; font-weight: 700; color: #0f172a; }
+              .inv-bank-val { font-weight: 500; color: #475569; }
+              
+              /* Footer */
+              .inv-footer { background: #0f172a; color: #ffffff; border-radius: 8px; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; }
+              .inv-footer-left { display: flex; align-items: center; gap: 18px; }
+              .inv-laptop-icon { width: 40px; height: 40px; background: #ffffff; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+              .inv-footer-text { font-size: 15px; font-weight: 500; line-height: 1.4; color: #e2e8f0; }
+              .inv-footer-right { display: flex; align-items: center; gap: 14px; font-size: 22px; font-weight: 700; border-left: 1px solid rgba(255,255,255,0.2); padding-left: 25px; }
+              .inv-phone-circle { width: 36px; height: 36px; background: #ffffff; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #0f172a; }
+              
               @media print {
                 body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
               }
             `}} />
             
-            <div id="a4-invoice" style={{ fontFamily: "serif" }}>
+            <div id="a4-invoice" className="inv-page">
               
-              <div style={{ textAlign: "right", fontSize: "12px", marginBottom: "5px", lineHeight: "1.2" }}>
-                Original for Recipient ( )<br/>
-                Duplicate for Transporter ( )<br/>
-                Triplicate for Supplier ( )
-              </div>
-
               {/* HEADER */}
-              <table className="inv-table inv-border">
-                <tbody>
-                  <tr>
-                    <td>GST No. : {bgst}</td>
-                    <td className="inv-center inv-bold">TAX INVOICE</td>
-                  </tr>
-                </tbody>
-              </table>
-
-              {/* COMPANY */}
-              <div className="inv-center" style={{ margin: "10px 0" }}>
-                <h2 className="inv-h2">{bname}</h2>
-                {bdesc}<br/>
-                {baddr}
+              <div className="inv-header">
+                <div className="inv-company-info">
+                  <div className="inv-logo-box">
+                    <div className="inv-logo-inner">
+                      <span className="inv-logo-text">
+                        {bname ? bname.split(" ").map(w => w[0]).join("").substring(0, 2).toUpperCase() : "MB"}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <h1 className="inv-company-name">{bname || "COMPANY NAME"}</h1>
+                    <p className="inv-company-desc">{bdesc}</p>
+                    <div className="inv-contact-row">
+                      <svg className="inv-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                      {baddr || "Address Not Available"}
+                    </div>
+                    <div className="inv-contact-row">
+                      <svg className="inv-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                      {bphone || "Phone Not Available"}
+                    </div>
+                    <div className="inv-contact-row">
+                      <svg className="inv-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                      GST No. {bgst}
+                    </div>
+                  </div>
+                </div>
+                <div className="inv-title-sec">
+                  <h1 className="inv-title">INVOICE</h1>
+                  <div className="inv-title-line"></div>
+                  <div className="inv-meta-grid">
+                    <svg className="inv-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    <span>Invoice No.</span> <span className="inv-meta-val">: &nbsp;{inv}</span>
+                    <svg className="inv-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    <span>Invoice Date</span> <span className="inv-meta-val">: &nbsp;{formatDate(invdate)}</span>
+                    {dcno && <>
+                      <svg className="inv-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                      <span>DC No.</span> <span className="inv-meta-val">: &nbsp;{dcno}</span>
+                    </>}
+                    {orderno && <>
+                      <svg className="inv-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                      <span>Order No.</span> <span className="inv-meta-val">: &nbsp;{orderno}</span>
+                    </>}
+                    {vehicle && <>
+                      <svg className="inv-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+                      <span>Vehicle No.</span> <span className="inv-meta-val">: &nbsp;{vehicle}</span>
+                    </>}
+                    {waybill && <>
+                      <svg className="inv-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                      <span>Way Bill No.</span> <span className="inv-meta-val">: &nbsp;{waybill}</span>
+                    </>}
+                  </div>
+                </div>
               </div>
-
-              {/* CUSTOMER + INVOICE */}
-              <table className="inv-table inv-border">
-                <tbody>
-                  <tr>
-                    <td style={{ width: "50%", verticalAlign: "top" }}>
-                      <b>To</b><br/>
-                      {cbizname || cname}{cbizname && cname ? <><br/><span style={{ fontSize: "12px" }}>({cname})</span></> : ''}<br/>
-                      {caddr1}<br/>
-                      {caddr2}<br/><br/>
-                      GST No. {cgst}
-                    </td>
-                    <td style={{ width: "50%", verticalAlign: "top" }}>
-                      Invoice No.: {inv}<br/>
-                      Date: {formatDate(invdate)}<br/><br/>
-                      DC No.: {dcno}<br/>
-                      Order No.: {orderno}<br/>
-                      Vehicle No.: {vehicle}<br/>
-                      Way Bill No.: {waybill}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-
-              <br/>
-
-              {/* PRODUCT TABLE */}
-              <table className="inv-table inv-border">
+              
+              <div className="inv-divider"></div>
+              
+              {/* BILLED TO */}
+              <div className="inv-billed-section">
+                <div>
+                  <div className="inv-billed-tab">
+                    <div className="inv-billed-icon">
+                      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    </div>
+                    BILLED TO
+                  </div>
+                  <h2 className="inv-customer-name">{cbizname || cname} {cbizname && cname ? `(${cname})` : ''}</h2>
+                  <div className="inv-customer-address">
+                    {caddr1} <br/>
+                    {caddr2} <br/>
+                    {cgst && <>GST No: <b>{cgst}</b></>}
+                  </div>
+                </div>
+                <div className="inv-decor-doc">
+                  <svg viewBox="0 0 200 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="70" y="20" width="80" height="110" rx="4" stroke="#94a3b8" strokeWidth="2"/>
+                    <line x1="85" y1="40" x2="135" y2="40" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round"/>
+                    <line x1="85" y1="55" x2="135" y2="55" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round"/>
+                    <line x1="85" y1="70" x2="120" y2="70" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round"/>
+                    <circle cx="130" cy="100" r="25" fill="#ffffff" stroke="#94a3b8" strokeWidth="2"/>
+                    <text x="130" y="110" fill="#94a3b8" fontSize="24" fontWeight="bold" textAnchor="middle">₹</text>
+                    <line x1="30" y1="80" x2="40" y2="80" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round"/>
+                    <circle cx="50" cy="60" r="3" fill="#cbd5e1"/>
+                  </svg>
+                </div>
+              </div>
+              
+              {/* TABLE */}
+              <table className="inv-table">
                 <thead>
                   <tr>
-                    <th className="inv-center" style={{ width: "5%" }}>S No.</th>
-                    <th className="inv-center" style={{ width: "60%" }}>Description</th>
-                    <th className="inv-center" style={{ width: "10%" }}>HSN Code</th>
-                    <th className="inv-center" style={{ width: "7%" }}>Quantity</th>
-                    <th className="inv-center" style={{ width: "8%" }}>Unit Rate</th>
-                    <th className="inv-center" style={{ width: "10%" }}>Amount</th>
+                    <th style={{ width: '6%' }}>#</th>
+                    <th style={{ width: '42%' }}>DESCRIPTION OF GOODS / SERVICES</th>
+                    <th style={{ width: '12%' }}>HSN</th>
+                    <th style={{ width: '10%' }}>QTY</th>
+                    <th style={{ width: '15%' }}>UNIT RATE (₹)</th>
+                    <th style={{ width: '15%' }}>AMOUNT (₹)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {products.map((p, i) => (
                     <tr key={p.id}>
-                      <td className="inv-center" style={{ borderLeft: "1px solid black", borderRight: "1px solid black", borderBottom: "none", borderTop: "none" }}>{i + 1}</td>
-                      <td style={{ borderLeft: "1px solid black", borderRight: "1px solid black", borderBottom: "none", borderTop: "none" }}>{p.desc}</td>
-                      <td className="inv-center" style={{ borderLeft: "1px solid black", borderRight: "1px solid black", borderBottom: "none", borderTop: "none" }}>{p.hsn}</td>
-                      <td className="inv-center" style={{ borderLeft: "1px solid black", borderRight: "1px solid black", borderBottom: "none", borderTop: "none" }}>{p.qty || ""}</td>
-                      <td className="inv-center" style={{ borderLeft: "1px solid black", borderRight: "1px solid black", borderBottom: "none", borderTop: "none" }}>{p.rate || ""}</td>
-                      <td className="inv-right" style={{ borderLeft: "1px solid black", borderRight: "1px solid black", borderBottom: "none", borderTop: "none" }}>{(p.qty * p.rate) > 0 ? (p.qty * p.rate).toFixed(2) : ""}</td>
+                      <td>{i + 1}</td>
+                      <td className="desc-col">{p.desc}</td>
+                      <td>{p.hsn}</td>
+                      <td>{p.qty || ""}</td>
+                      <td>{p.rate ? p.rate.toFixed(2) : ""}</td>
+                      <td>{(p.qty * p.rate) > 0 ? (p.qty * p.rate).toFixed(2) : ""}</td>
                     </tr>
                   ))}
-
-                  {/* LIMITED EMPTY SPACE: Removes extra grid lines to look clean */}
-                  {Array.from({ length: Math.max(0, 10 - products.length) }).map((_, i) => (
+                  {Array.from({ length: Math.max(0, 5 - products.length) }).map((_, i) => (
                     <tr key={`empty-${i}`}>
-                      <td style={{ borderLeft: "1px solid black", borderRight: "1px solid black", borderBottom: "none", borderTop: "none" }}>&nbsp;</td>
-                      <td style={{ borderLeft: "1px solid black", borderRight: "1px solid black", borderBottom: "none", borderTop: "none" }}></td>
-                      <td style={{ borderLeft: "1px solid black", borderRight: "1px solid black", borderBottom: "none", borderTop: "none" }}></td>
-                      <td style={{ borderLeft: "1px solid black", borderRight: "1px solid black", borderBottom: "none", borderTop: "none" }}></td>
-                      <td style={{ borderLeft: "1px solid black", borderRight: "1px solid black", borderBottom: "none", borderTop: "none" }}></td>
-                      <td style={{ borderLeft: "1px solid black", borderRight: "1px solid black", borderBottom: "none", borderTop: "none" }}></td>
+                      <td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td>
                     </tr>
                   ))}
-
-                  <tr>
-                    <td colSpan={5} className="inv-right inv-bold" style={{ borderTop: "2px solid black" }}>Total</td>
-                    <td className="inv-right" style={{ borderTop: "2px solid black", fontWeight: "bold" }}>{subtotal.toFixed(2)}</td>
-                  </tr>
                 </tbody>
               </table>
-
-              <br/>
-
-              {/* RUPEES + TAX */}
-              <table className="inv-table">
-                <tbody>
-                  <tr>
-                    <td style={{ width: "70%", verticalAlign: "top" }}>
-                      Rupees: {numberToWords(grandTotal).toUpperCase()} ONLY
-                    </td>
-                    <td style={{ width: "30%", verticalAlign: "top", padding: "0" }}>
-                      <table className="inv-table inv-border">
-                        <tbody>
-                          <tr><td>CGST @{cgstRate}%</td><td className="inv-right">{cgstAmt > 0 ? cgstAmt.toFixed(2) : ""}</td></tr>
-                          <tr><td>SGST @{sgstRate}%</td><td className="inv-right">{sgstAmt > 0 ? sgstAmt.toFixed(2) : ""}</td></tr>
-                          <tr><td>IGST @{igstRate}%</td><td className="inv-right">{igstAmt > 0 ? igstAmt.toFixed(2) : ""}</td></tr>
-                          <tr><td className="inv-bold">Grand Total</td><td className="inv-right inv-bold">{grandTotal.toFixed(2)}</td></tr>
-                        </tbody>
-                      </table>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-
-              <br/>
-
-              {/* BANK + SIGNATURE */}
-              <table className="inv-table">
-                <tbody>
-                  <tr>
-                    <td style={{ width: "60%", verticalAlign: "top" }}>
-                      <b>Bank Details:</b><br/>
-                      {bank}<br/>
-                      {branch}<br/>
-                      A/c No. {acc}<br/>
-                      IFSC Code: {ifsc}
-                    </td>
-                    <td className="inv-right" style={{ width: "40%", verticalAlign: "bottom" }}>
-                      For {bname}<br/><br/><br/><br/>
-                      Authorised Signature
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-
+              
+              {/* BOTTOM SECTION */}
+              <div className="inv-bottom-grid">
+                <div className="inv-words-box">
+                  <div className="inv-rupee-circle">₹</div>
+                  <div>
+                    <div className="inv-words-title">AMOUNT IN WORDS</div>
+                    <div className="inv-words-text">{numberToWords(grandTotal)}</div>
+                  </div>
+                </div>
+                <div className="inv-totals-box">
+                  <div className="inv-total-row">
+                    <span>Subtotal</span>
+                    <span>₹{subtotal.toFixed(2)}</span>
+                  </div>
+                  {cgstRate > 0 && <div className="inv-total-row">
+                    <span>CGST @ {cgstRate}%</span>
+                    <span>₹{cgstAmt.toFixed(2)}</span>
+                  </div>}
+                  {sgstRate > 0 && <div className="inv-total-row">
+                    <span>SGST @ {sgstRate}%</span>
+                    <span>₹{sgstAmt.toFixed(2)}</span>
+                  </div>}
+                  {igstRate > 0 && <div className="inv-total-row">
+                    <span>IGST @ {igstRate}%</span>
+                    <span>₹{igstAmt.toFixed(2)}</span>
+                  </div>}
+                  <div className="inv-grand-total">
+                    <span>TOTAL AMOUNT</span>
+                    <span>₹{grandTotal.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* BANK DETAILS */}
+              <div className="inv-bank-box">
+                <div className="inv-bank-icon">
+                  <svg viewBox="0 0 24 24"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"></path></svg>
+                </div>
+                <div>
+                  <div className="inv-bank-title">BANK DETAILS</div>
+                  <div className="inv-bank-grid">
+                    <span>Bank Name</span> <span>:</span> <span className="inv-bank-val">{bank || "N/A"}</span>
+                    <span>A/C No.</span> <span>:</span> <span className="inv-bank-val">{acc || "N/A"}</span>
+                    <span>IFSC Code</span> <span>:</span> <span className="inv-bank-val">{ifsc || "N/A"}</span>
+                    <span>A/C Holder Name</span> <span>:</span> <span className="inv-bank-val">{bname || "N/A"}</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* FOOTER */}
+              <div className="inv-footer">
+                <div className="inv-footer-left">
+                  <div className="inv-laptop-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                  </div>
+                  <div className="inv-footer-text">
+                    What a Business Software<br/>with this invoice?
+                  </div>
+                </div>
+                <div className="inv-footer-right">
+                  <div className="inv-phone-circle">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                  </div>
+                  {bphone || "8125629601"}
+                </div>
+              </div>
+              
             </div>
           </div>
         </>
