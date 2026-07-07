@@ -140,6 +140,9 @@ body {
 .center { text-align:center; }
 .bold { font-weight:bold; }
 .small { font-size:${smallFont}; }
+.title { font-size:1.3em; font-weight:900; margin-bottom:2px; }
+.mid-banner { text-align:center; font-weight:bold; font-size:1.1em; margin:3px 0; }
+.total-row { font-weight:900; font-size:1.1em; margin:4px 0; }
 
 /* Prevent content cutoff on narrow printers */
 .receipt * {
@@ -152,17 +155,17 @@ body {
 <body>
 <div class="receipt">
 
-    <div class="center bold">${fitText(data.poolName, poolMax)}</div>
+    <div class="center title">${fitText(data.poolName, poolMax)}</div>
     <div class="center small">Receipt</div>
 
     <div class="hr"></div>
 
-    <div class="center">MID:${data.memberId}</div>
+    <div class="mid-banner">MID: ${data.memberId}</div>
 
     <div class="hr"></div>
 
-    <div>Name:${fitText(data.name, nameMax)}</div>
-    <div>Ph:${data.phone}</div>
+    <div>Name: ${fitText(data.name, nameMax)}</div>
+    <div>Ph: ${data.phone}</div>
 
     <div class="hr"></div>
 
@@ -178,7 +181,7 @@ body {
 
     <div class="hr"></div>
 
-    <div class="row bold">
+    <div class="row total-row">
         <span>Total</span>
         <span>${formatMoney(data.planPrice)}</span>
     </div>
@@ -204,7 +207,7 @@ body {
 
     <div class="hr"></div>
 
-    <div class="center small">Thank you</div>
+    <div class="center" style="margin-top: 5px;">Thank you 🙏</div>
 
 </div>
 
