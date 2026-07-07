@@ -15,7 +15,7 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
 );
 
 export function FloatingCTA() {
-  const commonClasses = "relative flex items-center justify-center gap-2 rounded-full text-sm font-bold text-white shadow-[0_0_20px_rgba(37,99,235,0.4)] transition-all hover:scale-105 active:scale-95 m-0 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border border-blue-400/30 group";
+  const commonClasses = "relative flex items-center justify-center gap-2 rounded-full text-sm font-bold text-white transition-all hover:scale-105 active:scale-95 m-0 group";
   
   const encodedMessage = "Hi%20AquaSync%20Team%2C%20I%27d%20like%20to%20automate%20and%20manage%20my%20business%20using%20AquaSync.%20Could%20you%20guide%20me%20through%20the%20onboarding%20process%2C%20explain%20the%20available%20features%2C%20and%20help%20me%20choose%20the%20right%20plan%20for%20my%20business%3F";
 
@@ -27,7 +27,7 @@ export function FloatingCTA() {
         <div className="absolute -inset-1 rounded-full bg-blue-500 opacity-20 blur animate-pulse" />
         <Link 
           href="/demo?source=floating_cta"
-          className={`${commonClasses} py-3.5 px-6`}
+          className={`${commonClasses} shadow-[0_0_20px_rgba(37,99,235,0.4)] bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border border-blue-400/30 py-3.5 px-6`}
         >
           <Calendar className="h-5 w-5 group-hover:rotate-12 transition-transform duration-300" />
           <span>Book Free Demo</span>
@@ -36,14 +36,14 @@ export function FloatingCTA() {
 
       {/* WhatsApp CTA */}
       <div className="relative">
-        <div className="absolute -inset-1 rounded-full bg-blue-500 opacity-20 blur animate-pulse" />
+        <div className="absolute -inset-1 rounded-full bg-[#25D366] opacity-20 blur animate-pulse" />
         <a 
           href={`https://wa.me/918126296001?text=${encodedMessage}`}
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Chat on WhatsApp"
           title="Chat on WhatsApp"
-          className={`${commonClasses} w-12 h-12 md:w-auto md:h-auto md:py-3.5 md:px-6`}
+          className={`${commonClasses} shadow-[0_0_20px_rgba(37,211,102,0.4)] bg-[#25D366] hover:bg-[#128C7E] border border-[#25D366]/30 w-12 h-12 md:w-auto md:h-auto md:py-3.5 md:px-6`}
         >
           <WhatsAppIcon className="h-6 w-6 md:h-5 md:w-5 group-hover:scale-110 transition-transform duration-300" />
           <span className="hidden md:inline">Chat on WhatsApp</span>
