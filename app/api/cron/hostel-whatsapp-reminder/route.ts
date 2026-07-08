@@ -4,6 +4,8 @@ import { HostelMember } from "@/models/HostelMember";
 import { Hostel } from "@/models/Hostel";
 import { HostelPlan } from "@/models/HostelPlan";
 import { CronLog } from "@/models/CronLog";
+import { decryptToken } from "@/lib/twilioService";
+import { withHealthcheck } from "@/lib/healthchecks";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
@@ -11,6 +13,7 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    return withHealthcheck({ checkName: "hostel-whatsapp-reminder", timeoutMs: 55000 }, async () => {
     const jobName = "hostel-whatsapp-reminder";
     const log = await CronLog.create({ jobName, status: "running" });
 
@@ -58,22 +61,45 @@ export async function GET(req: Request) {
         let sentCount = 0;
         let failedCount = 0;
 
+        if (allTasks.length === 0) {
+            log.status = "success";
+            log.completedAt = new Date();
+            log.metadata = { sentCount: 0, failedCount: 0, targetsEvaluated: 0 };
+            await log.save();
+            return NextResponse.json({ success: true, sentCount: 0, failedCount: 0 });
+        }
+
+        // ── Batch pre-fetch plans and hostels (eliminates N+1 + N Twilio re-inits) ──
+        const uniquePlanIds   = [...new Set(allTasks.map(t => t.planId?.toString()).filter(Boolean))];
+        const uniqueHostelIds = [...new Set(allTasks.map(t => t.hostelId).filter(Boolean))];
+
+        const [plansArr, hostelsArr] = await Promise.all([
+            HostelPlan.find({ _id: { $in: uniquePlanIds } }).lean(),
+            Hostel.find({ hostelId: { $in: uniqueHostelIds } }).lean(),
+        ]);
+
+        const planMap   = new Map((plansArr  as any[]).map(p => [p._id.toString(), p]));
+        const hostelMap = new Map((hostelsArr as any[]).map(h => [h.hostelId, h]));
+
+        // One Twilio client per hostel — avoid re-instantiating SDK per message
+        const twilioClientCache = new Map<string, any>();
+
         for (const member of allTasks) {
             try {
-                // Determine messaging channels if active on plan or globally
-                const plan = await HostelPlan.findById(member.planId).lean() as any;
+                // O(1) lookups from pre-fetched Maps
+                const plan = planMap.get(member.planId?.toString()) as any;
                 if (!plan || (!plan.enableWhatsAppAlerts && !plan.whatsAppAlert)) {
                     continue; 
                 }
 
-                const hostel = await Hostel.findOne({ hostelId: member.hostelId }).lean() as any;
+                const hostel = hostelMap.get(member.hostelId) as any;
                 if (!hostel || !hostel.twilio?.whatsappNumber) {
                     continue; 
                 }
 
                 // Free Trial Guard
                 if (hostel.subscriptionStatus === "trial") {
-                    continue; // Trial users don't get automated WhatsApp integrations
+                    continue;
                 }
 
                 // Explicit Message Dispatch Based on Type
@@ -82,9 +108,18 @@ export async function GET(req: Request) {
                     ? `Your hostel rent is overdue. Please pay your outstanding balance immediately to avoid further action.`
                     : `Your hostel rent is due in 2 days. Please pay your balance to avoid defaulter status.`;
                 
-                // Generic twilio invocation structure mapping to the repository pattern
-                const { Twilio } = await import("twilio");
-                const client = new Twilio(hostel.twilio.sid, hostel.twilio.authToken);
+                // Reuse cached Twilio client — decrypt auth token once per hostel per run
+                if (!twilioClientCache.has(member.hostelId)) {
+                    // Guard: skip hostel if encryption fields are missing
+                    if (!hostel.twilio?.authToken_encrypted || !hostel.twilio?.iv) {
+                        console.warn(`[WHATSAPP-CRON] Hostel ${member.hostelId} missing Twilio credentials, skipping`);
+                        continue;
+                    }
+                    const authToken = decryptToken(hostel.twilio.authToken_encrypted, hostel.twilio.iv);
+                    const { Twilio } = await import("twilio");
+                    twilioClientCache.set(member.hostelId, new Twilio(hostel.twilio.sid, authToken));
+                }
+                const client = twilioClientCache.get(member.hostelId);
                 
                 const toPhone = member.phone.startsWith("whatsapp:") ? member.phone : `whatsapp:+91${member.phone.replace(/\D/g, '').slice(-10)}`;
                 const fromPhone = hostel.twilio.whatsappNumber;
@@ -127,4 +162,5 @@ export async function GET(req: Request) {
         console.error(`[CRON ERROR] ${jobName}:`, error);
         return NextResponse.json({ error: "Failed global whatsapp dispatch" }, { status: 500 });
     }
+    }); // end withHealthcheck
 }

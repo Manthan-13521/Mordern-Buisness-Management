@@ -5,6 +5,7 @@ import { Pool } from "@/models/Pool";
 import { redis } from "@/lib/redis";
 import { logger } from "@/lib/logger";
 import { checkTenantMutability } from "@/lib/subscriptionGuard";
+import { withHealthcheck } from "@/lib/healthchecks";
 
 export async function GET(req: Request) {
     const cronSecret = process.env.CRON_SECRET;
@@ -18,40 +19,43 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: "Unauthorized", code: "FORBIDDEN" }, { status: 401 });
     }
 
-    try {
-        await dbConnect();
-        
-        // Find all pools
-        const pools = await Pool.find({}).select("poolId").lean();
+    return withHealthcheck({ checkName: "occupancy-sync", timeoutMs: 25000 }, async () => {
+        try {
+            await dbConnect();
+            
+            // Find all pools
+            // Fetch only the poolId field — we need nothing else from Pool documents
+            const pools = await Pool.find({}).select("poolId").lean();
 
-        const BATCH_SIZE = 5;
-        for (let i = 0; i < pools.length; i += BATCH_SIZE) {
-            const batch = pools.slice(i, i + BATCH_SIZE);
-            await Promise.all(batch.map(async (pool) => {
-                const poolId = pool.poolId;
-                if (!poolId) return;
+            const BATCH_SIZE = 5;
+            for (let i = 0; i < pools.length; i += BATCH_SIZE) {
+                const batch = pools.slice(i, i + BATCH_SIZE);
+                await Promise.all(batch.map(async (pool) => {
+                    const poolId = pool.poolId;
+                    if (!poolId) return;
 
-                // ── SUBSCRIPTION LOCKDOWN CHECK ──
-                const canMutate = await checkTenantMutability(poolId, "pool");
-                if (!canMutate) return;
+                    // ── SUBSCRIPTION LOCKDOWN CHECK ──
+                    const canMutate = await checkTenantMutability(poolId, "pool");
+                    if (!canMutate) return;
 
-                const result = await PoolSession.aggregate([
-                    { $match: { poolId, status: "active" } },
-                    { $group: { _id: null, count: { $sum: "$numPersons" } } }
-                ]).option({ maxTimeMS: 10000 });
+                    const result = await PoolSession.aggregate([
+                        { $match: { poolId, status: "active" } },
+                        { $group: { _id: null, count: { $sum: "$numPersons" } } }
+                    ]).option({ maxTimeMS: 10000 });
 
-                const count = result.length > 0 ? result[0].count : 0;
+                    const count = result.length > 0 ? result[0].count : 0;
 
-                if (redis) {
-                    const key = `pool:${poolId}:count`;
-                    await redis.set(key, count, { ex: 300 }); // 5 min TTL
-                }
-            }));
+                    if (redis) {
+                        const key = `pool:${poolId}:count`;
+                        await redis.set(key, count, { ex: 300 }); // 5 min TTL
+                    }
+                }));
+            }
+
+            return NextResponse.json({ success: true, message: "Occupancy synced to Redis" });
+        } catch (error) {
+            logger.error("[Cron] Occupancy sync failed", { error: String(error) });
+            return NextResponse.json({ error: "Server error during sync" }, { status: 500 });
         }
-
-        return NextResponse.json({ success: true, message: "Occupancy synced to Redis" });
-    } catch (error) {
-        logger.error("[Cron] Occupancy sync failed", { error: String(error) });
-        return NextResponse.json({ error: "Server error during sync" }, { status: 500 });
-    }
+    });
 }

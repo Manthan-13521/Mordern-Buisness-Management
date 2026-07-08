@@ -1,37 +1,3 @@
-import mongoose from "mongoose";
-import { dbConnect } from "./mongodb";
-
-/**
- * ── Billing Engine (Step 7D) ────────────────────────────────────────────────────────
- * Scans all active subscriptions where nextDueDate has lapsed.
- * Safely increases the Ledger `totalDue`, syncs the hybrid Member visual cache natively, 
- * and extends the subscription cycle.
- */
-export async function processDueGenerations(poolId?: string) {
-    await dbConnect();
-    const { Subscription } = await import("@/models/Subscription");
-    const { Ledger } = await import("@/models/Ledger");
-    const { Plan } = await import("@/models/Plan");
-
-    const now = new Date();
-
-    const query: any = { status: "active", nextDueDate: { $lte: now } };
-    if (poolId) query.poolId = poolId;
-
-    // Use native index query [poolId, nextDueDate, status] for extreme high performance
-    const dueSubscriptions = await Subscription.find(query);
-    if (dueSubscriptions.length === 0) return { processed: 0 };
-
-    let processed = 0;
-
-    for (const sub of dueSubscriptions) {
-        await processIndividualBilling(sub);
-        processed++;
-    }
-
-    return { processed };
-}
-
 /**
  * ── Process Individual Billing Transaction ──
  * Atomic, transaction-bound billing for a single subscription record.

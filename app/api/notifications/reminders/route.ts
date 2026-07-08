@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
-
+import { withHealthcheck } from "@/lib/healthchecks";
 
 import { dispatchJob } from "@/lib/queueAdapter";
 
@@ -28,15 +28,18 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
     }
 
-    try {
-        const result = await dispatchJob("SEND_REMINDER", { poolId });
+    return withHealthcheck({ checkName: "notifications-reminders", timeoutMs: 55000 }, async () => {
+        try {
+            const result = await dispatchJob("SEND_REMINDER", { poolId });
 
-        return NextResponse.json({
-            message: "Reminders processed",
-            ...result as any,
-        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    } catch (error) {
-        console.error(error);
-        return NextResponse.json({ error: "Failed to process reminders" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+            return NextResponse.json({
+                message: "Reminders processed",
+                ...result as any,
+            }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        } catch (error) {
+            console.error(error);
+            return NextResponse.json({ error: "Failed to process reminders" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        }
+    });
 }
+

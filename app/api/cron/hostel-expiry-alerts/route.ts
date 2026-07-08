@@ -5,6 +5,7 @@ import { Hostel } from "@/models/Hostel";
 import { HostelSettings } from "@/models/HostelSettings";
 import { decryptToken } from "@/lib/twilioService";
 import twilio from "twilio";
+import { withHealthcheck } from "@/lib/healthchecks";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    return withHealthcheck({ checkName: "hostel-expiry-alerts", timeoutMs: 25000 }, async () => {
     await dbConnect();
 
     const now = new Date();
@@ -37,12 +39,17 @@ export async function GET(req: Request) {
 
     const results: Record<string, any> = {};
 
+    // ── Batch-fetch HostelSettings for all matched hostels (eliminates N+1) ──
+    const hostelIds = hostels.map((h: any) => h.hostelId);
+    const allSettings = await HostelSettings.find({ hostelId: { $in: hostelIds } }).lean() as any[];
+    const settingsByHostelId = new Map(allSettings.map((s: any) => [s.hostelId, s]));
+
     for (const hostel of hostels) {
         const { hostelId, hostelName, twilio: tw } = hostel;
         if (!tw?.sid || !tw?.authToken_encrypted || !tw?.iv) continue;
 
-        // Check WhatsApp enabled for this hostel
-        const settings = await HostelSettings.findOne({ hostelId }).lean() as any;
+        // Check WhatsApp enabled for this hostel (O(1) Map lookup)
+        const settings = settingsByHostelId.get(hostelId) as any;
         if (!settings?.whatsappEnabled) continue;
 
         const expiringMembers = await HostelMember.find({
@@ -99,4 +106,5 @@ export async function GET(req: Request) {
     }
 
     return NextResponse.json({ ok: true, results, at: now.toISOString() });
+    }); // end withHealthcheck
 }

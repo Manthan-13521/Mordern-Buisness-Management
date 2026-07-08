@@ -5,6 +5,8 @@ import { HostelPaymentLog } from "@/models/HostelPaymentLog";
 import { CronLog } from "@/models/CronLog";
 import { User } from "@/models/User";
 import { resolveSubscriptionState, isReadOnlyMode, isSubscriptionLocked } from "@/lib/subscriptionState";
+import { withHealthcheck } from "@/lib/healthchecks";
+
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,8 @@ async function executeRentCycle() {
     let processed = 0;
     const allTransactions: any[] = [];
     const BATCH_SIZE = 500;
+    // How many member.save() calls to run in parallel — distinct members, no conflict
+    const SAVE_CONCURRENCY = 10;
 
     // ── Batch loop: process 500 members at a time to prevent Vercel timeouts ──
     let hasMore = true;
@@ -34,6 +38,9 @@ async function executeRentCycle() {
             hasMore = false;
             break;
         }
+
+        // ── Collect members that need saving in this batch ──
+        const membersToSave: typeof activeMembersDue = [];
 
         for (const member of activeMembersDue) {
             // ── SUBSCRIPTION LOCKDOWN CHECK ──
@@ -80,7 +87,6 @@ async function executeRentCycle() {
                 nextDue.setMonth(nextDue.getMonth() + 1);
             }
 
-            // Save updates
             if (deductionsMade > 0) {
                 member.balance = currentBalance;
                 member.due_date = nextDue;
@@ -91,8 +97,21 @@ async function executeRentCycle() {
                 }
                 
                 member.last_rent_processed_date = new Date();
-                await member.save();
+                membersToSave.push(member);
                 processed++;
+            }
+        }
+
+        // ── Flush saves in parallel — Promise.allSettled so one failure never aborts others ──
+        // Each member is distinct (_id unique). All Mongoose post-save hooks still fire per save.
+        for (let i = 0; i < membersToSave.length; i += SAVE_CONCURRENCY) {
+            const saveResults = await Promise.allSettled(
+                membersToSave.slice(i, i + SAVE_CONCURRENCY).map(m => m.save())
+            );
+            for (const res of saveResults) {
+                if (res.status === "rejected") {
+                    console.error(`[hostel-rent-cycle] member.save() failed:`, res.reason?.message ?? res.reason);
+                }
             }
         }
 
@@ -114,36 +133,38 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const jobName = "hostel-rent-cycle";
-    const log = await CronLog.create({ jobName, status: "running" });
+    return withHealthcheck({ checkName: "hostel-rent-cycle", timeoutMs: 55000 }, async () => {
+        const jobName = "hostel-rent-cycle";
+        const log = await CronLog.create({ jobName, status: "running" });
 
-    try {
-        const stats = await executeRentCycle();
-        
-        log.status = "success";
-        log.completedAt = new Date();
-        log.metadata = stats;
-        await log.save();
-
-        return NextResponse.json({ success: true, ...stats });
-    } catch (error: any) {
-        console.error(`[CRON ERROR] ${jobName}:`, error);
-
-        // RETRY ONCE
         try {
-            console.log(`[CRON RETRY] ${jobName} retrying once...`);
-            const retryStats = await executeRentCycle();
+            const stats = await executeRentCycle();
+            
             log.status = "success";
-            log.metadata = { ...retryStats, retried: true };
             log.completedAt = new Date();
+            log.metadata = stats;
             await log.save();
-            return NextResponse.json({ success: true, ...retryStats });
-        } catch (retryErr: any) {
-            log.status = "failed";
-            log.error = error.message || String(error);
-            log.completedAt = new Date();
-            await log.save();
-            return NextResponse.json({ error: "CRON failed globally" }, { status: 500 });
+
+            return NextResponse.json({ success: true, ...stats });
+        } catch (error: any) {
+            console.error(`[CRON ERROR] ${jobName}:`, error);
+
+            // RETRY ONCE
+            try {
+                console.log(`[CRON RETRY] ${jobName} retrying once...`);
+                const retryStats = await executeRentCycle();
+                log.status = "success";
+                log.metadata = { ...retryStats, retried: true };
+                log.completedAt = new Date();
+                await log.save();
+                return NextResponse.json({ success: true, ...retryStats });
+            } catch (retryErr: any) {
+                log.status = "failed";
+                log.error = error.message || String(error);
+                log.completedAt = new Date();
+                await log.save();
+                return NextResponse.json({ error: "CRON failed globally" }, { status: 500 });
+            }
         }
-    }
+    });
 }

@@ -8,6 +8,7 @@ import { EntryLog } from "@/models/EntryLog";
 import { DataRetentionLog } from "@/models/DataRetentionLog";
 import { logger } from "@/lib/logger";
 import { deleteS3Object } from "@/lib/s3";
+import { withHealthcheck } from "@/lib/healthchecks";
 
 /**
  * GET /api/cron/data-retention
@@ -33,6 +34,7 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: "Unauthorized", code: "FORBIDDEN" }, { status: 401 });
     }
 
+    return withHealthcheck({ checkName: "data-retention", timeoutMs: 55000 }, async () => {
     try {
         await dbConnect();
         
@@ -83,19 +85,34 @@ export async function GET(req: Request) {
                 poolId: { $ne: null }
             }).lean();
 
+            // ── Batch photoUrl safety check (eliminates 2N queries → 2 queries) ──
+            // Collect all unique photoUrls from members-to-delete that have one
+            const photoUrls = [...new Set(
+                (membersToDelete as any[]).map((m: any) => m.photoUrl).filter(Boolean)
+            )];
+
+            // Build a Set of photoUrls that are still referenced by OTHER active members
+            const stillReferencedUrls = new Set<string>();
+            if (photoUrls.length > 0) {
+                const [activeMemberUrls, activeEntUrls] = await Promise.all([
+                    Member.find({ photoUrl: { $in: photoUrls }, _id: { $nin: (membersToDelete as any[]).map((m: any) => m._id) } })
+                        .select("photoUrl").lean(),
+                    EntertainmentMember.find({ photoUrl: { $in: photoUrls }, _id: { $nin: (membersToDelete as any[]).map((m: any) => m._id) } })
+                        .select("photoUrl").lean(),
+                ]);
+                for (const doc of [...activeMemberUrls, ...activeEntUrls] as any[]) {
+                    if (doc.photoUrl) stillReferencedUrls.add(doc.photoUrl);
+                }
+            }
+
             let deletedS3Count = 0;
             const archiveDocs = [];
 
-            for (const member of membersToDelete) {
-                if (member.photoUrl) {
-                    // Safety check: Ensure no other active member uses this exact photoUrl URL
-                    const mCount = await Member.countDocuments({ photoUrl: member.photoUrl, _id: { $ne: member._id } });
-                    const eCount = await EntertainmentMember.countDocuments({ photoUrl: member.photoUrl, _id: { $ne: member._id } });
-                    
-                    if (mCount === 0 && eCount === 0) {
-                        const s3Deleted = await deleteS3Object(member.photoUrl);
-                        if (s3Deleted) deletedS3Count++;
-                    }
+            for (const member of membersToDelete as any[]) {
+                if (member.photoUrl && !stillReferencedUrls.has(member.photoUrl)) {
+                    // Safe to delete from S3 — no other member references this URL
+                    const s3Deleted = await deleteS3Object(member.photoUrl);
+                    if (s3Deleted) deletedS3Count++;
                 }
                 
                 archiveDocs.push({
@@ -109,16 +126,19 @@ export async function GET(req: Request) {
                     collectionSource: isEntertainment ? "entertainment_members" : "members",
                     fullData: member,
                 });
-                
-                await Model.deleteOne({ _id: member._id });
+                // NOTE: deleteOne is NOT called here — we batch-delete after archival is complete.
             }
             
             if (archiveDocs.length > 0) {
+                // ── Archive FIRST, then delete — guarantees no record is lost on crash ──
                 const { DeletedMember } = await import("@/models/DeletedMember");
                 await DeletedMember.insertMany(archiveDocs);
+                // Single deleteMany is faster (1 round-trip vs N) and only runs after archive succeeds.
+                await Model.deleteMany({ _id: { $in: (membersToDelete as any[]).map((m: any) => m._id) } });
             }
             
             return membersToDelete.length;
+
         }
 
         const memDelCount = await cleanupMembers(Member, false);
@@ -154,4 +174,5 @@ export async function GET(req: Request) {
             { status: 500 }
         );
     }
+    }); // end withHealthcheck
 }

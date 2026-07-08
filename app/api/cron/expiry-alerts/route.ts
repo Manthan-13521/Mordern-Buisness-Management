@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { runExpiryAlerts } from "@/lib/services/expiryAlertService";
+import { withHealthcheck } from "@/lib/healthchecks";
 
 export const dynamic = "force-dynamic";
 
@@ -19,16 +20,18 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    try {
-        const result = await runExpiryAlerts();
-        return NextResponse.json({ success: true, ...result });
-    } catch (error: any) {
-        console.error("[POST /api/cron/expiry-alerts]", error);
-        return NextResponse.json(
-            { error: "Expiry alert cron failed", detail: error?.message },
-            { status: 500 }
-        );
-    }
+    return withHealthcheck({ checkName: "expiry-alerts", timeoutMs: 25000 }, async () => {
+        try {
+            const result = await runExpiryAlerts();
+            return NextResponse.json({ success: true, ...result });
+        } catch (error: any) {
+            console.error("[POST /api/cron/expiry-alerts]", error);
+            return NextResponse.json(
+                { error: "Expiry alert cron failed", detail: error?.message },
+                { status: 500 }
+            );
+        }
+    });
 }
 
 /**
@@ -38,3 +41,4 @@ export async function POST(req: Request) {
 export async function GET(req: Request) {
     return POST(req);
 }
+

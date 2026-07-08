@@ -23,6 +23,8 @@ const hostelRegistrationLogSchema = new Schema<IHostelRegistrationLog>(
 );
 
 hostelRegistrationLogSchema.index({ hostelId: 1, createdAt: -1 });
+// hostel-data-retention: deletes on { hostelId, join_date } — createdAt index does not cover this query
+hostelRegistrationLogSchema.index({ hostelId: 1, join_date: 1 }, { background: true });
 
 export const HostelRegistrationLog: Model<IHostelRegistrationLog> =
   mongoose.models.HostelRegistrationLog ||

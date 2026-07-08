@@ -98,6 +98,16 @@ hostelMemberSchema.index(
     { weights: { memberId: 3, name: 2, phone: 1 } }
 );
 
+// ── Performance indexes added for cron job query patterns ────────────
+// hostel-rent-cycle: queries { status, isDeleted, due_date } without hostelId prefix
+hostelMemberSchema.index({ status: 1, isDeleted: 1, due_date: 1 }, { background: true });
+// hostel-expiry-alerts: queries { hostelId, isDeleted, isActive, isExpired, planEndDate }
+// Improved index includes isExpired — covers the full query predicate.
+// NOTE: The previous { hostelId, isDeleted, isActive, planEndDate } index can be dropped
+// manually in MongoDB Atlas once this new index has finished building in the background.
+hostelMemberSchema.index({ hostelId: 1, isDeleted: 1, isActive: 1, isExpired: 1, planEndDate: 1 }, { background: true });
+
+
 // ── Dual Write Hook for UnifiedUser (Prompt 3.1) ──────────────
 // ── Dual Write Hook for UnifiedUser (Prompt 3.1) ──────────────
 async function syncToUnifiedUser(doc: any) {

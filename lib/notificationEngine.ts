@@ -27,9 +27,27 @@ async function alreadySentToday(memberId: any, actionType: string): Promise<bool
         actionType,
         dateKey: getTodayKey(),
         status: { $in: ["sent", "failed_permanent"] }
-    }).lean();
+    }).select("_id").lean();
     return !!existing;
 }
+
+// ── Batch dedup check — one $in query for all memberIds in a single engine run ──
+async function buildAlreadySentSet(
+    memberIds: any[],
+    actionType: string
+): Promise<Set<string>> {
+    if (memberIds.length === 0) return new Set();
+    const { NotificationLog } = await import("@/models/NotificationLog");
+    const todayKey = getTodayKey();
+    const logs = await NotificationLog.find({
+        memberId: { $in: memberIds },
+        actionType,
+        dateKey: todayKey,
+        status: { $in: ["sent", "failed_permanent"] },
+    }).select("memberId").lean() as any[];
+    return new Set(logs.map((l: any) => l.memberId.toString()));
+}
+
 
 // ── Log the notification attempt ────────────────────────────────────────────
 async function logNotification(params: {
@@ -77,10 +95,30 @@ const twilioBreaker = createBreaker(
     "twilio-whatsapp"
 );
 
-async function sendPoolWhatsApp(poolId: string, phone: string, message: string): Promise<{ success: boolean; retryable: boolean; error?: string }> {
+// ── Pool lookup cache scoped per engine run (not a global singleton) ──────────
+// Map is allocated fresh on each `sendPoolWhatsApp` module-level call scope.
+// We use a module-level WeakMap keyed by a run-context object to share cache
+// across calls within the same engine invocation without persisting stale data.
+// Simpler approach: pass cache explicitly — done via poolCache param.
+async function sendPoolWhatsApp(
+    poolId: string,
+    phone: string,
+    message: string,
+    poolCache?: Map<string, any>
+): Promise<{ success: boolean; retryable: boolean; error?: string }> {
     try {
         const { Pool } = await import("@/models/Pool");
-        const pool = await Pool.findOne({ poolId }).lean();
+        let pool: any;
+        if (poolCache) {
+            if (!poolCache.has(poolId)) {
+                pool = await Pool.findOne({ poolId }).lean();
+                poolCache.set(poolId, pool ?? null);
+            } else {
+                pool = poolCache.get(poolId);
+            }
+        } else {
+            pool = await Pool.findOne({ poolId }).lean();
+        }
         if (!pool?.twilio?.sid || !pool?.twilio?.whatsappNumber) {
             console.warn(`[NotifEngine] Pool ${poolId} has no Twilio config, skipping`);
             return { success: false, retryable: false, error: "No Twilio config" };
@@ -167,6 +205,13 @@ export async function processDefaulterReminders(poolId?: string) {
     const memberMap = new Map((allMembers as any[]).map(m => [m._id.toString(), m]));
 
     const mutabilityCache = new Map<string, boolean>();
+    // Pool lookup cache for this engine run — prevents N+1 pool queries
+    const poolCache = new Map<string, any>();
+    // Batch dedup — one $in query for all ledger member IDs (replaces N per-member findOne)
+    const alreadySentSet = await buildAlreadySentSet(
+        dueLedgers.map((l: any) => l.memberId),
+        "defaulter_reminder"
+    );
 
     for (const ledger of dueLedgers as any[]) {
         const sub = subMap.get(ledger.memberId.toString());
@@ -188,8 +233,8 @@ export async function processDefaulterReminders(poolId?: string) {
         // Only send to warning (5-15d) and blocked (>15d)
         if (status === "active") { skipped++; continue; }
 
-        // Idempotent check
-        if (await alreadySentToday(ledger.memberId, "defaulter_reminder")) { skipped++; continue; }
+        // Idempotent check — now uses batch pre-fetched Set
+        if (alreadySentSet.has(ledger.memberId.toString())) { skipped++; continue; }
 
         const member = memberMap.get(ledger.memberId.toString());
         if (!member?.phone) { skipped++; continue; }
@@ -198,7 +243,7 @@ export async function processDefaulterReminders(poolId?: string) {
             ? `Hi ${(member as any).name}, your pending amount is ₹${ledger.balance.toLocaleString("en-IN")}. Please clear it to avoid service interruption.`
             : `Reminder: ₹${ledger.balance.toLocaleString("en-IN")} is pending for ${(member as any).name}. Kindly pay soon to avoid restrictions.`;
 
-        const { success, retryable, error } = await sendPoolWhatsApp(ledger.poolId, (member as any).phone, message);
+        const { success, retryable, error } = await sendPoolWhatsApp(ledger.poolId, (member as any).phone, message, poolCache);
 
         if (!success) {
             // Log as failed_permanent if not retryable, otherwise failed
@@ -264,9 +309,16 @@ export async function processDueAlerts(poolId?: string) {
 
     let sent = 0, skipped = 0;
     const mutabilityCache = new Map<string, boolean>();
+    // Batch dedup — one $in query replaces N per-member findOne calls
+    const alreadySentSet = await buildAlreadySentSet(
+        upcomingSubs.map((s: any) => s.memberId),
+        "due_alert"
+    );
+    // Pool lookup cache for this engine run
+    const poolCache = new Map<string, any>();
 
     for (const sub of upcomingSubs as any[]) {
-        if (await alreadySentToday(sub.memberId, "due_alert")) { skipped++; continue; }
+        if (alreadySentSet.has(sub.memberId.toString())) { skipped++; continue; }
 
         // ── SUBSCRIPTION LOCKDOWN CHECK ──
         const tenantId = sub.poolId;
@@ -286,7 +338,7 @@ export async function processDueAlerts(poolId?: string) {
 
         const message = `Hi ${(member as any).name}, your payment of ₹${((plan as any)?.price || 0).toLocaleString("en-IN")} for ${(plan as any)?.name || "your plan"} is due ${dayText}. Please pay on time to continue services.`;
 
-        const { success, retryable, error } = await sendPoolWhatsApp(sub.poolId, (member as any).phone, message);
+        const { success, retryable, error } = await sendPoolWhatsApp(sub.poolId, (member as any).phone, message, poolCache);
 
         if (!success) {
             await logNotification({

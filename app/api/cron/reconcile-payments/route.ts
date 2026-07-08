@@ -6,6 +6,7 @@ import { WebhookDLQ } from "@/models/WebhookDLQ";
 import { activateSubscription } from "@/lib/services/subscriptionActivationService";
 import { SubscriptionPaymentLog } from "@/models/SubscriptionPaymentLog";
 import { logger } from "@/lib/logger";
+import { withHealthcheck } from "@/lib/healthchecks";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -25,6 +26,7 @@ export async function GET(req: Request) {
     const authError = requireCronAuth(req);
     if (authError) return authError;
 
+    return withHealthcheck({ checkName: "reconcile-payments", timeoutMs: 55000 }, async () => {
     const startTime = Date.now();
     const results = { recovered: 0, expired: 0, dlqRecovered: 0, errors: 0, total: 0 };
 
@@ -58,23 +60,55 @@ export async function GET(req: Request) {
             return NextResponse.json({ success: false, error: "Razorpay SDK unavailable" }, { status: 503 });
         }
 
-        // 2. Process each pending intent
+
+        // ── Batch-check SubscriptionPaymentLog for all pending orderIds (eliminates N queries) ──
+        const pendingOrderIds = pendingIntents.map((i: any) => i.razorpayOrderId).filter(Boolean);
+        const activatedLogs = await SubscriptionPaymentLog.find({
+            razorpayOrderId: { $in: pendingOrderIds },
+            status: "success",
+        }).select("razorpayOrderId").lean() as any[];
+        const activatedOrderIds = new Set(activatedLogs.map((l: any) => l.razorpayOrderId));
+
+        // ── Fetch Razorpay orders in parallel batches of 3 (read-only, safe to parallelize) ──
+        // activateSubscription() is called sequentially below — payment integrity preserved.
+        const BATCH_SIZE = 3;
+        const orderResults = new Map<string, any>(); // orderId -> Razorpay order object
+        for (let i = 0; i < pendingIntents.length; i += BATCH_SIZE) {
+            const batch = pendingIntents.slice(i, i + BATCH_SIZE);
+            const fetched = await Promise.allSettled(
+                batch.map((intent: any) => rzp.orders.fetch(intent.razorpayOrderId))
+            );
+            for (let j = 0; j < batch.length; j++) {
+                const result = fetched[j];
+                if (result.status === "fulfilled") {
+                    orderResults.set(batch[j].razorpayOrderId, result.value);
+                } else {
+                    // Log but don't abort — individual errors handled in the loop below
+                    logger.error("[Reconcile] Failed to fetch Razorpay order", {
+                        razorpayOrderId: batch[j].razorpayOrderId,
+                        error: (result.reason as any)?.message,
+                    });
+                }
+            }
+        }
+
+        // 2. Process each pending intent sequentially (activation must remain serial)
         for (const intent of pendingIntents) {
             try {
-                // Check if already activated (another process beat us to it)
-                const alreadyActivated = await SubscriptionPaymentLog.findOne({
-                    razorpayOrderId: intent.razorpayOrderId,
-                    status: "success",
-                }).select("_id").lean();
-
-                if (alreadyActivated) {
+                // O(1) Set lookup — replaces per-intent DB query
+                if (activatedOrderIds.has(intent.razorpayOrderId)) {
                     await PaymentIntent.updateOne({ _id: intent._id }, { $set: { status: "success" } });
-                    results.recovered++; // Count as recovered since it was activated
+                    results.recovered++;
                     continue;
                 }
 
-                // Fetch order from Razorpay
-                const order = await rzp.orders.fetch(intent.razorpayOrderId) as any;
+                // Use pre-fetched order — no additional Razorpay call needed
+                const order = orderResults.get(intent.razorpayOrderId) as any;
+                if (!order) {
+                    // Fetch failed for this intent — skip and count as error
+                    results.errors++;
+                    continue;
+                }
 
                 if (order.status === "paid") {
                     // Order was paid — fetch the payment details
@@ -84,7 +118,6 @@ export async function GET(req: Request) {
                         const capturedPayment = payments?.items?.find((p: any) => p.status === "captured");
                         paymentId = capturedPayment?.id || "";
                     } catch {
-                        // fetchPayments may not exist in all SDK versions — use order notes
                         paymentId = `recovered_${intent.razorpayOrderId}`;
                     }
 
@@ -156,22 +189,48 @@ export async function GET(req: Request) {
             createdAt: { $lt: oneHourAgo },
         }).limit(20).lean();
 
+        // ── Batch-fetch Razorpay orders for DLQ entries (parallel, BATCH_SIZE=3) ──
+        // Same strategy as pending intents above. Activation remains strictly serial below.
+        const dlqOrderResults = new Map<string, any>(); // orderId -> Razorpay order object
+        const dlqToFetch = (dlqEntries as any[]).filter(
+            (dlq: any) => !activatedOrderIds.has(dlq.razorpayOrderId)
+        );
+        for (let i = 0; i < dlqToFetch.length; i += BATCH_SIZE) {
+            const batch = dlqToFetch.slice(i, i + BATCH_SIZE);
+            const fetched = await Promise.allSettled(
+                batch.map((dlq: any) => rzp.orders.fetch(dlq.razorpayOrderId!))
+            );
+            for (let j = 0; j < batch.length; j++) {
+                const result = fetched[j];
+                if (result.status === "fulfilled") {
+                    dlqOrderResults.set(batch[j].razorpayOrderId, result.value);
+                } else {
+                    logger.error("[Reconcile] Failed to fetch DLQ Razorpay order", {
+                        razorpayOrderId: batch[j].razorpayOrderId,
+                        error: (result.reason as any)?.message,
+                    });
+                }
+            }
+        }
+
         for (const dlq of dlqEntries) {
             try {
-                // Check if already activated
-                const alreadyDone = await SubscriptionPaymentLog.findOne({
-                    razorpayOrderId: dlq.razorpayOrderId,
-                    status: "success",
-                }).select("_id").lean();
-
-                if (alreadyDone) {
+                // O(1) Set lookup — replaces per-DLQ-entry DB query
+                if (activatedOrderIds.has(dlq.razorpayOrderId)) {
                     await WebhookDLQ.updateOne({ _id: dlq._id }, { $set: { resolved: true, resolvedAt: new Date() } });
                     results.dlqRecovered++;
                     continue;
                 }
 
-                // Fetch order from Razorpay
-                const order = await rzp.orders.fetch(dlq.razorpayOrderId!) as any;
+                // Use pre-fetched order (no extra Razorpay call)
+                // razorpayOrderId is guaranteed by the $exists/$ne query above; guard satisfies TypeScript
+                if (!dlq.razorpayOrderId) { results.errors++; continue; }
+                const order = dlqOrderResults.get(dlq.razorpayOrderId) as any;
+                if (!order) {
+                    // Fetch failed for this DLQ entry — skip
+                    results.errors++;
+                    continue;
+                }
 
                 if (order.status === "paid") {
                     const notes = order.notes || {};
@@ -240,6 +299,7 @@ export async function GET(req: Request) {
         logger.error("[Reconcile] Cron failed", { error: error?.message });
         return NextResponse.json({ error: "Reconciliation failed", detail: error?.message }, { status: 500 });
     }
+    }); // end withHealthcheck
 }
 
 /**
@@ -250,12 +310,13 @@ export async function POST(req: Request) {
 }
 
 /**
- * Quick check if there are unresolved DLQ entries worth processing
+ * Quick check if there are unresolved DLQ entries worth processing.
+ * Uses findOne().select("_id") — stops at the first match instead of counting the full collection.
  */
 async function hasUnresolvedDLQ(): Promise<boolean> {
     try {
-        const count = await WebhookDLQ.countDocuments({ resolved: false });
-        return count > 0;
+        const entry = await WebhookDLQ.findOne({ resolved: false }).select("_id").lean();
+        return !!entry;
     } catch {
         return false;
     }

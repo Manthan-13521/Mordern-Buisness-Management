@@ -6,6 +6,7 @@ import { HostelPaymentLog } from "@/models/HostelPaymentLog";
 import { HostelPayment } from "@/models/HostelPayment";
 import { DataRetentionLog } from "@/models/DataRetentionLog";
 import { logger } from "@/lib/logger";
+import { withHealthcheck } from "@/lib/healthchecks";
 
 /**
  * GET /api/cron/hostel-data-retention
@@ -31,6 +32,7 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: "Unauthorized", code: "FORBIDDEN" }, { status: 401 });
     }
 
+    return withHealthcheck({ checkName: "hostel-data-retention", timeoutMs: 55000 }, async () => {
     try {
         await dbConnect();
         
@@ -64,11 +66,16 @@ export async function GET(req: Request) {
             let registrationsDeleted = 0;
             let paymentsDeleted = 0;
 
-            // A. Delete Registration logs older than 90 days
-            const regResult = await HostelRegistrationLog.deleteMany({ 
-                hostelId, 
-                join_date: { $lt: ninetyDaysAgo } 
-            });
+            // ── Run all 3 deletes in parallel — they target different collections ──
+            const [regResult, payLogResult, payResult] = await Promise.all([
+                // A. Delete Registration logs older than 90 days
+                HostelRegistrationLog.deleteMany({ hostelId, join_date: { $lt: ninetyDaysAgo } }),
+                // B. Delete Payment logs older than 180 days
+                HostelPaymentLog.deleteMany({ hostelId, payment_date: { $lt: oneEightyDaysAgo } }),
+                // C. Delete Payments older than 180 days
+                HostelPayment.deleteMany({ hostelId, createdAt: { $lt: oneEightyDaysAgo } }),
+            ]);
+
             if (regResult.deletedCount > 0) {
                 registrationsDeleted = regResult.deletedCount;
                 await DataRetentionLog.create({
@@ -77,18 +84,6 @@ export async function GET(req: Request) {
                     deletedAt: now,
                 });
             }
-
-            // B. Delete Payment logs older than 180 days
-            const payLogResult = await HostelPaymentLog.deleteMany({ 
-                hostelId, 
-                payment_date: { $lt: oneEightyDaysAgo } 
-            });
-
-            // C. Delete Payments older than 180 days
-            const payResult = await HostelPayment.deleteMany({
-                hostelId,
-                createdAt: { $lt: oneEightyDaysAgo }
-            });
 
             const totalPayRemoved = payLogResult.deletedCount + payResult.deletedCount;
             if (totalPayRemoved > 0) {
@@ -124,4 +119,5 @@ export async function GET(req: Request) {
             { status: 500 }
         );
     }
+    }); // end withHealthcheck
 }

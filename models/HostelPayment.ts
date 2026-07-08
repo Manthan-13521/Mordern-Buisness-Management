@@ -61,6 +61,8 @@ hostelPaymentSchema.index({ hostelId: 1, status: 1, createdAt: -1 });
 hostelPaymentSchema.index({ hostelId: 1, paymentType: 1, createdAt: -1 });
 // Optimized for dashboard revenue aggregation (covers isDeleted filter)
 hostelPaymentSchema.index({ hostelId: 1, status: 1, isDeleted: 1, createdAt: -1 });
+// Global createdAt-only query in hostel-payment-cleanup (intentional cross-tenant sweep)
+hostelPaymentSchema.index({ createdAt: 1 }, { background: true });
 
 export const HostelPayment: Model<IHostelPayment> =
     mongoose.models.HostelPayment ||
