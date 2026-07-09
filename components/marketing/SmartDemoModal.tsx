@@ -9,8 +9,13 @@ export function SmartDemoModal() {
   const router = useRouter();
   const pathname = usePathname();
   const { data: session } = useSession();
+  const [mounted, setMounted] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [hasDismissed, setHasDismissed] = useState(false);
+
+  // Prevent hydration mismatch: render nothing until client has mounted.
+  // session, localStorage, and pathname all differ between server and client.
+  useEffect(() => { setMounted(true); }, []);
 
   // List of paths where the modal should NEVER appear
   const excludedPaths = ["/demo", "/login", "/register", "/select-plan", "/renew-plan", "/subscribe", "/admin", "/superadmin"];
@@ -96,7 +101,7 @@ export function SmartDemoModal() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isVisible]);
 
-  if (session || isExcluded) return null;
+  if (!mounted || session || isExcluded) return null;
 
   return (
     <>
