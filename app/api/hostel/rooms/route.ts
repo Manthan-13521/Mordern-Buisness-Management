@@ -39,19 +39,33 @@ export async function GET(req: Request) {
 
         const occupancyCounts = await HostelMember.aggregate([
             { $match: { hostelId, roomId: { $in: roomIds }, status: "active", isDeleted: false } },
-            { $group: { _id: "$roomId", count: { $sum: 1 } } }
+            { $group: { _id: "$roomId", count: { $sum: 1 }, occupiedBeds: { $push: "$bedNo" } } }
         ]);
 
-        const occupancyMap = new Map(occupancyCounts.map(o => [o._id.toString(), o.count]));
+        const occupancyMap = new Map(occupancyCounts.map(o => [o._id.toString(), { count: o.count, occupiedBeds: o.occupiedBeds }]));
 
         const roomsWithStatus = rooms.map((r: any) => {
-            const occupants = occupancyMap.get(r._id.toString()) || 0;
-            const vac = (r.capacity || 1) - occupants;
+            const occ = occupancyMap.get(r._id.toString()) || { count: 0, occupiedBeds: [] };
+            const vac = (r.capacity || 1) - occ.count;
+            
+            // Auto-assign: Find the first available explicitly vacant bed slot 1 through capacity.
+            let nextAvailableBed = null;
+            if (vac > 0) {
+                let availableBed = 1;
+                while (occ.occupiedBeds.includes(availableBed) && availableBed <= (r.capacity || 1)) {
+                    availableBed++;
+                }
+                if (availableBed <= (r.capacity || 1)) {
+                    nextAvailableBed = availableBed;
+                }
+            }
+
             return {
                 roomNo: r.roomNo,
                 capacity: r.capacity || 1,
                 isOccupied: vac <= 0,
                 vacantCount: Math.max(0, vac),
+                nextAvailableBed
             };
         });
 
