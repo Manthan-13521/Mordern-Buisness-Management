@@ -483,11 +483,11 @@ export default function MembersPage() {
                                             <input value={form.collegeName} onChange={e => setForm(p => ({ ...p, collegeName: e.target.value }))} className={INPUT} placeholder="e.g. IIT Bombay" />
                                         </div>
 
-                                        <div className="grid grid-cols-3 gap-3">
+                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                                             {/* Block dropdown */}
                                             <div>
                                                 <label className={LABEL}>Block *</label>
-                                                <select required value={form.blockNo} onChange={e => setForm(p => ({ ...p, blockNo: e.target.value, floorNo: "", roomNo: "" }))} className={INPUT}>
+                                                <select required value={form.blockNo} onChange={e => setForm(p => ({ ...p, blockNo: e.target.value, floorNo: "", roomNo: "", bedNo: "" }))} className={INPUT}>
                                                     <option value="">Select…</option>
                                                     {blocks.map(b => <option key={b.name} value={b.name}>{b.name}</option>)}
                                                 </select>
@@ -496,7 +496,7 @@ export default function MembersPage() {
                                             {/* Floor dropdown */}
                                             <div>
                                                 <label className={LABEL}>Floor *</label>
-                                                <select required value={form.floorNo} onChange={e => setForm(p => ({ ...p, floorNo: e.target.value, roomNo: "" }))} disabled={!form.blockNo} className={INPUT}>
+                                                <select required value={form.floorNo} onChange={e => setForm(p => ({ ...p, floorNo: e.target.value, roomNo: "", bedNo: "" }))} disabled={!form.blockNo} className={INPUT}>
                                                     <option value="">Select…</option>
                                                     {floors.map(f => <option key={f.floorNo} value={f.floorNo}>Floor {f.floorNo}</option>)}
                                                 </select>
@@ -509,8 +509,8 @@ export default function MembersPage() {
                                                     className={`${INPUT} flex justify-between items-center cursor-pointer ${(!form.floorNo || loadingRooms) ? 'opacity-50 cursor-not-allowed bg-slate-100' : ''}`}
                                                     onClick={() => !(!form.floorNo || loadingRooms) && setRoomDropdownOpen(!roomDropdownOpen)}
                                                 >
-                                                    <span>{form.roomNo ? `Room ${form.roomNo}${form.bedNo ? ` - Bed ${form.bedNo}` : ''}` : (loadingRooms ? "Loading…" : "Select…")}</span>
-                                                    <span className="text-slate-400 text-xs">▼</span>
+                                                    <span className="truncate">{form.roomNo ? `Room ${form.roomNo}` : (loadingRooms ? "Loading…" : "Select…")}</span>
+                                                    <span className="text-slate-400 text-xs ml-1">▼</span>
                                                 </div>
                                                 
                                                 {roomDropdownOpen && (
@@ -540,6 +540,26 @@ export default function MembersPage() {
                                                 )}
                                                 {/* Hidden input to satisfy required prop in form submit */}
                                                 <input type="hidden" required value={form.roomNo} />
+                                            </div>
+
+                                            {/* Bed No dropdown */}
+                                            <div>
+                                                <label className={LABEL}>Bed No</label>
+                                                <select 
+                                                    value={form.bedNo} 
+                                                    onChange={e => setForm(p => ({ ...p, bedNo: e.target.value }))} 
+                                                    disabled={!form.roomNo} 
+                                                    className={INPUT}
+                                                >
+                                                    <option value="">Any</option>
+                                                    {(() => {
+                                                        const selectedRoom = rooms.find(r => r.roomNo === form.roomNo);
+                                                        if (!selectedRoom) return null;
+                                                        return Array.from({ length: selectedRoom.capacity || 1 }, (_, i) => i + 1).map(bed => (
+                                                            <option key={bed} value={bed}>Bed {bed}</option>
+                                                        ));
+                                                    })()}
+                                                </select>
                                             </div>
                                         </div>
 
