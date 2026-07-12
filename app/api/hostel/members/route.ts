@@ -10,8 +10,6 @@ import { HostelBlock } from "@/models/HostelBlock";
 import { HostelFloor } from "@/models/HostelFloor";
 import { HostelRoom } from "@/models/HostelRoom";
 import mongoose from "mongoose";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 import { HostelRegistrationLog } from "@/models/HostelRegistrationLog";
 import { HostelPaymentLog } from "@/models/HostelPaymentLog";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
@@ -19,6 +17,7 @@ import { isDuplicate } from "@/lib/idempotency";
 import { checkRateLimit, getClientIp, rateLimitHeaders } from "@/lib/rateLimit";
 import { logger } from "@/lib/logger";
 import { HostelMemberCreateSchema } from "@/lib/validators";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 export const dynamic = "force-dynamic";
 
 // ─── GET: list members (paginated + search + filters) ────────────────────────
@@ -213,28 +212,26 @@ export async function POST(req: Request) {
 
             const bedNo = finalBedNo;
 
-            // Handle photo upload
+            // Handle photo upload — must use Cloudinary on Vercel (no persistent local FS)
             let photoUrl: string | undefined;
             if (photoFile) {
-                // PHASE 5: Strict Photo Validation
+                // Strict photo validation
                 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
                 if (!ALLOWED_TYPES.includes(photoFile.type)) {
                     return NextResponse.json({ error: "Invalid file type. Only JPEG, PNG and WEBP are allowed." }, { status: 400 });
                 }
-                if (photoFile.size > 5 * 1024 * 1024) { // 5MB limit
+                if (photoFile.size > 5 * 1024 * 1024) {
                     return NextResponse.json({ error: "File too large. Maximum size is 5MB." }, { status: 400 });
                 }
 
                 try {
-                    const ext = photoFile.type.split("/")[1] || "jpg";
-                    const filename = `hostel_${hostelId}_${Date.now()}.${ext}`;
-                    const uploadDir = path.join(process.cwd(), "public", "uploads", "hostel-members");
-                    await mkdir(uploadDir, { recursive: true });
                     const buffer = Buffer.from(await photoFile.arrayBuffer());
-                    await writeFile(path.join(uploadDir, filename), buffer);
-                    photoUrl = `/uploads/hostel-members/${filename}`;
+                    const publicId = `hostel_${hostelId}_${Date.now()}`;
+                    // uploadToCloudinary with Buffer — works on all serverless environments
+                    photoUrl = await uploadToCloudinary(buffer, "hostel-members", publicId);
                 } catch (photoError) {
-                    console.warn("[POST /api/hostel/members] Photo save failed (non-fatal):", photoError);
+                    // Non-fatal: member is still created, just without a photo
+                    console.warn("[POST /api/hostel/members] Cloudinary upload failed (non-fatal):", photoError);
                 }
             }
 

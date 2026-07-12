@@ -3,8 +3,17 @@ import { z } from 'zod'
 // ── Safe money amount: integer rupees, max 10 digits (₹9,999,999,999) ────────
 const MAX_AMOUNT = 9_999_999_999;
 
+// For JSON payloads — expects a real JS number
 const safeAmount = (min = 0) =>
   z.number()
+    .min(min, `Amount must be at least ₹${min}`)
+    .max(MAX_AMOUNT, `Amount cannot exceed ₹${MAX_AMOUNT.toLocaleString('en-IN')}`)
+    .refine(v => Number.isFinite(v), 'Amount must be a finite number')
+    .refine(v => !isNaN(v), 'Amount must be a valid number');
+
+// For FormData payloads — coerces strings ("0", "500") to numbers before validation
+const coercedSafeAmount = (min = 0) =>
+  z.coerce.number()
     .min(min, `Amount must be at least ₹${min}`)
     .max(MAX_AMOUNT, `Amount cannot exceed ₹${MAX_AMOUNT.toLocaleString('en-IN')}`)
     .refine(v => Number.isFinite(v), 'Amount must be a finite number')
@@ -124,14 +133,19 @@ const objectId = z.string().regex(/^[a-f\d]{24}$/i, 'Must be a valid ObjectId')
 
 export const HostelMemberCreateSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100).trim(),
-  phone: z.string().regex(/^\d{10,15}$/, 'Phone must be 10-15 digits'),
+  // Phone: accepts 10-15 digits, strips leading +91 or spaces before validation
+  phone: z.string().transform(v => v.replace(/^\+91/, '').replace(/\s/g, '')).pipe(
+    z.string().regex(/^\d{10,15}$/, 'Phone must be 10-15 digits')
+  ),
   planId: objectId,
   blockNo: z.string().min(1).max(50),
+  // floorNo & roomNo always arrive as strings from both JSON and FormData — coerce is safe
   floorNo: z.coerce.string().min(1).max(50),
   roomNo: z.coerce.string().min(1).max(50),
   bedNo: z.coerce.number().int().min(1).max(50).optional(),
   paymentMode: z.enum(['cash', 'upi', 'bank_transfer', 'card', 'online']).optional().default('cash'),
-  paidAmount: safeAmount().optional().default(0),
+  // coercedSafeAmount handles both JSON numbers and FormData strings ("0", "500")
+  paidAmount: coercedSafeAmount().optional().default(0),
   notes: z.string().max(500).optional(),
   collegeName: z.string().max(200).optional(),
 })

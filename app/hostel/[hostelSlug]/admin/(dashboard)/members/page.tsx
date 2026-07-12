@@ -203,27 +203,49 @@ export default function MembersPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault(); setSubmitting(true); setError("");
         try {
-            const fd = new FormData();
-            Object.entries(form).forEach(([k, v]) => fd.append(k, String(v)));
-            fd.append("paidAmount", String(Number(form.paidAmount) || 0));
-            if (photoFile) fd.append("photo", photoFile);
-
             const url = editMember ? `/api/hostel/members/${editMember._id}` : "/api/hostel/members";
             const method = editMember ? "PUT" : "POST";
 
-            // Use JSON for edit (no photo change needed), FormData for new member with photo
             let res: Response;
-            if (photoFile || (!editMember && !photoFile)) {
-                // Always FormData for POST so photo can be attached
-                res = await fetch(url, { method, body: fd });
+
+            if (editMember && !photoFile) {
+                // ── Edit without new photo: use JSON ──
+                res = await fetch(url, {
+                    method,
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ...form, paidAmount: Number(form.paidAmount) || 0 }),
+                });
             } else {
-                res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, paidAmount: Number(form.paidAmount) }) });
+                // ── New member (always) or edit with new photo: use FormData ──
+                const fd = new FormData();
+                // Append each field exactly once; convert paidAmount to a numeric string
+                // so the server-side Zod schema (coercedSafeAmount) can parse it correctly.
+                Object.entries(form).forEach(([k, v]) => {
+                    if (k === "paidAmount") return; // handled below to avoid duplication
+                    fd.append(k, String(v));
+                });
+                fd.append("paidAmount", String(Number(form.paidAmount) || 0));
+                if (photoFile) fd.append("photo", photoFile);
+                res = await fetch(url, { method, body: fd });
             }
 
             const data = await res.json();
-            if (!res.ok) { setError(typeof data.error === "string" ? data.error : (data.error?.message || JSON.stringify(data.error) || "Failed")); setSubmitting(false); return; }
+            if (!res.ok) {
+                // Surface the most helpful error message to the user
+                const errMsg =
+                    typeof data.error === "string"
+                        ? data.error
+                        : data.details
+                        ? JSON.stringify(data.details)
+                        : data.error?.message || "Failed";
+                setError(errMsg);
+                setSubmitting(false);
+                return;
+            }
             setShowForm(false); stopCamera(); fetchMembers();
-        } catch { setError("Network error"); }
+        } catch {
+            setError("Network error. Please check your connection and try again.");
+        }
         setSubmitting(false);
     };
 
@@ -415,7 +437,30 @@ export default function MembersPage() {
                             </div>
                         ) : (
                             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-                                {error && <div className="mx-6 mt-4 text-sm text-rose-400 bg-rose-500/10/20 rounded-xl px-4 py-2.5">{error}</div>}
+                                {error && (
+                                    <div className="mx-6 mt-4 text-sm text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-2.5">
+                                        {/* Try to parse JSON field errors from Zod details, otherwise show plain message */}
+                                        {(() => {
+                                            try {
+                                                const parsed = JSON.parse(error);
+                                                const entries = Object.entries(parsed);
+                                                if (entries.length > 0) {
+                                                    return (
+                                                        <ul className="space-y-0.5 list-disc list-inside">
+                                                            {entries.map(([field, msgs]) => (
+                                                                <li key={field}>
+                                                                    <span className="font-semibold capitalize">{field}:</span>{" "}
+                                                                    {Array.isArray(msgs) ? (msgs as string[]).join(", ") : String(msgs)}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    );
+                                                }
+                                            } catch { /* not JSON — render as plain text */ }
+                                            return error;
+                                        })()}
+                                    </div>
+                                )}
                                 <div className="grid grid-cols-1 md:grid-cols-5 gap-0 p-6">
                                     {/* ── Left: form fields (3/5) ── */}
                                     <div className="md:col-span-3 md:pr-6 space-y-4 md:border-r border-[#1f2937]">

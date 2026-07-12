@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { processDueGenerations } from "@/lib/billingEngine";
 import { requireCronAuth } from "@/lib/requireCronAuth";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +11,6 @@ export async function GET(req: Request) {
         const { Subscription } = await import("@/models/Subscription");
         const { dbConnect } = await import("@/lib/mongodb");
         const { enqueueJob } = await import("@/lib/queue");
-        const { processDueGenerations } = await import("@/lib/billingEngine");
 
         await dbConnect();
         const now = new Date();

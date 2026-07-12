@@ -7,8 +7,7 @@ import { FeaturesSection } from "@/components/marketing/FeaturesSection";
 import { HowItWorks } from "@/components/marketing/HowItWorks";
 import { Testimonials } from "@/components/marketing/Testimonials";
 import { Footer } from "@/components/marketing/Footer";
-import { SmartDemoModal } from "@/components/marketing/SmartDemoModal";
-import { FloatingCTA } from "@/components/marketing/FloatingCTA";
+import { ClientOnlyComponents } from "@/components/marketing/ClientOnlyComponents";
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://aquasync.in";
 
@@ -40,8 +39,9 @@ export default function SaaSMarketingLanding() {
       </main>
 
       <Footer />
-      <SmartDemoModal />
-      <FloatingCTA />
+      {/* SmartDemoModal + FloatingCTA — loaded client-only (ssr:false) to
+          prevent hydration mismatches from localStorage / session / animations */}
+      <ClientOnlyComponents />
     </div>
   );
 }
