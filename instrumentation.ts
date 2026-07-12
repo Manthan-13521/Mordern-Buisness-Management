@@ -12,11 +12,15 @@ export async function register() {
   if (process.env.NODE_ENV === "development") return;
 
   if (process.env.NEXT_RUNTIME === "nodejs") {
-    await import("./sentry.server.config");
+    // @ts-ignore - Turbopack requires the explicit .ts extension here to avoid 'MODULE_UNPARSABLE' 
+    // errors with Sentry's valueInjectionLoader in Next.js 16.
+    await import("./sentry.server.config.ts");
   }
 
   if (process.env.NEXT_RUNTIME === "edge") {
-    await import("./sentry.edge.config");
+    // @ts-ignore - Turbopack requires the explicit .ts extension here to avoid 'MODULE_UNPARSABLE'
+    // errors with Sentry's valueInjectionLoader in Next.js 16.
+    await import("./sentry.edge.config.ts");
   }
 }
 

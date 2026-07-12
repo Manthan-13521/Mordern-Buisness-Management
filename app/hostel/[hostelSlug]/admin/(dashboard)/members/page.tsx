@@ -232,12 +232,13 @@ export default function MembersPage() {
             const data = await res.json();
             if (!res.ok) {
                 // Surface the most helpful error message to the user
-                const errMsg =
-                    typeof data.error === "string"
-                        ? data.error
-                        : data.details
-                        ? JSON.stringify(data.details)
-                        : data.error?.message || "Failed";
+                let errMsg = data.error || "Failed";
+                if (data.details) {
+                    errMsg = JSON.stringify(data.details);
+                } else if (typeof data.error !== "string") {
+                    errMsg = data.error?.message || "Failed";
+                }
+                
                 setError(errMsg);
                 setSubmitting(false);
                 return;

@@ -142,7 +142,13 @@ export const HostelMemberCreateSchema = z.object({
   // floorNo & roomNo always arrive as strings from both JSON and FormData — coerce is safe
   floorNo: z.coerce.string().min(1).max(50),
   roomNo: z.coerce.string().min(1).max(50),
-  bedNo: z.coerce.number().int().min(1).max(50).optional(),
+  
+  // Empty strings from FormData trigger `Number("") === 0`, failing `.min(1)`.
+  // z.preprocess converts empty strings to undefined BEFORE coercion, making .optional() work safely.
+  bedNo: z.preprocess(
+    (val) => (val === "" || val === undefined || val === null ? undefined : val),
+    z.coerce.number().int().min(1).max(50)
+  ).optional(),
   paymentMode: z.enum(['cash', 'upi', 'bank_transfer', 'card', 'online']).optional().default('cash'),
   // coercedSafeAmount handles both JSON numbers and FormData strings ("0", "500")
   paidAmount: coercedSafeAmount().optional().default(0),
