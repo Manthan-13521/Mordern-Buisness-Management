@@ -29,14 +29,14 @@ export async function POST(req: Request) {
         }
 
         const newRequest = await DemoRequest.create({
-            name,
-            email,
-            phone,
-            businessName,
-            businessType,
-            city: city || "",
-            notes: notes || "",
-            source: source || "website",
+            name: name.trim(),
+            phone: phone.trim(),
+            email:        email?.trim()        || "",
+            businessName: businessName?.trim() || "",
+            businessType: businessType         || "other",
+            city:         city?.trim()         || "",
+            notes:        notes?.trim()        || "",
+            source:       source               || "website",
             status: "new",
         });
 

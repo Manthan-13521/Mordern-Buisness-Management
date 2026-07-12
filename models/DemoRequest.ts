@@ -2,12 +2,12 @@ import mongoose, { Document, Model, Schema } from 'mongoose';
 
 export interface IDemoRequest extends Document {
   name: string;
-  email: string;
+  email?: string;
   phone: string;
-  businessName: string;
-  businessType: 'pool' | 'hostel' | 'business' | 'other';
-  city: string;
-  notes: string;
+  businessName?: string;
+  businessType?: 'pool' | 'hostel' | 'business' | 'other';
+  city?: string;
+  notes?: string;
   source: string;
   status: 'new' | 'contacted' | 'scheduled' | 'closed';
   createdAt: Date;
@@ -16,15 +16,15 @@ export interface IDemoRequest extends Document {
 
 const DemoRequestSchema = new Schema<IDemoRequest>(
   {
-    name: { type: String, required: true },
-    email: { type: String, required: true },
-    phone: { type: String, required: true },
-    businessName: { type: String, required: true },
-    businessType: { type: String, enum: ['pool', 'hostel', 'business', 'other'], required: true },
-    city: { type: String, default: '' },
-    notes: { type: String, default: '' },
-    source: { type: String, default: 'website' },
-    status: { type: String, enum: ['new', 'contacted', 'scheduled', 'closed'], default: 'new' },
+    name:         { type: String, required: true },
+    email:        { type: String, default: '' },
+    phone:        { type: String, required: true },
+    businessName: { type: String, default: '' },
+    businessType: { type: String, enum: ['pool', 'hostel', 'business', 'other'], default: 'other' },
+    city:         { type: String, default: '' },
+    notes:        { type: String, default: '' },
+    source:       { type: String, default: 'website' },
+    status:       { type: String, enum: ['new', 'contacted', 'scheduled', 'closed'], default: 'new' },
   },
   { timestamps: true }
 );
