@@ -10,20 +10,20 @@ export async function POST(req: Request) {
 
         const { name, email, phone, businessName, businessType, city, notes, source } = body;
 
-        if (!name || !email || !phone || !businessName || !businessType) {
+        if (!name || !phone) {
             return NextResponse.json(
-                { error: "Name, email, phone, business name, and business type are required." },
+                { error: "Name and phone number are required." },
                 { status: 400 }
             );
         }
 
-        // Basic rate limiting: max 1 demo request per email per hour
+        // Basic rate limiting: max 1 demo request per phone per hour
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-        const recentRequest = await DemoRequest.findOne({ email, createdAt: { $gte: oneHourAgo } });
+        const recentRequest = await DemoRequest.findOne({ phone, createdAt: { $gte: oneHourAgo } });
 
         if (recentRequest) {
             return NextResponse.json(
-                { error: "A demo request from this email was recently submitted. Please wait before trying again." },
+                { error: "A demo request from this phone number was recently submitted. Please wait before trying again." },
                 { status: 429 }
             );
         }
