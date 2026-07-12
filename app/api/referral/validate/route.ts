@@ -20,9 +20,12 @@ export async function POST(req: Request) {
 
         await dbConnect();
 
+        // Normalize: always uppercase + trim before DB lookup
+        const sanitizedCode = referralCode.toUpperCase().trim();
+
         // Find and validate the referral code
         const codeDoc = await ReferralCode.findOne({
-            code: referralCode.toUpperCase().trim(),
+            code: sanitizedCode,
             isActive: true
         }).lean() as any;
 

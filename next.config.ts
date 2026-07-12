@@ -78,20 +78,24 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "no-store, no-cache, must-revalidate" },
         ],
       },
-      {
-        // Next.js static assets — immutable, content-hashed filenames
-        source: "/_next/static/(.*)",
-        headers: [
-          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
-        ],
-      },
-      {
-        // Public static files (favicon, manifest, etc.)
-        source: "/(.*)\\.(ico|png|jpg|jpeg|svg|webp|woff2|woff)",
-        headers: [
-          { key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" },
-        ],
-      },
+      ...(process.env.NODE_ENV === "production"
+        ? [
+            {
+              // Next.js static assets — immutable, content-hashed filenames
+              source: "/_next/static/(.*)",
+              headers: [
+                { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+              ],
+            },
+            {
+              // Public static files (favicon, manifest, etc.)
+              source: "/(.*)\\.(ico|png|jpg|jpeg|svg|webp|woff2|woff)",
+              headers: [
+                { key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" },
+              ],
+            },
+          ]
+        : []),
       {
         // Content Security Policy — restricts script/resource origins
         source: "/(.*)",

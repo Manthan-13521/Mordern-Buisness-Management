@@ -15,15 +15,18 @@ export async function validateAndCalculateDiscount(
     let usedReferralDoc = null;
 
     try {
+        // Always normalize before lookup — schema uppercase:true is a setter on save, not on query
+        const sanitizedCode = referralCode.toUpperCase().trim();
+
         const codeDoc = await ReferralCode.findOne({
-            code: referralCode.toUpperCase().trim(),
+            code: sanitizedCode,
             isActive: true
         });
 
         if (
             codeDoc && 
             (!codeDoc.expiresAt || new Date(codeDoc.expiresAt) > new Date()) && 
-            (codeDoc.maxUses === 0 || codeDoc.usedCount < codeDoc.maxUses)
+            (codeDoc.maxUses === 0 || (codeDoc.usedCount ?? 0) < codeDoc.maxUses)
         ) {
             if (codeDoc.discountType === "percentage") {
                 discountApplied = (baseAmount * codeDoc.discountValue) / 100;
@@ -50,31 +53,55 @@ export async function recordReferralUsage(
 ): Promise<void> {
     if (!usedReferralDoc) return;
     try {
-        // Dynamically import to prevent circular dependencies in API routes if models are intertwined
         const { ReferralUsage } = await import("@/models/ReferralUsage");
+
         if (session) {
+            // Use findOneAndUpdate with atomic increment to prevent race conditions.
+            // If maxUses > 0, only increment when usedCount < maxUses.
+            const filter: Record<string, any> = { _id: usedReferralDoc._id, isActive: true };
+            if (usedReferralDoc.maxUses > 0) {
+                filter.$expr = { $lt: ["$usedCount", "$maxUses"] };
+            }
+
+            const updated = await ReferralCode.findOneAndUpdate(
+                filter,
+                { $inc: { usedCount: 1 } },
+                { session, new: true }
+            );
+
+            if (!updated && usedReferralDoc.maxUses > 0) {
+                // Usage limit reached — abort the transaction
+                throw new Error("Referral code usage limit reached during registration");
+            }
+
             await ReferralUsage.create([{
                 code: usedReferralDoc.code,
                 orgId,
                 discountApplied,
             }], { session });
 
-            const codeDoc = await ReferralCode.findById(usedReferralDoc._id).session(session || null);
-            if (codeDoc) {
-                if (codeDoc.maxUses > 0 && codeDoc.usedCount >= codeDoc.maxUses) {
-                    throw new Error("Referral code usage limit reached");
-                }
-                codeDoc.usedCount += 1;
-                await codeDoc.save({ session });
-            }
         } else {
-            await ReferralUsage.create({
-                code: usedReferralDoc.code,
-                orgId,
-                discountApplied,
-            });
-            usedReferralDoc.usedCount += 1;
-            await usedReferralDoc.save();
+            // Atomic increment outside transaction
+            const filter: Record<string, any> = { _id: usedReferralDoc._id, isActive: true };
+            if (usedReferralDoc.maxUses > 0) {
+                filter.$expr = { $lt: ["$usedCount", "$maxUses"] };
+            }
+
+            const updated = await ReferralCode.findOneAndUpdate(
+                filter,
+                { $inc: { usedCount: 1 } },
+                { new: true }
+            );
+
+            if (updated) {
+                await ReferralUsage.create({
+                    code: usedReferralDoc.code,
+                    orgId,
+                    discountApplied,
+                });
+            } else {
+                console.warn("Referral code usage limit hit or code inactive — skipping usage record.");
+            }
         }
     } catch (usageErr) {
         console.error("ReferralUsage creation failed:", usageErr);

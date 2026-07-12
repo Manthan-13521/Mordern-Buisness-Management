@@ -152,11 +152,13 @@ export async function POST(req: Request) {
                 // Re-validate and apply referral during finalize
                 if (pending.referralCode && !isTrial) {
                     const { ReferralCode } = await import("@/models/ReferralCode");
+                    // Always normalize — pending value may not have been sanitized on all code paths
+                    const normalizedCode = String(pending.referralCode).toUpperCase().trim();
                     const codeDoc = await ReferralCode.findOne({
-                        code: pending.referralCode,
+                        code: normalizedCode,
                         isActive: true
                     }).session(session || null);
-                    if (codeDoc && (!codeDoc.expiresAt || new Date(codeDoc.expiresAt) > now) && (codeDoc.maxUses === 0 || codeDoc.usedCount < codeDoc.maxUses)) {
+                    if (codeDoc && (!codeDoc.expiresAt || new Date(codeDoc.expiresAt) > now) && (codeDoc.maxUses === 0 || (codeDoc.usedCount ?? 0) < codeDoc.maxUses)) {
                         if (codeDoc.discountType === "percentage") {
                             discountApplied = (amountPaid * codeDoc.discountValue) / 100;
                         } else {

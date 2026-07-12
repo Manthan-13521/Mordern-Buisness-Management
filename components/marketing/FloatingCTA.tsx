@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Calendar } from "lucide-react";
+import { Calendar, Phone } from "lucide-react";
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
   <svg
@@ -21,8 +21,21 @@ export function FloatingCTA() {
 
   return (
     <>
-      {/* Book Free Demo CTA (Left) */}
-      <div className="fixed bottom-6 left-6 z-[80] animate-in slide-in-from-bottom-5 fade-in duration-300">
+      <div className="fixed bottom-6 left-6 z-[80] flex flex-col items-start gap-3 animate-in slide-in-from-bottom-5 fade-in duration-300">
+        {/* Contact Phone Button */}
+        <div className="relative">
+          <div className="absolute -inset-1 rounded-full bg-blue-500 opacity-20 blur animate-pulse" />
+          <a
+            href="tel:+918125629601"
+            aria-label="Call AquaSync Support"
+            className={`${commonClasses} shadow-[0_0_20px_rgba(37,99,235,0.4)] bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border border-blue-400/30 py-3.5 px-6`}
+          >
+            <Phone className="h-5 w-5 group-hover:rotate-12 transition-transform duration-300" />
+            <span>contact 8125629601</span>
+          </a>
+        </div>
+
+        {/* Book Free Demo Button */}
         <div className="relative">
           <div className="absolute -inset-1 rounded-full bg-blue-500 opacity-20 blur animate-pulse" />
           <Link 

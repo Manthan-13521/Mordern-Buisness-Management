@@ -77,13 +77,20 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
-        const existing = await ReferralCode.findOne({ code: { $regex: new RegExp(`^${code}$`, 'i') } });
+        // Always normalize code before storing or querying to avoid case-mismatch issues
+        const normalizedCode = String(code).toUpperCase().trim();
+
+        if (!normalizedCode) {
+            return NextResponse.json({ error: "Code cannot be empty after normalization" }, { status: 400 });
+        }
+
+        const existing = await ReferralCode.findOne({ code: normalizedCode });
         if (existing) {
             return NextResponse.json({ error: "Code already exists" }, { status: 400 });
         }
 
         const newCode = await ReferralCode.create({
-            code,
+            code: normalizedCode,
             createdBy: new mongoose.Types.ObjectId(user.id),
             discountType,
             discountValue,
