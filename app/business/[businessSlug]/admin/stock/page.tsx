@@ -1,6 +1,6 @@
 import { dbConnect } from "@/lib/mongodb";
-import { resolveUser } from "@/lib/authHelper";
-import { requireBusinessId } from "@/lib/tenant";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { BusinessInventoryItem } from "@/models/BusinessInventoryItem";
 import { BusinessInventoryTransaction } from "@/models/BusinessInventoryTransaction";
 import { StockAction } from "@/lib/stockHelper";
@@ -11,58 +11,51 @@ export const dynamic = "force-dynamic";
 
 export default async function EnterpriseStockPage() {
   await dbConnect();
-  
-  // Need to extract the raw Request or use alternative for resolveUser since it requires `req`.
-  // Wait, in Next.js Server Components, we don't have `req`.
-  // Let's use getServerSession(authOptions) directly here.
-  const { getServerSession } = await import("next-auth");
-  const { authOptions } = await import("@/lib/auth");
+
   const session = await getServerSession(authOptions);
   const user = session?.user as any;
-  
+
   if (!user) {
-    return <div>Unauthorized</div>;
+    return <div className="p-8 text-red-400">Unauthorized</div>;
   }
+
   const businessId = user.businessId;
   if (!businessId) {
-    return <div>Tenant context lost</div>;
+    return <div className="p-8 text-red-400">Tenant context lost</div>;
   }
 
-  // 1. Run Migration seamless engine
+  // 1. Run seamless migration engine (no-op if already migrated)
   await migrateTenantStock(businessId, user.id);
 
-  // 2. Fetch O(1) Dashboard Data (Lean & Projections)
+  // 2. Single O(1) query — lean + projections only
   const items = await BusinessInventoryItem.find({ businessId, isArchived: false })
-    .select("name sku category unit currentStock minimumStock costPrice updatedAt version")
+    .select("name sku category unit currentStock minimumStock updatedAt version")
+    .sort({ updatedAt: -1 })
     .lean();
 
-  // 3. Today's usage via Aggregation
+  // 3. Today's consumption — single aggregation
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
 
   const todayUsageResult = await BusinessInventoryTransaction.aggregate([
-    { 
-      $match: { 
-        businessId, 
-        action: StockAction.STOCK_OUT, 
-        createdAt: { $gte: startOfDay } 
-      } 
+    {
+      $match: {
+        businessId,
+        action: StockAction.STOCK_OUT,
+        createdAt: { $gte: startOfDay }
+      }
     },
-    { 
-      $group: { 
-        _id: null, 
-        totalOut: { $sum: "$quantity" } 
-      } 
+    {
+      $group: {
+        _id: null,
+        totalOut: { $sum: "$quantity" }
+      }
     }
   ]);
   const todaysConsumption = todayUsageResult[0]?.totalOut || 0;
 
-  // 4. Calculate KPIs dynamically
-  let healthy = 0;
-  let nearMinimum = 0;
-  let lowStock = 0;
-  let outOfStock = 0;
-
+  // 4. Compute KPIs in-memory — zero extra queries
+  let healthy = 0, nearMinimum = 0, lowStock = 0, outOfStock = 0;
   for (const item of items) {
     if (item.currentStock === 0) outOfStock++;
     else if (item.currentStock <= item.minimumStock) lowStock++;
@@ -70,16 +63,9 @@ export default async function EnterpriseStockPage() {
     else healthy++;
   }
 
-  const kpis = {
-    totalProducts: items.length,
-    healthy,
-    nearMinimum,
-    lowStock,
-    outOfStock,
-    todaysConsumption
-  };
+  const kpis = { totalProducts: items.length, healthy, nearMinimum, lowStock, outOfStock, todaysConsumption };
 
-  // Convert ObjectIds to strings for Client Components
+  // 5. Serialize ObjectIds for Client Components — stable string keys
   const serializedItems = items.map(item => ({
     ...item,
     _id: item._id.toString(),
