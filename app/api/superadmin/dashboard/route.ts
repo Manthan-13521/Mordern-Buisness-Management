@@ -42,7 +42,15 @@ export async function GET(req: Request) {
             BillingLog.find({}).populate("orgId").sort({ createdAt: -1 }).limit(500).lean(),
             SubscriptionPaymentLog.find({ status: "success" }).sort({ createdAt: -1 }).limit(500).lean(),
             ReferralCode.find({}).lean(),
-            ReferralUsage.find({}).lean(),
+            ReferralUsage.aggregate([
+                {
+                    $group: {
+                        _id: "$code",
+                        uses: { $sum: 1 },
+                        discountTotal: { $sum: "$discountApplied" }
+                    }
+                }
+            ]),
             Organization.aggregate([
                 { $match: { createdAt: { $gte: thirtyDaysAgo } } },
                 {
@@ -170,10 +178,8 @@ export async function GET(req: Request) {
 
         // ── Referral Intelligence ─────────────────────────────────────────────
         const usageByCode: Record<string, { uses: number; discountTotal: number }> = {};
-        referralUsages.forEach((u: any) => {
-            if (!usageByCode[u.code]) usageByCode[u.code] = { uses: 0, discountTotal: 0 };
-            usageByCode[u.code].uses += 1;
-            usageByCode[u.code].discountTotal += u.discountApplied || 0;
+        referralUsages.forEach((s: any) => {
+            usageByCode[s._id] = { uses: s.uses, discountTotal: s.discountTotal };
         });
 
         const revenueByCode: Record<string, number> = {};

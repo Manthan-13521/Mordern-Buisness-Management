@@ -44,12 +44,6 @@ export default function SuperAdminDemoPage() {
         fetchLeads();
     }, [filterStatus, filterType]);
 
-    // Auto-refresh every 30 seconds
-    useEffect(() => {
-        const interval = setInterval(fetchLeads, 30000);
-        return () => clearInterval(interval);
-    }, [filterStatus, filterType]);
-
     const handleStatusUpdate = async (id: string, status: string, leadType: string) => {
         try {
             const res = await fetch("/api/superadmin/demo", {

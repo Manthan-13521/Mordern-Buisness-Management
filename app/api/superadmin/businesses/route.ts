@@ -16,16 +16,22 @@ export async function GET(req: Request) {
 
         const businesses = await Business.find({}).sort({ createdAt: -1 }).lean();
 
-        // For each business, let's attach the admin email
-        const businessesWithAdmins = await Promise.all(
-            businesses.map(async (business: any) => {
-                const admin = await User.findOne({ businessId: business.businessId, role: "business_admin" }).select("email").lean();
-                return {
-                    ...business,
-                    adminEmail: admin?.email || "No admin assigned",
-                };
-            })
-        );
+        // Fetch all business admins in a single query to avoid N+1 problem
+        const businessIds = businesses.map((b: any) => b.businessId);
+        const admins = await User.find({ businessId: { $in: businessIds }, role: "business_admin" })
+            .select("businessId email")
+            .lean();
+
+        const adminMap = admins.reduce((acc: any, admin: any) => {
+            acc[admin.businessId] = admin.email;
+            return acc;
+        }, {});
+
+        // Attach the admin email to each business
+        const businessesWithAdmins = businesses.map((business: any) => ({
+            ...business,
+            adminEmail: adminMap[business.businessId] || "No admin assigned",
+        }));
 
         return NextResponse.json(businessesWithAdmins);
     } catch (error) {

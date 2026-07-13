@@ -56,9 +56,6 @@ export default function SuperAdminDashboard() {
 
     useEffect(() => {
         fetchDashboard();
-        // Live data: auto-refresh every 30 seconds
-        const interval = setInterval(fetchDashboard, 30000);
-        return () => clearInterval(interval);
     }, []);
 
     if (loading && !data) {
