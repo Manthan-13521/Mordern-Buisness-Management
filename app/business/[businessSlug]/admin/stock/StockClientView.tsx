@@ -239,7 +239,7 @@ export default function StockClientView({ initialItems, kpis }: { initialItems: 
 
               <div className="flex items-end justify-between mt-auto pt-4 border-t border-[#1f2937]/50">
                 <div>
-                  <div className="text-[10px] text-[#6b7280] uppercase font-bold tracking-wider mb-1">On Hand</div>
+                  <div className="text-[10px] text-[#6b7280] uppercase font-bold tracking-wider mb-1">Available</div>
                   <div className="font-extrabold text-[#f9fafb] text-2xl flex items-baseline gap-1">
                     {item.currentStock}
                     <span className="text-sm font-semibold text-[#9ca3af]">{item.unit}</span>
