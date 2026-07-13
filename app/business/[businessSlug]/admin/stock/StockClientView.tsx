@@ -219,12 +219,12 @@ export default function StockClientView({ initialItems, kpis }: { initialItems: 
                 <div className="bg-indigo-500/10 text-indigo-400 p-2.5 rounded-xl border border-indigo-500/20">
                   <Package className="w-5 h-5" />
                 </div>
-                <div className="flex gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => openModal(item, "IN")} className="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-colors border border-emerald-500/20" title="Stock In">
-                    <ArrowDownToLine className="w-4 h-4" />
+                <div className="flex gap-2">
+                  <button onClick={() => openModal(item, "IN")} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 font-bold text-[10px] uppercase tracking-wider rounded-lg hover:bg-emerald-500/20 transition-all border border-emerald-500/20 hover:scale-105 active:scale-95 shadow-sm" title="Stock In">
+                    <ArrowDownToLine className="w-3.5 h-3.5" /> IN
                   </button>
-                  <button onClick={() => openModal(item, "OUT")} className="p-2 bg-rose-500/10 text-rose-400 rounded-lg hover:bg-rose-500/20 transition-colors border border-rose-500/20" title="Stock Out">
-                    <ArrowUpFromLine className="w-4 h-4" />
+                  <button onClick={() => openModal(item, "OUT")} className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 text-rose-400 font-bold text-[10px] uppercase tracking-wider rounded-lg hover:bg-rose-500/20 transition-all border border-rose-500/20 hover:scale-105 active:scale-95 shadow-sm" title="Stock Out">
+                    <ArrowUpFromLine className="w-3.5 h-3.5" /> OUT
                   </button>
                 </div>
               </div>
