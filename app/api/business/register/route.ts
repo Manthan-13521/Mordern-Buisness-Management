@@ -226,16 +226,15 @@ export async function POST(req: Request) {
             let amountINR = SUBSCRIPTION_PRICES[priceKey];
 
             // Apply referral discount
-            const { finalAmount } = await validateAndCalculateDiscount(
+            const { finalAmount, usedReferralDoc } = await validateAndCalculateDiscount(
                 referralCode,
                 planType,
                 amountINR
             );
             
-            if (finalAmount !== amountINR) {
-                // If a discount was applied, finalAmount will be less
+            if (usedReferralDoc) {
                 amountINR = finalAmount;
-                pending.referralCode = referralCode.toUpperCase().trim();
+                pending.referralCode = usedReferralDoc.code;
             }
 
             const amountPaise = amountINR * 100;

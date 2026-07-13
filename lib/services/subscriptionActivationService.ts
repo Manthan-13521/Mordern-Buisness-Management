@@ -313,6 +313,9 @@ export async function activateSubscription(params: {
             if (verifiedPlanType === "trial") {
                 orgForSync.trialEndsAt = expiryDate;
             }
+            if (referralCode) {
+                orgForSync.referralCodeUsed = referralCode.toUpperCase().trim();
+            }
             await orgForSync.save();
 
             // Invalidate Redis SaaS guard cache so it picks up new state immediately
