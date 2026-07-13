@@ -147,6 +147,35 @@ export default function EntryPage() {
         return `${diffMins} mins remaining`;
     };
 
+    const autoCloseTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+    const clearAutoCloseTimer = useCallback(() => {
+        if (autoCloseTimerRef.current) {
+            clearTimeout(autoCloseTimerRef.current);
+            autoCloseTimerRef.current = null;
+        }
+    }, []);
+
+    const stopScanning = useCallback(() => {
+        setCameraActive(false);
+        setIsScanning(false);
+        clearAutoCloseTimer();
+    }, [clearAutoCloseTimer]);
+
+    const startAutoCloseTimer = useCallback(() => {
+        if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+        autoCloseTimerRef.current = setTimeout(() => {
+            stopScanning();
+            setScanResult({ success: false, message: "Camera auto-closed due to inactivity" });
+            setTimeout(() => setScanResult(null), 3000);
+        }, 30000); // 30 seconds
+    }, [stopScanning]);
+
+    // Cleanup timer on unmount
+    useEffect(() => {
+        return () => clearAutoCloseTimer();
+    }, [clearAutoCloseTimer]);
+
     const handleScan = async (text: string, isManual = false) => {
         if (!text || loading) return;
         if (!isManual && !isScanning) return;
@@ -162,6 +191,7 @@ export default function EntryPage() {
 
         setLoading(true);
         setIsScanning(false);
+        clearAutoCloseTimer(); // Pause auto-close while processing
 
         if (!isOnline) {
             const newPending: PendingScan[] = [...pendingScans, { qrPayload: text, timestamp: now }];
@@ -169,7 +199,11 @@ export default function EntryPage() {
             localStorage.setItem("pendingScans", JSON.stringify(newPending));
             setScanResult({ success: false, message: "Offline — Scan Queued for Sync" });
             setLoading(false);
-            setTimeout(() => { setScanResult(null); setIsScanning(true); }, 3000);
+            setTimeout(() => { 
+                setScanResult(null); 
+                setIsScanning(true); 
+                startAutoCloseTimer(); 
+            }, 3000);
             return;
         }
 
@@ -220,7 +254,11 @@ export default function EntryPage() {
         } finally {
             setLoading(false);
             // Reactivate camera quickly so they can scan the next person (2 seconds)
-            setTimeout(() => { setScanResult(null); setIsScanning(true); }, 2000);
+            setTimeout(() => { 
+                setScanResult(null); 
+                setIsScanning(true); 
+                startAutoCloseTimer(); 
+            }, 2000);
         }
     };
 
@@ -228,11 +266,7 @@ export default function EntryPage() {
         setCameraActive(true);
         setIsScanning(true);
         setScanResult(null);
-    };
-
-    const stopScanning = () => {
-        setCameraActive(false);
-        setIsScanning(false);
+        startAutoCloseTimer();
     };
 
     // ── UID Lookup ─────────────────────────────────────────────────────────
