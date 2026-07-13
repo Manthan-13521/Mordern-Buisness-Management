@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 /**
  * robots.ts — Next.js Metadata API
- * Blocks crawlers from admin dashboards, API routes, and internal pages.
- * Only allows public marketing/landing pages.
+ * Explicitly allows all public marketing pages.
+ * Blocks crawlers from admin dashboards, API routes, and tenant app routes.
  */
 export default function robots(): MetadataRoute.Robots {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://aquasync.in";
@@ -12,7 +12,31 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/login", "/select-plan"],
+        allow: [
+          "/",
+          "/about",
+          "/contact",
+          "/blog",
+          "/blog/",
+          "/demo",
+          "/faq",
+          "/login",
+          "/select-plan",
+          "/trust",
+          "/swimming-pool-management-software",
+          "/hostel-management-software",
+          "/business-management-software",
+          "/privacy-policy",
+          "/terms",
+          "/refund-policy",
+          "/subscription-policy",
+          "/data-retention-policy",
+          "/security-policy",
+          "/acceptable-use-policy",
+          "/support-policy",
+          "/races",
+          "/member-portal",
+        ],
         disallow: [
           "/api/",
           "/superadmin/",
@@ -20,9 +44,12 @@ export default function robots(): MetadataRoute.Robots {
           "/hostel/",
           "/business/",
           "/dashboard/",
-          "/members/",
           "/settings/",
           "/admin/",
+          "/recycle-bin",
+          "/renew-plan",
+          "/subscribe",
+          "/forgot-password",
         ],
       },
     ],

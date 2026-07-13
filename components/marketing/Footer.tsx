@@ -23,7 +23,10 @@ export function Footer() {
           <div>
             <h3 className="text-sm font-semibold leading-6 text-gray-900 dark:text-white mb-4">Product</h3>
             <ul className="space-y-3">
-              <li><Link href="/#features" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Features</Link></li>
+              <li><Link href="/swimming-pool-management-software" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Pool Management</Link></li>
+              <li><Link href="/hostel-management-software" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Hostel ERP</Link></li>
+              <li><Link href="/business-management-software" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Business Suite</Link></li>
+              <li><Link href="/blog" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Blog & Resources</Link></li>
               <li><Link href="/#pricing" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Pricing</Link></li>
               <li><Link href="/login" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Admin Portal</Link></li>
               <li><Link href="/trust" className="text-sm leading-6 text-gray-600 dark:text-gray-400 hover:text-blue-500">Trust Center</Link></li>

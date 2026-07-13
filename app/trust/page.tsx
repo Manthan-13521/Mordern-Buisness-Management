@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: "Trust Center | AquaSync SaaS",
   description: "AquaSync Trust Center detailing our commitment to security, privacy, and system reliability.",
   alternates: {
-    canonical: "https://aquasync.com/trust",
+    canonical: "https://aquasync.in/trust",
   },
   openGraph: {
     title: "Trust Center | AquaSync SaaS",

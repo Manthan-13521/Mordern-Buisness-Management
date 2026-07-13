@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { PlayCircle } from "lucide-react";
+import { PlayCircle, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 
 export function HeroSection() {
@@ -14,32 +14,48 @@ export function HeroSection() {
       </div>
 
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        <div className="mx-auto max-w-3xl text-center">
+        <div className="mx-auto max-w-4xl text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-6xl">
-              The Enterprise Engine for <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-500">Modern Businesses</span>
+            <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white sm:text-6xl">
+              All-in-One Cloud SaaS for <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-500">Growing Indian Businesses</span>
             </h1>
-            <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300">
-              High-performance management software for Swimming Pools, Hostels, and Trading Businesses. Automate your workforce, inventory, and revenue with one unified dashboard.
-            </p>
-            <div className="mt-10 flex items-center justify-center gap-x-6">
+            <h2 className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300 font-medium">
+              Enterprise-grade management software for Swimming Pools, Hostels, and Trading Businesses. Automate your workforce, inventory, and revenue from one unified dashboard.
+            </h2>
+            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link 
-                href="#features"
-                className="relative group overflow-hidden rounded-full px-8 py-3.5 text-sm font-semibold text-white shadow-xl transition-all duration-300 hover:scale-105 active:scale-95"
+                href="/select-plan"
+                className="relative group overflow-hidden rounded-full px-8 py-4 text-sm font-semibold text-white shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 w-full sm:w-auto text-center"
                 style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-purple))' }}
               >
                 <div className="absolute inset-0 bg-white/20 opacity-0 transition-opacity group-hover:opacity-100" />
                 <div className="absolute -inset-1 blur-md bg-gradient-to-r from-blue-500 to-purple-500 opacity-0 group-hover:opacity-40 transition-opacity z-[-1]"></div>
-                Get Started
+                Start Free Trial
               </Link>
-              <Link href="#demo" className="flex items-center gap-2 text-sm font-semibold leading-6 text-gray-900 dark:text-white transition hover:opacity-80">
+              <Link href="/demo" className="flex items-center justify-center gap-2 px-8 py-4 text-sm font-semibold leading-6 text-gray-900 dark:text-white bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-full transition hover:bg-gray-50 dark:hover:bg-white/10 w-full sm:w-auto">
                 <PlayCircle className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                 Watch Demo
               </Link>
+            </div>
+
+            {/* SEO Pillar Links */}
+            <div className="mt-12 pt-8 border-t border-gray-200 dark:border-white/10">
+              <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-4 uppercase tracking-wider">Explore Our Solutions</p>
+              <div className="flex flex-wrap justify-center gap-3 sm:gap-6">
+                <Link href="/swimming-pool-management-software" className="group flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors bg-gray-50 dark:bg-white/5 px-4 py-2 rounded-lg border border-gray-200 dark:border-white/10">
+                  🏊 Pool Management <ArrowRight className="w-4 h-4 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all" />
+                </Link>
+                <Link href="/hostel-management-software" className="group flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors bg-gray-50 dark:bg-white/5 px-4 py-2 rounded-lg border border-gray-200 dark:border-white/10">
+                  🏠 Hostel ERP <ArrowRight className="w-4 h-4 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all" />
+                </Link>
+                <Link href="/business-management-software" className="group flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors bg-gray-50 dark:bg-white/5 px-4 py-2 rounded-lg border border-gray-200 dark:border-white/10">
+                  💼 Business Suite <ArrowRight className="w-4 h-4 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all" />
+                </Link>
+              </div>
             </div>
           </motion.div>
         </div>

@@ -1,0 +1,161 @@
+name: AquaSync Enterprise CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: "20"
+  MONGODB_URI: mongodb://localhost:27017/swimming-pool-system-test
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & TypeCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+
+  functional-tests:
+    name: Functional & API Tests
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck]
+    services:
+      mongodb:
+        image: mongo:8
+        ports:
+          - 27017:27017
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+      - run: npm ci
+      - run: |
+          cp .env.example .env.local
+          echo "MONGODB_URI=${{ env.MONGODB_URI }}" >> .env.local
+      - run: npx tsx scripts/seed-test-data.ts
+      - run: npm run dev &
+      - run: npx wait-on http://localhost:3000/api/health
+      - run: npx tsx tests/runner.ts
+
+  security-tests:
+    name: Security Tests
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck]
+    services:
+      mongodb:
+        image: mongo:8
+        ports:
+          - 27017:27017
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+      - run: npm ci
+      - run: |
+          cp .env.example .env.local
+          echo "MONGODB_URI=${{ env.MONGODB_URI }}" >> .env.local
+      - run: npx tsx scripts/seed-test-data.ts
+      - run: npm run dev &
+      - run: npx wait-on http://localhost:3000/api/health
+      - run: npx tsx tests/security/security.test.ts
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck]
+    services:
+      mongodb:
+        image: mongo:8
+        ports:
+          - 27017:27017
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+      - run: npm ci
+      - run: |
+          cp .env.example .env.local
+          echo "MONGODB_URI=${{ env.MONGODB_URI }}" >> .env.local
+          echo "UPSTASH_REDIS_REST_URL=http://localhost:6379" >> .env.local
+          echo "UPSTASH_REDIS_REST_TOKEN=" >> .env.local
+      - run: npx tsx tests/integration/database/database.test.ts
+      - run: npx tsx tests/integration/redis/redis.test.ts
+
+  performance-smoke:
+    name: Performance Smoke Test
+    runs-on: ubuntu-latest
+    needs: [functional-tests]
+    services:
+      mongodb:
+        image: mongo:8
+        ports:
+          - 27017:27017
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+      - uses: grafana/setup-k6-action@v1
+      - run: npm ci
+      - run: |
+          cp .env.example .env.local
+          echo "MONGODB_URI=${{ env.MONGODB_URI }}" >> .env.local
+      - run: npm run dev &
+      - run: npx wait-on http://localhost:3000/api/health
+      - run: k6 run tests/performance/load/smoke.test.js
+
+  coverage:
+    name: Coverage Report
+    runs-on: ubuntu-latest
+    needs: [functional-tests]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+      - run: npm ci
+      - run: npm run coverage || echo "Coverage script not configured"
+
+  notify:
+    name: Notify Status
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [lint-and-typecheck, functional-tests, security-tests, integration-tests, performance-smoke]
+    steps:
+      - run: |
+          echo "::notice::AquaSync CI run completed"
+          echo "Status: ${{ needs.functional-tests.result == 'success' && '✅ PASS' || '❌ FAIL' }}"
+
+  badges:
+    name: Generate Badges
+    runs-on: ubuntu-latest
+    needs: [functional-tests, security-tests]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          echo "Generating status badges..."
+          # Use shields.io or similar badge service
+          # This would typically update a badges/ directory or README

@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "Support Policy | AquaSync SaaS",
   description: "AquaSync support response commitments, contact methods, and escalation paths for pool, hostel, and business customers.",
   alternates: {
-    canonical: "https://aquasync.com/support-policy",
+    canonical: "https://aquasync.in/support-policy",
   },
   openGraph: {
     title: "Support Policy | AquaSync SaaS",

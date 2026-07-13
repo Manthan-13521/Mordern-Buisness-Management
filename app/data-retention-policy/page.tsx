@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "Data Retention Policy | AquaSync SaaS",
   description: "Data retention, ownership, and deletion policies for AquaSync customers.",
   alternates: {
-    canonical: "https://aquasync.com/data-retention-policy",
+    canonical: "https://aquasync.in/data-retention-policy",
   },
   openGraph: {
     title: "Data Retention Policy | AquaSync SaaS",

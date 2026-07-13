@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "Security Policy | AquaSync SaaS",
   description: "Comprehensive security measures, data protection, and infrastructure overview for AquaSync.",
   alternates: {
-    canonical: "https://aquasync.com/security-policy",
+    canonical: "https://aquasync.in/security-policy",
   },
   openGraph: {
     title: "Security Policy | AquaSync SaaS",

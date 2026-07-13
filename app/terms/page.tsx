@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "Terms & Conditions | AquaSync SaaS",
   description: "Terms and conditions for utilizing the AquaSync SaaS platform.",
   alternates: {
-    canonical: "https://aquasync.com/terms",
+    canonical: "https://aquasync.in/terms",
   },
   openGraph: {
     title: "Terms & Conditions | AquaSync SaaS",

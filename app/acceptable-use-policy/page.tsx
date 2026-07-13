@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "Acceptable Use Policy | AquaSync SaaS",
   description: "Acceptable Use Policy (AUP) outlining permitted and prohibited uses of the AquaSync platform.",
   alternates: {
-    canonical: "https://aquasync.com/acceptable-use-policy",
+    canonical: "https://aquasync.in/acceptable-use-policy",
   },
   openGraph: {
     title: "Acceptable Use Policy | AquaSync SaaS",

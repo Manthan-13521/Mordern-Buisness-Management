@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "Subscription & Billing Policy | AquaSync SaaS",
   description: "Subscription and billing terms, renewal behavior, and account states for AquaSync.",
   alternates: {
-    canonical: "https://aquasync.com/subscription-policy",
+    canonical: "https://aquasync.in/subscription-policy",
   },
   openGraph: {
     title: "Subscription & Billing Policy | AquaSync SaaS",

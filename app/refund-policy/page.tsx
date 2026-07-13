@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "Refund & Cancellation Policy | AquaSync SaaS",
   description: "Our policies concerning refunds and subscription cancellations.",
   alternates: {
-    canonical: "https://aquasync.com/refund-policy",
+    canonical: "https://aquasync.in/refund-policy",
   },
   openGraph: {
     title: "Refund & Cancellation Policy | AquaSync SaaS",

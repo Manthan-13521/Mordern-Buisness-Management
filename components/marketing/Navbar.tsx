@@ -28,7 +28,18 @@ export function Navbar() {
           <div className="hidden lg:flex lg:gap-x-12">
             <Link href="#features" className="text-sm font-semibold leading-6 text-gray-900 dark:text-gray-100 hover:text-blue-500 transition">Features</Link>
             <Link href="#why-aquasync" className="text-sm font-semibold leading-6 text-gray-900 dark:text-gray-100 hover:text-blue-500 transition">Why AquaSync?</Link>
-            <Link href="#pricing" className="text-sm font-semibold leading-6 text-gray-900 dark:text-gray-100 hover:text-blue-500 transition">Pricing</Link>
+            <Link 
+              href="/blog" 
+              className="text-sm font-semibold leading-6 text-gray-900 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            >
+              Blog
+            </Link>
+            <Link 
+              href="/#pricing" 
+              className="text-sm font-semibold leading-6 text-gray-900 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            >
+              Pricing
+            </Link>
           </div>
 
           <div className="flex flex-1 justify-end items-center gap-3 sm:gap-4">
@@ -53,7 +64,7 @@ export function Navbar() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
               </span>
-              <span>Need Setup Guid??</span>
+              <span>Need a Setup Guide?</span>
             </button>
 
             <Link 

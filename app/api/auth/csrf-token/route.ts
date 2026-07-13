@@ -7,6 +7,6 @@ import { generateCSRFToken } from "@/lib/csrf";
  * mutating requests (POST/PUT/DELETE) via the x-csrf-token header.
  */
 export async function GET(req: Request) {
-    const token = generateCSRFToken();
+    const token = await generateCSRFToken();
     return NextResponse.json({ csrfToken: token });
 }

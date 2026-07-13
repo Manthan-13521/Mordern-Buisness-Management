@@ -15,28 +15,69 @@ const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://aquasync.in";
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl),
   title: {
-    default: "AquaSync — All-in-One Business Management",
+    default: "AquaSync — Pool, Hostel & Business Management Software",
     template: "%s | AquaSync",
   },
-  description: "Manage swimming pools, hostels, and businesses with one powerful platform. Payments, members, analytics, and automation.",
+  description:
+    "AquaSync is an all-in-one cloud SaaS platform for swimming pool management, hostel management, and business management. Automate payments, members, inventory, staff, and analytics from one unified dashboard.",
+  keywords: [
+    "swimming pool management software",
+    "hostel management software",
+    "business management software",
+    "pool membership software",
+    "hostel ERP India",
+    "inventory management software India",
+    "billing software small business",
+    "QR code pool entry",
+    "WhatsApp rent reminders",
+    "SaaS India",
+  ],
+  authors: [{ name: "AquaSync", url: appUrl }],
+  creator: "AquaSync",
+  publisher: "AquaSync",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   openGraph: {
-    title: "AquaSync SaaS",
-    description: "All-in-one business management platform for pools, hostels & workforce",
+    type: "website",
+    locale: "en_IN",
     url: appUrl,
     siteName: "AquaSync",
-    type: "website",
+    title: "AquaSync — Pool, Hostel & Business Management Software",
+    description:
+      "All-in-one SaaS platform for swimming pools, hostels, and businesses. Payments, members, inventory, staff automation — one dashboard.",
+    images: [
+      {
+        url: `${appUrl}/opengraph-image`,
+        width: 1200,
+        height: 630,
+        alt: "AquaSync — Pool, Hostel & Business Management Software",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "AquaSync SaaS",
-    description: "All-in-one business management platform",
+    title: "AquaSync — Pool, Hostel & Business Management Software",
+    description:
+      "All-in-one SaaS for swimming pools, hostels, and businesses. Automate payments, members, inventory, and staff.",
+    images: [`${appUrl}/opengraph-image`],
+    creator: "@aquasync",
   },
   alternates: {
     canonical: appUrl,
   },
-  robots: {
-    index: true,
-    follow: true,
+  verification: {
+    // Add your Google Search Console verification token below after setting up GSC
+    // google: "YOUR_GSC_VERIFICATION_TOKEN",
+    // bing: "YOUR_BING_VERIFICATION_TOKEN",
   },
 };
 
@@ -52,7 +93,13 @@ export default function RootLayout({
           <LocalDBInitializer />
           <TrialBanner />
           {children}
-          <Toaster position="bottom-right" toastOptions={{ className: 'dark:bg-[#0f172a] dark:text-white dark:border dark:border-white/10' }} />
+          <Toaster
+            position="bottom-right"
+            toastOptions={{
+              className:
+                "dark:bg-[#0f172a] dark:text-white dark:border dark:border-white/10",
+            }}
+          />
           <QuotaWarningModal />
         </Providers>
         <Analytics />
