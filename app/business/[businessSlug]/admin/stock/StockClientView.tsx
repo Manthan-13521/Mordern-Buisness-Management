@@ -194,74 +194,66 @@ export default function StockClientView({ initialItems, kpis }: { initialItems: 
         ))}
       </div>
 
-      {/* Table */}
-      <div className="bg-[#0b1220] border border-[#1f2937] rounded-2xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-[#1f2937]">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6b7280]" />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search by Name, SKU, or Category..."
-              className="w-full bg-[#020617] border border-[#1f2937] rounded-xl pl-9 pr-4 py-2 text-sm text-[#f9fafb] placeholder:text-[#6b7280] focus:ring-2 focus:ring-[#8b5cf6] focus:border-transparent outline-none"
-            />
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-[#020617] text-[#9ca3af]">
-              <tr>
-                <th className="px-5 py-4 font-semibold text-xs uppercase tracking-wider">Product</th>
-                <th className="px-5 py-4 font-semibold text-xs uppercase tracking-wider">Category</th>
-                <th className="px-5 py-4 font-semibold text-xs uppercase tracking-wider">Stock</th>
-                <th className="px-5 py-4 font-semibold text-xs uppercase tracking-wider">Status</th>
-                <th className="px-5 py-4 font-semibold text-xs uppercase tracking-wider text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#1f2937]">
-              {filteredItems.map(item => (
-                <tr key={item._id} className="hover:bg-[#1f2937]/30 transition-colors">
-                  <td className="px-5 py-4">
-                    <div className="font-bold text-[#f9fafb]">{item.name}</div>
-                    <div className="text-xs text-[#6b7280] font-mono mt-0.5">SKU: {item.sku}</div>
-                  </td>
-                  <td className="px-5 py-4 text-[#9ca3af]">{item.category}</td>
-                  <td className="px-5 py-4">
-                    <div className="font-extrabold text-[#f9fafb] text-base">{item.currentStock}<span className="text-xs font-semibold text-[#6b7280] ml-1">{item.unit}</span></div>
-                    <div className="text-[10px] text-[#6b7280] uppercase tracking-wider mt-1">Min: {item.minimumStock}</div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <StatusBadge status={computeStockStatus(item.currentStock, item.minimumStock)} />
-                  </td>
-                  <td className="px-5 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => openModal(item, "IN")}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors font-medium text-xs border border-emerald-500/20"
-                      >
-                        <ArrowDownToLine className="w-3.5 h-3.5" /> IN
-                      </button>
-                      <button
-                        onClick={() => openModal(item, "OUT")}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-colors font-medium text-xs border border-rose-500/20"
-                      >
-                        <ArrowUpFromLine className="w-3.5 h-3.5" /> OUT
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filteredItems.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="text-center py-16 text-[#6b7280]">
-                    {search ? "No products match your search." : "No products yet. Click \"+ Add Product\" to get started."}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+      {/* Product Grid */}
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="relative w-full max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6b7280]" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search products..."
+            className="w-full bg-[#0b1220] border border-[#1f2937] rounded-xl pl-9 pr-4 py-2 text-sm text-[#f9fafb] placeholder:text-[#6b7280] focus:ring-2 focus:ring-[#8b5cf6] focus:border-transparent outline-none shadow-sm"
+          />
         </div>
       </div>
+
+      {filteredItems.length === 0 ? (
+        <div className="bg-[#0b1220] border border-[#1f2937] rounded-2xl shadow-sm p-12 text-center text-[#6b7280]">
+          {search ? "No products match your search." : "No products yet. Click \"+ Add Product\" to get started."}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredItems.map(item => (
+            <div key={item._id} className="bg-[#0b1220] border border-[#1f2937] rounded-2xl p-5 flex flex-col shadow-sm hover:border-[#374151] transition-all group">
+              <div className="flex justify-between items-start mb-3">
+                <div className="bg-indigo-500/10 text-indigo-400 p-2.5 rounded-xl border border-indigo-500/20">
+                  <Package className="w-5 h-5" />
+                </div>
+                <div className="flex gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => openModal(item, "IN")} className="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-colors border border-emerald-500/20" title="Stock In">
+                    <ArrowDownToLine className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => openModal(item, "OUT")} className="p-2 bg-rose-500/10 text-rose-400 rounded-lg hover:bg-rose-500/20 transition-colors border border-rose-500/20" title="Stock Out">
+                    <ArrowUpFromLine className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              
+              <div className="mb-4 flex-1">
+                <h3 className="font-bold text-[#f9fafb] text-lg truncate">{item.name}</h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-[#6b7280] bg-[#1f2937]/50 px-2 py-0.5 rounded-md">{item.category}</span>
+                  <span className="text-xs text-[#9ca3af] font-mono">SKU: {item.sku}</span>
+                </div>
+              </div>
+
+              <div className="flex items-end justify-between mt-auto pt-4 border-t border-[#1f2937]/50">
+                <div>
+                  <div className="text-[10px] text-[#6b7280] uppercase font-bold tracking-wider mb-1">On Hand</div>
+                  <div className="font-extrabold text-[#f9fafb] text-2xl flex items-baseline gap-1">
+                    {item.currentStock}
+                    <span className="text-sm font-semibold text-[#9ca3af]">{item.unit}</span>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <StatusBadge status={computeStockStatus(item.currentStock, item.minimumStock)} />
+                  <span className="text-[10px] text-[#6b7280] font-medium">Min: {item.minimumStock}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── MODALS ── */}
 
@@ -278,7 +270,7 @@ export default function StockClientView({ initialItems, kpis }: { initialItems: 
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-[#9ca3af] mb-1.5">SKU</label>
+                  <label className="block text-xs font-semibold text-[#9ca3af] mb-1.5">SKU (Barcode/ID)</label>
                   <input type="text" value={newItemData.sku} onChange={e => setNewItemData(p => ({ ...p, sku: e.target.value }))} className={inputClass} placeholder="PPR-A4-01" />
                 </div>
                 <div>
@@ -289,7 +281,16 @@ export default function StockClientView({ initialItems, kpis }: { initialItems: 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-[#9ca3af] mb-1.5">Unit</label>
-                  <input type="text" value={newItemData.unit} onChange={e => setNewItemData(p => ({ ...p, unit: e.target.value }))} className={inputClass} placeholder="Box, Kg, Pcs..." />
+                  <select value={newItemData.unit} onChange={e => setNewItemData(p => ({ ...p, unit: e.target.value }))} className={inputClass}>
+                    <option value="Pcs">Pcs</option>
+                    <option value="Kg">Kg</option>
+                    <option value="Grams">Grams</option>
+                    <option value="Liter">Liter</option>
+                    <option value="Box">Box</option>
+                    <option value="Pack">Pack</option>
+                    <option value="Dozen">Dozen</option>
+                    <option value="Meters">Meters</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-[#9ca3af] mb-1.5">Min Stock Alert</label>
@@ -310,35 +311,29 @@ export default function StockClientView({ initialItems, kpis }: { initialItems: 
       {/* Stock IN Modal */}
       {inModalOpen && selectedItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={closeAll}>
-          <div className="bg-[#0b1220] border border-[#1f2937] rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
-            <h2 className="text-xl font-bold text-[#f9fafb] mb-1">Stock Came</h2>
-            <p className="text-sm text-[#9ca3af] mb-6">Receive stock for <strong className="text-emerald-400">{selectedItem.name}</strong></p>
+          <div className="bg-[#0b1220] border border-[#1f2937] rounded-2xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+            <h2 className="text-xl font-bold text-[#f9fafb] mb-1">Add Stock</h2>
+            <p className="text-sm text-[#9ca3af] mb-6">Receive <strong className="text-emerald-400">{selectedItem.name}</strong></p>
+            
+            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 mb-5 flex justify-between items-center">
+              <span className="text-xs font-semibold text-emerald-400/80">Current Stock</span>
+              <span className="font-extrabold text-emerald-400">{selectedItem.currentStock} {selectedItem.unit}</span>
+            </div>
+
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-[#9ca3af] mb-1.5">Quantity Received</label>
+                <label className="block text-xs font-semibold text-[#9ca3af] mb-1.5">Quantity to Add</label>
                 <div className="relative">
                   <input type="number" min="1" value={quantity} onChange={e => setQuantity(e.target.value)} className={inputClass} placeholder="0" autoFocus />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#6b7280] text-xs font-semibold">{selectedItem.unit}</span>
                 </div>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-[#9ca3af] mb-1.5">Reason</label>
-                <select value={reason} onChange={e => setReason(e.target.value as StockReason)} className={inputClass}>
-                  <option value={StockReason.PURCHASE}>Purchase</option>
-                  <option value={StockReason.RETURN}>Return</option>
-                  <option value={StockReason.ADJUSTMENT}>Adjustment</option>
-                  <option value={StockReason.OPENING_STOCK}>Opening Stock</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-[#9ca3af] mb-1.5">Notes (Optional)</label>
-                <input type="text" value={notes} onChange={e => setNotes(e.target.value)} className={inputClass} placeholder="Invoice #, Supplier info..." />
-              </div>
             </div>
+            
             <div className="mt-8 flex justify-end gap-3">
               <button disabled={loading} onClick={closeAll} className="px-5 py-2.5 rounded-xl font-semibold text-sm text-[#9ca3af] hover:bg-[#1f2937] transition">Cancel</button>
               <button disabled={loading} onClick={handleStockIn} className="px-5 py-2.5 rounded-xl font-bold text-sm bg-emerald-500 hover:bg-emerald-400 text-black transition disabled:opacity-50">
-                {loading ? "Saving..." : "Confirm Receipt"}
+                {loading ? "Saving..." : "Add Stock"}
               </button>
             </div>
           </div>
@@ -348,13 +343,15 @@ export default function StockClientView({ initialItems, kpis }: { initialItems: 
       {/* Stock OUT Modal */}
       {outModalOpen && selectedItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={closeAll}>
-          <div className="bg-[#0b1220] border border-[#1f2937] rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
-            <h2 className="text-xl font-bold text-[#f9fafb] mb-1">Stock Used Today</h2>
-            <p className="text-sm text-[#9ca3af] mb-6">Deduct stock for <strong className="text-rose-400">{selectedItem.name}</strong></p>
+          <div className="bg-[#0b1220] border border-[#1f2937] rounded-2xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+            <h2 className="text-xl font-bold text-[#f9fafb] mb-1">Deduct Stock</h2>
+            <p className="text-sm text-[#9ca3af] mb-6">Use <strong className="text-rose-400">{selectedItem.name}</strong></p>
+            
             <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 mb-5 flex justify-between items-center">
               <span className="text-xs font-semibold text-rose-400/80">Available</span>
               <span className="font-extrabold text-rose-400">{selectedItem.currentStock} {selectedItem.unit}</span>
             </div>
+
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-[#9ca3af] mb-1.5">Quantity Used</label>
@@ -363,25 +360,12 @@ export default function StockClientView({ initialItems, kpis }: { initialItems: 
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#6b7280] text-xs font-semibold">{selectedItem.unit}</span>
                 </div>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-[#9ca3af] mb-1.5">Reason</label>
-                <select value={reason} onChange={e => setReason(e.target.value as StockReason)} className={inputClass}>
-                  <option value={StockReason.SALE}>Sale</option>
-                  <option value={StockReason.CONSUMPTION}>Consumption</option>
-                  <option value={StockReason.WASTAGE}>Wastage</option>
-                  <option value={StockReason.DAMAGE}>Damage</option>
-                  <option value={StockReason.ADJUSTMENT}>Adjustment</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-[#9ca3af] mb-1.5">Notes (Optional)</label>
-                <input type="text" value={notes} onChange={e => setNotes(e.target.value)} className={inputClass} placeholder="Why was this used?" />
-              </div>
             </div>
+            
             <div className="mt-8 flex justify-end gap-3">
               <button disabled={loading} onClick={closeAll} className="px-5 py-2.5 rounded-xl font-semibold text-sm text-[#9ca3af] hover:bg-[#1f2937] transition">Cancel</button>
               <button disabled={loading} onClick={handleStockOut} className="px-5 py-2.5 rounded-xl font-bold text-sm bg-rose-500 hover:bg-rose-400 text-white transition disabled:opacity-50">
-                {loading ? "Saving..." : "Confirm Deduction"}
+                {loading ? "Saving..." : "Deduct Stock"}
               </button>
             </div>
           </div>
