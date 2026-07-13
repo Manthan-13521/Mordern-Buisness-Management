@@ -215,8 +215,24 @@ export async function POST(req: Request) {
         if (planId) {
             const { Plan } = await import("@/models/Plan");
             const plan = await Plan.findOne({ _id: planId, poolId }).lean();
-            if (plan && safeAmount > (plan as any).price) {
-                return NextResponse.json({ error: "Amount exceeds expected plan price parameters." }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            if (plan) {
+                // To allow clearing balances that exceed a single plan price (e.g. accumulated dues),
+                // the max allowable payment is the greater of the plan price or the current ledger balance.
+                const { Ledger } = await import("@/models/Ledger");
+                const ledger = await Ledger.findOne({ memberId: new mongoose.Types.ObjectId(memberId as string), poolId }).lean();
+                
+                // Fallback to legacy balance if ledger doesn't exist
+                let currentBalance = ledger?.balance || 0;
+                if (!ledger) {
+                    const fallbackMember = await import("@/models/Member").then(m => m.Member.findById(memberId).lean());
+                    currentBalance = (fallbackMember as any)?.balanceAmount || 0;
+                }
+                
+                const maxAllowed = Math.max((plan as any).price, currentBalance);
+                
+                if (safeAmount > maxAllowed) {
+                    return NextResponse.json({ error: "Amount exceeds expected plan price or outstanding balance." }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+                }
             }
         }
 

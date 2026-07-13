@@ -506,19 +506,19 @@ export default function MembersPage() {
                                             <div className="relative">
                                                 <label className={LABEL}>Room *</label>
                                                 <div 
-                                                    className={`${INPUT} flex justify-between items-center cursor-pointer ${(!form.floorNo || loadingRooms) ? 'opacity-50 cursor-not-allowed bg-slate-100' : ''}`}
+                                                    className={`${INPUT} flex justify-between items-center cursor-pointer ${(!form.floorNo || loadingRooms) ? 'opacity-50 cursor-not-allowed bg-[#020617]' : ''}`}
                                                     onClick={() => !(!form.floorNo || loadingRooms) && setRoomDropdownOpen(!roomDropdownOpen)}
                                                 >
                                                     <span className="truncate">
                                                         {form.roomNo 
-                                                            ? `Room ${form.roomNo}${rooms.find((r: any) => r.roomNo === form.roomNo)?.nextAvailableBed ? ` - Bed ${rooms.find((r: any) => r.roomNo === form.roomNo)?.nextAvailableBed}` : ''}`
+                                                            ? `${form.roomNo}${rooms.find((r: any) => r.roomNo === form.roomNo)?.nextAvailableBed ? `-${rooms.find((r: any) => r.roomNo === form.roomNo)?.nextAvailableBed}` : ''}`
                                                             : (loadingRooms ? "Loading…" : "Select…")}
                                                     </span>
                                                     <span className="text-slate-400 text-xs ml-1">▼</span>
                                                 </div>
                                                 
                                                 {roomDropdownOpen && (
-                                                    <div className="absolute z-10 w-full mt-1 bg-[#0b1220] border border-[#1f2937] rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                                                    <div className="absolute z-10 w-full mt-1 bg-[#0b1220] border border-[#1f2937] rounded-xl shadow-lg max-h-60 overflow-y-auto custom-scrollbar">
                                                         {rooms.length === 0 ? (
                                                             <div className="px-3 py-2 text-sm text-[#6b7280]">No rooms</div>
                                                         ) : (
@@ -531,13 +531,13 @@ export default function MembersPage() {
                                                                             setRoomDropdownOpen(false);
                                                                         }
                                                                     }}
-                                                                    className={`px-3 py-2 text-sm flex justify-between border-b border-slate-100/50 last:border-0 ${r.isOccupied ? 'bg-[#020617]/50 text-slate-400 cursor-not-allowed' : 'hover:bg-[#8b5cf6]/10  cursor-pointer text-[#f9fafb]'}`}
+                                                                    className={`px-3 py-2.5 text-sm flex items-center justify-between gap-3 border-b border-[#1f2937] last:border-0 ${r.isOccupied ? 'bg-[#020617]/50 text-slate-500 cursor-not-allowed' : 'hover:bg-[#8b5cf6]/15 cursor-pointer text-[#f9fafb]'}`}
                                                                 >
-                                                                    <span className="font-medium">
-                                                                        {r.roomNo}{!r.isOccupied && r.nextAvailableBed ? ` - Bed ${r.nextAvailableBed}` : ''}
+                                                                    <span className="font-medium flex-1 pr-2">
+                                                                        {r.roomNo}{!r.isOccupied && r.nextAvailableBed ? `-${r.nextAvailableBed}` : ''}
                                                                     </span>
-                                                                    <span className="text-xs">
-                                                                        {r.isOccupied ? 'full (disabled)' : `vacant: ${r.vacantCount ?? 0}`}
+                                                                    <span className={`text-xs whitespace-nowrap font-medium ${r.isOccupied ? 'text-slate-500' : 'text-emerald-400/80'}`}>
+                                                                        {r.isOccupied ? 'Full' : `${r.vacantCount ?? 0} Vacant`}
                                                                     </span>
                                                                 </div>
                                                             ))

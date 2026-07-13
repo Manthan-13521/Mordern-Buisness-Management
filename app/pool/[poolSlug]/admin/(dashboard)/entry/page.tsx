@@ -325,6 +325,7 @@ export default function EntryPage() {
                         <div className="w-full max-w-sm mb-6 relative rounded-xl overflow-hidden shadow-lg border-4 border-[#1f2937] bg-black aspect-square flex items-center justify-center">
                             {cameraActive && isScanning ? (
                                 <Scanner
+                                    formats={["qr_code"]}
                                     onScan={(result) => handleScan(result[0].rawValue)}
                                     components={{ finder: false }}
                                     sound={false}

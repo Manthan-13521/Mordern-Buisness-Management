@@ -117,21 +117,11 @@ async function RevenueKPIs({ poolId }: { poolId: string }) {
         Subscription.find({ ...filter, status: "active", nextDueDate: { $lt: now } }).select("memberId").lean()
     ]);
 
-    let defaulterCount = 0;
-    if (overdueSubs.length > 0) {
-        const dAgg = await Ledger.aggregate([
-            { $match: { ...filter, balance: { $gt: 0 }, memberId: { $in: overdueSubs.map((s: any) => s.memberId) } } },
-            { $count: "total" }
-        ]);
-        defaulterCount = dAgg[0]?.total || 0;
-    }
-
     const l = ledgerAgg[0] || { totalDue: 0, totalPaid: 0, outstandingDues: 0, creditBalance: 0 };
     const recoveryRate = l.totalDue > 0 ? Math.round((l.totalPaid / l.totalDue) * 100) : 100;
 
     const kpis = [
         { label: "Outstanding Dues", value: `₹${l.outstandingDues.toLocaleString("en-IN")}`, icon: AlertTriangle, accent: "from-rose-500/20 to-rose-600/10", textColor: "text-rose-400" },
-        { label: "Defaulters", value: defaulterCount, icon: ShieldAlert, accent: "from-amber-500/20 to-amber-600/10", textColor: "text-amber-400" },
         { label: "Recovery Rate", value: `${recoveryRate}%`, icon: BarChart3, accent: recoveryRate >= 80 ? "from-emerald-500/20 to-emerald-600/10" : "from-amber-500/20 to-amber-600/10", textColor: recoveryRate >= 80 ? "text-emerald-400" : "text-yellow-400" },
         { label: "Credit Balance", value: `₹${l.creditBalance.toLocaleString("en-IN")}`, icon: CreditCard, accent: "from-blue-500/20 to-blue-600/10", textColor: "text-blue-400" },
     ];
@@ -152,79 +142,6 @@ async function RevenueKPIs({ poolId }: { poolId: string }) {
     );
 }
 
-// Top Defaulters Mini-List (Server)
-async function TopDefaulters({ poolId }: { poolId: string }) {
-    const { dbConnect } = await import("@/lib/mongodb");
-    await dbConnect();
-    const { Ledger } = await import("@/models/Ledger");
-    const { Subscription } = await import("@/models/Subscription");
-    const { computeDefaulterStatus } = await import("@/lib/defaulterEngine");
-
-    const now = new Date();
-    const filter = poolId !== "superadmin" ? { poolId } : {};
-
-    const overdueSubs = await Subscription.find({ ...filter, status: "active", nextDueDate: { $lt: now } }).lean();
-    const subMap = new Map(overdueSubs.map((s: any) => [s.memberId.toString(), s]));
-
-    const dueLedgers = await Ledger.find({
-        ...filter,
-        balance: { $gt: 0 },
-        memberId: { $in: overdueSubs.map((s: any) => s.memberId) }
-    }).sort({ balance: -1 }).limit(5).lean();
-
-    const memberIds = dueLedgers.map((l: any) => l.memberId);
-    const members = await Member.find({ _id: { $in: memberIds } }).select("name memberId").lean();
-    const memberMap = new Map(members.map((m: any) => [m._id.toString(), m]));
-
-    const list = dueLedgers.map((l: any) => {
-        const sub = subMap.get(l.memberId.toString());
-        const overdueDays = sub ? Math.floor((now.getTime() - new Date((sub as any).nextDueDate).getTime()) / 86400000) : 0;
-        const member = memberMap.get(l.memberId.toString());
-        return {
-            name: member?.name || "Unknown",
-            memberId: member?.memberId || "N/A",
-            balance: l.balance,
-            overdueDays,
-            status: computeDefaulterStatus(overdueDays)
-        };
-    });
-
-    const statusColors: Record<string, string> = {
-        active: "bg-green-500/10 text-green-400 border-green-500/20",
-        warning: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-        blocked: "bg-rose-500/10 text-rose-400 border-rose-500/20 animate-pulse"
-    };
-
-    return (
-        <div className="rounded-2xl bg-[#0b1220] border border-rose-500/20 shadow-sm p-6 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/5 blur-3xl -mr-16 -mt-16 pointer-events-none" />
-            <h2 className="text-lg font-semibold text-rose-400 mb-4 flex items-center gap-2">
-                <ShieldAlert className="w-5 h-5" />
-                Top Defaulters
-            </h2>
-            {list.length > 0 ? (
-                <ul className="space-y-3 max-h-56 overflow-y-auto pr-2">
-                    {list.map((m, i) => (
-                        <li key={i} className="flex justify-between items-center text-sm py-2 border-b border-[#1f2937] last:border-0 hover:bg-[#8b5cf6]/5 px-2 rounded-lg transition-colors">
-                            <div className="flex flex-col">
-                                <span className="font-medium text-[#f9fafb]">{m.name}</span>
-                                <span className="text-[10px] text-[#6b7280] font-mono">#{m.memberId}</span>
-                            </div>
-                            <div className="text-right flex flex-col items-end gap-1">
-                                <span className="font-bold text-rose-400">₹{m.balance.toLocaleString("en-IN")}</span>
-                                <span className={`text-[10px] px-2 py-0.5 rounded-full border ${statusColors[m.status]}`}>
-                                    {m.overdueDays}d overdue · {m.status.toUpperCase()}
-                                </span>
-                            </div>
-                        </li>
-                    ))}
-                </ul>
-            ) : (
-                <p className="text-sm text-[#6b7280] font-medium">No defaulters found. 🎉</p>
-            )}
-        </div>
-    );
-}
 
 // Alerts Component (Server)
 async function ExpiryAlerts({ poolId }: { poolId: string }) {
@@ -355,12 +272,7 @@ export default async function DashboardPage(props: { searchParams?: Promise<any>
 
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
                 <div className="lg:col-span-2 space-y-8">
-                    {/* Priority 4: Defaulters list (deferred) */}
-                    {isAdmin && (
-                        <Suspense fallback={<div className="h-48 bg-[#0b1220] rounded-xl animate-pulse" />}>
-                            <TopDefaulters poolId={poolId} />
-                        </Suspense>
-                    )}
+
                     
                     {/* Priority 5: Notifications / Alerts panel (deferred) */}
                     <Suspense fallback={<div className="h-48 bg-[#0b1220] rounded-xl animate-pulse" />}>

@@ -17,13 +17,12 @@ interface Summary {
     totalDue: number;
     totalPaid: number;
     outstandingDues: number;
-    defaulterCount: number;
     recoveryRate: number;
     creditBalance: number;
 }
 
 interface TrendPoint { date: string; revenue: number; count: number; }
-interface DefaulterData { buckets: { active: number; warning: number; blocked: number }; members: any[]; }
+interface MonthlyTrend { month: string; revenue: number; count: number; }
 interface PlanRevenue { planName: string; revenue: number; count: number; }
 
 const BUCKET_COLORS = { active: "#22c55e", warning: "#f59e0b", blocked: "#ef4444" };
@@ -32,7 +31,7 @@ export default function RevenueAnalyticsPage() {
     const { data: session } = useSession();
     const [summary, setSummary] = useState<Summary | null>(null);
     const [trends, setTrends] = useState<TrendPoint[]>([]);
-    const [defaulters, setDefaulters] = useState<DefaulterData | null>(null);
+    const [monthlyTrends, setMonthlyTrends] = useState<MonthlyTrend[]>([]);
     const [planRevenue, setPlanRevenue] = useState<PlanRevenue[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -43,12 +42,12 @@ export default function RevenueAnalyticsPage() {
         Promise.all([
             fetch("/api/analytics/summary", { cache: 'no-store' }).then(r => r.json()),
             fetch("/api/analytics/trends", { cache: 'no-store' }).then(r => r.json()),
-            fetch("/api/analytics/defaulters", { cache: 'no-store' }).then(r => r.json()),
+            fetch("/api/analytics/monthly-revenue", { cache: 'no-store' }).then(r => r.json()),
             fetch("/api/analytics/plan-revenue", { cache: 'no-store' }).then(r => r.json()),
-        ]).then(([s, t, d, p]) => {
+        ]).then(([s, t, m, p]) => {
             setSummary(s);
             setTrends(t);
-            setDefaulters(d);
+            setMonthlyTrends(m);
             setPlanRevenue(p);
         }).catch(console.error).finally(() => setLoading(false));
     }, [session]);
@@ -67,22 +66,11 @@ export default function RevenueAnalyticsPage() {
         { label: "Today's Revenue", value: fmt(summary.todayRevenue), icon: DollarSign, color: "text-emerald-400", bg: "from-emerald-500/20 to-emerald-600/5" },
         { label: "Monthly Revenue", value: fmt(summary.monthlyRevenue), icon: TrendingUp, color: "text-blue-400", bg: "from-blue-500/20 to-blue-600/5" },
         { label: "Outstanding Dues", value: fmt(summary.outstandingDues), icon: AlertTriangle, color: "text-rose-400", bg: "from-red-500/20 to-red-600/5" },
-        { label: "Defaulters", value: summary.defaulterCount, icon: ShieldAlert, color: "text-amber-400", bg: "from-amber-500/20 to-amber-600/5" },
         { label: "Recovery Rate", value: `${summary.recoveryRate}%`, icon: BarChart3, color: summary.recoveryRate >= 80 ? "text-emerald-400" : "text-yellow-400", bg: summary.recoveryRate >= 80 ? "from-emerald-500/20 to-emerald-600/5" : "from-yellow-500/20 to-yellow-600/5" },
         { label: "Credit Balance", value: fmt(summary.creditBalance), icon: CreditCard, color: "text-cyan-400", bg: "from-cyan-500/20 to-cyan-600/5" },
     ];
 
-    const pieData = defaulters ? [
-        { name: "Active (0-5d)", value: defaulters.buckets.active, color: BUCKET_COLORS.active },
-        { name: "Warning (5-15d)", value: defaulters.buckets.warning, color: BUCKET_COLORS.warning },
-        { name: "Blocked (15+d)", value: defaulters.buckets.blocked, color: BUCKET_COLORS.blocked },
-    ].filter(d => d.value > 0) : [];
 
-    const statusBadge: Record<string, string> = {
-        active: "bg-green-500/10 text-green-400 border-green-500/30",
-        warning: "bg-amber-500/10 text-amber-400 border-amber-500/30",
-        blocked: "bg-rose-500/10 text-rose-400 border-rose-500/30 font-bold",
-    };
 
     return (
         <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in zoom-in duration-500">
@@ -149,39 +137,27 @@ export default function RevenueAnalyticsPage() {
                         </ResponsiveContainer>
                     </div>
                 </div>
-
-                {/* Defaulter Buckets */}
+                {/* 12-Month Revenue Trend */}
                 <div className="bg-gray-900 p-6 rounded-2xl shadow-xl border border-gray-800 flex flex-col">
                     <div className="flex items-center gap-3 mb-6">
-                        <div className="p-2.5 bg-rose-500/10 rounded-xl">
-                            <ShieldAlert className="w-5 h-5 text-rose-400" />
+                        <div className="p-2.5 bg-emerald-500/10 rounded-xl">
+                            <BarChart3 className="w-5 h-5 text-emerald-400" />
                         </div>
-                        <h2 className="text-lg font-semibold text-gray-100">Defaulter Distribution</h2>
+                        <h2 className="text-lg font-semibold text-gray-100">12-Month Revenue Trend</h2>
                     </div>
                     <div className="w-full min-h-[300px] flex items-center justify-center bg-gray-950/20 rounded-xl border border-gray-800/50">
-                        {pieData.length > 0 ? (
+                        {monthlyTrends.length > 0 ? (
                             <ResponsiveContainer width="100%" height={300}>
-                                <PieChart>
-                                    <Pie
-                                        data={pieData}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={100}
-                                        paddingAngle={4}
-                                        dataKey="value"
-                                        label={({ name, value }) => `${name}: ${value}`}
-                                    >
-                                        {pieData.map((entry, i) => (
-                                            <Cell key={i} fill={entry.color} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: 8 }} />
-                                    <Legend wrapperStyle={{ color: '#9CA3AF', fontSize: 12 }} />
-                                </PieChart>
+                                <BarChart data={monthlyTrends} margin={{ top: 10, right: 20, left: 0, bottom: 20 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
+                                    <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fill: '#9CA3AF', fontSize: 10 }} dy={10} />
+                                    <YAxis tickLine={false} axisLine={false} tick={{ fill: '#9CA3AF', fontSize: 10 }} tickFormatter={(v) => `₹${v}`} width={60} />
+                                    <Tooltip contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: 8 }} labelStyle={{ color: '#9CA3AF' }} formatter={(value: any) => [fmt(Number(value)), "Revenue"]} />
+                                    <Bar dataKey="revenue" fill="#10B981" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                                </BarChart>
                             </ResponsiveContainer>
                         ) : (
-                            <p className="text-[#6b7280] text-sm font-medium">No defaulters found. 🎉</p>
+                            <p className="text-[#6b7280] text-sm font-medium">No monthly revenue data yet.</p>
                         )}
                     </div>
                 </div>
@@ -214,48 +190,7 @@ export default function RevenueAnalyticsPage() {
                     </div>
                 </div>
 
-                {/* Top Defaulters Table */}
-                <div className="bg-gray-900 p-6 rounded-2xl shadow-xl border border-gray-800 flex flex-col">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="p-2.5 bg-rose-500/10 rounded-xl">
-                            <Users className="w-5 h-5 text-rose-400" />
-                        </div>
-                        <h2 className="text-lg font-semibold text-gray-100">Top Defaulters</h2>
-                    </div>
-                    <div className="overflow-auto max-h-[300px]">
-                        {defaulters && defaulters.members.length > 0 ? (
-                            <table className="w-full text-sm">
-                                <thead className="sticky top-0 bg-gray-900">
-                                    <tr className="text-left text-[#6b7280] text-xs uppercase">
-                                        <th className="pb-3 pr-4">Member</th>
-                                        <th className="pb-3 pr-4 text-right">Balance</th>
-                                        <th className="pb-3 pr-4 text-right">Overdue</th>
-                                        <th className="pb-3 text-center">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {defaulters.members.slice(0, 15).map((m: any, i: number) => (
-                                        <tr key={i} className="border-t border-[#1f2937] hover:bg-[#0b1220] transition-colors">
-                                            <td className="py-3 pr-4">
-                                                <div className="font-medium text-white">{m.name}</div>
-                                                <div className="text-[10px] text-[#6b7280] font-mono">#{m.memberId}</div>
-                                            </td>
-                                            <td className="py-3 pr-4 text-right font-bold text-rose-400">{fmt(m.balance)}</td>
-                                            <td className="py-3 pr-4 text-right text-[#6b7280]">{m.overdueDays}d</td>
-                                            <td className="py-3 text-center">
-                                                <span className={`text-[10px] px-2 py-1 rounded-full border ${statusBadge[m.status]}`}>
-                                                    {m.status.toUpperCase()}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        ) : (
-                            <p className="text-[#6b7280] text-sm font-medium text-center py-8">No defaulters found. 🎉</p>
-                        )}
-                    </div>
-                </div>
+
             </div>
         </div>
     );
