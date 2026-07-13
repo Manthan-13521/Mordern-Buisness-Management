@@ -142,178 +142,198 @@ export function HeroShowcase() {
 
         {/* 1. Main Dashboard / Revenue Card */}
         <motion.div 
-          initial={{ opacity: 0, y: 50, scale: 0.9 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          className="absolute z-30 flex flex-col p-6 rounded-2xl bg-[#101828]/80 backdrop-blur-xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.1)] w-[320px] sm:w-[380px]"
           style={{ x: translateX1, y: translateY1, translateZ: 50 }}
+          className="absolute z-30 w-[320px] sm:w-[380px]"
         >
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-[#7C5CFF]/20 to-[#3B82F6]/20 border border-white/5">
-                <TrendingUp className="w-5 h-5 text-[#7C5CFF]" />
+          <motion.div 
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="flex flex-col p-6 rounded-2xl bg-[#101828]/80 backdrop-blur-xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.1)] w-full"
+          >
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-[#7C5CFF]/20 to-[#3B82F6]/20 border border-white/5">
+                  <TrendingUp className="w-5 h-5 text-[#7C5CFF]" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-200">Total Revenue</h3>
+                  <p className="text-xs text-gray-500">Last 30 days</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-sm font-semibold text-gray-200">Total Revenue</h3>
-                <p className="text-xs text-gray-500">Last 30 days</p>
+              <div className="px-2.5 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-medium flex items-center gap-1">
+                <ArrowUpRight className="w-3 h-3" /> 18.6%
               </div>
             </div>
-            <div className="px-2.5 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-medium flex items-center gap-1">
-              <ArrowUpRight className="w-3 h-3" /> 18.6%
+            
+            <div className="flex items-baseline gap-2 mb-6">
+              <span className="text-3xl font-bold text-white tracking-tight">₹{revenue.toLocaleString()}</span>
             </div>
-          </div>
-          
-          <div className="flex items-baseline gap-2 mb-6">
-            <span className="text-3xl font-bold text-white tracking-tight">₹{revenue.toLocaleString()}</span>
-          </div>
 
-          {/* Animated Bar Chart */}
-          <div className="h-16 flex items-end gap-1.5 w-full">
-            {[40, 70, 45, 90, 65, 80, 100, 75, 50, 85].map((h, i) => (
-              <motion.div 
-                key={i}
-                initial={{ height: 0 }}
-                animate={{ height: `${h}%` }}
-                transition={{ duration: 1, delay: 0.5 + (i * 0.05), type: "spring" }}
-                className="flex-1 rounded-t-sm bg-gradient-to-t from-[#3B82F6] to-[#7C5CFF] opacity-80 hover:opacity-100 transition-opacity"
-              />
-            ))}
-          </div>
+            {/* Animated Bar Chart */}
+            <div className="h-16 flex items-end gap-1.5 w-full">
+              {[40, 70, 45, 90, 65, 80, 100, 75, 50, 85].map((h, i) => (
+                <motion.div 
+                  key={i}
+                  initial={{ height: 0 }}
+                  animate={{ height: `${h}%` }}
+                  transition={{ duration: 1, delay: 0.5 + (i * 0.05), type: "spring" }}
+                  className="flex-1 rounded-t-sm bg-gradient-to-t from-[#3B82F6] to-[#7C5CFF] opacity-80 hover:opacity-100 transition-opacity"
+                />
+              ))}
+            </div>
+          </motion.div>
         </motion.div>
 
         {/* 2. Customer Insights Card */}
         <motion.div 
-          initial={{ opacity: 0, x: -50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
-          className="absolute -left-[5%] md:left-[10%] top-[15%] z-20 flex flex-col p-5 rounded-2xl bg-[#101828]/70 backdrop-blur-md border border-white/5 shadow-2xl w-[240px]"
           style={{ x: translateX2, y: translateY2, translateZ: 30 }}
+          className="absolute -left-[5%] md:left-[10%] top-[15%] z-20 w-[240px]"
         >
-          <div className="flex items-center gap-2 mb-4">
-            <Users className="w-4 h-4 text-[#38BDF8]" />
-            <h3 className="text-sm font-medium text-gray-300">Active Members</h3>
-          </div>
-          <div className="text-2xl font-bold text-white mb-2">{members.toLocaleString()}</div>
-          <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
-            <motion.div 
-              initial={{ width: 0 }}
-              animate={{ width: "85%" }}
-              transition={{ duration: 1.5, delay: 0.8, ease: "easeOut" }}
-              className="h-full bg-gradient-to-r from-[#38BDF8] to-[#3B82F6]"
-            />
-          </div>
+          <motion.div 
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+            className="flex flex-col p-5 rounded-2xl bg-[#101828]/70 backdrop-blur-md border border-white/5 shadow-2xl w-full"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <Users className="w-4 h-4 text-[#38BDF8]" />
+              <h3 className="text-sm font-medium text-gray-300">Active Members</h3>
+            </div>
+            <div className="text-2xl font-bold text-white mb-2">{members.toLocaleString()}</div>
+            <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: "85%" }}
+                transition={{ duration: 1.5, delay: 0.8, ease: "easeOut" }}
+                className="h-full bg-gradient-to-r from-[#38BDF8] to-[#3B82F6]"
+              />
+            </div>
+          </motion.div>
         </motion.div>
 
         {/* 3. Invoice / Recent Transactions */}
         <motion.div 
-          initial={{ opacity: 0, x: 50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
-          className="absolute -right-[5%] md:right-[10%] top-[40%] z-40 flex flex-col p-4 rounded-xl bg-[#101828]/80 backdrop-blur-xl border border-white/10 shadow-2xl w-[260px]"
           style={{ x: translateX2, y: translateY1, translateZ: 80 }}
+          className="absolute -right-[5%] md:right-[10%] top-[40%] z-40 w-[260px]"
         >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xs font-semibold text-gray-400 tracking-wider uppercase">Recent Invoices</h3>
-            <FileText className="w-4 h-4 text-[#F59E0B]" />
-          </div>
-          
-          <div className="space-y-3">
-            {[
-              { name: "Rahul Pools", amt: "45,600", stat: "Paid", color: "text-green-400" },
-              { name: "Elite Hostel", amt: "12,450", stat: "Pending", color: "text-[#F59E0B]" },
-              { name: "Aqua Club", amt: "28,340", stat: "Paid", color: "text-green-400" },
-            ].map((inv, i) => (
-              <motion.div 
-                key={i}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.4, delay: 0.6 + (i * 0.1) }}
-                className="flex items-center justify-between group cursor-default"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-gray-800 flex items-center justify-center text-[10px] text-gray-300 font-bold border border-gray-700">
-                    {inv.name.charAt(0)}
+          <motion.div 
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
+            className="flex flex-col p-4 rounded-xl bg-[#101828]/80 backdrop-blur-xl border border-white/10 shadow-2xl w-full"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xs font-semibold text-gray-400 tracking-wider uppercase">Recent Invoices</h3>
+              <FileText className="w-4 h-4 text-[#F59E0B]" />
+            </div>
+            
+            <div className="space-y-3">
+              {[
+                { name: "Rahul Pools", amt: "45,600", stat: "Paid", color: "text-green-400" },
+                { name: "Elite Hostel", amt: "12,450", stat: "Pending", color: "text-[#F59E0B]" },
+                { name: "Aqua Club", amt: "28,340", stat: "Paid", color: "text-green-400" },
+              ].map((inv, i) => (
+                <motion.div 
+                  key={i}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.4, delay: 0.6 + (i * 0.1) }}
+                  className="flex items-center justify-between group cursor-default"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-gray-800 flex items-center justify-center text-[10px] text-gray-300 font-bold border border-gray-700">
+                      {inv.name.charAt(0)}
+                    </div>
+                    <span className="text-sm text-gray-300 group-hover:text-white transition-colors">{inv.name}</span>
                   </div>
-                  <span className="text-sm text-gray-300 group-hover:text-white transition-colors">{inv.name}</span>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-medium text-white">₹{inv.amt}</div>
-                  <div className={`text-[10px] ${inv.color}`}>{inv.stat}</div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-white">₹{inv.amt}</div>
+                    <div className={`text-[10px] ${inv.color}`}>{inv.stat}</div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
         </motion.div>
 
         {/* 4. Scanner / Entry Point */}
         <motion.div 
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
-          className="absolute left-[15%] bottom-[10%] z-20 flex items-center gap-4 p-4 rounded-2xl bg-[#101828]/60 backdrop-blur-md border border-white/5 shadow-xl"
           style={{ x: translateX1, y: translateY2, translateZ: 40 }}
+          className="absolute left-[15%] bottom-[10%] z-20"
         >
-          <div className="relative flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30 overflow-hidden">
-            <ScanLine className="w-6 h-6 text-green-400 relative z-10" />
-            <motion.div 
-              animate={{ top: ["-100%", "200%"] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-              className="absolute left-0 w-full h-[2px] bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.8)] z-20"
-            />
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-gray-200">Fast Entry</h3>
-            <p className="text-xs text-gray-500">QR Scanner Active</p>
-          </div>
+          <motion.div 
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
+            className="flex items-center gap-4 p-4 rounded-2xl bg-[#101828]/60 backdrop-blur-md border border-white/5 shadow-xl"
+          >
+            <div className="relative flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30 overflow-hidden">
+              <ScanLine className="w-6 h-6 text-green-400 relative z-10" />
+              <motion.div 
+                animate={{ top: ["-100%", "200%"] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                className="absolute left-0 w-full h-[2px] bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.8)] z-20"
+              />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-gray-200">Fast Entry</h3>
+              <p className="text-xs text-gray-500">QR Scanner Active</p>
+            </div>
+          </motion.div>
         </motion.div>
 
         {/* 5. Business Health / Analytics */}
         <motion.div 
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, delay: 0.5, ease: "easeOut" }}
-          className="absolute right-[15%] bottom-[15%] z-30 p-5 rounded-2xl bg-[#101828]/70 backdrop-blur-lg border border-white/10 shadow-2xl w-[200px]"
           style={{ x: translateX2, y: translateY2, translateZ: 60 }}
+          className="absolute right-[15%] bottom-[15%] z-30 w-[200px]"
         >
-          <div className="flex justify-between items-center mb-4">
-             <h3 className="text-sm font-medium text-gray-300">Health</h3>
-             <Activity className="w-4 h-4 text-[#EF4444]" />
-          </div>
-          
-          <div className="relative w-24 h-24 mx-auto">
-            {/* SVG Donut Chart */}
-            <svg viewBox="0 0 100 100" className="transform -rotate-90">
-              <circle cx="50" cy="50" r="40" fill="transparent" stroke="#1f2937" strokeWidth="12" />
-              <motion.circle 
-                cx="50" cy="50" r="40" 
-                fill="transparent" 
-                stroke="#7C5CFF" 
-                strokeWidth="12"
-                strokeDasharray="251.2"
-                strokeDashoffset="251.2"
-                strokeLinecap="round"
-                initial={{ strokeDashoffset: 251.2 }}
-                animate={{ strokeDashoffset: 60 }}
-                transition={{ duration: 1.5, delay: 1, ease: "easeOut" }}
-              />
-              <motion.circle 
-                cx="50" cy="50" r="40" 
-                fill="transparent" 
-                stroke="#3B82F6" 
-                strokeWidth="12"
-                strokeDasharray="251.2"
-                strokeDashoffset="251.2"
-                strokeLinecap="round"
-                initial={{ strokeDashoffset: 251.2 }}
-                animate={{ strokeDashoffset: 200 }}
-                transition={{ duration: 1.5, delay: 1, ease: "easeOut" }}
-              />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center flex-col">
-              <span className="text-xl font-bold text-white">80%</span>
-              <span className="text-[8px] text-gray-400 uppercase tracking-wider">Margin</span>
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.5, ease: "easeOut" }}
+            className="p-5 rounded-2xl bg-[#101828]/70 backdrop-blur-lg border border-white/10 shadow-2xl w-full"
+          >
+            <div className="flex justify-between items-center mb-4">
+               <h3 className="text-sm font-medium text-gray-300">Health</h3>
+               <Activity className="w-4 h-4 text-[#EF4444]" />
             </div>
-          </div>
+            
+            <div className="relative w-24 h-24 mx-auto">
+              {/* SVG Donut Chart */}
+              <svg viewBox="0 0 100 100" className="transform -rotate-90">
+                <circle cx="50" cy="50" r="40" fill="transparent" stroke="#1f2937" strokeWidth="12" />
+                <motion.circle 
+                  cx="50" cy="50" r="40" 
+                  fill="transparent" 
+                  stroke="#7C5CFF" 
+                  strokeWidth="12"
+                  strokeDasharray="251.2"
+                  strokeDashoffset="251.2"
+                  strokeLinecap="round"
+                  initial={{ strokeDashoffset: 251.2 }}
+                  animate={{ strokeDashoffset: 60 }}
+                  transition={{ duration: 1.5, delay: 1, ease: "easeOut" }}
+                />
+                <motion.circle 
+                  cx="50" cy="50" r="40" 
+                  fill="transparent" 
+                  stroke="#3B82F6" 
+                  strokeWidth="12"
+                  strokeDasharray="251.2"
+                  strokeDashoffset="251.2"
+                  strokeLinecap="round"
+                  initial={{ strokeDashoffset: 251.2 }}
+                  animate={{ strokeDashoffset: 200 }}
+                  transition={{ duration: 1.5, delay: 1, ease: "easeOut" }}
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center flex-col">
+                <span className="text-xl font-bold text-white">80%</span>
+                <span className="text-[8px] text-gray-400 uppercase tracking-wider">Margin</span>
+              </div>
+            </div>
+          </motion.div>
         </motion.div>
 
       </motion.div>
