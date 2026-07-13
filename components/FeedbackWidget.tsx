@@ -11,12 +11,16 @@ export function FeedbackWidget() {
     const [isOpen, setIsOpen] = useState(false);
     const [type, setType] = useState<"bug" | "feedback" | "feature">("feedback");
     
-    // Only show on dashboard and settings pages
+    // Only show on specific pages (Dashboard, Settings, and Business SaaS pages)
     const isVisible = 
         pathname?.endsWith("/dashboard") || 
         pathname?.endsWith("/settings") || 
         pathname?.endsWith("/hostel-settings") ||
-        pathname === "/superadmin"; // Include superadmin dashboard if ever added
+        pathname?.endsWith("/labour") ||
+        pathname?.endsWith("/stock") ||
+        pathname?.includes("/customers") ||
+        pathname?.endsWith("/sales") ||
+        pathname === "/superadmin";
 
     const [message, setMessage] = useState("");
     const [screenshot, setScreenshot] = useState("");

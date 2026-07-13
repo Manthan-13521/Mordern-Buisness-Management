@@ -4,6 +4,7 @@ import { SidebarProvider } from "@/components/providers/SidebarProvider";
 import { MobileDrawer } from "@/components/business/MobileDrawer";
 import { SubscriptionBanner } from "@/components/SubscriptionBanner";
 import { AdProvider } from "@/components/ads/AdProvider";
+import { FeedbackWidget } from "@/components/FeedbackWidget";
 
 export default function BusinessLayout({
  children,
@@ -32,9 +33,10 @@ export default function BusinessLayout({
          {children}
         </div>
        </main>
+       </div>
       </div>
+      <FeedbackWidget />
      </div>
-    </div>
    </AdProvider>
   </SidebarProvider>
  );
