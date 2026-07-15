@@ -3,41 +3,58 @@ import { dbConnect } from "@/lib/mongodb";
 import { HostelMember } from "@/models/HostelMember";
 import { HostelPlan } from "@/models/HostelPlan";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
+import { requestContext } from "@/lib/requestContext";
+
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
-    try {
-        const user = await resolveUser(req);
-        await dbConnect();
 
-        if (!user || user.role !== "hostel_admin") {
-            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "GET";
+
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            const user = await resolveUser(req);
+            await dbConnect();
+
+            if (!user || user.role !== "hostel_admin") {
+                return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+            const hostelId = user.hostelId as string;
+            if (!hostelId) return NextResponse.json({ error: "Forbidden" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+
+            const url = new URL(req.url);
+            const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1"));
+            const limit = 11;
+            const skip = (page - 1) * limit;
+            const search = url.searchParams.get("search") || "";
+
+            const baseMatch: Record<string, unknown> = { hostelId, isDeleted: false, status: "active", balance: { $lt: 0 } };
+            if (search) baseMatch.$text = { $search: search };
+
+            const [members, total] = await Promise.all([
+                HostelMember.find(baseMatch)
+                    .populate("planId", "name durationDays price")
+                    .sort({ balance: 1 })
+                    .skip(skip)
+                    .limit(limit)
+                    .lean(),
+                HostelMember.countDocuments(baseMatch),
+            ]);
+
+            return NextResponse.json({ data: members, total, page, limit, totalPages: Math.ceil(total / limit) }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        } catch (error) {
+            console.error("[GET /api/hostel/members/expired]", error);
+            return NextResponse.json({ error: "Failed to fetch expired members" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-        const hostelId = user.hostelId as string;
-        if (!hostelId) return NextResponse.json({ error: "Forbidden" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-
-        const url = new URL(req.url);
-        const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1"));
-        const limit = 11;
-        const skip = (page - 1) * limit;
-        const search = url.searchParams.get("search") || "";
-
-        const baseMatch: Record<string, unknown> = { hostelId, isDeleted: false, status: "active", balance: { $lt: 0 } };
-        if (search) baseMatch.$text = { $search: search };
-
-        const [members, total] = await Promise.all([
-            HostelMember.find(baseMatch)
-                .populate("planId", "name durationDays price")
-                .sort({ balance: 1 })
-                .skip(skip)
-                .limit(limit)
-                .lean(),
-            HostelMember.countDocuments(baseMatch),
-        ]);
-
-        return NextResponse.json({ data: members, total, page, limit, totalPages: Math.ceil(total / limit) }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    } catch (error) {
-        console.error("[GET /api/hostel/members/expired]", error);
-        return NextResponse.json({ error: "Failed to fetch expired members" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+        });
+            
 }

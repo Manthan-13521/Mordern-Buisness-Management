@@ -18,6 +18,8 @@ const hostelStaffPaymentSchema = new Schema<IHostelStaffPayment>(
 );
 
 hostelStaffPaymentSchema.index({ hostelId: 1, createdAt: -1 });
+// Speed up summary queries: { staffId, hostelId, createdAt range }
+hostelStaffPaymentSchema.index({ hostelId: 1, staffId: 1, createdAt: -1 });
 
 export const HostelStaffPayment: Model<IHostelStaffPayment> =
   mongoose.models.HostelStaffPayment || mongoose.model<IHostelStaffPayment>("HostelStaffPayment", hostelStaffPaymentSchema);

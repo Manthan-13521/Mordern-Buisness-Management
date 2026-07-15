@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 import { EntertainmentMember } from "@/models/EntertainmentMember";
+import { requestContext } from "@/lib/requestContext";
 
 /**
  * GET /api/members/balance
@@ -14,72 +15,87 @@ import { EntertainmentMember } from "@/models/EntertainmentMember";
  * Used in the Balance Payments admin page.
  */
 export async function GET(req: Request) {
-    try {
-        const [, user] = await Promise.all([
-            dbConnect(),
-            resolveUser(req),
-        ]);
-        if (!user)
-            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
-        const url = new URL(req.url);
-        const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1"));
-        const limit = Math.min(20, Math.max(1, parseInt(url.searchParams.get("limit") ?? "20")));
-        const memberType = url.searchParams.get("type") || "all";
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "GET";
 
-        // ── Tenant isolation guard ───────────────────────────────────────────
-        if (user.role !== "superadmin" && !user.poolId) {
-            return NextResponse.json({ error: "No pool assigned to this account" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            const [, user] = await Promise.all([
+                dbConnect(),
+                resolveUser(req),
+            ]);
+            if (!user)
+                return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+
+            const url = new URL(req.url);
+            const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1"));
+            const limit = Math.min(20, Math.max(1, parseInt(url.searchParams.get("limit") ?? "20")));
+            const memberType = url.searchParams.get("type") || "all";
+
+            // ── Tenant isolation guard ───────────────────────────────────────────
+            if (user.role !== "superadmin" && !user.poolId) {
+                return NextResponse.json({ error: "No pool assigned to this account" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+            const tenantFilter = getTenantFilter(user);
+
+            const query: Record<string, unknown> = {
+                balanceAmount: { $gt: 0 },
+                isDeleted: false,
+                ...tenantFilter,
+            };
+
+            if (memberType === "member") {
+                query.memberType = "regular";
+            } else if (memberType === "entertainment") {
+                query.memberType = "entertainment";
+            }
+
+            const selectFields = "memberId name phone planId planQuantity paidAmount balanceAmount paymentStatus createdAt";
+            
+            // Run both queries in parallel
+            const [regularMembers, entertainmentMembers] = await Promise.all([
+                (memberType === "all" || memberType === "member")
+                    ? Member.find(query).populate("planId", "name price").select(selectFields).lean() as Promise<any[]>
+                    : Promise.resolve([]),
+                (memberType === "all" || memberType === "entertainment")
+                    ? EntertainmentMember.find(query).populate("planId", "name price").select(selectFields).lean() as Promise<any[]>
+                    : Promise.resolve([]),
+            ]);
+
+            const taggedEntertainment = entertainmentMembers.map((m: any) => ({ ...m, _source: "entertainment" }));
+            const allMembers = [...regularMembers, ...taggedEntertainment]
+                .sort((a, b) => {
+                    const diff = (b.balanceAmount || 0) - (a.balanceAmount || 0);
+                    if (diff !== 0) return diff;
+                    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                });
+
+            const total = allMembers.length;
+            const totalPages = Math.ceil(total / limit);
+            const paginatedData = allMembers.slice((page - 1) * limit, page * limit);
+            const totalBalance = allMembers.reduce((sum, m) => sum + (m.balanceAmount || 0), 0);
+
+            return NextResponse.json({
+                data: paginatedData,
+                total,
+                page,
+                limit,
+                totalPages,
+                totalBalance,
+            }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        } catch (error) {
+            console.error("[GET /api/members/balance]", error);
+            return NextResponse.json({ error: "Failed to fetch balance members" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-        const tenantFilter = getTenantFilter(user);
-
-        const query: Record<string, unknown> = {
-            balanceAmount: { $gt: 0 },
-            isDeleted: false,
-            ...tenantFilter,
-        };
-
-        if (memberType === "member") {
-            query.memberType = "regular";
-        } else if (memberType === "entertainment") {
-            query.memberType = "entertainment";
-        }
-
-        const selectFields = "memberId name phone planId planQuantity paidAmount balanceAmount paymentStatus createdAt";
-        
-        // Run both queries in parallel
-        const [regularMembers, entertainmentMembers] = await Promise.all([
-            (memberType === "all" || memberType === "member")
-                ? Member.find(query).populate("planId", "name price").select(selectFields).lean() as Promise<any[]>
-                : Promise.resolve([]),
-            (memberType === "all" || memberType === "entertainment")
-                ? EntertainmentMember.find(query).populate("planId", "name price").select(selectFields).lean() as Promise<any[]>
-                : Promise.resolve([]),
-        ]);
-
-        const taggedEntertainment = entertainmentMembers.map((m: any) => ({ ...m, _source: "entertainment" }));
-        const allMembers = [...regularMembers, ...taggedEntertainment]
-            .sort((a, b) => {
-                const diff = (b.balanceAmount || 0) - (a.balanceAmount || 0);
-                if (diff !== 0) return diff;
-                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-            });
-
-        const total = allMembers.length;
-        const totalPages = Math.ceil(total / limit);
-        const paginatedData = allMembers.slice((page - 1) * limit, page * limit);
-        const totalBalance = allMembers.reduce((sum, m) => sum + (m.balanceAmount || 0), 0);
-
-        return NextResponse.json({
-            data: paginatedData,
-            total,
-            page,
-            limit,
-            totalPages,
-            totalBalance,
-        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    } catch (error) {
-        console.error("[GET /api/members/balance]", error);
-        return NextResponse.json({ error: "Failed to fetch balance members" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+        });
+            
 }

@@ -59,6 +59,21 @@ function normalizeRawPayload(raw: Record<string, unknown> | null | undefined): A
     };
 }
 
+import { requestContext } from "@/lib/requestContext";
+
+function enrichContext(user: AuthUser | null): AuthUser | null {
+    if (user) {
+        const store = requestContext.getStore();
+        if (store) {
+            store.userId = user.id;
+            store.poolId = user.poolId;
+            store.hostelId = user.hostelId;
+            store.businessId = user.businessId;
+        }
+    }
+    return user;
+}
+
 /**
  * Resolves the authenticated user from a Next.js API Request.
  *
@@ -78,13 +93,13 @@ export async function resolveUser(req: Request): Promise<AuthUser | null> {
             ? req.headers.get("x-load-test-secret")
             : (req as any).headers?.["x-load-test-secret"];
         if (loadTestSecret && loadTestSecret === process.env.LOAD_TEST_SECRET) {
-            return {
+            return enrichContext({
                 id: "test-user",
                 email: "b@1.com",
                 role: "admin",
                 businessId: "BIZ001", // used by new logic
                 poolId: "BIZ001",     // required for legacy dashboard APIs
-            };
+            });
         }
     }
 
@@ -96,7 +111,7 @@ export async function resolveUser(req: Request): Promise<AuthUser | null> {
             const secret = new TextEncoder().encode(process.env.JWT_SECRET);
             const { payload } = await jwtVerify(bearerToken, secret);
             const user = normalizeRawPayload(payload as Record<string, unknown>);
-            if (user) return user;
+            if (user) return enrichContext(user);
         } catch {
             // Invalid bearer token — fall through to NextAuth
         }
@@ -106,14 +121,14 @@ export async function resolveUser(req: Request): Promise<AuthUser | null> {
     const token = await getToken({ req: req as Parameters<typeof getToken>[0]["req"] });
     if (token) {
         const user = normalizeRawPayload(token as Record<string, unknown>);
-        if (user) return user;
+        if (user) return enrichContext(user);
     }
 
     // 3. NextAuth Server Session (slower, for edge-case compatibility)
     const session = await getServerSession(authOptions);
     if (session?.user) {
         const user = normalizeRawPayload(session.user as Record<string, unknown>);
-        if (user) return user;
+        if (user) return enrichContext(user);
     }
 
     return null;

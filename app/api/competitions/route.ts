@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { Competition } from "@/models/Competition";
-
+import { requestContext } from "@/lib/requestContext";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -13,40 +13,55 @@ export const revalidate = 0;
  * ?status=upcoming|active|completed&page=&limit=
  */
 export async function GET(req: NextRequest) {
-    try {
-        const [, user] = await Promise.all([
-            dbConnect(),
-            resolveUser(req),
-        ]);
-        if (!user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
-        const { searchParams } = new URL(req.url);
-        const page     = Math.max(1, Number(searchParams.get("page")  ?? 1));
-        const limit    = Math.min(50, Number(searchParams.get("limit") ?? 20));
-        const status   = searchParams.get("status"); // "upcoming" | "completed" | null (all)
-        const poolId   = user.role === "superadmin"
-            ? (searchParams.get("poolId") ?? user.poolId)
-            : user.poolId;
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "GET";
 
-        const filter: Record<string, unknown> = { poolId };
-        if (status === "completed") filter.isCompleted = true;
-        if (status === "upcoming")  { filter.isCompleted = false; filter.date = { $gte: new Date() }; }
-        if (status === "past")      { filter.isCompleted = false; filter.date = { $lt:  new Date() }; }
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            const [, user] = await Promise.all([
+                dbConnect(),
+                resolveUser(req),
+            ]);
+            if (!user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
-        const [data, total] = await Promise.all([
-            Competition.find(filter)
-                .sort({ date: -1 })
-                .skip((page - 1) * limit)
-                .limit(limit)
-                .lean(),
-            Competition.countDocuments(filter),
-        ]);
+            const { searchParams } = new URL(req.url);
+            const page     = Math.max(1, Number(searchParams.get("page")  ?? 1));
+            const limit    = Math.min(50, Number(searchParams.get("limit") ?? 20));
+            const status   = searchParams.get("status"); // "upcoming" | "completed" | null (all)
+            const poolId   = user.role === "superadmin"
+                ? (searchParams.get("poolId") ?? user.poolId)
+                : user.poolId;
 
-        return NextResponse.json({ data, total, page, limit }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    } catch (error) {
-        console.error("[GET /api/competitions]", error);
-        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+            const filter: Record<string, unknown> = { poolId };
+            if (status === "completed") filter.isCompleted = true;
+            if (status === "upcoming")  { filter.isCompleted = false; filter.date = { $gte: new Date() }; }
+            if (status === "past")      { filter.isCompleted = false; filter.date = { $lt:  new Date() }; }
+
+            const [data, total] = await Promise.all([
+                Competition.find(filter)
+                    .sort({ date: -1 })
+                    .skip((page - 1) * limit)
+                    .limit(limit)
+                    .lean(),
+                Competition.countDocuments(filter),
+            ]);
+
+            return NextResponse.json({ data, total, page, limit }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        } catch (error) {
+            console.error("[GET /api/competitions]", error);
+            return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        }
+        });
+            
 }
 
 /**
@@ -55,36 +70,51 @@ export async function GET(req: NextRequest) {
  * Body: { name, date, category, notes? }
  */
 export async function POST(req: NextRequest) {
-    try {
-        const [, user] = await Promise.all([
-            dbConnect(),
-            resolveUser(req),
-        ]);
-        if (!user || !["admin", "superadmin"].includes(user.role)) {
-            return NextResponse.json({ error: "Admin only" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "POST";
+
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            const [, user] = await Promise.all([
+                dbConnect(),
+                resolveUser(req),
+            ]);
+            if (!user || !["admin", "superadmin"].includes(user.role)) {
+                return NextResponse.json({ error: "Admin only" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+
+            const body = await req.json();
+            const { name, date, category, notes } = body;
+
+            if (!name?.trim() || !date || !category?.trim()) {
+                return NextResponse.json({ error: "name, date, and category are required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+
+            const competition = await Competition.create({
+                poolId:       user.poolId,
+                name:         name.trim(),
+                date:         new Date(date),
+                category:     category.trim(),
+                notes:        notes?.trim() || undefined,
+                participants: [],
+                winners:      [],
+                isCompleted:  false,
+            });
+
+            return NextResponse.json(competition, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        } catch (error) {
+            console.error("[POST /api/competitions]", error);
+            return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-
-        const body = await req.json();
-        const { name, date, category, notes } = body;
-
-        if (!name?.trim() || !date || !category?.trim()) {
-            return NextResponse.json({ error: "name, date, and category are required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
-
-        const competition = await Competition.create({
-            poolId:       user.poolId,
-            name:         name.trim(),
-            date:         new Date(date),
-            category:     category.trim(),
-            notes:        notes?.trim() || undefined,
-            participants: [],
-            winners:      [],
-            isCompleted:  false,
         });
-
-        return NextResponse.json(competition, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    } catch (error) {
-        console.error("[POST /api/competitions]", error);
-        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+            
 }

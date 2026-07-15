@@ -6,119 +6,165 @@ import { User } from "@/models/User";
 
 import { BusinessTransaction } from "@/models/BusinessTransaction";
 import { BusinessCustomer } from "@/models/BusinessCustomer";
+import { requestContext } from "@/lib/requestContext";
 
 export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
-    try {
-        await dbConnect();
-        const user = await resolveUser(req);
-        if (!user || user.role !== "superadmin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
 
-        const { id } = await props.params;
-        const business = await Business.findOne({ businessId: id }).lean();
-        if (!business) {
-            return NextResponse.json({ error: "Business not found" }, { status: 404 });
-        }
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "GET";
 
-        // Fetch some basic stats for the "Details" view
-        const [customerCount, transactionCount] = await Promise.all([
-            BusinessCustomer.countDocuments({ businessId: id }),
-            BusinessTransaction.countDocuments({ businessId: id }),
-        ]);
-
-        return NextResponse.json({
-            ...business,
-            stats: {
-                customers: customerCount,
-                transactions: transactionCount
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            await dbConnect();
+            const user = await resolveUser(req);
+            if (!user || user.role !== "superadmin") {
+                return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
             }
+
+            const { id } = await props.params;
+            const business = await Business.findOne({ businessId: id }).lean();
+            if (!business) {
+                return NextResponse.json({ error: "Business not found" }, { status: 404 });
+            }
+
+            // Fetch some basic stats for the "Details" view
+            const [customerCount, transactionCount] = await Promise.all([
+                BusinessCustomer.countDocuments({ businessId: id }),
+                BusinessTransaction.countDocuments({ businessId: id }),
+            ]);
+
+            return NextResponse.json({
+                ...business,
+                stats: {
+                    customers: customerCount,
+                    transactions: transactionCount
+                }
+            });
+        } catch (error) {
+            console.error("Fetch Business Details Error:", error);
+            return NextResponse.json({ error: "Server error" }, { status: 500 });
+        }
         });
-    } catch (error) {
-        console.error("Fetch Business Details Error:", error);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
-    }
+            
 }
 
 export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
-    try {
-        await dbConnect();
-        const user = await resolveUser(req);
-        if (!user || user.role !== "superadmin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "PATCH";
+
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            await dbConnect();
+            const user = await resolveUser(req);
+            if (!user || user.role !== "superadmin") {
+                return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            }
+
+            const { id } = await props.params;
+            const { isActive } = await req.json();
+
+            const business = await Business.findOneAndUpdate(
+                { businessId: id },
+                { isActive },
+                { new: true }
+            );
+
+            if (!business) {
+                return NextResponse.json({ error: "Business not found" }, { status: 404 });
+            }
+
+            return NextResponse.json(business);
+        } catch (error) {
+            console.error("Toggle Business Error:", error);
+            return NextResponse.json({ error: "Server error toggling status" }, { status: 500 });
         }
-
-        const { id } = await props.params;
-        const { isActive } = await req.json();
-
-        const business = await Business.findOneAndUpdate(
-            { businessId: id },
-            { isActive },
-            { new: true }
-        );
-
-        if (!business) {
-            return NextResponse.json({ error: "Business not found" }, { status: 404 });
-        }
-
-        return NextResponse.json(business);
-    } catch (error) {
-        console.error("Toggle Business Error:", error);
-        return NextResponse.json({ error: "Server error toggling status" }, { status: 500 });
-    }
+        });
+            
 }
 
 export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
-    try {
-        await dbConnect();
-        const user = await resolveUser(req);
-        if (!user || user.role !== "superadmin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
 
-        const { id } = await props.params;
-        const body = await req.json().catch(() => ({}));
-        const confirmationText = body.confirmationText?.trim();
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "DELETE";
 
-        const business = await Business.findOne({ businessId: id });
-        if (!business) {
-            return NextResponse.json({ error: "Business not found" }, { status: 404 });
-        }
-
-        if (confirmationText !== `delete ${business.name}`) {
-            return NextResponse.json({ error: "Invalid confirmation text. Deletion aborted." }, { status: 400 });
-        }
-
-        const { withTransaction } = await import("@/lib/withTransaction");
-        await withTransaction(async (session) => {
-            // CASCADE DELETE ALL RELATED DATA
-            const collectionsToDeleteFrom = [
-                { model: "BusinessTransaction", query: { businessId: id } },
-                { model: "BusinessCustomer", query: { businessId: id } },
-                { model: "BusinessLabour", query: { businessId: id } },
-                { model: "BusinessLabourPayment", query: { businessId: id } },
-                { model: "BusinessStock", query: { businessId: id } },
-                { model: "BusinessSale", query: { businessId: id } },
-                { model: "BusinessPayment", query: { businessId: id } },
-                { model: "BusinessAttendance", query: { businessId: id } },
-                { model: "User", query: { businessId: id } },
-            ];
-
-            for (const item of collectionsToDeleteFrom) {
-                try {
-                    const { [item.model]: ModelImport } = await import(`@/models/${item.model}`);
-                    await ModelImport.deleteMany(item.query, { session });
-                } catch (err) {
-                    console.warn(`Could not delete from ${item.model}:`, err);
-                }
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            await dbConnect();
+            const user = await resolveUser(req);
+            if (!user || user.role !== "superadmin") {
+                return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
             }
 
-            await Business.deleteOne({ businessId: id }, { session });
-        });
+            const { id } = await props.params;
+            const body = await req.json().catch(() => ({}));
+            const confirmationText = body.confirmationText?.trim();
 
-        return NextResponse.json({ message: `Business "${business.name}" and all associated records deleted successfully` });
-    } catch (error) {
-        console.error("Delete Business Error:", error);
-        return NextResponse.json({ error: "Server error deleting business" }, { status: 500 });
-    }
+            const business = await Business.findOne({ businessId: id });
+            if (!business) {
+                return NextResponse.json({ error: "Business not found" }, { status: 404 });
+            }
+
+            if (confirmationText !== `delete ${business.name}`) {
+                return NextResponse.json({ error: "Invalid confirmation text. Deletion aborted." }, { status: 400 });
+            }
+
+            const { withTransaction } = await import("@/lib/withTransaction");
+            await withTransaction(async (session) => {
+                // CASCADE DELETE ALL RELATED DATA
+                const collectionsToDeleteFrom = [
+                    { model: "BusinessTransaction", query: { businessId: id } },
+                    { model: "BusinessCustomer", query: { businessId: id } },
+                    { model: "BusinessLabour", query: { businessId: id } },
+                    { model: "BusinessLabourPayment", query: { businessId: id } },
+                    { model: "BusinessStock", query: { businessId: id } },
+                    { model: "BusinessSale", query: { businessId: id } },
+                    { model: "BusinessPayment", query: { businessId: id } },
+                    { model: "BusinessAttendance", query: { businessId: id } },
+                    { model: "User", query: { businessId: id } },
+                ];
+
+                for (const item of collectionsToDeleteFrom) {
+                    try {
+                        const { [item.model]: ModelImport } = await import(`@/models/${item.model}`);
+                        await ModelImport.deleteMany(item.query, { session });
+                    } catch (err) {
+                        console.warn(`Could not delete from ${item.model}:`, err);
+                    }
+                }
+
+                await Business.deleteOne({ businessId: id }, { session });
+            });
+
+            return NextResponse.json({ message: `Business "${business.name}" and all associated records deleted successfully` });
+        } catch (error) {
+            console.error("Delete Business Error:", error);
+            return NextResponse.json({ error: "Server error deleting business" }, { status: 500 });
+        }
+        });
+            
 }

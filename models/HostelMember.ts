@@ -126,7 +126,7 @@ async function syncToUnifiedUser(doc: any) {
                     cachedBalance: doc.balance || 0,
                 }
             },
-            { upsert: true, new: true }
+            { upsert: true, returnDocument: 'after' }
         );
         console.log(`UnifiedUser synced (Hostel: ${doc._id})`);
     } catch (e: any) {

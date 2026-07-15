@@ -4,6 +4,7 @@ import { dbConnect } from "@/lib/mongodb";
 import { Pool } from "@/models/Pool";
 
 import { nanoid } from "nanoid";
+import { requestContext } from "@/lib/requestContext";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -14,56 +15,71 @@ export const revalidate = 0;
  * Supports: ?page=1&limit=20&status=ACTIVE|SUSPENDED|INACTIVE&search=<name>
  */
 export async function GET(req: NextRequest) {
-    try {
-        await dbConnect();
 
-        const user = await resolveUser(req) as any;
-        if (!user || user.role !== "superadmin") {
-            return NextResponse.json({ error: "Superadmin only", code: "FORBIDDEN" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "GET";
+
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            await dbConnect();
+
+            const user = await resolveUser(req) as any;
+            if (!user || user.role !== "superadmin") {
+                return NextResponse.json({ error: "Superadmin only", code: "FORBIDDEN" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+
+            const url    = new URL(req.url);
+            const page   = Math.max(1, parseInt(url.searchParams.get("page")  ?? "1"));
+            const limit  = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "20")));
+            const skip   = (page - 1) * limit;
+
+            const query: Record<string, unknown> = {};
+
+            const statusParam = url.searchParams.get("status");
+            if (statusParam) query.status = statusParam;
+
+            const searchParam = url.searchParams.get("search");
+            if (searchParam) {
+                query.$or = [
+                    { poolName:   { $regex: searchParam, $options: "i" } },
+                    { adminEmail: { $regex: searchParam, $options: "i" } },
+                    { slug:       { $regex: searchParam, $options: "i" } },
+                ];
+            }
+
+            const subStatus = url.searchParams.get("subscriptionStatus");
+            if (subStatus) query.subscriptionStatus = subStatus;
+
+            const [pools, total] = await Promise.all([
+                Pool.find(query)
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limit)
+                    .lean(),
+                Pool.countDocuments(query),
+            ]);
+
+            return NextResponse.json({
+                data: pools,
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        } catch (error) {
+            console.error("[GET /api/super-admin/pools]", error);
+            return NextResponse.json({ error: "Failed to fetch pools" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-
-        const url    = new URL(req.url);
-        const page   = Math.max(1, parseInt(url.searchParams.get("page")  ?? "1"));
-        const limit  = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "20")));
-        const skip   = (page - 1) * limit;
-
-        const query: Record<string, unknown> = {};
-
-        const statusParam = url.searchParams.get("status");
-        if (statusParam) query.status = statusParam;
-
-        const searchParam = url.searchParams.get("search");
-        if (searchParam) {
-            query.$or = [
-                { poolName:   { $regex: searchParam, $options: "i" } },
-                { adminEmail: { $regex: searchParam, $options: "i" } },
-                { slug:       { $regex: searchParam, $options: "i" } },
-            ];
-        }
-
-        const subStatus = url.searchParams.get("subscriptionStatus");
-        if (subStatus) query.subscriptionStatus = subStatus;
-
-        const [pools, total] = await Promise.all([
-            Pool.find(query)
-                .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(limit)
-                .lean(),
-            Pool.countDocuments(query),
-        ]);
-
-        return NextResponse.json({
-            data: pools,
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
-        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    } catch (error) {
-        console.error("[GET /api/super-admin/pools]", error);
-        return NextResponse.json({ error: "Failed to fetch pools" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+        });
+            
 }
 
 /**
@@ -71,49 +87,64 @@ export async function GET(req: NextRequest) {
  * Creates a new pool (tenant) from the super-admin dashboard.
  */
 export async function POST(req: NextRequest) {
-    try {
-        await dbConnect();
 
-        const user = await resolveUser(req) as any;
-        if (!user || user.role !== "superadmin") {
-            return NextResponse.json({ error: "Superadmin only", code: "FORBIDDEN" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "POST";
+
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            await dbConnect();
+
+            const user = await resolveUser(req) as any;
+            if (!user || user.role !== "superadmin") {
+                return NextResponse.json({ error: "Superadmin only", code: "FORBIDDEN" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+
+            const body = await req.json();
+            const { poolName, slug, adminEmail, capacity, location, plan = "free" } = body;
+
+            if (!poolName || !slug || !adminEmail) {
+                return NextResponse.json({ error: "poolName, slug and adminEmail are required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+
+            // Generate unique poolId
+            const poolId = `POOL_${nanoid(8).toUpperCase()}`;
+
+            // Set trial period: 14 days from now
+            const trialEndsAt = new Date();
+            trialEndsAt.setDate(trialEndsAt.getDate() + 14);
+
+            const pool = await Pool.create({
+                poolId,
+                poolName,
+                slug:               slug.toLowerCase().replace(/\s+/g, "-"),
+                adminEmail,
+                capacity:           capacity ?? 100,
+                location:           location ?? "",
+                status:             "ACTIVE",
+                plan,
+                subscriptionStatus: "trial",
+                trialEndsAt,
+            });
+
+            return NextResponse.json(pool, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        } catch (error: any) {
+            if (error?.code === 11000) {
+                return NextResponse.json({ error: "A pool with this slug or poolId already exists.", code: "DUPLICATE_KEY" }, {  status: 409 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+            console.error("[POST /api/super-admin/pools]", error);
+            return NextResponse.json({ error: "Failed to create pool" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-
-        const body = await req.json();
-        const { poolName, slug, adminEmail, capacity, location, plan = "free" } = body;
-
-        if (!poolName || !slug || !adminEmail) {
-            return NextResponse.json({ error: "poolName, slug and adminEmail are required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
-
-        // Generate unique poolId
-        const poolId = `POOL_${nanoid(8).toUpperCase()}`;
-
-        // Set trial period: 14 days from now
-        const trialEndsAt = new Date();
-        trialEndsAt.setDate(trialEndsAt.getDate() + 14);
-
-        const pool = await Pool.create({
-            poolId,
-            poolName,
-            slug:               slug.toLowerCase().replace(/\s+/g, "-"),
-            adminEmail,
-            capacity:           capacity ?? 100,
-            location:           location ?? "",
-            status:             "ACTIVE",
-            plan,
-            subscriptionStatus: "trial",
-            trialEndsAt,
         });
-
-        return NextResponse.json(pool, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    } catch (error: any) {
-        if (error?.code === 11000) {
-            return NextResponse.json({ error: "A pool with this slug or poolId already exists.", code: "DUPLICATE_KEY" }, {  status: 409 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
-        console.error("[POST /api/super-admin/pools]", error);
-        return NextResponse.json({ error: "Failed to create pool" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+            
 }
 
 /**
@@ -122,32 +153,47 @@ export async function POST(req: NextRequest) {
  * Body: { poolId, status: "ACTIVE" | "SUSPENDED" | "INACTIVE" }
  */
 export async function PATCH(req: NextRequest) {
-    try {
-        await dbConnect();
 
-        const user = await resolveUser(req) as any;
-        if (!user || user.role !== "superadmin") {
-            return NextResponse.json({ error: "Superadmin only", code: "FORBIDDEN" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "PATCH";
+
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            await dbConnect();
+
+            const user = await resolveUser(req) as any;
+            if (!user || user.role !== "superadmin") {
+                return NextResponse.json({ error: "Superadmin only", code: "FORBIDDEN" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+
+            const { poolId, status } = await req.json();
+            if (!poolId || !status) {
+                return NextResponse.json({ error: "poolId and status are required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+
+            const pool = await Pool.findOneAndUpdate(
+                { poolId },
+                { $set: { status } },
+                { returnDocument: 'after' }
+            );
+
+            if (!pool) {
+                return NextResponse.json({ error: "Pool not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+
+            return NextResponse.json(pool, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        } catch (error) {
+            console.error("[PATCH /api/super-admin/pools]", error);
+            return NextResponse.json({ error: "Failed to update pool" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-
-        const { poolId, status } = await req.json();
-        if (!poolId || !status) {
-            return NextResponse.json({ error: "poolId and status are required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
-
-        const pool = await Pool.findOneAndUpdate(
-            { poolId },
-            { $set: { status } },
-            { returnDocument: 'after' }
-        );
-
-        if (!pool) {
-            return NextResponse.json({ error: "Pool not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
-
-        return NextResponse.json(pool, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    } catch (error) {
-        console.error("[PATCH /api/super-admin/pools]", error);
-        return NextResponse.json({ error: "Failed to update pool" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+        });
+            
 }

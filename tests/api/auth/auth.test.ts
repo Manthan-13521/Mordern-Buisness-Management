@@ -24,7 +24,7 @@
  * ========================================================================
  */
 
-import { TestClient, TEST_USERS, TestRunner } from "../../helpers";
+import { TestClient, TestRunner } from "../../helpers";
 
 const runner = new TestRunner();
 const client = new TestClient();

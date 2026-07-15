@@ -5,6 +5,8 @@ import { EntertainmentMember } from "@/models/EntertainmentMember";
 import { auditCrossTenantAccess, secureUpdateById } from "@/lib/tenantSecurity";
 import { getTenantFilter } from "@/lib/tenant";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
+import { requestContext } from "@/lib/requestContext";
+
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
@@ -13,31 +15,33 @@ type RouteContext = { params: Promise<{ id: string }> };
  * Body: { itemName: string }
  */
 export async function POST(req: Request, props: RouteContext) {
-    try {
-        await dbConnect();
 
-        const user = await resolveUser(req);
-        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "POST";
 
-        const { id } = await props.params;
-        const { itemName } = await req.json();
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            await dbConnect();
 
-        if (!itemName?.trim()) {
-            return NextResponse.json({ error: "itemName is required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
+            const user = await resolveUser(req);
+            if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
-        let member = await secureUpdateById(Member, id, {
-            $push: {
-                equipmentTaken: {
-                    itemName:    itemName.trim(),
-                    issuedDate:  new Date(),
-                    isReturned:  false,
-                },
-            },
-        }, user, { select: "memberId name equipmentTaken" });
+            const { id } = await props.params;
+            const { itemName } = await req.json();
 
-        if (!member) {
-            member = await secureUpdateById(EntertainmentMember, id, {
+            if (!itemName?.trim()) {
+                return NextResponse.json({ error: "itemName is required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+
+            let member = await secureUpdateById(Member, id, {
                 $push: {
                     equipmentTaken: {
                         itemName:    itemName.trim(),
@@ -46,15 +50,28 @@ export async function POST(req: Request, props: RouteContext) {
                     },
                 },
             }, user, { select: "memberId name equipmentTaken" });
+
+            if (!member) {
+                member = await secureUpdateById(EntertainmentMember, id, {
+                    $push: {
+                        equipmentTaken: {
+                            itemName:    itemName.trim(),
+                            issuedDate:  new Date(),
+                            isReturned:  false,
+                        },
+                    },
+                }, user, { select: "memberId name equipmentTaken" });
+            }
+
+            if (!member) return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+
+            return NextResponse.json({ message: "Equipment issued.", equipmentTaken: member.equipmentTaken }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        } catch (error) {
+            console.error("[POST /api/members/[id]/equipment]", error);
+            return NextResponse.json({ error: "Server error issuing equipment" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-
-        if (!member) return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-
-        return NextResponse.json({ message: "Equipment issued.", equipmentTaken: member.equipmentTaken }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    } catch (error) {
-        console.error("[POST /api/members/[id]/equipment]", error);
-        return NextResponse.json({ error: "Server error issuing equipment" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+        });
+            
 }
 
 /**
@@ -63,34 +80,35 @@ export async function POST(req: Request, props: RouteContext) {
  * Body: { equipmentItemId: string }
  */
 export async function PATCH(req: Request, props: RouteContext) {
-    try {
-        await dbConnect();
 
-        const user = await resolveUser(req);
-        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "PATCH";
 
-        const { id } = await props.params;
-        const { equipmentItemId } = await req.json();
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            await dbConnect();
 
-        if (!equipmentItemId) {
-            return NextResponse.json({ error: "equipmentItemId is required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
+            const user = await resolveUser(req);
+            if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
-        const tenantFilter = getTenantFilter(user);
+            const { id } = await props.params;
+            const { equipmentItemId } = await req.json();
 
-        let member: any = await Member.findOneAndUpdate(
-            { _id: id, "equipmentTaken._id": equipmentItemId, ...tenantFilter },
-            {
-                $set: {
-                    "equipmentTaken.$.isReturned":   true,
-                    "equipmentTaken.$.returnedDate": new Date(),
-                },
-            },
-            { returnDocument: 'after' }
-        ).select("memberId name equipmentTaken");
+            if (!equipmentItemId) {
+                return NextResponse.json({ error: "equipmentItemId is required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
 
-        if (!member) {
-            member = await EntertainmentMember.findOneAndUpdate(
+            const tenantFilter = getTenantFilter(user);
+
+            let member: any = await Member.findOneAndUpdate(
                 { _id: id, "equipmentTaken._id": equipmentItemId, ...tenantFilter },
                 {
                     $set: {
@@ -100,17 +118,31 @@ export async function PATCH(req: Request, props: RouteContext) {
                 },
                 { returnDocument: 'after' }
             ).select("memberId name equipmentTaken");
-        }
 
-        if (!member) {
-            await auditCrossTenantAccess(Member, id, user);
-            await auditCrossTenantAccess(EntertainmentMember, id, user);
-            return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
+            if (!member) {
+                member = await EntertainmentMember.findOneAndUpdate(
+                    { _id: id, "equipmentTaken._id": equipmentItemId, ...tenantFilter },
+                    {
+                        $set: {
+                            "equipmentTaken.$.isReturned":   true,
+                            "equipmentTaken.$.returnedDate": new Date(),
+                        },
+                    },
+                    { returnDocument: 'after' }
+                ).select("memberId name equipmentTaken");
+            }
 
-        return NextResponse.json({ message: "Equipment marked as returned.", equipmentTaken: member.equipmentTaken }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    } catch (error) {
-        console.error("[PATCH /api/members/[id]/equipment]", error);
-        return NextResponse.json({ error: "Server error returning equipment" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+            if (!member) {
+                await auditCrossTenantAccess(Member, id, user);
+                await auditCrossTenantAccess(EntertainmentMember, id, user);
+                return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+
+            return NextResponse.json({ message: "Equipment marked as returned.", equipmentTaken: member.equipmentTaken }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        } catch (error) {
+            console.error("[PATCH /api/members/[id]/equipment]", error);
+            return NextResponse.json({ error: "Server error returning equipment" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        }
+        });
+            
 }

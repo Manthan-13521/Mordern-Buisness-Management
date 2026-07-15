@@ -3,6 +3,8 @@ import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { secureUpdateById } from "@/lib/tenantSecurity";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
+import { requestContext } from "@/lib/requestContext";
+
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
@@ -11,43 +13,58 @@ type RouteContext = { params: Promise<{ id: string }> };
  * Optionally accepts a new planEndDate in the body.
  */
 export async function POST(req: Request, props: RouteContext) {
-    try {
-        await dbConnect();
 
-        const user = await resolveUser(req);
-        if (!user || user.role !== "admin") {
-            return NextResponse.json({ error: "Admin only" }, { status: 403, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "POST";
+
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            await dbConnect();
+
+            const user = await resolveUser(req);
+            if (!user || user.role !== "admin") {
+                return NextResponse.json({ error: "Admin only" }, { status: 403, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+
+            const { id } = await props.params;
+
+            // Optionally accept a new planEndDate for renewal-on-restore
+            let body: { planEndDate?: string } = {};
+            try { body = await req.json(); } catch { /* no body — ok */ }
+
+            const updates: Record<string, unknown> = {
+                isDeleted:    false,
+                isExpired:    false,
+                isActive:     true,
+                status:       "active",
+                deletedAt:    null,
+                deletedAtLegacy: null,
+                deleteReason: null,
+                expiredAt:    null,
+            };
+
+            if (body.planEndDate) {
+                updates.planEndDate = new Date(body.planEndDate);
+                updates.expiryDate  = new Date(body.planEndDate);
+            }
+
+            const member = await secureUpdateById(Member, id, { $set: updates }, user, { populate: { path: "planId", select: "name price hasTokenPrint" } });
+
+            if (!member) return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+
+            return NextResponse.json({ message: "Member restored successfully.", member }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        } catch (error) {
+            console.error("[POST /api/members/[id]/restore]", error);
+            return NextResponse.json({ error: "Server error restoring member" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-
-        const { id } = await props.params;
-
-        // Optionally accept a new planEndDate for renewal-on-restore
-        let body: { planEndDate?: string } = {};
-        try { body = await req.json(); } catch { /* no body — ok */ }
-
-        const updates: Record<string, unknown> = {
-            isDeleted:    false,
-            isExpired:    false,
-            isActive:     true,
-            status:       "active",
-            deletedAt:    null,
-            deletedAtLegacy: null,
-            deleteReason: null,
-            expiredAt:    null,
-        };
-
-        if (body.planEndDate) {
-            updates.planEndDate = new Date(body.planEndDate);
-            updates.expiryDate  = new Date(body.planEndDate);
-        }
-
-        const member = await secureUpdateById(Member, id, { $set: updates }, user, { populate: { path: "planId", select: "name price hasTokenPrint" } });
-
-        if (!member) return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-
-        return NextResponse.json({ message: "Member restored successfully.", member }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    } catch (error) {
-        console.error("[POST /api/members/[id]/restore]", error);
-        return NextResponse.json({ error: "Server error restoring member" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+        });
+            
 }

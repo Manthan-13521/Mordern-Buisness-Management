@@ -4,6 +4,7 @@ import { dbConnect } from "@/lib/mongodb";
 import { Competition } from "@/models/Competition";
 
 import mongoose from "mongoose";
+import { requestContext } from "@/lib/requestContext";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -15,26 +16,41 @@ type RouteContext = { params: Promise<{ id: string }> };
  * Competition detail — returns all participants and winners.
  */
 export async function GET(req: Request, props: RouteContext) {
-    try {
-        await dbConnect();
 
-        const user = await resolveUser(req);
-        if (!user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "GET";
 
-        const { id } = await props.params;
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            await dbConnect();
 
-        const competition = await Competition.findById(id).lean();
+            const user = await resolveUser(req);
+            if (!user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
-        if (!competition) return NextResponse.json({ error: "Not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        if (user.role !== "superadmin" && (competition as any).poolId !== user.poolId) {
-            return NextResponse.json({ error: "Forbidden" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            const { id } = await props.params;
+
+            const competition = await Competition.findById(id).lean();
+
+            if (!competition) return NextResponse.json({ error: "Not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            if (user.role !== "superadmin" && (competition as any).poolId !== user.poolId) {
+                return NextResponse.json({ error: "Forbidden" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+
+            return NextResponse.json(competition, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        } catch (error) {
+            console.error("[GET /api/competitions/[id]]", error);
+            return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-
-        return NextResponse.json(competition, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    } catch (error) {
-        console.error("[GET /api/competitions/[id]]", error);
-        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+        });
+            
 }
 
 /**
@@ -43,78 +59,93 @@ export async function GET(req: Request, props: RouteContext) {
  * Body: { isCompleted?, participant?, winner?, notes? }
  */
 export async function PATCH(req: Request, props: RouteContext) {
-    try {
-        await dbConnect();
 
-        const user = await resolveUser(req);
-        if (!user || !["admin", "superadmin"].includes(user.role)) {
-            return NextResponse.json({ error: "Admin only" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "PATCH";
 
-        const { id } = await props.params;
-        const body = await req.json();
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            await dbConnect();
 
-        const competition = await Competition.findById(id).lean();
-        if (!competition) return NextResponse.json({ error: "Not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            const user = await resolveUser(req);
+            if (!user || !["admin", "superadmin"].includes(user.role)) {
+                return NextResponse.json({ error: "Admin only" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
 
-        const updates: Record<string, unknown> = {};
+            const { id } = await props.params;
+            const body = await req.json();
 
-        if (typeof body.isCompleted === "boolean") updates.isCompleted = body.isCompleted;
-        if (body.notes !== undefined) updates.notes = body.notes;
+            const competition = await Competition.findById(id).lean();
+            if (!competition) return NextResponse.json({ error: "Not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
-        // Add participant
-        if (body.participant) {
-            const { name, memberId, laneNumber } = body.participant;
-            if (!name) return NextResponse.json({ error: "participant.name required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-            await Competition.findByIdAndUpdate(id, {
-                $push: {
-                    participants: {
-                        name,
-                        memberId: memberId ? new mongoose.Types.ObjectId(memberId) : undefined,
-                        laneNumber: laneNumber ?? undefined,
+            const updates: Record<string, unknown> = {};
+
+            if (typeof body.isCompleted === "boolean") updates.isCompleted = body.isCompleted;
+            if (body.notes !== undefined) updates.notes = body.notes;
+
+            // Add participant
+            if (body.participant) {
+                const { name, memberId, laneNumber } = body.participant;
+                if (!name) return NextResponse.json({ error: "participant.name required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+                await Competition.findByIdAndUpdate(id, {
+                    $push: {
+                        participants: {
+                            name,
+                            memberId: memberId ? new mongoose.Types.ObjectId(memberId) : undefined,
+                            laneNumber: laneNumber ?? undefined,
+                        },
                     },
-                },
-            });
-            return NextResponse.json({ message: "Participant added" }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
+                });
+                return NextResponse.json({ message: "Participant added" }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
 
-        // Add / update winner
-        if (body.winner) {
-            const { position, name, memberId, timing, prize } = body.winner;
-            if (!position || !name) return NextResponse.json({ error: "winner.position and winner.name required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-            // Remove any existing winner at this position, then push new
-            await Competition.findByIdAndUpdate(id, { $pull: { winners: { position } } });
-            await Competition.findByIdAndUpdate(id, {
-                $push: {
-                    winners: {
-                        position,
-                        name,
-                        memberId: memberId ? new mongoose.Types.ObjectId(memberId) : undefined,
-                        timing:   timing  ?? undefined,
-                        prize:    prize   ?? undefined,
+            // Add / update winner
+            if (body.winner) {
+                const { position, name, memberId, timing, prize } = body.winner;
+                if (!position || !name) return NextResponse.json({ error: "winner.position and winner.name required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+                // Remove any existing winner at this position, then push new
+                await Competition.findByIdAndUpdate(id, { $pull: { winners: { position } } });
+                await Competition.findByIdAndUpdate(id, {
+                    $push: {
+                        winners: {
+                            position,
+                            name,
+                            memberId: memberId ? new mongoose.Types.ObjectId(memberId) : undefined,
+                            timing:   timing  ?? undefined,
+                            prize:    prize   ?? undefined,
+                        },
                     },
-                },
-            });
-            return NextResponse.json({ message: "Winner recorded" }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
+                });
+                return NextResponse.json({ message: "Winner recorded" }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
 
-        // Update participant timing / position
-        if (body.participantUpdate) {
-            const { participantId, timing, position } = body.participantUpdate;
-            const setObj: Record<string, unknown> = {};
-            if (timing !== undefined)   setObj["participants.$.timing"]   = timing;
-            if (position !== undefined) setObj["participants.$.position"] = position;
-            await Competition.findOneAndUpdate(
-                { _id: id, "participants._id": new mongoose.Types.ObjectId(participantId) },
-                { $set: setObj }
-            );
-            return NextResponse.json({ message: "Participant updated" }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
+            // Update participant timing / position
+            if (body.participantUpdate) {
+                const { participantId, timing, position } = body.participantUpdate;
+                const setObj: Record<string, unknown> = {};
+                if (timing !== undefined)   setObj["participants.$.timing"]   = timing;
+                if (position !== undefined) setObj["participants.$.position"] = position;
+                await Competition.findOneAndUpdate(
+                    { _id: id, "participants._id": new mongoose.Types.ObjectId(participantId) },
+                    { $set: setObj }
+                );
+                return NextResponse.json({ message: "Participant updated" }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
 
-        const updated = await Competition.findByIdAndUpdate(id, { $set: updates }, { returnDocument: 'after' });
-        return NextResponse.json(updated, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    } catch (error) {
-        console.error("[PATCH /api/competitions/[id]]", error);
-        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+            const updated = await Competition.findByIdAndUpdate(id, { $set: updates }, { returnDocument: 'after' });
+            return NextResponse.json(updated, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        } catch (error) {
+            console.error("[PATCH /api/competitions/[id]]", error);
+            return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        }
+        });
+            
 }

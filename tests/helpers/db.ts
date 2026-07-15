@@ -7,6 +7,10 @@ import { Business } from "../../models/Business";
 import { Member } from "../../models/Member";
 import { Payment } from "../../models/Payment";
 import { Plan } from "../../models/Plan";
+import { HostelMember } from "../../models/HostelMember";
+import { HostelPayment } from "../../models/HostelPayment";
+import { EntryLog } from "../../models/EntryLog";
+import { PoolSession } from "../../models/PoolSession";
 
 type CollectionName =
   | "users"
@@ -30,10 +34,10 @@ const MODEL_MAP: Record<CollectionName, any> = {
   members: Member,
   payments: Payment,
   plans: Plan,
-  hostel_members: null,
-  hostel_payments: null,
-  entry_logs: null,
-  pool_sessions: null,
+  hostel_members: HostelMember,
+  hostel_payments: HostelPayment,
+  entry_logs: EntryLog,
+  pool_sessions: PoolSession,
   audit_logs: null,
 };
 

@@ -6,7 +6,7 @@ import { CronLog } from "@/models/CronLog";
 import { User } from "@/models/User";
 import { resolveSubscriptionState, isReadOnlyMode, isSubscriptionLocked } from "@/lib/subscriptionState";
 import { withHealthcheck } from "@/lib/healthchecks";
-
+import { requestContext } from "@/lib/requestContext";
 
 export const dynamic = "force-dynamic";
 
@@ -129,42 +129,56 @@ async function executeRentCycle() {
 }
 
 export async function GET(req: Request) {
-    if (req.headers.get("Authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
-    return withHealthcheck({ checkName: "hostel-rent-cycle", timeoutMs: 55000 }, async () => {
-        const jobName = "hostel-rent-cycle";
-        const log = await CronLog.create({ jobName, status: "running" });
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "GET";
 
-        try {
-            const stats = await executeRentCycle();
-            
-            log.status = "success";
-            log.completedAt = new Date();
-            log.metadata = stats;
-            await log.save();
-
-            return NextResponse.json({ success: true, ...stats });
-        } catch (error: any) {
-            console.error(`[CRON ERROR] ${jobName}:`, error);
-
-            // RETRY ONCE
-            try {
-                console.log(`[CRON RETRY] ${jobName} retrying once...`);
-                const retryStats = await executeRentCycle();
-                log.status = "success";
-                log.metadata = { ...retryStats, retried: true };
-                log.completedAt = new Date();
-                await log.save();
-                return NextResponse.json({ success: true, ...retryStats });
-            } catch (retryErr: any) {
-                log.status = "failed";
-                log.error = error.message || String(error);
-                log.completedAt = new Date();
-                await log.save();
-                return NextResponse.json({ error: "CRON failed globally" }, { status: 500 });
-            }
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            if (req.headers.get("Authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-    });
+    return withHealthcheck({ checkName: "hostel-rent-cycle", timeoutMs: 55000 }, async () => {
+            const jobName = "hostel-rent-cycle";
+            const log = await CronLog.create({ jobName, status: "running" });
+
+            try {
+                const stats = await executeRentCycle();
+                
+                log.status = "success";
+                log.completedAt = new Date();
+                log.metadata = stats;
+                await log.save();
+
+                return NextResponse.json({ success: true, ...stats });
+            } catch (error: any) {
+                console.error(`[CRON ERROR] ${jobName}:`, error);
+
+                // RETRY ONCE
+                try {
+                    console.log(`[CRON RETRY] ${jobName} retrying once...`);
+                    const retryStats = await executeRentCycle();
+                    log.status = "success";
+                    log.metadata = { ...retryStats, retried: true };
+                    log.completedAt = new Date();
+                    await log.save();
+                    return NextResponse.json({ success: true, ...retryStats });
+                } catch (retryErr: any) {
+                    log.status = "failed";
+                    log.error = error.message || String(error);
+                    log.completedAt = new Date();
+                    await log.save();
+                    return NextResponse.json({ error: "CRON failed globally" }, { status: 500 });
+                }
+            }
+        });
+        });
+            
 }

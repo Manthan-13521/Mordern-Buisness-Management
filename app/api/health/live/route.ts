@@ -1,35 +1,51 @@
 import { NextResponse } from "next/server";
+import { requestContext } from "@/lib/requestContext";
 
 export const dynamic = "force-dynamic"; // disable caching
 
 export async function GET(req: Request) {
-  try {
-    const memory = process.memoryUsage();
 
-    return NextResponse.json({
-        status: "alive",
-        uptime: process.uptime(), // in seconds
-        timestamp: new Date().toISOString(),
-        env: process.env.NODE_ENV,
-        memory: {
-          rss: memory.rss,
-          heapTotal: memory.heapTotal,
-          heapUsed: memory.heapUsed,
-          external: memory.external,
-        },
-      },
-      {
-        status: 200,
-        headers: {
-          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
-          Pragma: "no-cache",
-          Expires: "0",
-        },
-      });
-  } catch (error) {
-    return NextResponse.json({
-        status: "error",
-        message: "Health check failed",
-      }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-  }
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "GET";
+
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+        const memory = process.memoryUsage();
+
+        return NextResponse.json({
+            status: "alive",
+            uptime: process.uptime(), // in seconds
+            timestamp: new Date().toISOString(),
+            env: process.env.NODE_ENV,
+            memory: {
+              rss: memory.rss,
+              heapTotal: memory.heapTotal,
+              heapUsed: memory.heapUsed,
+              external: memory.external,
+            },
+          },
+          {
+            status: 200,
+            headers: {
+              "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              Pragma: "no-cache",
+              Expires: "0",
+            },
+          });
+      } catch (error) {
+        return NextResponse.json({
+            status: "error",
+            message: "Health check failed",
+          }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+      }
+        });
+            
 }

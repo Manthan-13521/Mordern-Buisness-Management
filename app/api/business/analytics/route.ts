@@ -10,134 +10,150 @@ import {
     getReceivables,
     type DateRange,
 } from "@/services/analyticsService";
+import { requestContext } from "@/lib/requestContext";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
-    const start = Date.now();
+
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "GET";
+
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            const start = Date.now();
     try {
-        const user = await resolveUser(req);
-        if (!user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-        
-        // 🟠 RATE LIMITING
-        const ip = req.headers.get("x-forwarded-for") || "unknown";
-        const rl = analyticsLimiter.checkTenant(user.businessId || "unknown", ip);
-        if (!rl.allowed) {
-            return NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429 });
-        }
-        
-        let businessId;
-        try {
-            businessId = requireBusinessId(user);
-        } catch (err: any) {
-            return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
-        }
+            const user = await resolveUser(req);
+            if (!user) {
+                return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            }
+            
+            // 🟠 RATE LIMITING
+            const ip = req.headers.get("x-forwarded-for") || "unknown";
+            const rl = analyticsLimiter.checkTenant(user.businessId || "unknown", ip);
+            if (!rl.allowed) {
+                return NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429 });
+            }
+            
+            let businessId;
+            try {
+                businessId = requireBusinessId(user);
+            } catch (err: any) {
+                return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
+            }
 
-        // 🟠 DOUBLE DEFENSE: Explicit type and validity checks
-        if (!businessId || typeof businessId !== "string") {
-            throw new Error("Invalid businessId type or value");
-        }
-        if (businessId !== "superadmin" && businessId.trim() === "") {
-            throw new Error("Invalid businessId format");
-        }
+            // 🟠 DOUBLE DEFENSE: Explicit type and validity checks
+            if (!businessId || typeof businessId !== "string") {
+                throw new Error("Invalid businessId type or value");
+            }
+            if (businessId !== "superadmin" && businessId.trim() === "") {
+                throw new Error("Invalid businessId format");
+            }
 
-        // Structured debug logging via pino
-        if (process.env.DEBUG_ANALYTICS === "true") {
-            logger.debug("Business analytics query", {
-                businessId,
-                userId: user.id,
-                route: "/api/business/analytics",
-            });
-        }
+            // Structured debug logging via pino
+            if (process.env.DEBUG_ANALYTICS === "true") {
+                logger.debug("Business analytics query", {
+                    businessId,
+                    userId: user.id,
+                    route: "/api/business/analytics",
+                });
+            }
 
-        await dbConnect();
+            await dbConnect();
 
-        // 🔴 TERMINAL DEFENSE: Failsafe check before query execution
-        if (!businessId) {
-            throw new Error("Tenant context lost before query execution");
-        }
+            // 🔴 TERMINAL DEFENSE: Failsafe check before query execution
+            if (!businessId) {
+                throw new Error("Tenant context lost before query execution");
+            }
 
-        // ═══════════════════════════════════════════════════════════════════
-        // USE CENTRALIZED ANALYTICS SERVICE — Single Source of Truth
-        // Revenue = SALE + sent ONLY (not all sales!)
-        // ═══════════════════════════════════════════════════════════════════
-        const [
-            dailyRevenue,
-            monthlyRevenue,
-            yearlyRevenue,
-            receivables,
-            recentSalesRaw,
-            recentPaymentsRaw
-        ] = await Promise.all([
-            getRevenue(businessId, "daily"),
-            getRevenue(businessId, "monthly"),
-            getRevenue(businessId, "yearly"),
-            getReceivables(businessId),
-            BusinessTransaction.find({ businessId, category: 'SALE', transactionType: 'sent' })
-                .populate("customerId", "name")
-                .select("customerId amount paidAmount date transactionType items category createdAt")
-                .sort({ date: -1 })
-                .limit(5)
-                .lean(),
-            BusinessTransaction.find({ businessId, category: 'PAYMENT' })
-                .populate("customerId", "name")
-                .select("customerId amount date transactionType paymentMethod category createdAt")
-                .sort({ date: -1 })
-                .limit(5)
-                .lean()
-        ]);
+            // ═══════════════════════════════════════════════════════════════════
+            // USE CENTRALIZED ANALYTICS SERVICE — Single Source of Truth
+            // Revenue = SALE + sent ONLY (not all sales!)
+            // ═══════════════════════════════════════════════════════════════════
+            const [
+                dailyRevenue,
+                monthlyRevenue,
+                yearlyRevenue,
+                receivables,
+                recentSalesRaw,
+                recentPaymentsRaw
+            ] = await Promise.all([
+                getRevenue(businessId, "daily"),
+                getRevenue(businessId, "monthly"),
+                getRevenue(businessId, "yearly"),
+                getReceivables(businessId),
+                BusinessTransaction.find({ businessId, category: 'SALE', transactionType: 'sent' })
+                    .populate("customerId", "name")
+                    .select("customerId amount paidAmount date transactionType items category createdAt")
+                    .sort({ date: -1 })
+                    .limit(5)
+                    .lean(),
+                BusinessTransaction.find({ businessId, category: 'PAYMENT' })
+                    .populate("customerId", "name")
+                    .select("customerId amount date transactionType paymentMethod category createdAt")
+                    .sort({ date: -1 })
+                    .limit(5)
+                    .lean()
+            ]);
 
-        // 🟠 AGGREGATION SAFETY: Fallback for Mongo structure quirks
-        const recentSales = Array.isArray(recentSalesRaw) ? recentSalesRaw : [];
-        const recentPayments = Array.isArray(recentPaymentsRaw) ? recentPaymentsRaw : [];
+            // 🟠 AGGREGATION SAFETY: Fallback for Mongo structure quirks
+            const recentSales = Array.isArray(recentSalesRaw) ? recentSalesRaw : [];
+            const recentPayments = Array.isArray(recentPaymentsRaw) ? recentPaymentsRaw : [];
 
-        const hasNoData = recentSales.length === 0 && recentPayments.length === 0;
+            const hasNoData = recentSales.length === 0 && recentPayments.length === 0;
 
-        // Performance tracking via structured logger
-        if (process.env.DEBUG_ANALYTICS === "true") {
-            logger.debug("Analytics performance", {
-                businessId,
-                duration: Date.now() - start,
-                dailySales: dailyRevenue.total,
-                monthlySales: monthlyRevenue.total,
-                yearlySales: yearlyRevenue.total,
-                dailyTxCount: dailyRevenue.transactionCount,
-                monthlyTxCount: monthlyRevenue.transactionCount,
-                yearlyTxCount: yearlyRevenue.transactionCount,
-            });
-        }
-
-        return NextResponse.json({
-            data: {
-                stats: {
+            // Performance tracking via structured logger
+            if (process.env.DEBUG_ANALYTICS === "true") {
+                logger.debug("Analytics performance", {
+                    businessId,
+                    duration: Date.now() - start,
                     dailySales: dailyRevenue.total,
                     monthlySales: monthlyRevenue.total,
                     yearlySales: yearlyRevenue.total,
-                    totalDue: receivables.totalReceivables
+                    dailyTxCount: dailyRevenue.transactionCount,
+                    monthlyTxCount: monthlyRevenue.transactionCount,
+                    yearlyTxCount: yearlyRevenue.transactionCount,
+                });
+            }
+
+            return NextResponse.json({
+                data: {
+                    stats: {
+                        dailySales: dailyRevenue.total,
+                        monthlySales: monthlyRevenue.total,
+                        yearlySales: yearlyRevenue.total,
+                        totalDue: receivables.totalReceivables
+                    },
+                    recentSales,
+                    recentPayments
                 },
-                recentSales,
-                recentPayments
-            },
-            meta: {
-                message: hasNoData ? "No data for this tenant" : "Analytics fetched successfully",
-                businessId,
-                timestamp: new Date().toISOString()
-            }
-        }, {
-            headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
+                meta: {
+                    message: hasNoData ? "No data for this tenant" : "Analytics fetched successfully",
+                    businessId,
+                    timestamp: new Date().toISOString()
+                }
+            }, {
+                headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
+            });
+        } catch (error: any) {
+            logger.error("Analytics error", { error: error.message, duration: Date.now() - start });
+            return NextResponse.json({ 
+                data: null,
+                meta: {
+                    error: "Failed to fetch analytics",
+                    details: error.message,
+                    duration: Date.now() - start,
+                    timestamp: new Date().toISOString()
+                }
+            }, { status: 500 });
+        }
         });
-    } catch (error: any) {
-        logger.error("Analytics error", { error: error.message, duration: Date.now() - start });
-        return NextResponse.json({ 
-            data: null,
-            meta: {
-                error: "Failed to fetch analytics",
-                details: error.message,
-                duration: Date.now() - start,
-                timestamp: new Date().toISOString()
-            }
-        }, { status: 500 });
-    }
+            
 }

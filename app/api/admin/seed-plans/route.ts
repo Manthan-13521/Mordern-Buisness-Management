@@ -12,7 +12,7 @@
 import { NextResponse } from "next/server";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
-
+import { requestContext } from "@/lib/requestContext";
 
 export const dynamic = "force-dynamic";
 
@@ -59,35 +59,50 @@ const DEFAULT_PLANS = [
 ];
 
 export async function GET(req: Request) {
-    try {
-        const user = await resolveUser(req);
-        if (!user || user.role !== "superadmin") {
-            return NextResponse.json({ error: "Forbidden" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
 
-        await dbConnect();
-        const { SaaSPlan } = await import("@/models/SaaSPlan");
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "GET";
 
-        const results = await Promise.all(
-            DEFAULT_PLANS.map(plan =>
-                (SaaSPlan as any).findOneAndUpdate(
-                    { name: plan.name },
-                    { $setOnInsert: plan },   // only write if it doesn't exist
-                    { upsert: true, new: true }
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            const user = await resolveUser(req);
+            if (!user || user.role !== "superadmin") {
+                return NextResponse.json({ error: "Forbidden" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+
+            await dbConnect();
+            const { SaaSPlan } = await import("@/models/SaaSPlan");
+
+            const results = await Promise.all(
+                DEFAULT_PLANS.map(plan =>
+                    (SaaSPlan as any).findOneAndUpdate(
+                        { name: plan.name },
+                        { $setOnInsert: plan },   // only write if it doesn't exist
+                        { upsert: true, new: true }
+                    )
                 )
-            )
-        );
+            );
 
-        const plans = results.map((p: any) => ({ id: p._id, name: p.name, price: p.price }));
+            const plans = results.map((p: any) => ({ id: p._id, name: p.name, price: p.price }));
 
-        return NextResponse.json({
-            success: true,
-            message: `${plans.length} SaaS plans seeded (idempotent — safe to re-run).`,
-            plans,
-        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            return NextResponse.json({
+                success: true,
+                message: `${plans.length} SaaS plans seeded (idempotent — safe to re-run).`,
+                plans,
+            }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
-    } catch (e) {
-        console.error("[Seed Plans]", e);
-        return NextResponse.json({ error: "Failed to seed plans" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+        } catch (e) {
+            console.error("[Seed Plans]", e);
+            return NextResponse.json({ error: "Failed to seed plans" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        }
+        });
+            
 }

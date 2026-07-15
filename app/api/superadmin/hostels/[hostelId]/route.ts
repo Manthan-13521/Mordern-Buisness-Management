@@ -5,190 +5,236 @@ import { dbConnect } from "@/lib/mongodb";
 import { Hostel } from "@/models/Hostel";
 import { User } from "@/models/User";
 import bcrypt from "bcryptjs";
+import { requestContext } from "@/lib/requestContext";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/superadmin/hostels/[hostelId] — single hostel detail
 export async function GET(req: Request, { params }: { params: Promise<{ hostelId: string }> }) {
-    try {
-        const [user, { hostelId }] = await Promise.all([resolveUser(req), params]);
-        await dbConnect();
-        if (!user || user.role !== "superadmin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
 
-        const hostel = await Hostel.findOne({ hostelId }).lean();
-        if (!hostel) return NextResponse.json({ error: "Hostel not found" }, { status: 404 });
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "GET";
 
-        const adminUser = await User.findOne({ hostelId, role: "hostel_admin" }).select("name email isActive").lean();
-
-        const [memberCount, paymentCount] = await Promise.all([
-            (async () => {
-                try {
-                    const { HostelMember } = await import("@/models/HostelMember");
-                    return await HostelMember.countDocuments({ hostelId });
-                } catch { return 0; }
-            })(),
-            (async () => {
-                try {
-                    const { HostelPayment } = await import("@/models/HostelPayment");
-                    return await HostelPayment.countDocuments({ hostelId });
-                } catch { return 0; }
-            })()
-        ]);
-
-        return NextResponse.json({
-            ...hostel,
-            adminUser,
-            stats: {
-                members: memberCount,
-                payments: paymentCount
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            const [user, { hostelId }] = await Promise.all([resolveUser(req), params]);
+            await dbConnect();
+            if (!user || user.role !== "superadmin") {
+                return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
             }
+
+            const hostel = await Hostel.findOne({ hostelId }).lean();
+            if (!hostel) return NextResponse.json({ error: "Hostel not found" }, { status: 404 });
+
+            const adminUser = await User.findOne({ hostelId, role: "hostel_admin" }).select("name email isActive").lean();
+
+            const [memberCount, paymentCount] = await Promise.all([
+                (async () => {
+                    try {
+                        const { HostelMember } = await import("@/models/HostelMember");
+                        return await HostelMember.countDocuments({ hostelId });
+                    } catch { return 0; }
+                })(),
+                (async () => {
+                    try {
+                        const { HostelPayment } = await import("@/models/HostelPayment");
+                        return await HostelPayment.countDocuments({ hostelId });
+                    } catch { return 0; }
+                })()
+            ]);
+
+            return NextResponse.json({
+                ...hostel,
+                adminUser,
+                stats: {
+                    members: memberCount,
+                    payments: paymentCount
+                }
+            });
+        } catch (error) {
+            console.error("[GET /api/superadmin/hostels/[hostelId]]", error);
+            return NextResponse.json({ error: "Server error" }, { status: 500 });
+        }
         });
-    } catch (error) {
-        console.error("[GET /api/superadmin/hostels/[hostelId]]", error);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
-    }
+            
 }
 
 // PATCH /api/superadmin/hostels/[hostelId] — update status / metadata / reset password
 export async function PATCH(req: Request, { params }: { params: Promise<{ hostelId: string }> }) {
-    try {
-        const [user, { hostelId }, body] = await Promise.all([resolveUser(req), params, req.json()]);
-        await dbConnect();
-        if (!user || user.role !== "superadmin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
 
-        const { action, newPassword, hostelName, city, adminPhone, numberOfBlocks, status } = body;
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "PATCH";
 
-        if (action === "reset-password") {
-            if (!newPassword || newPassword.length < 8) {
-                return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            const [user, { hostelId }, body] = await Promise.all([resolveUser(req), params, req.json()]);
+            await dbConnect();
+            if (!user || user.role !== "superadmin") {
+                return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
             }
-            const passwordHash = await bcrypt.hash(newPassword, 12);
-            // Invalidate all sessions by rotating the passwordHash
-            const updated = await User.findOneAndUpdate(
-                { hostelId, role: "hostel_admin" },
-                { $set: { passwordHash, updatedAt: new Date() } },
-                { returnDocument: 'after' }
-            ).select("email").lean();
-            if (!updated) return NextResponse.json({ error: "Admin user not found" }, { status: 404 });
-            return NextResponse.json({ success: true, message: "Password reset. All active sessions invalidated." });
-        }
 
-        if (action === "toggle-status") {
-            const hostel = await Hostel.findOne({ hostelId }).lean() as any;
+            const { action, newPassword, hostelName, city, adminPhone, numberOfBlocks, status } = body;
+
+            if (action === "reset-password") {
+                if (!newPassword || newPassword.length < 8) {
+                    return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
+                }
+                const passwordHash = await bcrypt.hash(newPassword, 12);
+                // Invalidate all sessions by rotating the passwordHash
+                const updated = await User.findOneAndUpdate(
+                    { hostelId, role: "hostel_admin" },
+                    { $set: { passwordHash, updatedAt: new Date() } },
+                    { returnDocument: 'after' }
+                ).select("email").lean();
+                if (!updated) return NextResponse.json({ error: "Admin user not found" }, { status: 404 });
+                return NextResponse.json({ success: true, message: "Password reset. All active sessions invalidated." });
+            }
+
+            if (action === "toggle-status") {
+                const hostel = await Hostel.findOne({ hostelId }).lean() as any;
+                if (!hostel) return NextResponse.json({ error: "Hostel not found" }, { status: 404 });
+                const newStatus = hostel.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE";
+                await Promise.all([
+                    Hostel.updateOne({ hostelId }, { $set: { status: newStatus } }),
+                    User.updateOne({ hostelId, role: "hostel_admin" }, { $set: { isActive: newStatus === "ACTIVE" } }),
+                ]);
+                return NextResponse.json({ success: true, status: newStatus });
+            }
+
+            // Update metadata
+            const updates: Record<string, unknown> = {};
+            if (hostelName) updates.hostelName = hostelName;
+            if (city) updates.city = city;
+            if (adminPhone !== undefined) updates.adminPhone = adminPhone;
+            if (numberOfBlocks) updates.numberOfBlocks = Math.min(4, Math.max(1, numberOfBlocks));
+            if (status) updates.status = status;
+
+            const hostel = await Hostel.findOneAndUpdate({ hostelId }, { $set: updates }, { returnDocument: 'after' }).lean();
             if (!hostel) return NextResponse.json({ error: "Hostel not found" }, { status: 404 });
-            const newStatus = hostel.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE";
-            await Promise.all([
-                Hostel.updateOne({ hostelId }, { $set: { status: newStatus } }),
-                User.updateOne({ hostelId, role: "hostel_admin" }, { $set: { isActive: newStatus === "ACTIVE" } }),
-            ]);
-            return NextResponse.json({ success: true, status: newStatus });
+            return NextResponse.json(hostel);
+        } catch (error: any) {
+            console.error("[PATCH /api/superadmin/hostels/[hostelId]]", error);
+            return NextResponse.json({ error: error?.message || "Server error" }, { status: 500 });
         }
-
-        // Update metadata
-        const updates: Record<string, unknown> = {};
-        if (hostelName) updates.hostelName = hostelName;
-        if (city) updates.city = city;
-        if (adminPhone !== undefined) updates.adminPhone = adminPhone;
-        if (numberOfBlocks) updates.numberOfBlocks = Math.min(4, Math.max(1, numberOfBlocks));
-        if (status) updates.status = status;
-
-        const hostel = await Hostel.findOneAndUpdate({ hostelId }, { $set: updates }, { returnDocument: 'after' }).lean();
-        if (!hostel) return NextResponse.json({ error: "Hostel not found" }, { status: 404 });
-        return NextResponse.json(hostel);
-    } catch (error: any) {
-        console.error("[PATCH /api/superadmin/hostels/[hostelId]]", error);
-        return NextResponse.json({ error: error?.message || "Server error" }, { status: 500 });
-    }
+        });
+            
 }
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ hostelId: string }> }) {
-    try {
-        const [user, { hostelId }] = await Promise.all([resolveUser(req), params]);
-        await dbConnect();
 
-        if (!user || user.role !== "superadmin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "DELETE";
+
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            const [user, { hostelId }] = await Promise.all([resolveUser(req), params]);
+            await dbConnect();
+
+            if (!user || user.role !== "superadmin") {
+                return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            }
+
+            const body = await req.json().catch(() => ({}));
+            const confirmationText = body.confirmationText?.trim();
+
+            if (!hostelId) {
+                return NextResponse.json({ error: "Missing hostel ID" }, { status: 400 });
+            }
+
+            const hostel = await Hostel.findOne({ hostelId });
+            if (!hostel) {
+                return NextResponse.json({ error: "Hostel not found" }, { status: 404 });
+            }
+
+            if (confirmationText !== `delete ${hostel.hostelName}`) {
+                return NextResponse.json({ error: "Invalid confirmation text. Deletion aborted." }, { status: 400 });
+            }
+
+            const { withTransaction } = await import("@/lib/withTransaction");
+            await withTransaction(async (session) => {
+                // Cascade delete
+                try {
+                    const { User } = await import("@/models/User");
+                    await User.deleteMany({ hostelId }, { session });
+                } catch {}
+                try {
+                    const { HostelBlock } = await import("@/models/HostelBlock");
+                    await HostelBlock.deleteMany({ hostelId }, { session });
+                } catch {}
+                try {
+                    const { HostelFloor } = await import("@/models/HostelFloor");
+                    await HostelFloor.deleteMany({ hostelId }, { session });
+                } catch {}
+                try {
+                    const { HostelRoom } = await import("@/models/HostelRoom");
+                    await HostelRoom.deleteMany({ hostelId }, { session });
+                } catch {}
+                try {
+                    const { HostelMember } = await import("@/models/HostelMember");
+                    await HostelMember.deleteMany({ hostelId }, { session });
+                } catch {}
+                try {
+                    const { HostelStaff } = await import("@/models/HostelStaff");
+                    await HostelStaff.deleteMany({ hostelId }, { session });
+                } catch {}
+                try {
+                    const { HostelStaffAttendance } = await import("@/models/HostelStaffAttendance");
+                    await HostelStaffAttendance.deleteMany({ hostelId }, { session });
+                } catch {}
+                try {
+                    const { HostelPayment } = await import("@/models/HostelPayment");
+                    await HostelPayment.deleteMany({ hostelId }, { session });
+                } catch {}
+                try {
+                    const { HostelRenewal } = await import("@/models/HostelRenewal");
+                    await HostelRenewal.deleteMany({ hostelId }, { session });
+                } catch {}
+                try {
+                    const { HostelSettings } = await import("@/models/HostelSettings");
+                    await HostelSettings.deleteMany({ hostelId }, { session });
+                } catch {}
+                try {
+                    const { HostelLog } = await import("@/models/HostelLog");
+                    await HostelLog.deleteMany({ hostelId }, { session });
+                } catch {}
+                try {
+                    const { HostelPlan } = await import("@/models/HostelPlan");
+                    await HostelPlan.deleteMany({ hostelId }, { session });
+                } catch {}
+
+                await Hostel.deleteOne({ hostelId }, { session });
+            });
+
+            return NextResponse.json({ message: `Hostel "${hostel.hostelName}" deleted successfully` });
+        } catch (error: any) {
+            console.error("[DELETE /api/superadmin/hostels/[hostelId]]", error);
+            return NextResponse.json({ error: error?.message || "Server error deleting hostel" }, { status: 500 });
         }
-
-        const body = await req.json().catch(() => ({}));
-        const confirmationText = body.confirmationText?.trim();
-
-        if (!hostelId) {
-            return NextResponse.json({ error: "Missing hostel ID" }, { status: 400 });
-        }
-
-        const hostel = await Hostel.findOne({ hostelId });
-        if (!hostel) {
-            return NextResponse.json({ error: "Hostel not found" }, { status: 404 });
-        }
-
-        if (confirmationText !== `delete ${hostel.hostelName}`) {
-            return NextResponse.json({ error: "Invalid confirmation text. Deletion aborted." }, { status: 400 });
-        }
-
-        const { withTransaction } = await import("@/lib/withTransaction");
-        await withTransaction(async (session) => {
-            // Cascade delete
-            try {
-                const { User } = await import("@/models/User");
-                await User.deleteMany({ hostelId }, { session });
-            } catch {}
-            try {
-                const { HostelBlock } = await import("@/models/HostelBlock");
-                await HostelBlock.deleteMany({ hostelId }, { session });
-            } catch {}
-            try {
-                const { HostelFloor } = await import("@/models/HostelFloor");
-                await HostelFloor.deleteMany({ hostelId }, { session });
-            } catch {}
-            try {
-                const { HostelRoom } = await import("@/models/HostelRoom");
-                await HostelRoom.deleteMany({ hostelId }, { session });
-            } catch {}
-            try {
-                const { HostelMember } = await import("@/models/HostelMember");
-                await HostelMember.deleteMany({ hostelId }, { session });
-            } catch {}
-            try {
-                const { HostelStaff } = await import("@/models/HostelStaff");
-                await HostelStaff.deleteMany({ hostelId }, { session });
-            } catch {}
-            try {
-                const { HostelStaffAttendance } = await import("@/models/HostelStaffAttendance");
-                await HostelStaffAttendance.deleteMany({ hostelId }, { session });
-            } catch {}
-            try {
-                const { HostelPayment } = await import("@/models/HostelPayment");
-                await HostelPayment.deleteMany({ hostelId }, { session });
-            } catch {}
-            try {
-                const { HostelRenewal } = await import("@/models/HostelRenewal");
-                await HostelRenewal.deleteMany({ hostelId }, { session });
-            } catch {}
-            try {
-                const { HostelSettings } = await import("@/models/HostelSettings");
-                await HostelSettings.deleteMany({ hostelId }, { session });
-            } catch {}
-            try {
-                const { HostelLog } = await import("@/models/HostelLog");
-                await HostelLog.deleteMany({ hostelId }, { session });
-            } catch {}
-            try {
-                const { HostelPlan } = await import("@/models/HostelPlan");
-                await HostelPlan.deleteMany({ hostelId }, { session });
-            } catch {}
-
-            await Hostel.deleteOne({ hostelId }, { session });
         });
-
-        return NextResponse.json({ message: `Hostel "${hostel.hostelName}" deleted successfully` });
-    } catch (error: any) {
-        console.error("[DELETE /api/superadmin/hostels/[hostelId]]", error);
-        return NextResponse.json({ error: error?.message || "Server error deleting hostel" }, { status: 500 });
-    }
+            
 }
 

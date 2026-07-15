@@ -21,6 +21,8 @@ const businessAttendanceSchema = new Schema<IBusinessAttendance>(
 
 businessAttendanceSchema.index({ businessId: 1, date: -1 });
 businessAttendanceSchema.index({ labourId: 1, date: 1 }, { unique: true });
+// Speed up summary queries: { labourId, businessId, date range }
+businessAttendanceSchema.index({ businessId: 1, labourId: 1, date: 1 });
 
 export const BusinessAttendance: Model<IBusinessAttendance> =
   mongoose.models.BusinessAttendance || mongoose.model<IBusinessAttendance>("BusinessAttendance", businessAttendanceSchema);

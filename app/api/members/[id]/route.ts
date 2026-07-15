@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 import { EntertainmentMember } from "@/models/EntertainmentMember";
+import { requestContext } from "@/lib/requestContext";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -15,28 +16,43 @@ type RouteContext = { params: Promise<{ id: string }> };
  * Returns a single member with populated plan.
  */
 export async function GET(req: Request, props: RouteContext) {
-    try {
-        await dbConnect();
 
-        const user = await resolveUser(req);
-        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "GET";
 
-        const { id } = await props.params;
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            await dbConnect();
 
-        const populateFields = "name price durationDays durationHours durationMinutes hasTokenPrint quickDelete hasEntertainment hasFaceScan";
-        let member = await secureFindById(Member, id, user, { select: "+photoUrl", populate: { path: "planId", select: populateFields } });
+            const user = await resolveUser(req);
+            if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
-        if (!member) {
-            member = await secureFindById(EntertainmentMember, id, user, { select: "+photoUrl", populate: { path: "planId", select: populateFields } });
+            const { id } = await props.params;
+
+            const populateFields = "name price durationDays durationHours durationMinutes hasTokenPrint quickDelete hasEntertainment hasFaceScan";
+            let member = await secureFindById(Member, id, user, { select: "+photoUrl", populate: { path: "planId", select: populateFields } });
+
+            if (!member) {
+                member = await secureFindById(EntertainmentMember, id, user, { select: "+photoUrl", populate: { path: "planId", select: populateFields } });
+            }
+
+            if (!member) return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+
+            return NextResponse.json(member, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        } catch (error) {
+            console.error("[GET /api/members/[id]]", error);
+            return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-
-        if (!member) return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-
-        return NextResponse.json(member, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    } catch (error) {
-        console.error("[GET /api/members/[id]]", error);
-        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+        });
+            
 }
 
 /**
@@ -44,31 +60,46 @@ export async function GET(req: Request, props: RouteContext) {
  * Partial update — used for balance adjustments, plan updates, etc.
  */
 export async function PATCH(req: Request, props: RouteContext) {
-    try {
-        await dbConnect();
 
-        const user = await resolveUser(req);
-        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "PATCH";
 
-        const { id } = await props.params;
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            await dbConnect();
 
-        const body = await req.json();
-        const { isDeleted, deletedAt, memberId, poolId, ...safeUpdates } = body;
+            const user = await resolveUser(req);
+            if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
-        // ── Ownership check: strictly scoped via secure wrapper ──
-        let member = await secureUpdateById(Member, id, { $set: safeUpdates }, user, { populate: { path: "planId", select: "name price hasTokenPrint" } });
+            const { id } = await props.params;
 
-        if (!member) {
-            member = await secureUpdateById(EntertainmentMember, id, { $set: safeUpdates }, user, { populate: { path: "planId", select: "name price hasTokenPrint" } });
+            const body = await req.json();
+            const { isDeleted, deletedAt, memberId, poolId, ...safeUpdates } = body;
+
+            // ── Ownership check: strictly scoped via secure wrapper ──
+            let member = await secureUpdateById(Member, id, { $set: safeUpdates }, user, { populate: { path: "planId", select: "name price hasTokenPrint" } });
+
+            if (!member) {
+                member = await secureUpdateById(EntertainmentMember, id, { $set: safeUpdates }, user, { populate: { path: "planId", select: "name price hasTokenPrint" } });
+            }
+
+            if (!member) return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+
+            return NextResponse.json(member, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        } catch (error) {
+            console.error("[PATCH /api/members/[id]]", error);
+            return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-
-        if (!member) return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-
-        return NextResponse.json(member, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    } catch (error) {
-        console.error("[PATCH /api/members/[id]]", error);
-        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+        });
+            
 }
 
 /**
@@ -77,84 +108,99 @@ export async function PATCH(req: Request, props: RouteContext) {
  * Archives to DeletedMember collection for historical count tracking.
  */
 export async function DELETE(req: Request, props: RouteContext) {
-    try {
-        await dbConnect();
 
-        const user = await resolveUser(req);
-        if (!user || user.role !== "admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "DELETE";
 
-        const { id } = await props.params;
-        if (!id) return NextResponse.json({ error: "Missing member ID" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            await dbConnect();
 
-        // 1. Fetch member first to validate balance
-        let member: any = await secureFindById(Member, id, user);
-        let isEntertainment = false;
-
-        if (!member) {
-            member = await secureFindById(EntertainmentMember, id, user);
-            isEntertainment = true;
-        }
-
-        if (!member) {
-            await auditCrossTenantAccess(Member, id, user);
-            await auditCrossTenantAccess(EntertainmentMember, id, user);
-            return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
-
-        // 2. Block deletion if member has pending balance
-        if ((member.balanceAmount || 0) > 0) {
-            return NextResponse.json(
-                { error: "Member has pending balance. Cannot delete." },
-                { status: 400, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }
-            );
-        }
-
-        // 3. Archive to DeletedMember for historical count tracking
-        try {
-            const { DeletedMember } = await import("@/models/DeletedMember");
-            await DeletedMember.create({
-                originalId: member._id,
-                memberId: member.memberId || member._id.toString(),
-                name: member.name || "Unknown",
-                phone: member.phone || "Unknown",
-                poolId: member.poolId?.toString() || "unknown",
-                deletedAt: new Date(),
-                deletionType: "manual",
-                collectionSource: isEntertainment ? "entertainment_members" : "members",
-                fullData: member,
-            });
-        } catch (archiveErr) {
-            console.warn("DeletedMember archive failed (non-critical):", archiveErr);
-        }
-
-        // 4. Hard delete
-        let deleted = await secureDeleteById(Member, id, user);
-        if (!deleted) {
-            deleted = await secureDeleteById(EntertainmentMember, id, user);
-        }
-
-        // ── AUDIT LOG: Member Deletion ──────────────────────────────────
-        const { logger } = await import("@/lib/logger");
-        logger.audit({
-            type: "MEMBER_DELETED",
-            userId: user.id,
-            poolId: member.poolId?.toString(),
-            meta: {
-                memberId: member.memberId,
-                memberName: member.name,
-                isEntertainment,
-                deletedBy: user.email || user.id,
+            const user = await resolveUser(req);
+            if (!user || user.role !== "admin") {
+                return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
+
+            const { id } = await props.params;
+            if (!id) return NextResponse.json({ error: "Missing member ID" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+
+            // 1. Fetch member first to validate balance
+            let member: any = await secureFindById(Member, id, user);
+            let isEntertainment = false;
+
+            if (!member) {
+                member = await secureFindById(EntertainmentMember, id, user);
+                isEntertainment = true;
+            }
+
+            if (!member) {
+                await auditCrossTenantAccess(Member, id, user);
+                await auditCrossTenantAccess(EntertainmentMember, id, user);
+                return NextResponse.json({ error: "Not Found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+
+            // 2. Block deletion if member has pending balance
+            if ((member.balanceAmount || 0) > 0) {
+                return NextResponse.json(
+                    { error: "Member has pending balance. Cannot delete." },
+                    { status: 400, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }
+                );
+            }
+
+            // 3. Archive to DeletedMember for historical count tracking
+            try {
+                const { DeletedMember } = await import("@/models/DeletedMember");
+                await DeletedMember.create({
+                    originalId: member._id,
+                    memberId: member.memberId || member._id.toString(),
+                    name: member.name || "Unknown",
+                    phone: member.phone || "Unknown",
+                    poolId: member.poolId?.toString() || "unknown",
+                    deletedAt: new Date(),
+                    deletionType: "manual",
+                    collectionSource: isEntertainment ? "entertainment_members" : "members",
+                    fullData: member,
+                });
+            } catch (archiveErr) {
+                console.warn("DeletedMember archive failed (non-critical):", archiveErr);
+            }
+
+            // 4. Hard delete
+            let deleted = await secureDeleteById(Member, id, user);
+            if (!deleted) {
+                deleted = await secureDeleteById(EntertainmentMember, id, user);
+            }
+
+            // ── AUDIT LOG: Member Deletion ──────────────────────────────────
+            const { logger } = await import("@/lib/logger");
+            logger.audit({
+                type: "MEMBER_DELETED",
+                userId: user.id,
+                poolId: member.poolId?.toString(),
+                meta: {
+                    memberId: member.memberId,
+                    memberName: member.name,
+                    isEntertainment,
+                    deletedBy: user.email || user.id,
+                }
+            });
+
+            // Invalidate dashboard cache
+            import("@/lib/dashboardCache").then(m => m.invalidateDashboard(member.poolId?.toString())).catch(() => {});
+
+            return NextResponse.json({ message: "Member deleted successfully." }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        } catch (error) {
+            console.error("[DELETE /api/members/[id]]", error);
+            return NextResponse.json({ error: "Server error deleting member" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        }
         });
-
-        // Invalidate dashboard cache
-        import("@/lib/dashboardCache").then(m => m.invalidateDashboard(member.poolId?.toString())).catch(() => {});
-
-        return NextResponse.json({ message: "Member deleted successfully." }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    } catch (error) {
-        console.error("[DELETE /api/members/[id]]", error);
-        return NextResponse.json({ error: "Server error deleting member" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+            
 }

@@ -10,165 +10,196 @@ import { uploadBuffer } from "@/lib/local-upload";
 import { savePhoto } from "@/lib/savePhoto";
 import { signQRToken } from "@/lib/qrSigner";
 import { EntertainmentMemberCreateSchema } from "@/lib/validators";
+import { requestContext } from "@/lib/requestContext";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function GET(req: Request) {
-    try {
-        const [, user] = await Promise.all([
-            dbConnect(),
-            resolveUser(req),
-        ]);
-        if (!user)
-            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
-        const url = new URL(req.url);
-        const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1"));
-        const limit = Math.min(20, Math.max(1, parseInt(url.searchParams.get("limit") ?? "20")));
-        const skip = (page - 1) * limit;
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "GET";
 
-        const query: Record<string, unknown> = { isDeleted: false };
-        if (user.role !== "superadmin") {
-            if (!user.poolId) {
-                return NextResponse.json({ error: "No pool assigned to this account" }, { status: 400, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            const [, user] = await Promise.all([
+                dbConnect(),
+                resolveUser(req),
+            ]);
+            if (!user)
+                return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+
+            const url = new URL(req.url);
+            const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1"));
+            const limit = Math.min(20, Math.max(1, parseInt(url.searchParams.get("limit") ?? "20")));
+            const skip = (page - 1) * limit;
+
+            const query: Record<string, unknown> = { isDeleted: false };
+            if (user.role !== "superadmin") {
+                if (!user.poolId) {
+                    return NextResponse.json({ error: "No pool assigned to this account" }, { status: 400, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+                }
+                query.poolId = user.poolId;
             }
-            query.poolId = user.poolId;
+
+            const search = url.searchParams.get("search");
+            if (search) {
+                const sanitized = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Prevent ReDoS
+                query.$or = [
+                    { name: { $regex: sanitized, $options: "i" } },
+                    { phone: { $regex: sanitized, $options: "i" } },
+                    { memberId: { $regex: sanitized, $options: "i" } },
+                ];
+            }
+
+            const [members, total] = await Promise.all([
+                EntertainmentMember.find(query)
+                    .populate("planId", "name price hasTokenPrint")
+                    .select("memberId name phone planId planQuantity planStartDate planEndDate paidAmount balanceAmount paymentStatus photoUrl qrCodeUrl isActive isExpired createdAt")
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limit)
+                    .lean(),
+                EntertainmentMember.countDocuments(query),
+            ]);
+
+            return NextResponse.json({
+                data: members,
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        } catch (error) {
+            console.error("[GET /api/entertainment-members]", error);
+            return NextResponse.json({ error: "Failed to fetch entertainment members" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-
-        const search = url.searchParams.get("search");
-        if (search) {
-            const sanitized = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Prevent ReDoS
-            query.$or = [
-                { name: { $regex: sanitized, $options: "i" } },
-                { phone: { $regex: sanitized, $options: "i" } },
-                { memberId: { $regex: sanitized, $options: "i" } },
-            ];
-        }
-
-        const [members, total] = await Promise.all([
-            EntertainmentMember.find(query)
-                .populate("planId", "name price hasTokenPrint")
-                .select("memberId name phone planId planQuantity planStartDate planEndDate paidAmount balanceAmount paymentStatus photoUrl qrCodeUrl isActive isExpired createdAt")
-                .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(limit)
-                .lean(),
-            EntertainmentMember.countDocuments(query),
-        ]);
-
-        return NextResponse.json({
-            data: members,
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
-        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    } catch (error) {
-        console.error("[GET /api/entertainment-members]", error);
-        return NextResponse.json({ error: "Failed to fetch entertainment members" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+        });
+            
 }
 
 export async function POST(req: Request) {
-    try {
-        const [, user] = await Promise.all([
-            dbConnect(),
-            resolveUser(req),
-        ]);
-        if (!user)
-            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
-        const body = await req.json();
-        const result = EntertainmentMemberCreateSchema.safeParse(body);
-        if (!result.success) {
-            const errs = result.error.flatten().fieldErrors;
-            const errMsg = Object.entries(errs).map(([f, m]) => `${f}: ${(m as string[])?.join(", ")}`).join(" | ") || result.error.flatten().formErrors?.join(", ") || "Validation failed";
-            return NextResponse.json({ error: errMsg }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
-        const { name, phone, planId, dob, photoBase64, aadharCard, address, planQuantity = 1, paidAmount = 0, balanceAmount = 0 } = result.data;
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "POST";
 
-        const poolId = user.role !== "superadmin" ? user.poolId : body.poolId;
-        if (!poolId)
-            return NextResponse.json({ error: "Pool ID required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-
-        const plan = await Plan.findOne({ _id: planId, poolId }).lean();
-        if (!plan)
-            return NextResponse.json({ error: "Invalid Plan" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-
-        // poolId already resolved above before plan lookup
-
-        const { Pool } = await import("@/models/Pool");
-        const updatedPool = await Pool.findOneAndUpdate(
-            { poolId },
-            { $inc: { entertainmentMemberCounter: 1 } },
-            { returnDocument: 'after' }
-        );
-        const counter = updatedPool!.entertainmentMemberCounter;
-        const memberId = `MS${counter.toString().padStart(4, "0")}`;
-
-        let age: number | undefined;
-        if (dob) {
-            const b = new Date(dob);
-            const today = new Date();
-            age = today.getFullYear() - b.getFullYear();
-            const m = today.getMonth() - b.getMonth();
-            if (m < 0 || (m === 0 && today.getDate() < b.getDate())) age--;
-        }
-
-        let photoUrl = "";
-        if (photoBase64) {
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
             try {
-                photoUrl = await savePhoto(photoBase64);
-            } catch { /* skip if local save fails */ }
+            const [, user] = await Promise.all([
+                dbConnect(),
+                resolveUser(req),
+            ]);
+            if (!user)
+                return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+
+            const body = await req.json();
+            const result = EntertainmentMemberCreateSchema.safeParse(body);
+            if (!result.success) {
+                const errs = result.error.flatten().fieldErrors;
+                const errMsg = Object.entries(errs).map(([f, m]) => `${f}: ${(m as string[])?.join(", ")}`).join(" | ") || result.error.flatten().formErrors?.join(", ") || "Validation failed";
+                return NextResponse.json({ error: errMsg }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+            const { name, phone, planId, dob, photoBase64, aadharCard, address, planQuantity = 1, paidAmount = 0, balanceAmount = 0 } = result.data;
+
+            const poolId = user.role !== "superadmin" ? user.poolId : body.poolId;
+            if (!poolId)
+                return NextResponse.json({ error: "Pool ID required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+
+            const plan = await Plan.findOne({ _id: planId, poolId }).lean();
+            if (!plan)
+                return NextResponse.json({ error: "Invalid Plan" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+
+            // poolId already resolved above before plan lookup
+
+            const { Pool } = await import("@/models/Pool");
+            const updatedPool = await Pool.findOneAndUpdate(
+                { poolId },
+                { $inc: { entertainmentMemberCounter: 1 } },
+                { returnDocument: 'after' }
+            );
+            const counter = updatedPool!.entertainmentMemberCounter;
+            const memberId = `MS${counter.toString().padStart(4, "0")}`;
+
+            let age: number | undefined;
+            if (dob) {
+                const b = new Date(dob);
+                const today = new Date();
+                age = today.getFullYear() - b.getFullYear();
+                const m = today.getMonth() - b.getMonth();
+                if (m < 0 || (m === 0 && today.getDate() < b.getDate())) age--;
+            }
+
+            let photoUrl = "";
+            if (photoBase64) {
+                try {
+                    photoUrl = await savePhoto(photoBase64);
+                } catch { /* skip if local save fails */ }
+            }
+
+            const qrToken = crypto.randomUUID();
+            let qrCodeUrl = "";
+            const qrPayloadObject = await signQRToken(memberId);
+            try {
+                const buf = await QRCode.toBuffer(qrPayloadObject, { width: 300 });
+                qrCodeUrl = await uploadBuffer(buf, "swimming-pool/qrcodes", `${poolId}_${memberId}_qr`);
+            } catch {
+                try { qrCodeUrl = await QRCode.toDataURL(qrPayloadObject, { width: 300 }); } catch { /* ignore */ }
+            }
+
+            const startDate = new Date();
+            const planEndDate = new Date();
+            const multiplier = planQuantity || 1;
+            if (plan.durationSeconds) planEndDate.setSeconds(planEndDate.getSeconds() + plan.durationSeconds * multiplier);
+            else if (plan.durationMinutes) planEndDate.setMinutes(planEndDate.getMinutes() + plan.durationMinutes * multiplier);
+            else if (plan.durationHours) planEndDate.setHours(planEndDate.getHours() + plan.durationHours * multiplier);
+            else planEndDate.setDate(startDate.getDate() + (plan.durationDays || 30) * multiplier);
+
+            const paymentStatus = balanceAmount <= 0 ? "paid" : paidAmount > 0 ? "partial" : "pending";
+
+            const newMember = new EntertainmentMember({
+                memberId, poolId, name, phone,
+                dob: dob ? new Date(dob) : undefined,
+                age, aadharCard, address, photoUrl, planId,
+                planQuantity: multiplier, planStartDate: startDate, planEndDate,
+                paidAmount, balanceAmount, paymentStatus,
+                qrCodeUrl, qrToken, isActive: true, isExpired: false, isDeleted: false,
+            });
+
+            await newMember.save();
+            const saved = await EntertainmentMember.findById(newMember._id)
+                .populate("planId", "name hasTokenPrint price")
+                .select("memberId name phone planId planQuantity planStartDate planEndDate paidAmount balanceAmount paymentStatus photoUrl qrCodeUrl")
+                .lean();
+
+            // Invalidate dashboard cache so new member shows immediately
+            try {
+                const { invalidateDashboard } = await import("@/lib/dashboardCache");
+                await invalidateDashboard(poolId);
+            } catch (err) {
+                console.error("Cache invalidation failed", err);
+            }
+
+            return NextResponse.json(saved, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        } catch (error) {
+            console.error("[POST /api/entertainment-members]", error);
+            return NextResponse.json({ error: "Server error creating entertainment member" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-
-        const qrToken = crypto.randomUUID();
-        let qrCodeUrl = "";
-        const qrPayloadObject = await signQRToken(memberId);
-        try {
-            const buf = await QRCode.toBuffer(qrPayloadObject, { width: 300 });
-            qrCodeUrl = await uploadBuffer(buf, "swimming-pool/qrcodes", `${poolId}_${memberId}_qr`);
-        } catch {
-            try { qrCodeUrl = await QRCode.toDataURL(qrPayloadObject, { width: 300 }); } catch { /* ignore */ }
-        }
-
-        const startDate = new Date();
-        const planEndDate = new Date();
-        const multiplier = planQuantity || 1;
-        if (plan.durationSeconds) planEndDate.setSeconds(planEndDate.getSeconds() + plan.durationSeconds * multiplier);
-        else if (plan.durationMinutes) planEndDate.setMinutes(planEndDate.getMinutes() + plan.durationMinutes * multiplier);
-        else if (plan.durationHours) planEndDate.setHours(planEndDate.getHours() + plan.durationHours * multiplier);
-        else planEndDate.setDate(startDate.getDate() + (plan.durationDays || 30) * multiplier);
-
-        const paymentStatus = balanceAmount <= 0 ? "paid" : paidAmount > 0 ? "partial" : "pending";
-
-        const newMember = new EntertainmentMember({
-            memberId, poolId, name, phone,
-            dob: dob ? new Date(dob) : undefined,
-            age, aadharCard, address, photoUrl, planId,
-            planQuantity: multiplier, planStartDate: startDate, planEndDate,
-            paidAmount, balanceAmount, paymentStatus,
-            qrCodeUrl, qrToken, isActive: true, isExpired: false, isDeleted: false,
         });
-
-        await newMember.save();
-        const saved = await EntertainmentMember.findById(newMember._id)
-            .populate("planId", "name hasTokenPrint price")
-            .select("memberId name phone planId planQuantity planStartDate planEndDate paidAmount balanceAmount paymentStatus photoUrl qrCodeUrl")
-            .lean();
-
-        // Invalidate dashboard cache so new member shows immediately
-        try {
-            const { invalidateDashboard } = await import("@/lib/dashboardCache");
-            await invalidateDashboard(poolId);
-        } catch (err) {
-            console.error("Cache invalidation failed", err);
-        }
-
-        return NextResponse.json(saved, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    } catch (error) {
-        console.error("[POST /api/entertainment-members]", error);
-        return NextResponse.json({ error: "Server error creating entertainment member" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+            
 }

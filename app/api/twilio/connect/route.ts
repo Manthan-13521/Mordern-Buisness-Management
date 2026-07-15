@@ -6,6 +6,7 @@ import { Pool } from "@/models/Pool";
 import { TwilioConnectSchema } from "@/lib/validators";
 import { encryptToken } from "@/lib/twilioService";
 import twilio from "twilio";
+import { requestContext } from "@/lib/requestContext";
 
 export const dynamic = "force-dynamic";
 
@@ -15,90 +16,105 @@ export const dynamic = "force-dynamic";
  * IMPORTANT: credentials are NEVER saved if the test message fails.
  */
 export async function POST(req: Request) {
-    try {
-        const [, user] = await Promise.all([dbConnect(), resolveUser(req)]);
 
-        if (!user || user.role !== "admin") {
-            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "POST";
 
-        // Free Trial Lockout
-        const { isTwilioAllowed } = await import("@/lib/quotas");
-        if (!isTwilioAllowed(user)) {
-            return NextResponse.json({ error: "Twilio integration is not available on the Free Trial. Please upgrade your plan." }, { status: 403 });
-        }
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            const [, user] = await Promise.all([dbConnect(), resolveUser(req)]);
 
-        const body = await req.json();
-        const result = TwilioConnectSchema.safeParse(body);
-        if (!result.success) {
-            return NextResponse.json({ error: Object.entries(result.error.flatten().fieldErrors).map(([f, m]) => `${f}: ${(m as string[])?.join(", ")}`).join(" | ") || "Validation failed" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
+            if (!user || user.role !== "admin") {
+                return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
 
-        const { sid, authToken, whatsappNumber, testPhone } = result.data;
+            // Free Trial Lockout
+            const { isTwilioAllowed } = await import("@/lib/quotas");
+            if (!isTwilioAllowed(user)) {
+                return NextResponse.json({ error: "Twilio integration is not available on the Free Trial. Please upgrade your plan." }, { status: 403 });
+            }
 
-        // Normalize the from/to numbers
-        const fromNumber = whatsappNumber.startsWith("whatsapp:")
-            ? whatsappNumber
-            : `whatsapp:${whatsappNumber}`;
+            const body = await req.json();
+            const result = TwilioConnectSchema.safeParse(body);
+            if (!result.success) {
+                return NextResponse.json({ error: Object.entries(result.error.flatten().fieldErrors).map(([f, m]) => `${f}: ${(m as string[])?.join(", ")}`).join(" | ") || "Validation failed" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
 
-        const rawPhone = testPhone.replace(/\D/g, "");
-        const toBase = rawPhone.startsWith("91") && rawPhone.length === 12
-            ? `+${rawPhone}`
-            : `+91${rawPhone}`;
-        const toNumber = `whatsapp:${toBase}`;
+            const { sid, authToken, whatsappNumber, testPhone } = result.data;
 
-        // ── Step 1: Test credentials by sending a real message ────────────
-        let testClient: twilio.Twilio;
-        try {
-            testClient = twilio(sid, authToken);
-        } catch {
-            return NextResponse.json({ error: "Invalid Twilio credentials format." }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
+            // Normalize the from/to numbers
+            const fromNumber = whatsappNumber.startsWith("whatsapp:")
+                ? whatsappNumber
+                : `whatsapp:${whatsappNumber}`;
 
-        try {
-            await testClient.messages.create({
-                from: fromNumber,
-                to: toNumber,
-                body: "✅ WhatsApp connected successfully! Your pool management system is now linked to this number.",
-            });
-        } catch (twilioErr: any) {
-            // Do NOT save credentials on failure
-            return NextResponse.json({
-                    error: "Twilio test message failed. Credentials not saved.",
-                    detail: twilioErr?.message || "Unknown Twilio error",
-                }, {  status: 422 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
+            const rawPhone = testPhone.replace(/\D/g, "");
+            const toBase = rawPhone.startsWith("91") && rawPhone.length === 12
+                ? `+${rawPhone}`
+                : `+91${rawPhone}`;
+            const toNumber = `whatsapp:${toBase}`;
 
-        // ── Step 2: Encrypt and save ──────────────────────────────────────
-        const { encrypted, iv } = encryptToken(authToken);
+            // ── Step 1: Test credentials by sending a real message ────────────
+            let testClient: twilio.Twilio;
+            try {
+                testClient = twilio(sid, authToken);
+            } catch {
+                return NextResponse.json({ error: "Invalid Twilio credentials format." }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
 
-        const pool = await Pool.findOneAndUpdate(
-            { poolId: user.poolId },
-            {
-                $set: {
-                    twilio: {
-                        sid,
-                        authToken_encrypted: encrypted,
-                        iv,
-                        whatsappNumber: fromNumber,
+            try {
+                await testClient.messages.create({
+                    from: fromNumber,
+                    to: toNumber,
+                    body: "✅ WhatsApp connected successfully! Your pool management system is now linked to this number.",
+                });
+            } catch (twilioErr: any) {
+                // Do NOT save credentials on failure
+                return NextResponse.json({
+                        error: "Twilio test message failed. Credentials not saved.",
+                        detail: twilioErr?.message || "Unknown Twilio error",
+                    }, {  status: 422 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+
+            // ── Step 2: Encrypt and save ──────────────────────────────────────
+            const { encrypted, iv } = encryptToken(authToken);
+
+            const pool = await Pool.findOneAndUpdate(
+                { poolId: user.poolId },
+                {
+                    $set: {
+                        twilio: {
+                            sid,
+                            authToken_encrypted: encrypted,
+                            iv,
+                            whatsappNumber: fromNumber,
+                        },
+                        isTwilioConnected: true,
                     },
-                    isTwilioConnected: true,
                 },
-            },
-            { returnDocument: 'after' }
-        );
+                { returnDocument: 'after' }
+            );
 
-        if (!pool) {
-            return NextResponse.json({ error: "Pool not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            if (!pool) {
+                return NextResponse.json({ error: "Pool not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+
+            return NextResponse.json({
+                success: true,
+                message: "Twilio connected! Test message sent successfully.",
+                whatsappNumber: fromNumber,
+            }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        } catch (error: any) {
+            console.error("[POST /api/twilio/connect]", error);
+            return NextResponse.json({ error: "Internal server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-
-        return NextResponse.json({
-            success: true,
-            message: "Twilio connected! Test message sent successfully.",
-            whatsappNumber: fromNumber,
-        }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    } catch (error: any) {
-        console.error("[POST /api/twilio/connect]", error);
-        return NextResponse.json({ error: "Internal server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+        });
+            
 }

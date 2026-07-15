@@ -5,6 +5,7 @@ import { HostelPayment } from "@/models/HostelPayment";
 import { HostelMember } from "@/models/HostelMember";
 import { HostelBlock } from "@/models/HostelBlock";
 import { CronLog } from "@/models/CronLog";
+import { requestContext } from "@/lib/requestContext";
 
 export const dynamic = "force-dynamic";
 
@@ -53,65 +54,78 @@ async function generateSnapshotForMonth(targetDate: Date, hostelId: string) {
 }
 
 export async function GET(req: Request) {
-    if (req.headers.get("Authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "GET";
+
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            if (req.headers.get("Authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
     const jobName = "hostel-analytics-snapshot";
     const log = await CronLog.create({ jobName, status: "running" });
-
     try {
-        await dbConnect();
-        const hostels = await HostelBlock.distinct("hostelId");
+            await dbConnect();
+            const hostels = await HostelBlock.distinct("hostelId");
 
-        const today = new Date();
-        today.setUTCHours(0, 0, 0, 0);
-        
-        let snapshotsCreated = 0;
-
-        for (const hostelId of hostels) {
-            // Gap Recovery: Find the last snapshot yearMonth, evaluate missed months natively
-            const lastSnapshot = await HostelAnalytics.findOne({ hostelId }).sort({ yearMonth: -1 }).lean();
+            const today = new Date();
+            today.setUTCHours(0, 0, 0, 0);
             
-            let pointerDate = new Date(today);
-            pointerDate.setUTCDate(1); // default to this month boundary
+            let snapshotsCreated = 0;
 
-            if (lastSnapshot && lastSnapshot.yearMonth) {
-                const parts = lastSnapshot.yearMonth.split("-");
-                if (parts.length === 2 && !isNaN(Number(parts[0])) && !isNaN(Number(parts[1]))) {
-                    // Date.UTC with Number(parts[1]) correctly evaluates natively to the NEXT month
-                    // (since parts[1] is 1-indexed string e.g. "04" -> Date.UTC(y, 4, 1) -> May 1st)
-                    pointerDate = new Date(Date.UTC(Number(parts[0]), Number(parts[1]), 1));
+            for (const hostelId of hostels) {
+                // Gap Recovery: Find the last snapshot yearMonth, evaluate missed months natively
+                const lastSnapshot = await HostelAnalytics.findOne({ hostelId }).sort({ yearMonth: -1 }).lean();
+                
+                let pointerDate = new Date(today);
+                pointerDate.setUTCDate(1); // default to this month boundary
+
+                if (lastSnapshot && lastSnapshot.yearMonth) {
+                    const parts = lastSnapshot.yearMonth.split("-");
+                    if (parts.length === 2 && !isNaN(Number(parts[0])) && !isNaN(Number(parts[1]))) {
+                        // Date.UTC with Number(parts[1]) correctly evaluates natively to the NEXT month
+                        // (since parts[1] is 1-indexed string e.g. "04" -> Date.UTC(y, 4, 1) -> May 1st)
+                        pointerDate = new Date(Date.UTC(Number(parts[0]), Number(parts[1]), 1));
+                    }
                 }
-            }
 
-            while (pointerDate.getTime() <= today.getTime()) {
-                await generateSnapshotForMonth(pointerDate, hostelId);
+                while (pointerDate.getTime() <= today.getTime()) {
+                    await generateSnapshotForMonth(pointerDate, hostelId);
+                    snapshotsCreated++;
+                    pointerDate = new Date(Date.UTC(pointerDate.getUTCFullYear(), pointerDate.getUTCMonth() + 1, 1)); // +1 month increment
+                }
+                
+                // Redundancy: explicitly always ensure this month is up to date
+                await generateSnapshotForMonth(today, hostelId);
                 snapshotsCreated++;
-                pointerDate = new Date(Date.UTC(pointerDate.getUTCFullYear(), pointerDate.getUTCMonth() + 1, 1)); // +1 month increment
             }
-            
-            // Redundancy: explicitly always ensure this month is up to date
-            await generateSnapshotForMonth(today, hostelId);
-            snapshotsCreated++;
-        }
 
-        log.status = "success";
-        log.completedAt = new Date();
-        log.metadata = { snapshotsCreated, hostelsProcessed: hostels.length };
-        await log.save();
-
-        return NextResponse.json({ success: true, snapshotsCreated });
-    } catch (error: any) {
-        console.error(`[CRON ERROR] ${jobName}:`, error);
-
-        // RETRY BLOCK
-        try {
-            log.status = "failed";
-            log.error = error?.message;
+            log.status = "success";
+            log.completedAt = new Date();
+            log.metadata = { snapshotsCreated, hostelsProcessed: hostels.length };
             await log.save();
-        } catch(e) {}
 
-        return NextResponse.json({ error: "Analytics job failed" }, { status: 500 });
-    }
+            return NextResponse.json({ success: true, snapshotsCreated });
+        } catch (error: any) {
+            console.error(`[CRON ERROR] ${jobName}:`, error);
+
+            // RETRY BLOCK
+            try {
+                log.status = "failed";
+                log.error = error?.message;
+                await log.save();
+            } catch(e) {}
+
+            return NextResponse.json({ error: "Analytics job failed" }, { status: 500 });
+        }
+        });
+            
 }

@@ -141,13 +141,9 @@ export function rateLimitHeaders(limit: number, remaining: number): Record<strin
     }
 }
 
-/**
- * Security headers applied to all API responses.
- */
-export const SECURITY_HEADERS: Record<string, string> = {
-    'X-Content-Type-Options': 'nosniff',
-    'X-Frame-Options': 'DENY',
-    'X-XSS-Protection': '1; mode=block',
-    'Referrer-Policy': 'strict-origin-when-cross-origin',
-    'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
-}
+
+// NOTE: Security headers are applied globally by next.config.ts (headers()) and
+// per-request by middlewares/security.ts (applySecurityHeaders).
+// Do not add route-level security headers here — they will duplicate or conflict
+// with the global middleware headers.
+

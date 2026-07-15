@@ -6,6 +6,7 @@ import { Pool } from "@/models/Pool";
 import { Hostel } from "@/models/Hostel";
 import { checkRateLimit, getClientIp, rateLimitHeaders } from "@/lib/rateLimit";
 import { isDuplicate } from "@/lib/idempotency";
+import { requestContext } from "@/lib/requestContext";
 
 export const dynamic = "force-dynamic";
 
@@ -23,46 +24,61 @@ async function resolveTenant(slug: string, type: "pool" | "hostel") {
 }
 
 export async function POST(req: Request, props: { params: Promise<{ hostelSlug: string }> }) {
-  try {
-    const { hostelSlug } = await props.params;
-    const user = await resolveUser(req);
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const tenantId = await resolveTenant(hostelSlug, "hostel");
-    const { validateTenantAccess } = await import("@/lib/tenant");
-    if (!validateTenantAccess(user, tenantId, "hostel")) {
-      return NextResponse.json({ error: "Access denied: hostel mismatch" }, { status: 403 });
-    }
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "POST";
 
-    // ── RATE LIMITING ──
-    const ip = getClientIp(req);
-    const { allowed, limit, remaining } = checkRateLimit(ip, "/api/hostel/staff/attendance", "POST");
-    if (!allowed) {
-      return NextResponse.json(
-        { error: "Too many requests. Please wait." },
-        { status: 429, headers: rateLimitHeaders(limit, remaining) }
-      );
-    }
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+        const { hostelSlug } = await props.params;
+        const user = await resolveUser(req);
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { date, records } = await req.json();
+        const tenantId = await resolveTenant(hostelSlug, "hostel");
+        const { validateTenantAccess } = await import("@/lib/tenant");
+        if (!validateTenantAccess(user, tenantId, "hostel")) {
+          return NextResponse.json({ error: "Access denied: hostel mismatch" }, { status: 403 });
+        }
 
-    // ── IDEMPOTENCY: Prevent double submission for same date (10s window) ──
-    const dedupeKey = `attendance:${tenantId}:${date}`;
-    if (await isDuplicate(dedupeKey, 10_000)) {
-      return NextResponse.json({ success: true, message: "Already processed" });
-    }
+        // ── RATE LIMITING ──
+        const ip = getClientIp(req);
+        const { allowed, limit, remaining } = checkRateLimit(ip, "/api/hostel/staff/attendance", "POST");
+        if (!allowed) {
+          return NextResponse.json(
+            { error: "Too many requests. Please wait." },
+            { status: 429, headers: rateLimitHeaders(limit, remaining) }
+          );
+        }
 
-    const promises = records.map(async (rec: any) => {
-      // Normalize to model enum: "Present" | "Absent" (capital first letter)
-      const raw = (rec.status || "").toLowerCase();
-      const normalizedStatus = raw === "present" ? "Present" : raw === "half_day" ? "half_day" : raw === "absent" ? "Absent" : rec.status;
-      return HostelStaffAttendance.findOneAndUpdate({ staffId: rec.labourId, hostelId: tenantId, date }, { $set: { status: normalizedStatus } }, { upsert: true });
-    });
+        const { date, records } = await req.json();
 
-    await Promise.all(promises);
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error(error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+        // ── IDEMPOTENCY: Prevent double submission for same date (10s window) ──
+        const dedupeKey = `attendance:${tenantId}:${date}`;
+        if (await isDuplicate(dedupeKey, 10_000)) {
+          return NextResponse.json({ success: true, message: "Already processed" });
+        }
+
+        const promises = records.map(async (rec: any) => {
+          // Normalize to model enum: "Present" | "Absent" (capital first letter)
+          const raw = (rec.status || "").toLowerCase();
+          const normalizedStatus = raw === "present" ? "Present" : raw === "half_day" ? "half_day" : raw === "absent" ? "Absent" : rec.status;
+          return HostelStaffAttendance.findOneAndUpdate({ staffId: rec.labourId, hostelId: tenantId, date }, { $set: { status: normalizedStatus } }, { upsert: true });
+        });
+
+        await Promise.all(promises);
+        return NextResponse.json({ success: true });
+      } catch (error: any) {
+        console.error(error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+        });
+            
 }

@@ -183,7 +183,7 @@ export async function enforceMemberCreationLimit(poolId: string) {
     const usage = await OrgUsage.findOneAndUpdate(
         { orgId: context.orgId },
         { $max: { peakMembers: currentCount } },
-        { new: true, upsert: true }
+        { returnDocument: 'after', upsert: true }
     );
     
     const peak = usage?.peakMembers || currentCount;

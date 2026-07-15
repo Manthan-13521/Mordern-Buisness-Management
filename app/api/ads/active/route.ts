@@ -1,87 +1,103 @@
 import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/mongodb";
 import { Ad } from "@/models/Ad";
+import { requestContext } from "@/lib/requestContext";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
-    try {
-        await dbConnect();
 
-        const now = new Date();
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "GET";
 
-        // 1. Fetch ALL active ads
-        // Note: Legacy ads without status fallback to isActive in migration, but here we query by status.
-        // Also support older ads using an $or for backward compatibility if migration hasn't run.
-        const activeAds = await Ad.find({
-            $or: [{ status: "active" }, { isActive: true }],
-            startDate: { $lte: now },
-            endDate: { $gte: now },
-        }).lean<any[]>();
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            await dbConnect();
 
-        if (!activeAds || activeAds.length === 0) {
-            return NextResponse.json({ slots: {} });
-        }
+            const now = new Date();
 
-        // 2. Score ads based on priority, performance (CTR) and recency
-        const scoredAds = activeAds.map(ad => {
-            let score = (ad.priority || 0) * 10; // Base score from manual priority
+            // 1. Fetch ALL active ads
+            // Note: Legacy ads without status fallback to isActive in migration, but here we query by status.
+            // Also support older ads using an $or for backward compatibility if migration hasn't run.
+            const activeAds = await Ad.find({
+                $or: [{ status: "active" }, { isActive: true }],
+                startDate: { $lte: now },
+                endDate: { $gte: now },
+            }).lean<any[]>();
 
-            // Add CTR to score (impressions > 100)
-            if (ad.impressions > 100) {
-                const ctr = ad.clicks / ad.impressions;
-                score += ctr * 20; // High CTR boosts score
+            if (!activeAds || activeAds.length === 0) {
+                return NextResponse.json({ slots: {} });
             }
 
-            // Add recency to score (newer campaigns get slight boost)
-            const daysOld = (now.getTime() - new Date(ad.createdAt).getTime()) / (1000 * 3600 * 24);
-            if (daysOld < 7) score += 5;
+            // 2. Score ads based on priority, performance (CTR) and recency
+            const scoredAds = activeAds.map(ad => {
+                let score = (ad.priority || 0) * 10; // Base score from manual priority
 
-            return { ...ad, score };
-        });
+                // Add CTR to score (impressions > 100)
+                if (ad.impressions > 100) {
+                    const ctr = ad.clicks / ad.impressions;
+                    score += ctr * 20; // High CTR boosts score
+                }
 
-        // 3. Group by Slot
-        const slotsMap: Record<string, any[]> = {};
-        
-        for (const ad of scoredAds) {
-            const slots = ad.placementSlots && ad.placementSlots.length > 0 
-                ? ad.placementSlots 
-                : (ad.placementSlot ? [ad.placementSlot] : [ad.type]); // Fallback for old ads
+                // Add recency to score (newer campaigns get slight boost)
+                const daysOld = (now.getTime() - new Date(ad.createdAt).getTime()) / (1000 * 3600 * 24);
+                if (daysOld < 7) score += 5;
+
+                return { ...ad, score };
+            });
+
+            // 3. Group by Slot
+            const slotsMap: Record<string, any[]> = {};
             
-            for (const slot of slots) {
-                if (!slotsMap[slot]) slotsMap[slot] = [];
-                slotsMap[slot].push(ad);
+            for (const ad of scoredAds) {
+                const slots = ad.placementSlots && ad.placementSlots.length > 0 
+                    ? ad.placementSlots 
+                    : (ad.placementSlot ? [ad.placementSlot] : [ad.type]); // Fallback for old ads
+                
+                for (const slot of slots) {
+                    if (!slotsMap[slot]) slotsMap[slot] = [];
+                    slotsMap[slot].push(ad);
+                }
             }
+
+            // 4. Resolve the best ad(s) for each slot based on delivery strategy
+            const resolvedSlots: Record<string, any | any[]> = {};
+
+            for (const slot of Object.keys(slotsMap)) {
+                // Sort by score descending
+                const adsInSlot = slotsMap[slot].sort((a, b) => b.score - a.score);
+                
+                // Provide multiple ads if the slot or strategy supports it
+                const hasMultipleStrategy = adsInSlot.some(a => ["rotate", "weighted", "sequential"].includes(a.deliveryStrategy));
+
+                if (slot === "carousel" || slot === "popup" || hasMultipleStrategy) {
+                    // Return array for slots that support multiple rotating ads
+                    resolvedSlots[slot] = adsInSlot;
+                } else {
+                    // Return the single highest-scoring ad for fixed slots
+                    resolvedSlots[slot] = adsInSlot[0];
+                }
+            }
+
+            return NextResponse.json({
+                slots: resolvedSlots,
+            }, {
+                headers: {
+                    "Cache-Control": "no-store, no-cache, must-revalidate, private"
+                }
+            });
+        } catch (error) {
+            console.error("GET /api/ads/active error:", error);
+            return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
         }
-
-        // 4. Resolve the best ad(s) for each slot based on delivery strategy
-        const resolvedSlots: Record<string, any | any[]> = {};
-
-        for (const slot of Object.keys(slotsMap)) {
-            // Sort by score descending
-            const adsInSlot = slotsMap[slot].sort((a, b) => b.score - a.score);
-            
-            // Provide multiple ads if the slot or strategy supports it
-            const hasMultipleStrategy = adsInSlot.some(a => ["rotate", "weighted", "sequential"].includes(a.deliveryStrategy));
-
-            if (slot === "carousel" || slot === "popup" || hasMultipleStrategy) {
-                // Return array for slots that support multiple rotating ads
-                resolvedSlots[slot] = adsInSlot;
-            } else {
-                // Return the single highest-scoring ad for fixed slots
-                resolvedSlots[slot] = adsInSlot[0];
-            }
-        }
-
-        return NextResponse.json({
-            slots: resolvedSlots,
-        }, {
-            headers: {
-                "Cache-Control": "no-store, no-cache, must-revalidate, private"
-            }
         });
-    } catch (error) {
-        console.error("GET /api/ads/active error:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
-    }
+            
 }

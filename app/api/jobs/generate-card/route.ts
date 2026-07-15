@@ -11,70 +11,86 @@ import { signQRToken } from "@/lib/qrSigner";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import path from "path";
 import fs from "fs";
+import { requestContext } from "@/lib/requestContext";
 
 export const maxDuration = 60; // Allow more time for jobs
 
 export async function POST(req: Request) {
-    try {
-        const authError = requireCronAuth(req);
-        if (authError) return authError;
 
-        const { memberObjId, memberId, poolId, isEntertainment } = await req.json();
-        
-        if (!memberObjId || !memberId) {
-            return NextResponse.json({ error: "Missing required fields" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "POST";
+
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            const authError = requireCronAuth(req);
+            if (authError) return authError;
+
+            const { memberObjId, memberId, poolId, isEntertainment } = await req.json();
+            
+            if (!memberObjId || !memberId) {
+                return NextResponse.json({ error: "Missing required fields" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+
+            await dbConnect();
+            
+            const Model: any = isEntertainment ? EntertainmentMember : Member;
+            const member = await Model.findById(memberObjId).populate("planId");
+            
+            if (!member) {
+                return NextResponse.json({ error: "Member not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+
+            // 1. Generate QR Code
+            const qrPayloadObject = await signQRToken(memberId);
+            let qrCodeUrl = "";
+            try {
+                const qrPngBuffer = await QRCode.toBuffer(qrPayloadObject, { width: 300 });
+                qrCodeUrl = await uploadBuffer(qrPngBuffer, "swimming-pool/qrcodes", `${poolId}_${memberId}_qr`);
+            } catch (e) {
+                console.error("QR Code local upload failed, falling back to Data URL", e);
+                qrCodeUrl = await QRCode.toDataURL(qrPayloadObject, { width: 300 });
+            }
+
+            // We assign qrCodeUrl to the object for the PDF generator to read it correctly
+            member.qrCodeUrl = qrCodeUrl;
+
+            // 2. Generate PDF ID Card
+            let pdfUrl = "";
+            try {
+                const pdfBytes = await generatePDFBytes(member);
+                const pdfBuffer = Buffer.from(pdfBytes);
+                pdfUrl = await uploadBuffer(pdfBuffer, "swimming-pool/pdfs", `${poolId}_${memberId}_idcard`);
+            } catch (pdfErr) {
+                console.error("Background PDF generation failed", pdfErr);
+                // Optionally, we don't block it if PDF fails. Provide fallback logic in UI.
+            }
+
+            // 3. Mark as Ready using raw update bypassing populated object cast issues
+            const updateDoc: any = { 
+                cardStatus: "ready",
+                qrCodeUrl
+            };
+            if (pdfUrl) {
+                updateDoc.pdfUrl = pdfUrl;
+            }
+
+            await Model.updateOne({ _id: member._id }, { $set: updateDoc });
+
+            return NextResponse.json({ success: true, memberId, cardStatus: "ready" }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        } catch (error) {
+            console.error("[generate-card job]", error);
+            return NextResponse.json({ error: "Job failed" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-
-        await dbConnect();
-        
-        const Model: any = isEntertainment ? EntertainmentMember : Member;
-        const member = await Model.findById(memberObjId).populate("planId");
-        
-        if (!member) {
-            return NextResponse.json({ error: "Member not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
-
-        // 1. Generate QR Code
-        const qrPayloadObject = await signQRToken(memberId);
-        let qrCodeUrl = "";
-        try {
-            const qrPngBuffer = await QRCode.toBuffer(qrPayloadObject, { width: 300 });
-            qrCodeUrl = await uploadBuffer(qrPngBuffer, "swimming-pool/qrcodes", `${poolId}_${memberId}_qr`);
-        } catch (e) {
-            console.error("QR Code local upload failed, falling back to Data URL", e);
-            qrCodeUrl = await QRCode.toDataURL(qrPayloadObject, { width: 300 });
-        }
-
-        // We assign qrCodeUrl to the object for the PDF generator to read it correctly
-        member.qrCodeUrl = qrCodeUrl;
-
-        // 2. Generate PDF ID Card
-        let pdfUrl = "";
-        try {
-            const pdfBytes = await generatePDFBytes(member);
-            const pdfBuffer = Buffer.from(pdfBytes);
-            pdfUrl = await uploadBuffer(pdfBuffer, "swimming-pool/pdfs", `${poolId}_${memberId}_idcard`);
-        } catch (pdfErr) {
-            console.error("Background PDF generation failed", pdfErr);
-            // Optionally, we don't block it if PDF fails. Provide fallback logic in UI.
-        }
-
-        // 3. Mark as Ready using raw update bypassing populated object cast issues
-        const updateDoc: any = { 
-            cardStatus: "ready",
-            qrCodeUrl
-        };
-        if (pdfUrl) {
-            updateDoc.pdfUrl = pdfUrl;
-        }
-
-        await Model.updateOne({ _id: member._id }, { $set: updateDoc });
-
-        return NextResponse.json({ success: true, memberId, cardStatus: "ready" }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    } catch (error) {
-        console.error("[generate-card job]", error);
-        return NextResponse.json({ error: "Job failed" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+        });
+            
 }
 
 // Reuse logic from [id]/pdf/route.ts

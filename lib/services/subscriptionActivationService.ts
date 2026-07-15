@@ -348,7 +348,7 @@ export async function activateSubscription(params: {
             const hostelUpdateResult = await Hostel.findOneAndUpdate(
                 { hostelId: user.hostelId },
                 { $set: { numberOfBlocks: verifiedBlocks } },
-                { new: true }
+                { returnDocument: 'after' }
             );
             if (hostelUpdateResult) {
                 logger.info("[Activation] Hostel.numberOfBlocks synced to paid entitlement", {

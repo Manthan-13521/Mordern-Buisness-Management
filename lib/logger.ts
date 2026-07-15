@@ -92,6 +92,25 @@ interface AuditEvent {
     meta?: Record<string, unknown>;
 }
 
+import { getRequestContext } from "./requestContext";
+
+function getContextMeta(): Record<string, any> {
+    const ctx = getRequestContext();
+    if (!ctx) return {};
+    
+    return {
+        requestId: ctx.requestId,
+        userId: ctx.userId,
+        poolId: ctx.poolId,
+        hostelId: ctx.hostelId,
+        businessId: ctx.businessId,
+        ip: ctx.ip,
+        route: ctx.route,
+        method: ctx.method,
+        durationMs: Date.now() - ctx.startTime
+    };
+}
+
 /**
  * Backward-compatible wrapper with request-level sampling.
  * error/warn: ALWAYS logged. info/debug: sampled in production.
@@ -100,23 +119,23 @@ interface AuditEvent {
 export const logger = {
     info(message: string, meta?: object, context?: string) {
         if (shouldSample("info", context)) {
-            pinoLogger.info(meta || {}, message);
+            pinoLogger.info({ ...getContextMeta(), ...meta }, message);
         }
     },
     warn(message: string, meta?: object) {
-        pinoLogger.warn(meta || {}, message);
+        pinoLogger.warn({ ...getContextMeta(), ...meta }, message);
     },
     error(message: string, meta?: object) {
-        pinoLogger.error(meta || {}, message);
+        pinoLogger.error({ ...getContextMeta(), ...meta }, message);
     },
     debug(message: string, meta?: object, context?: string) {
         if (shouldSample("debug", context)) {
-            pinoLogger.debug(meta || {}, message);
+            pinoLogger.debug({ ...getContextMeta(), ...meta }, message);
         }
     },
     scan(message: string, meta?: object) {
         if (shouldSample("info")) {
-            pinoLogger.info({ category: "SCAN", ...meta }, message);
+            pinoLogger.info({ category: "SCAN", ...getContextMeta(), ...meta }, message);
         }
     },
 
@@ -125,14 +144,17 @@ export const logger = {
      * ALWAYS logged — never sampled, uses warn level to survive production filter.
      */
     audit(event: AuditEvent) {
+        const ctxMeta = getContextMeta();
         pinoLogger.warn({
             category: "AUDIT", 
             type: event.type,
-            userId: event.userId,
-            poolId: event.poolId,
-            hostelId: event.hostelId,
-            businessId: event.businessId,
-            ip: event.ip,
+            userId: event.userId || ctxMeta.userId,
+            poolId: event.poolId || ctxMeta.poolId,
+            hostelId: event.hostelId || ctxMeta.hostelId,
+            businessId: event.businessId || ctxMeta.businessId,
+            ip: event.ip || ctxMeta.ip,
+            requestId: ctxMeta.requestId,
+            ...ctxMeta,
             ...event.meta
         }, `Audit: ${event.type}`);
     },

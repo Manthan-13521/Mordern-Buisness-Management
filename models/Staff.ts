@@ -25,5 +25,10 @@ const staffSchema = new Schema<IStaff>(
     { timestamps: true }
 );
 
+// Speed up staff list queries: { poolId, isActive }
+staffSchema.index({ poolId: 1, isActive: 1 });
+// Compound lookup: { _id, poolId } — common for access control checks
+staffSchema.index({ poolId: 1, staffId: 1 });
+
 export const Staff: Model<IStaff> =
     mongoose.models.Staff || mongoose.model<IStaff>("Staff", staffSchema);

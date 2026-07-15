@@ -224,7 +224,7 @@ async function syncToUnifiedUser(doc: any) {
                     cachedBalance: doc.cachedBalance || 0,
                 }
             },
-            { upsert: true, new: true }
+            { upsert: true, returnDocument: 'after' }
         );
         console.log(`UnifiedUser synced (Pool: ${doc._id})`);
     } catch (e: any) {

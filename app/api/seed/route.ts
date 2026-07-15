@@ -5,6 +5,7 @@ import { Pool } from "@/models/Pool";
 import { PlatformAdmin } from "@/models/PlatformAdmin";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import { requestContext } from "@/lib/requestContext";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -22,94 +23,105 @@ export const revalidate = 0;
  *   SEED_SECRET, SEED_ADMIN_PASSWORD, SEED_OPERATOR_PASSWORD
  */
 export async function POST(req: NextRequest) {
-    // ── Gate: Block in production (defense in depth) ─────────────────────
-    // Requires both: NOT production AND SEED_ENABLED=true
-    if (process.env.NODE_ENV === "production" && !process.env.SEED_ENABLED) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
 
-    // ── Auth: Require SEED_SECRET ────────────────────────────────────────
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "POST";
+
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            if (process.env.NODE_ENV === "production" && !process.env.SEED_ENABLED) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
     const seedSecret = process.env.SEED_SECRET;
     if (!seedSecret || seedSecret.length < 32) {
-        return NextResponse.json({ error: "Server misconfiguration.", code: "MISCONFIGURED" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
-
+            return NextResponse.json({ error: "Server misconfiguration.", code: "MISCONFIGURED" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        }
     const authHeader = req.headers.get("authorization") ?? "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-
-    // Constant-time comparison — prevents timing side-channel attacks
     if (
-        !token ||
-        token.length !== seedSecret.length ||
-        !crypto.timingSafeEqual(Buffer.from(token, "utf8"), Buffer.from(seedSecret, "utf8"))
-    ) {
-        // Generic 401 — never reveal "invalid token" vs "missing token"
-        return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
-
-    // ── Validate: Require env-based passwords ────────────────────────────
+            !token ||
+            token.length !== seedSecret.length ||
+            !crypto.timingSafeEqual(Buffer.from(token, "utf8"), Buffer.from(seedSecret, "utf8"))
+        ) {
+            // Generic 401 — never reveal "invalid token" vs "missing token"
+            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        }
     const superAdminPassword = process.env.SEED_ADMIN_PASSWORD;
     const operatorPassword = process.env.SEED_OPERATOR_PASSWORD || superAdminPassword;
-
     if (!superAdminPassword || superAdminPassword.length < 12) {
-        return NextResponse.json({ error: "SEED_ADMIN_PASSWORD must be set and at least 12 characters.", code: "MISCONFIGURED" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
-
+            return NextResponse.json({ error: "SEED_ADMIN_PASSWORD must be set and at least 12 characters.", code: "MISCONFIGURED" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        }
     await dbConnect();
-
-    // 1. Seed Platform Super Admin
     const superAdminEmail = "superadmin@tspools.com";
     const existingSuperAdmin = await PlatformAdmin.findOne({ email: superAdminEmail });
     if (!existingSuperAdmin) {
-        const superAdminPasswordHash = await bcrypt.hash(superAdminPassword, 12);
-        await PlatformAdmin.create({
-            email: superAdminEmail,
-            passwordHash: superAdminPasswordHash,
-            role: "superadmin"
-        });
-        console.log("✅ Super Admin created (password from env)");
-    }
-
-    // 2. Seed Demo Pool
-    // Idempotent — don't create duplicates
+            const superAdminPasswordHash = await bcrypt.hash(superAdminPassword, 12);
+            await PlatformAdmin.create({
+                email: superAdminEmail,
+                passwordHash: superAdminPasswordHash,
+                role: "superadmin"
+            });
+            console.log("✅ Super Admin created (password from env)");
+        }
     const existingPool = await Pool.findOne({ slug: "demo-pool" }).lean();
     if (existingPool) {
-        return NextResponse.json({ 
-            message: "Seed data already exists (Demo Pool). Super Admin checked.",
-            superAdmin: superAdminEmail
-        }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
-
+            return NextResponse.json({ 
+                message: "Seed data already exists (Demo Pool). Super Admin checked.",
+                superAdmin: superAdminEmail
+            }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        }
     const poolId = "DEMO001";
     await Pool.create({
-        poolId,
-        poolName: "Demo Pool",
-        slug: "demo-pool",
-        adminEmail: "admin@demo.com",
-        capacity: 100,
-        status: "ACTIVE",
-    });
-
+            poolId,
+            poolName: "Demo Pool",
+            slug: "demo-pool",
+            adminEmail: "admin@demo.com",
+            capacity: 100,
+            status: "ACTIVE",
+        });
     const passwordHash = await bcrypt.hash(operatorPassword!, 12);
     await User.create({
-        name: "Demo Admin",
-        email: "admin@demo.com",
-        passwordHash,
-        role: "admin",
-        poolId,
-        isActive: true,
-    });
-
+            name: "Demo Admin",
+            email: "admin@demo.com",
+            passwordHash,
+            role: "admin",
+            poolId,
+            isActive: true,
+        });
     console.warn("⚠️  Seed complete. Passwords sourced from env vars.");
     return NextResponse.json({ message: "Seed data created successfully." }, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        });
+            
 }
 
 /**
  * GET /api/seed — always returns 404 in production, 401 otherwise
  */
 export async function GET(req: Request) {
-    if (process.env.NODE_ENV === "production") {
-        return new NextResponse(null, { status: 404 });
-    }
+
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "GET";
+
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            if (process.env.NODE_ENV === "production") {
+            return new NextResponse(null, { status: 404 });
+        }
     return NextResponse.json({ error: "Unauthorized", code: "FORBIDDEN" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        });
+            
 }

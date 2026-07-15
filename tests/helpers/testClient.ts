@@ -1,166 +1,129 @@
-import "./env";
-import { NextResponse } from "next/server";
-
 const BASE_URL = process.env.TEST_BASE_URL || "http://localhost:3000";
-
-export interface TestUser {
-  email: string;
-  password: string;
-  role: "admin" | "hostel_admin" | "business_admin" | "superadmin";
-  poolId?: string;
-  hostelId?: string;
-  businessId?: string;
-}
-
-export const TEST_USERS: Record<string, TestUser> = {
-  poolAdmin: {
-    email: "admin@ts.com",
-    password: "testpass123",
-    role: "admin",
-    poolId: "POOL001",
-  },
-  hostelAdmin: {
-    email: "h@1.com",
-    password: "testpass123",
-    role: "hostel_admin",
-    hostelId: "HOS001",
-  },
-  businessAdmin: {
-    email: "b@1.com",
-    password: "testpass123",
-    role: "business_admin",
-    businessId: "BIZ001",
-  },
-  superAdmin: {
-    email: "superadmin@tspools.com",
-    password: "testpass123",
-    role: "superadmin",
-  },
-};
 
 export class TestClient {
   private baseUrl: string;
-  private cookies: string[] = [];
-  private csrfToken: string | null = null;
+  private cookieJar: Map<string, string> = new Map();
 
   constructor(baseUrl: string = BASE_URL) {
     this.baseUrl = baseUrl;
   }
 
-  async login(user: TestUser): Promise<boolean> {
-    // IMPORTANT: Start fresh — no cookies. NextAuth v4 checks CSRF only when
-    // a *next-auth.csrf-token* cookie is present in the request. By clearing
-    // cookies first, we skip the CSRF check entirely (matching the frontend's
-    // signIn() behavior on first visit).
-    this.clearCookies();
-
-    // Get CSRF token for API mutation headers (separate from NextAuth login CSRF)
-    const csrfRes = await fetch(`${this.baseUrl}/api/auth/csrf-token`);
-    if (csrfRes.ok) {
-      const data = await csrfRes.json();
-      this.csrfToken = data?.csrfToken || data?.token || "";
+  private async request(path: string, init: RequestInit = {}): Promise<Response> {
+    const headers = new Headers(init.headers || {});
+    if (!headers.has("Content-Type") && init.method !== "GET" && init.method !== "HEAD") {
+      headers.set("Content-Type", "application/json");
+    }
+    // Set matching Origin for CSRF bypass
+    if (!headers.has("Origin")) {
+      headers.set("Origin", this.baseUrl);
     }
 
-    // Login via form-encoded POST — NextAuth v4 expects this format.
-    // NO csrfToken in body = NextAuth skips CSRF (since we have no cookie).
-    const formData = new URLSearchParams();
-    formData.append("username", user.email);
-    formData.append("password", user.password);
-    formData.append("json", "true");
-    if (user.role === "admin") formData.append("poolSlug", "ts-pool");
-    if (user.role === "superadmin") formData.append("isSuperAdmin", "true");
-    if (user.role === "hostel_admin") formData.append("isHostelAdmin", "true");
-    if (user.role === "business_admin") formData.append("isBusinessAdmin", "true");
+    // Attach stored cookies
+    const cookies = Array.from(this.cookieJar.entries())
+      .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+      .join("; ");
+    if (cookies) headers.set("Cookie", cookies);
 
-    const loginRes = await this.fetch("/api/auth/callback/credentials", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formData.toString(),
-      redirect: "manual",
-    });
-
-    // Store session cookies from login response (next-auth.session-token)
-    const setCookie = loginRes.headers.get("set-cookie") || "";
-    if (setCookie) {
-      this.cookies.push(...setCookie.split(",").map(c => c.split(";")[0].trim()).filter(Boolean));
-    }
-
-    const hasSession = this.cookies.some(
-      (c) => c.includes("next-auth.session-token") || c.includes("__Secure-next-auth.session-token")
-    );
-    return hasSession;
-  }
-
-  async fetch(
-    path: string,
-    options: RequestInit = {}
-  ): Promise<Response> {
-    const headers: Record<string, string> = {
-      ...(options.headers as Record<string, string>),
-    };
-
-    if (this.cookies.length > 0) {
-      headers["Cookie"] = this.cookies.join("; ");
-    }
-
-    return fetch(`${this.baseUrl}${path}`, {
-      ...options,
+    const res = await fetch(`${this.baseUrl}${path}`, {
+      ...init,
       headers,
       redirect: "manual",
     });
+
+    // Capture Set-Cookie headers
+    const setCookies = (res.headers as any).getSetCookie?.() as string[] | undefined;
+    if (setCookies) {
+      for (const sc of setCookies) {
+        const m = sc.match(/^([^=]+)=([^;]+)/);
+        if (m) this.cookieJar.set(decodeURIComponent(m[1]), decodeURIComponent(m[2]));
+      }
+    }
+
+    return res;
   }
 
-  async get(path: string): Promise<Response> {
-    const suffix = path.includes("?") ? "&test=true" : "?test=true";
-    return this.fetch(`${path}${suffix}`);
-  }
+  async login(email: string, password: string, extraFields?: Record<string, string>): Promise<void> {
+    // 1. Fetch CSRF token
+    const csrfRes = await this.request("/api/auth/csrf");
+    const { csrfToken } = await csrfRes.json();
+    if (!csrfToken) throw new Error("CSRF token not returned");
 
-  async post(path: string, body?: unknown): Promise<Response> {
-    const suffix = path.includes("?") ? "&test=true" : "?test=true";
-    return this.fetch(`${path}${suffix}`, {
+    // 2. Submit credentials
+    const body = new URLSearchParams({ csrfToken, username: email, password });
+    if (extraFields) {
+      for (const [k, v] of Object.entries(extraFields)) body.set(k, v);
+    }
+    const loginRes = await this.request("/api/auth/callback/credentials", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: body ? JSON.stringify(body) : undefined,
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+    });
+
+    if (loginRes.status !== 200 && loginRes.status !== 302 && loginRes.status !== 307) {
+      const text = await loginRes.text().catch(() => "");
+      throw new Error(`Login failed (${loginRes.status}): ${text.substring(0, 200)}`);
+    }
+
+    // 3. Verify we got a session token
+    if (!this.cookieJar.has("next-auth.session-token")) {
+      throw new Error("No session token after login");
+    }
+  }
+
+  async get(path: string, init?: RequestInit): Promise<Response> {
+    return this.request(path, { method: "GET", ...init });
+  }
+
+  async post(path: string, body?: unknown, init?: RequestInit): Promise<Response> {
+    return this.request(path, {
+      method: "POST",
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      ...init,
     });
   }
 
-  async put(path: string, body?: unknown): Promise<Response> {
-    const suffix = path.includes("?") ? "&test=true" : "?test=true";
-    return this.fetch(`${path}${suffix}`, {
+  async put(path: string, body?: unknown, init?: RequestInit): Promise<Response> {
+    return this.request(path, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: body ? JSON.stringify(body) : undefined,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      ...init,
     });
   }
 
-  async patch(path: string, body?: unknown): Promise<Response> {
-    const suffix = path.includes("?") ? "&test=true" : "?test=true";
-    return this.fetch(`${path}${suffix}`, {
+  async patch(path: string, body?: unknown, init?: RequestInit): Promise<Response> {
+    return this.request(path, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: body ? JSON.stringify(body) : undefined,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      ...init,
     });
   }
 
-  async del(path: string): Promise<Response> {
-    const suffix = path.includes("?") ? "&test=true" : "?test=true";
-    return this.fetch(`${path}${suffix}`, { method: "DELETE" });
+  async del(path: string, init?: RequestInit): Promise<Response> {
+    return this.request(path, { method: "DELETE", ...init });
   }
 
-  clearCookies(): void {
-    this.cookies = [];
+  /**
+   * Low-level fetch with cookies/headers managed by the client.
+   * Allows full control over body, headers, method (e.g. raw body, no JSON).
+   */
+  async fetch(path: string, init: RequestInit = {}): Promise<Response> {
+    return this.request(path, init);
+  }
+
+  async logout(): Promise<void> {
+    const res = await this.request("/api/auth/signout", { method: "POST" });
+    this.cookieJar.clear();
+  }
+
+  clearAuth(): void {
+    this.cookieJar.clear();
   }
 }
 
-export function assertOk(res: Response, message?: string): void {
-  if (!res.ok && res.status < 300) {
-    throw new Error(message || `Expected OK, got ${res.status}`);
-  }
-}
-
-export function assertStatus(res: Response, status: number): void {
-  if (res.status !== status) {
-    throw new Error(`Expected status ${status}, got ${res.status}`);
+export async function assertStatus(res: Response, expected: number): Promise<void> {
+  if (res.status !== expected) {
+    const body = await res.text().catch(() => "(no body)");
+    throw new Error(`Expected status ${expected}, got ${res.status}: ${body.substring(0, 300)}`);
   }
 }
 

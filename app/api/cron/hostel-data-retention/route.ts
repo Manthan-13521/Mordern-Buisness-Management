@@ -7,6 +7,7 @@ import { HostelPayment } from "@/models/HostelPayment";
 import { DataRetentionLog } from "@/models/DataRetentionLog";
 import { logger } from "@/lib/logger";
 import { withHealthcheck } from "@/lib/healthchecks";
+import { requestContext } from "@/lib/requestContext";
 
 /**
  * GET /api/cron/hostel-data-retention
@@ -21,103 +22,116 @@ import { withHealthcheck } from "@/lib/healthchecks";
  * within the last 24 hours for that SPECIFIC tenant.
  */
 export async function GET(req: Request) {
-    const cronSecret = process.env.CRON_SECRET;
+
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "GET";
+
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            const cronSecret = process.env.CRON_SECRET;
     const authHeader = req.headers.get("authorization");
     const querySecret = new URL(req.url).searchParams.get("secret");
     const providedSecret = authHeader?.startsWith("Bearer ")
-        ? authHeader.slice(7)
-        : querySecret;
-
+            ? authHeader.slice(7)
+            : querySecret;
     if (!cronSecret || providedSecret !== cronSecret) {
-        return NextResponse.json({ error: "Unauthorized", code: "FORBIDDEN" }, { status: 401 });
-    }
-
-    return withHealthcheck({ checkName: "hostel-data-retention", timeoutMs: 55000 }, async () => {
-    try {
-        await dbConnect();
-        
-        const allSettings = await HostelSettings.find({}).lean();
-        const msIn24Hours = 24 * 60 * 60 * 1000;
-        const now = new Date();
-        const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-        const oneEightyDaysAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
-        
-        const summary: any[] = [];
-
-        // Sweep each tenant
-        for (const settings of allSettings) {
-            const hostelId = settings.hostelId;
-            
-            // --- 1. AWS Backup Safety Check ---
-            if (!settings.lastBackupAt) {
-                logger.warn(`[HostelDataRetention] Backup safety check failed for ${hostelId}. lastBackupAt is missing.`);
-                continue; // Skip safely
-            }
-
-            const timeSinceLastBackup = Date.now() - new Date(settings.lastBackupAt).getTime();
-            if (timeSinceLastBackup > msIn24Hours) {
-                logger.warn(`[HostelDataRetention] Backup safety check failed for ${hostelId}. Backup is older than 24 hours.`, { 
-                    lastBackupAt: settings.lastBackupAt 
-                });
-                continue; // Skip safely
-            }
-
-            // --- 2. Execute Data Retention Cleanup ---
-            let registrationsDeleted = 0;
-            let paymentsDeleted = 0;
-
-            // ── Run all 3 deletes in parallel — they target different collections ──
-            const [regResult, payLogResult, payResult] = await Promise.all([
-                // A. Delete Registration logs older than 90 days
-                HostelRegistrationLog.deleteMany({ hostelId, join_date: { $lt: ninetyDaysAgo } }),
-                // B. Delete Payment logs older than 180 days
-                HostelPaymentLog.deleteMany({ hostelId, payment_date: { $lt: oneEightyDaysAgo } }),
-                // C. Delete Payments older than 180 days
-                HostelPayment.deleteMany({ hostelId, createdAt: { $lt: oneEightyDaysAgo } }),
-            ]);
-
-            if (regResult.deletedCount > 0) {
-                registrationsDeleted = regResult.deletedCount;
-                await DataRetentionLog.create({
-                    deletedType: "hostel_registration",
-                    countDeleted: regResult.deletedCount,
-                    deletedAt: now,
-                });
-            }
-
-            const totalPayRemoved = payLogResult.deletedCount + payResult.deletedCount;
-            if (totalPayRemoved > 0) {
-                paymentsDeleted = totalPayRemoved;
-                await DataRetentionLog.create({
-                    deletedType: "hostel_payment",
-                    countDeleted: totalPayRemoved,
-                    deletedAt: now,
-                });
-            }
-            
-            summary.push({
-                hostelId,
-                registrationsDeleted,
-                paymentsDeleted,
-                backupVerifiedAt: settings.lastBackupAt
-            });
+            return NextResponse.json({ error: "Unauthorized", code: "FORBIDDEN" }, { status: 401 });
         }
+    return withHealthcheck({ checkName: "hostel-data-retention", timeoutMs: 55000 }, async () => {
+        try {
+            await dbConnect();
+            
+            const allSettings = await HostelSettings.find({}).lean();
+            const msIn24Hours = 24 * 60 * 60 * 1000;
+            const now = new Date();
+            const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+            const oneEightyDaysAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+            
+            const summary: any[] = [];
 
-        logger.info("[HostelDataRetention] Cleanup completed safely.", { tenantsProcessed: summary.length, summary });
-        
-        return NextResponse.json({ 
-            success: true, 
-            timestamp: now, 
-            tenantsProcessed: summary.length,
-            summary 
+            // Sweep each tenant
+            for (const settings of allSettings) {
+                const hostelId = settings.hostelId;
+                
+                // --- 1. AWS Backup Safety Check ---
+                if (!settings.lastBackupAt) {
+                    logger.warn(`[HostelDataRetention] Backup safety check failed for ${hostelId}. lastBackupAt is missing.`);
+                    continue; // Skip safely
+                }
+
+                const timeSinceLastBackup = Date.now() - new Date(settings.lastBackupAt).getTime();
+                if (timeSinceLastBackup > msIn24Hours) {
+                    logger.warn(`[HostelDataRetention] Backup safety check failed for ${hostelId}. Backup is older than 24 hours.`, { 
+                        lastBackupAt: settings.lastBackupAt 
+                    });
+                    continue; // Skip safely
+                }
+
+                // --- 2. Execute Data Retention Cleanup ---
+                let registrationsDeleted = 0;
+                let paymentsDeleted = 0;
+
+                // ── Run all 3 deletes in parallel — they target different collections ──
+                const [regResult, payLogResult, payResult] = await Promise.all([
+                    // A. Delete Registration logs older than 90 days
+                    HostelRegistrationLog.deleteMany({ hostelId, join_date: { $lt: ninetyDaysAgo } }),
+                    // B. Delete Payment logs older than 180 days
+                    HostelPaymentLog.deleteMany({ hostelId, payment_date: { $lt: oneEightyDaysAgo } }),
+                    // C. Delete Payments older than 180 days
+                    HostelPayment.deleteMany({ hostelId, createdAt: { $lt: oneEightyDaysAgo } }),
+                ]);
+
+                if (regResult.deletedCount > 0) {
+                    registrationsDeleted = regResult.deletedCount;
+                    await DataRetentionLog.create({
+                        deletedType: "hostel_registration",
+                        countDeleted: regResult.deletedCount,
+                        deletedAt: now,
+                    });
+                }
+
+                const totalPayRemoved = payLogResult.deletedCount + payResult.deletedCount;
+                if (totalPayRemoved > 0) {
+                    paymentsDeleted = totalPayRemoved;
+                    await DataRetentionLog.create({
+                        deletedType: "hostel_payment",
+                        countDeleted: totalPayRemoved,
+                        deletedAt: now,
+                    });
+                }
+                
+                summary.push({
+                    hostelId,
+                    registrationsDeleted,
+                    paymentsDeleted,
+                    backupVerifiedAt: settings.lastBackupAt
+                });
+            }
+
+            logger.info("[HostelDataRetention] Cleanup completed safely.", { tenantsProcessed: summary.length, summary });
+            
+            return NextResponse.json({ 
+                success: true, 
+                timestamp: now, 
+                tenantsProcessed: summary.length,
+                summary 
+            });
+
+        } catch (error: any) {
+            logger.error("[HostelDataRetention] Cron failed:", { error: error?.message || String(error) });
+            return NextResponse.json(
+                { error: error?.message || "Data retention cleanup failed" },
+                { status: 500 }
+            );
+        }
         });
-
-    } catch (error: any) {
-        logger.error("[HostelDataRetention] Cron failed:", { error: error?.message || String(error) });
-        return NextResponse.json(
-            { error: error?.message || "Data retention cleanup failed" },
-            { status: 500 }
-        );
-    }
-    }); // end withHealthcheck
+        });
+            
 }

@@ -3,6 +3,8 @@ import { dbConnect } from "@/lib/mongodb";
 import { Member } from "@/models/Member";
 import { EntertainmentMember } from "@/models/EntertainmentMember";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
+import { requestContext } from "@/lib/requestContext";
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -12,41 +14,56 @@ export const revalidate = 0;
  * Returns the member details with populated plan info.
  */
 export async function GET(req: NextRequest) {
-    try {
-        await dbConnect();
 
-                const user = await resolveUser(req);
-                await dbConnect();
-        if (!user)
-            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "GET";
 
-        const uid = req.nextUrl.searchParams.get("uid")?.trim();
-        if (!uid)
-            return NextResponse.json({ error: "uid query parameter required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            await dbConnect();
 
-        const poolId = user.role !== "superadmin" ? (user.poolId || "UNASSIGNED_POOL") : undefined;
-        const query: Record<string, unknown> = { memberId: { $regex: `^${uid}$`, $options: "i" } };
-        if (poolId) query.poolId = poolId;
+                    const user = await resolveUser(req);
+                    await dbConnect();
+            if (!user)
+                return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
-        const populateFields = "name price durationDays durationHours durationMinutes durationSeconds hasTokenPrint quickDelete hasEntertainment";
+            const uid = req.nextUrl.searchParams.get("uid")?.trim();
+            if (!uid)
+                return NextResponse.json({ error: "uid query parameter required" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
-        // Try regular member first
-        let member: any = await Member.findOne(query).populate("planId", populateFields).lean();
-        let source = "member";
+            const poolId = user.role !== "superadmin" ? (user.poolId || "UNASSIGNED_POOL") : undefined;
+            const query: Record<string, unknown> = { memberId: { $regex: `^${uid}$`, $options: "i" } };
+            if (poolId) query.poolId = poolId;
 
-        // Try entertainment member if not found
-        if (!member) {
-            member = await EntertainmentMember.findOne(query).populate("planId", populateFields).lean();
-            source = "entertainment";
+            const populateFields = "name price durationDays durationHours durationMinutes durationSeconds hasTokenPrint quickDelete hasEntertainment";
+
+            // Try regular member first
+            let member: any = await Member.findOne(query).populate("planId", populateFields).lean();
+            let source = "member";
+
+            // Try entertainment member if not found
+            if (!member) {
+                member = await EntertainmentMember.findOne(query).populate("planId", populateFields).lean();
+                source = "entertainment";
+            }
+
+            if (!member) {
+                return NextResponse.json({ error: "Member not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+
+            return NextResponse.json({ ...member, _source: source }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        } catch (error) {
+            console.error("[GET /api/members/lookup]", error);
+            return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-
-        if (!member) {
-            return NextResponse.json({ error: "Member not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
-
-        return NextResponse.json({ ...member, _source: source }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    } catch (error) {
-        console.error("[GET /api/members/lookup]", error);
-        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+        });
+            
 }

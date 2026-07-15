@@ -2,90 +2,105 @@ import { NextResponse } from "next/server";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { PoolAnalytics } from "@/models/PoolAnalytics";
-
+import { requestContext } from "@/lib/requestContext";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function GET(req: Request) {
-    try {
-        await dbConnect();
-        const user = await resolveUser(req);
 
-        if (!user) {
-            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "GET";
 
-        const poolId = user.poolId;
-        if (!poolId) {
-            return NextResponse.json({ error: "No pool assigned" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            await dbConnect();
+            const user = await resolveUser(req);
 
-        const url = new URL(req.url);
-        const memberType = url.searchParams.get("type") || "all";
-
-        // Build last 12 month keys explicitly
-        const months: string[] = [];
-        const now = new Date();
-        for (let i = 11; i >= 0; i--) {
-            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
-        }
-
-        const memMap = new Map<string, number>();
-
-        if (memberType === "all") {
-            // Use the new Pool Analytics ledger instead of raw Member grouping
-            const rows = await PoolAnalytics.find({
-                poolId,
-                yearMonth: { $in: months }
-            }).lean();
-            rows.forEach((r: any) => memMap.set(r.yearMonth, r.newMembers || 0));
-        } else {
-            // Live aggregation for specific member types
-            const startDate = new Date(now.getFullYear(), now.getMonth() - 11, 1);
-            const matchQuery: Record<string, unknown> = {
-                poolId,
-                isDeleted: false,
-                createdAt: { $gte: startDate }
-            };
-
-            if (memberType === "member") {
-                matchQuery.memberType = "regular";
-            } else if (memberType === "entertainment") {
-                matchQuery.memberType = "entertainment";
+            if (!user) {
+                return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
 
-            const { Member } = await import("@/models/Member");
-            const { EntertainmentMember } = await import("@/models/EntertainmentMember");
-            
-            const [regularRaw, entRaw] = await Promise.all([
-                Member.find(matchQuery, "createdAt").lean(),
-                EntertainmentMember.find(matchQuery, "createdAt").lean(),
-            ]);
+            const poolId = user.poolId;
+            if (!poolId) {
+                return NextResponse.json({ error: "No pool assigned" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
 
-            const rawMembers = [...regularRaw, ...entRaw];
-                rawMembers.forEach((m: any) => {
-                    const date = new Date(m.createdAt);
-                    const istTime = date.getTime() + (5.5 * 60 * 60 * 1000);
-                    const istDate = new Date(istTime);
-                    const yrMo = `${istDate.getUTCFullYear()}-${String(istDate.getUTCMonth() + 1).padStart(2, "0")}`;
-                    
-                    if (months.includes(yrMo)) {
-                        memMap.set(yrMo, (memMap.get(yrMo) || 0) + 1);
-                    }
-                });
+            const url = new URL(req.url);
+            const memberType = url.searchParams.get("type") || "all";
+
+            // Build last 12 month keys explicitly
+            const months: string[] = [];
+            const now = new Date();
+            for (let i = 11; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+            }
+
+            const memMap = new Map<string, number>();
+
+            if (memberType === "all") {
+                // Use the new Pool Analytics ledger instead of raw Member grouping
+                const rows = await PoolAnalytics.find({
+                    poolId,
+                    yearMonth: { $in: months }
+                }).lean();
+                rows.forEach((r: any) => memMap.set(r.yearMonth, r.newMembers || 0));
+            } else {
+                // Live aggregation for specific member types
+                const startDate = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+                const matchQuery: Record<string, unknown> = {
+                    poolId,
+                    isDeleted: false,
+                    createdAt: { $gte: startDate }
+                };
+
+                if (memberType === "member") {
+                    matchQuery.memberType = "regular";
+                } else if (memberType === "entertainment") {
+                    matchQuery.memberType = "entertainment";
+                }
+
+                const { Member } = await import("@/models/Member");
+                const { EntertainmentMember } = await import("@/models/EntertainmentMember");
+                
+                const [regularRaw, entRaw] = await Promise.all([
+                    Member.find(matchQuery, "createdAt").lean(),
+                    EntertainmentMember.find(matchQuery, "createdAt").lean(),
+                ]);
+
+                const rawMembers = [...regularRaw, ...entRaw];
+                    rawMembers.forEach((m: any) => {
+                        const date = new Date(m.createdAt);
+                        const istTime = date.getTime() + (5.5 * 60 * 60 * 1000);
+                        const istDate = new Date(istTime);
+                        const yrMo = `${istDate.getUTCFullYear()}-${String(istDate.getUTCMonth() + 1).padStart(2, "0")}`;
+                        
+                        if (months.includes(yrMo)) {
+                            memMap.set(yrMo, (memMap.get(yrMo) || 0) + 1);
+                        }
+                    });
+            }
+
+            const finalData = months.map(month => ({
+                month,
+                total_members: memMap.get(month) || 0
+            }));
+
+            return NextResponse.json(finalData, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+
+        } catch (error) {
+            console.error("[GET /api/analytics/monthly-members]", error);
+            return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-
-        const finalData = months.map(month => ({
-            month,
-            total_members: memMap.get(month) || 0
-        }));
-
-        return NextResponse.json(finalData, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-
-    } catch (error) {
-        console.error("[GET /api/analytics/monthly-members]", error);
-        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+        });
+            
 }

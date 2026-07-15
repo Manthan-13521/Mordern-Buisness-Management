@@ -9,6 +9,7 @@ import { generalLimiter } from "@/lib/rateLimiter";
 import { auditLog } from "@/lib/auditLog";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
+import { requestContext } from "@/lib/requestContext";
 
 export const dynamic = "force-dynamic";
 
@@ -20,208 +21,238 @@ const LabourCreateSchema = z.object({
 });
 
 export async function GET(req: Request) {
-    try {
-        const user = await resolveUser(req);
-        if (!user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-        let businessId;
-        try {
-            businessId = requireBusinessId(user);
-        } catch (err: any) {
-            return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
-        }
 
-        if (process.env.DEBUG_ANALYTICS === "true") {
-            logger.debug("Business labour list", { businessId, userId: user.id });
-        }
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "GET";
 
-        await dbConnect();
-
-        // 🔴 TERMINAL DEFENSE
-        if (!businessId) {
-            throw new Error("Tenant context lost before query execution");
-        }
-
-        const now = new Date();
-        const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-
-        const laboursRaw = await BusinessLabour.aggregate([
-            { $match: { businessId, isActive: true } },
-            {
-                $lookup: {
-                    from: "businessattendances",
-                    let: { labId: "$_id", businessId: "$businessId" },
-                    pipeline: [
-                        { $match: { 
-                            $expr: { 
-                                $and: [
-                                    { $eq: ["$labourId", "$$labId"] },
-                                    { $eq: ["$businessId", "$$businessId"] }
-                                ]
-                            } 
-                        }},
-                        { $sort: { date: -1 } }
-                    ],
-                    as: "recentAttendance"
-                }
-            },
-            {
-                $lookup: {
-                    from: "businesslabourpayments",
-                    let: { labId: "$_id", businessId: "$businessId" },
-                    pipeline: [
-                        { $match: { 
-                            $expr: { 
-                                $and: [
-                                    { $eq: ["$labourId", "$$labId"] },
-                                    { $eq: ["$businessId", "$$businessId"] }
-                                ]
-                            } 
-                        }},
-                        { $sort: { date: -1 } }
-                    ],
-                    as: "payments"
-                }
-            },
-            {
-                $lookup: {
-                    from: "businesslabouradvances",
-                    let: { labId: "$_id", businessId: "$businessId" },
-                    pipeline: [
-                        { $match: { 
-                            $expr: { 
-                                $and: [
-                                    { $eq: ["$labourId", "$$labId"] },
-                                    { $eq: ["$businessId", "$$businessId"] },
-                                    { $eq: ["$month", currentMonthKey] }
-                                ]
-                            } 
-                        }}
-                    ],
-                    as: "advances"
-                }
-            },
-            {
-                $addFields: {
-                    advancePaid: { $ifNull: [{ $arrayElemAt: ["$advances.amount", 0] }, 0] }
-                }
-            },
-            { $sort: { name: 1 } }
-        ]).option({ maxTimeMS: 10_000 });
-
-        const labours = Array.isArray(laboursRaw) ? laboursRaw : [];
-
-        return NextResponse.json({
-            data: labours,
-            meta: {
-                count: labours.length,
-                businessId,
-                timestamp: new Date().toISOString()
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            const user = await resolveUser(req);
+            if (!user) {
+                return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
             }
-        }, {
-            headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
+            let businessId;
+            try {
+                businessId = requireBusinessId(user);
+            } catch (err: any) {
+                return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
+            }
+
+            if (process.env.DEBUG_ANALYTICS === "true") {
+                logger.debug("Business labour list", { businessId, userId: user.id });
+            }
+
+            await dbConnect();
+
+            // 🔴 TERMINAL DEFENSE
+            if (!businessId) {
+                throw new Error("Tenant context lost before query execution");
+            }
+
+            const now = new Date();
+            const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+            const laboursRaw = await BusinessLabour.aggregate([
+                { $match: { businessId, isActive: true } },
+                {
+                    $lookup: {
+                        from: "businessattendances",
+                        let: { labId: "$_id", businessId: "$businessId" },
+                        pipeline: [
+                            { $match: { 
+                                $expr: { 
+                                    $and: [
+                                        { $eq: ["$labourId", "$$labId"] },
+                                        { $eq: ["$businessId", "$$businessId"] }
+                                    ]
+                                } 
+                            }},
+                            { $sort: { date: -1 } }
+                        ],
+                        as: "recentAttendance"
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "businesslabourpayments",
+                        let: { labId: "$_id", businessId: "$businessId" },
+                        pipeline: [
+                            { $match: { 
+                                $expr: { 
+                                    $and: [
+                                        { $eq: ["$labourId", "$$labId"] },
+                                        { $eq: ["$businessId", "$$businessId"] }
+                                    ]
+                                } 
+                            }},
+                            { $sort: { date: -1 } }
+                        ],
+                        as: "payments"
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "businesslabouradvances",
+                        let: { labId: "$_id", businessId: "$businessId" },
+                        pipeline: [
+                            { $match: { 
+                                $expr: { 
+                                    $and: [
+                                        { $eq: ["$labourId", "$$labId"] },
+                                        { $eq: ["$businessId", "$$businessId"] },
+                                        { $eq: ["$month", currentMonthKey] }
+                                    ]
+                                } 
+                            }}
+                        ],
+                        as: "advances"
+                    }
+                },
+                {
+                    $addFields: {
+                        advancePaid: { $ifNull: [{ $arrayElemAt: ["$advances.amount", 0] }, 0] }
+                    }
+                },
+                { $sort: { name: 1 } }
+            ]).option({ maxTimeMS: 10_000 });
+
+            const labours = Array.isArray(laboursRaw) ? laboursRaw : [];
+
+            return NextResponse.json({
+                data: labours,
+                meta: {
+                    count: labours.length,
+                    businessId,
+                    timestamp: new Date().toISOString()
+                }
+            }, {
+                headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
+            });
+        } catch (error: any) {
+            return NextResponse.json({ 
+                data: [],
+                meta: {
+                    error: "Failed to fetch labour",
+                    details: error.message,
+                    timestamp: new Date().toISOString()
+                }
+            }, { status: 500 });
+        }
         });
-    } catch (error: any) {
-        return NextResponse.json({ 
-            data: [],
-            meta: {
-                error: "Failed to fetch labour",
-                details: error.message,
-                timestamp: new Date().toISOString()
-            }
-        }, { status: 500 });
-    }
+            
 }
 
 export async function POST(req: Request) {
-    try {
-        const user = await resolveUser(req);
-        if (!user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-        if (user.role !== "business_admin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
 
-        // 🟠 RATE LIMITING
-        const ip = req.headers.get("x-forwarded-for") || "unknown";
-        const rl = generalLimiter.checkTenant(user.businessId || "unknown", ip);
-        if (!rl.allowed) {
-            return NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429 });
-        }
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "POST";
 
-        const body = await req.json();
-        const parsed = LabourCreateSchema.safeParse(body);
-        if (!parsed.success) {
-            return NextResponse.json(
-                { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
-                { status: 400 }
-            );
-        }
-
-        const { name, role, salary, phone } = parsed.data;
-
-        let businessId;
-        try {
-            businessId = requireBusinessId(user);
-        } catch (err: any) {
-            return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
-        }
-
-        logger.debug("Business labour create", { businessId, userId: user.id });
-
-        await dbConnect();
-
-        // 🔴 TERMINAL DEFENSE
-        if (!businessId) {
-            throw new Error("Tenant context lost before database operation");
-        }
-
-        // Free Trial Quota Check
-        try {
-            const { enforceQuota } = await import("@/lib/quotas");
-            await enforceQuota(user, "business", "staff", "BusinessLabour", { businessId, isActive: true });
-        } catch (e: any) {
-            if (e.message.startsWith("QUOTA_EXCEEDED")) {
-                const { quotaExceededResponse } = await import("@/lib/quotas");
-                return quotaExceededResponse("staff");
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            const user = await resolveUser(req);
+            if (!user) {
+                return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
             }
-            throw e;
-        }
+            if (user.role !== "business_admin") {
+                return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            }
 
-        const labour = new BusinessLabour({
-            name,
-            role,
-            salary,
-            phone,
-            businessId,
-            isActive: true
-        });
+            // 🟠 RATE LIMITING
+            const ip = req.headers.get("x-forwarded-for") || "unknown";
+            const rl = generalLimiter.checkTenant(user.businessId || "unknown", ip);
+            if (!rl.allowed) {
+                return NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429 });
+            }
 
-        await labour.save();
+            const body = await req.json();
+            const parsed = LabourCreateSchema.safeParse(body);
+            if (!parsed.success) {
+                return NextResponse.json(
+                    { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
+                    { status: 400 }
+                );
+            }
 
-        auditLog.financial({ businessId, userId: user.id, action: "LABOUR_CREATED", details: { name, role, salary } });
+            const { name, role, salary, phone } = parsed.data;
 
-        return NextResponse.json({
-            data: labour,
-            meta: {
-                message: "Labour record created successfully",
+            let businessId;
+            try {
+                businessId = requireBusinessId(user);
+            } catch (err: any) {
+                return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
+            }
+
+            logger.debug("Business labour create", { businessId, userId: user.id });
+
+            await dbConnect();
+
+            // 🔴 TERMINAL DEFENSE
+            if (!businessId) {
+                throw new Error("Tenant context lost before database operation");
+            }
+
+            // Free Trial Quota Check
+            try {
+                const { enforceQuota } = await import("@/lib/quotas");
+                await enforceQuota(user, "business", "staff", "BusinessLabour", { businessId, isActive: true });
+            } catch (e: any) {
+                if (e.message.startsWith("QUOTA_EXCEEDED")) {
+                    const { quotaExceededResponse } = await import("@/lib/quotas");
+                    return quotaExceededResponse("staff");
+                }
+                throw e;
+            }
+
+            const labour = new BusinessLabour({
+                name,
+                role,
+                salary,
+                phone,
                 businessId,
-                timestamp: new Date().toISOString()
-            }
-        }, {
-            status: 201,
-            headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
+                isActive: true
+            });
+
+            await labour.save();
+
+            auditLog.financial({ businessId, userId: user.id, action: "LABOUR_CREATED", details: { name, role, salary } });
+
+            return NextResponse.json({
+                data: labour,
+                meta: {
+                    message: "Labour record created successfully",
+                    businessId,
+                    timestamp: new Date().toISOString()
+                }
+            }, {
+                status: 201,
+                headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
+            });
+        } catch (error: any) {
+            return NextResponse.json({ 
+                data: null,
+                meta: {
+                    error: "Failed to create labour",
+                    details: error.message,
+                    timestamp: new Date().toISOString()
+                }
+            }, { status: 500 });
+        }
         });
-    } catch (error: any) {
-        return NextResponse.json({ 
-            data: null,
-            meta: {
-                error: "Failed to create labour",
-                details: error.message,
-                timestamp: new Date().toISOString()
-            }
-        }, { status: 500 });
-    }
+            
 }

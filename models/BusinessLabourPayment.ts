@@ -18,6 +18,8 @@ const businessLabourPaymentSchema = new Schema<IBusinessLabourPayment>(
 );
 
 businessLabourPaymentSchema.index({ businessId: 1, createdAt: -1 });
+// Speed up summary queries: { labourId, businessId, createdAt range }
+businessLabourPaymentSchema.index({ businessId: 1, labourId: 1, createdAt: -1 });
 
 export const BusinessLabourPayment: Model<IBusinessLabourPayment> =
   mongoose.models.BusinessLabourPayment || mongoose.model<IBusinessLabourPayment>("BusinessLabourPayment", businessLabourPaymentSchema);

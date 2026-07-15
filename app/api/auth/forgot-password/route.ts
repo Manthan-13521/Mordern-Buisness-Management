@@ -6,6 +6,7 @@ import { User } from "@/models/User";
 import { PasswordReset } from "@/models/PasswordReset";
 import { sendOtpEmail } from "@/lib/emailService";
 import { logger } from "@/lib/logger";
+import { requestContext } from "@/lib/requestContext";
 
 export const dynamic = "force-dynamic";
 
@@ -37,82 +38,95 @@ function delay(ms: number) {
 }
 
 export async function POST(req: Request) {
-    // Fixed 150ms base delay — always runs, even on early returns
-    const baseDelay = delay(150);
 
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "POST";
+
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            const baseDelay = delay(150);
     try {
-        const body = await req.json().catch(() => ({}));
-        const rawEmail = (body?.email || "").trim().toLowerCase();
+            const body = await req.json().catch(() => ({}));
+            const rawEmail = (body?.email || "").trim().toLowerCase();
 
-        if (!rawEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail)) {
-            await baseDelay;
-            return NextResponse.json({ message: GENERIC_MSG }, { status: 200 });
-        }
+            if (!rawEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail)) {
+                await baseDelay;
+                return NextResponse.json({ message: GENERIC_MSG }, { status: 200 });
+            }
 
-        // Rate limit by email
-        if (!checkRateLimit(rawEmail)) {
-            await baseDelay;
-            return NextResponse.json(
-                { error: "Too many reset requests. Please wait 15 minutes before trying again." },
-                { status: 429 }
+            // Rate limit by email
+            if (!checkRateLimit(rawEmail)) {
+                await baseDelay;
+                return NextResponse.json(
+                    { error: "Too many reset requests. Please wait 15 minutes before trying again." },
+                    { status: 429 }
+                );
+            }
+
+            await Promise.all([dbConnect(), baseDelay]);
+
+            // ── Look up user by email in DB (the ONLY source of truth for email) ──
+            const user = await User.findOne({ email: rawEmail }).lean();
+
+            if (!user) {
+                // Do NOT reveal that the email wasn't found
+                logger.audit({
+                    type: "PASSWORD_RESET_REQUESTED",
+                    meta: { email: rawEmail, found: false },
+                });
+                return NextResponse.json({ message: GENERIC_MSG }, { status: 200 });
+            }
+
+            // ── Generate 6-digit numeric OTP ──
+            // crypto.randomInt is cryptographically secure
+            const otp = String(crypto.randomInt(100000, 999999));
+            const otpHash = await bcrypt.hash(otp, 12);
+            const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+            // ── Upsert: replaces any existing OTP for this user (resend invalidates old OTP) ──
+            await PasswordReset.findOneAndUpdate(
+                { userId: user._id },
+                {
+                    userId:    user._id,
+                    email:     user.email,  // Always use the DB email, never the frontend input
+                    otpHash,
+                    expiresAt,
+                    attempts:  0,
+                },
+                { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
             );
-        }
 
-        await Promise.all([dbConnect(), baseDelay]);
+            // ── Send OTP to the DB-matched email only ──
+            try {
+                await sendOtpEmail(user.email, otp);
+            } catch (emailErr: any) {
+                logger.error("[ForgotPassword] Email send failed", {
+                    userId: user._id.toString(),
+                    error: emailErr?.message,
+                });
+                // Don't reveal email sending errors to the client
+                return NextResponse.json({ message: GENERIC_MSG }, { status: 200 });
+            }
 
-        // ── Look up user by email in DB (the ONLY source of truth for email) ──
-        const user = await User.findOne({ email: rawEmail }).lean();
-
-        if (!user) {
-            // Do NOT reveal that the email wasn't found
             logger.audit({
-                type: "PASSWORD_RESET_REQUESTED",
-                meta: { email: rawEmail, found: false },
-            });
-            return NextResponse.json({ message: GENERIC_MSG }, { status: 200 });
-        }
-
-        // ── Generate 6-digit numeric OTP ──
-        // crypto.randomInt is cryptographically secure
-        const otp = String(crypto.randomInt(100000, 999999));
-        const otpHash = await bcrypt.hash(otp, 12);
-        const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-
-        // ── Upsert: replaces any existing OTP for this user (resend invalidates old OTP) ──
-        await PasswordReset.findOneAndUpdate(
-            { userId: user._id },
-            {
-                userId:    user._id,
-                email:     user.email,  // Always use the DB email, never the frontend input
-                otpHash,
-                expiresAt,
-                attempts:  0,
-            },
-            { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
-        );
-
-        // ── Send OTP to the DB-matched email only ──
-        try {
-            await sendOtpEmail(user.email, otp);
-        } catch (emailErr: any) {
-            logger.error("[ForgotPassword] Email send failed", {
+                type:   "PASSWORD_RESET_REQUESTED",
                 userId: user._id.toString(),
-                error: emailErr?.message,
+                meta:   { email: user.email, found: true, status: "otp_sent" },
             });
-            // Don't reveal email sending errors to the client
+
+            return NextResponse.json({ message: GENERIC_MSG }, { status: 200 });
+        } catch (error: any) {
+            await baseDelay;
+            logger.error("[ForgotPassword] Unexpected error", { error: error?.message });
             return NextResponse.json({ message: GENERIC_MSG }, { status: 200 });
         }
-
-        logger.audit({
-            type:   "PASSWORD_RESET_REQUESTED",
-            userId: user._id.toString(),
-            meta:   { email: user.email, found: true, status: "otp_sent" },
         });
-
-        return NextResponse.json({ message: GENERIC_MSG }, { status: 200 });
-    } catch (error: any) {
-        await baseDelay;
-        logger.error("[ForgotPassword] Unexpected error", { error: error?.message });
-        return NextResponse.json({ message: GENERIC_MSG }, { status: 200 });
-    }
+            
 }

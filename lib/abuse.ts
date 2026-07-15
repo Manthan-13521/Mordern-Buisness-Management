@@ -9,6 +9,9 @@
  * for multi-instance support.
  */
 
+import { redis } from "@/lib/redis";
+import { logger } from "@/lib/logger";
+
 interface AbuseRecord {
     count: number;
     windowStart: number;
@@ -37,10 +40,38 @@ setInterval(() => {
 
 /**
  * Detect abusive request patterns.
+ * Uses Redis if available, falls back to in-memory map.
  * @returns true if the key is exhibiting abuse (should be blocked)
  */
-export function detectAbuse(key: string): boolean {
+export async function detectAbuse(key: string): Promise<boolean> {
     const now = Date.now();
+    
+    if (redis) {
+        try {
+            const blockKey = `abuse:blocked:${key}`;
+            const countKey = `abuse:count:${key}`;
+            
+            // Check if blocked
+            const isBlocked = await redis.get(blockKey);
+            if (isBlocked) return true;
+            
+            // Increment count
+            const count = await redis.incr(countKey);
+            if (count === 1) {
+                await redis.expire(countKey, Math.floor(ABUSE_WINDOW_MS / 1000));
+            }
+            
+            if (count > ABUSE_THRESHOLD) {
+                await redis.set(blockKey, "true", { ex: Math.floor(BLOCK_DURATION_MS / 1000) });
+                return true;
+            }
+            return false;
+        } catch (e) {
+            logger.warn("[Abuse] Redis failed, falling back to memory", { error: String(e) });
+        }
+    }
+
+    // -- In-Memory Fallback --
     const record = abuseMap.get(key);
 
     // If currently blocked, check if block has expired
@@ -53,6 +84,16 @@ export function detectAbuse(key: string): boolean {
     }
 
     if (!record || now > record.windowStart + ABUSE_WINDOW_MS) {
+        // Enforce maximum size before adding new entries
+        if (abuseMap.size >= 10000) {
+            let deleted = 0;
+            const toDelete = 2000;
+            for (const k of abuseMap.keys()) {
+                abuseMap.delete(k);
+                if (++deleted >= toDelete) break;
+            }
+        }
+        
         // New window
         abuseMap.set(key, { count: 1, windowStart: now, blocked: false, blockedUntil: 0 });
         return false;
@@ -71,6 +112,7 @@ export function detectAbuse(key: string): boolean {
 
 /**
  * Get abuse statistics for monitoring.
+ * (Local stats only, Redis stats would require SCAN)
  */
 export function getAbuseStats(): { activeKeys: number; blockedKeys: number } {
     let blockedKeys = 0;

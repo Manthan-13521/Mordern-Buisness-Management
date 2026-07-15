@@ -4,6 +4,7 @@ import { dbConnect } from "@/lib/mongodb";
 import { StaffPayment } from "@/models/StaffPayment";
 import { Pool } from "@/models/Pool";
 import { Hostel } from "@/models/Hostel";
+import { requestContext } from "@/lib/requestContext";
 
 export const dynamic = "force-dynamic";
 
@@ -21,44 +22,59 @@ async function resolveTenant(slug: string, type: "pool" | "hostel") {
 }
 
 export async function POST(req: Request, props: { params: Promise<{ poolSlug: string, staffId: string }> }) {
-  try {
-    const { poolSlug, staffId } = await props.params;
-    const user = await resolveUser(req);
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const tenantId = await resolveTenant(poolSlug, "pool");
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "POST";
 
-    // ── TENANT OWNERSHIP CHECK ──────────────────────────────────────────
-    if (user.role !== "superadmin" && user.poolId !== tenantId) {
-      return NextResponse.json({ error: "Access denied: pool mismatch" }, { status: 403 });
-    }
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+        const { poolSlug, staffId } = await props.params;
+        const user = await resolveUser(req);
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { amount } = await req.json();
+        const tenantId = await resolveTenant(poolSlug, "pool");
 
-    const payment = new StaffPayment({
-      staffId,
-      poolId: tenantId,
-      amount
-    });
-
-    await payment.save();
-
-    // ── AUDIT LOG: Staff Payment Recorded ──────────────────────────
-    const { logger } = await import("@/lib/logger");
-    logger.audit({
-        type: "STAFF_PAYMENT_RECORDED",
-        userId: user.id,
-        poolId: tenantId,
-        meta: {
-            staffId,
-            amount,
-            recordedBy: user.email || user.id,
+        // ── TENANT OWNERSHIP CHECK ──────────────────────────────────────────
+        if (user.role !== "superadmin" && user.poolId !== tenantId) {
+          return NextResponse.json({ error: "Access denied: pool mismatch" }, { status: 403 });
         }
-    });
 
-    return NextResponse.json(payment);
-  } catch (error: any) {
-    console.error(error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+        const { amount } = await req.json();
+
+        const payment = new StaffPayment({
+          staffId,
+          poolId: tenantId,
+          amount
+        });
+
+        await payment.save();
+
+        // ── AUDIT LOG: Staff Payment Recorded ──────────────────────────
+        const { logger } = await import("@/lib/logger");
+        logger.audit({
+            type: "STAFF_PAYMENT_RECORDED",
+            userId: user.id,
+            poolId: tenantId,
+            meta: {
+                staffId,
+                amount,
+                recordedBy: user.email || user.id,
+            }
+        });
+
+        return NextResponse.json(payment);
+      } catch (error: any) {
+        console.error(error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+        });
+            
 }

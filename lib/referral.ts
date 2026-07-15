@@ -66,7 +66,7 @@ export async function recordReferralUsage(
             const updated = await ReferralCode.findOneAndUpdate(
                 filter,
                 { $inc: { usedCount: 1 } },
-                { session, new: true }
+                { session, returnDocument: 'after' }
             );
 
             if (!updated && usedReferralDoc.maxUses > 0) {
@@ -90,7 +90,7 @@ export async function recordReferralUsage(
             const updated = await ReferralCode.findOneAndUpdate(
                 filter,
                 { $inc: { usedCount: 1 } },
-                { new: true }
+                { returnDocument: 'after' }
             );
 
             if (updated) {

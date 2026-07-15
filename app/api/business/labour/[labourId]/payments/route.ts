@@ -8,133 +8,149 @@ import { financialWriteLimiter } from "@/lib/rateLimiter";
 import { auditLog } from "@/lib/auditLog";
 import { logger } from "@/lib/logger";
 import crypto from "crypto";
+import { requestContext } from "@/lib/requestContext";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request, { params }: { params: Promise<{ labourId: string }> }) {
-    try {
-        const user = await resolveUser(req);
-        if (!user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-        let businessId;
-        try {
-            businessId = requireBusinessId(user);
-        } catch (err: any) {
-            return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
-        }
 
-        // 🟠 RATE LIMITING
-        const ip = req.headers.get("x-forwarded-for") || "unknown";
-        const rl = financialWriteLimiter.checkTenant(user.businessId || "unknown", ip);
-        if (!rl.allowed) {
-            return NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429 });
-        }
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "POST";
 
-        const { labourId } = await params;
-        const body = await req.json();
-        const { amount } = body;
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            const user = await resolveUser(req);
+            if (!user) {
+                return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            }
+            let businessId;
+            try {
+                businessId = requireBusinessId(user);
+            } catch (err: any) {
+                return NextResponse.json({ error: err.message }, { status: err.message === "Unauthorized" ? 401 : 403 });
+            }
 
-        // "Reject amount <= 0" rule strictly enforced
-        if (!amount || amount <= 0) {
-            return NextResponse.json({ error: "Invalid payment amount" }, { status: 400 });
-        }
+            // 🟠 RATE LIMITING
+            const ip = req.headers.get("x-forwarded-for") || "unknown";
+            const rl = financialWriteLimiter.checkTenant(user.businessId || "unknown", ip);
+            if (!rl.allowed) {
+                return NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429 });
+            }
 
-        logger.debug("Business labour payment create", { businessId, labourId, userId: user.id });
+            const { labourId } = await params;
+            const body = await req.json();
+            const { amount } = body;
 
-        await dbConnect();
+            // "Reject amount <= 0" rule strictly enforced
+            if (!amount || amount <= 0) {
+                return NextResponse.json({ error: "Invalid payment amount" }, { status: 400 });
+            }
 
-        // 🔴 TERMINAL DEFENSE
-        if (!businessId) {
-            throw new Error("Tenant context lost before database operation");
-        }
+            logger.debug("Business labour payment create", { businessId, labourId, userId: user.id });
 
-        const payment = new BusinessLabourPayment({
-            labourId,
-            businessId,
-            amount,
-        });
+            await dbConnect();
 
-        await payment.save();
+            // 🔴 TERMINAL DEFENSE
+            if (!businessId) {
+                throw new Error("Tenant context lost before database operation");
+            }
 
-        auditLog.financial({ businessId, userId: user.id, action: "LABOUR_PAYMENT", details: { labourId, amount } });
-
-        // ── 90-Day Rolling Window Cleanup (Distributed Atomic Locked Sweep) ──
-        if (Math.random() < 0.05) {
-            (async () => {
-                const instanceId = crypto.randomUUID();
-                try {
-                    const now = new Date();
-                    // 🟡 ATOMIC LOCK ACQUISITION WITH OWNERSHIP
-                    const lock = await SystemLock.findOneAndUpdate(
-                        { 
-                            key: "labour_cleanup", 
-                            $or: [
-                                { expiresAt: { $lt: now } }, 
-                                { expiresAt: { $exists: false } }
-                            ] 
-                        },
-                        { 
-                            $set: { 
-                                key: "labour_cleanup", 
-                                ownerId: instanceId,
-                                expiresAt: new Date(now.getTime() + 60000) 
-                            } 
-                        },
-                        { upsert: true, new: true, rawResult: true }
-                    ).catch(err => {
-                        if (err.code === 11000) return null; // Duplicate key (lock held)
-                        throw err;
-                    });
-
-                    // Verify we actually own this lock user
-                    const lockDoc = (lock as any)?.value;
-                    if (!lock || (lockDoc && lockDoc.ownerId !== instanceId)) {
-                        return;
-                    }
-
-                    const ninetyDaysAgo = new Date();
-                    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-                    
-                    const result = await BusinessLabourPayment.deleteMany({ 
-                        businessId, 
-                        createdAt: { $lt: ninetyDaysAgo } 
-                    });
-
-                    logger.debug("Payment cleanup success", {
-                        businessId,
-                        ownerId: instanceId,
-                        deletedCount: result.deletedCount,
-                    });
-                } catch (err: any) {
-                    logger.error("Payment cleanup failed", {
-                        key: "labour_cleanup",
-                        ownerId: instanceId,
-                        error: err.message,
-                    });
-                }
-            })();
-        }
-
-        return NextResponse.json({ 
-            data: payment,
-            meta: {
-                message: "Payment recorded successfully",
+            const payment = new BusinessLabourPayment({
+                labourId,
                 businessId,
-                timestamp: new Date().toISOString()
+                amount,
+            });
+
+            await payment.save();
+
+            auditLog.financial({ businessId, userId: user.id, action: "LABOUR_PAYMENT", details: { labourId, amount } });
+
+            // ── 90-Day Rolling Window Cleanup (Distributed Atomic Locked Sweep) ──
+            if (Math.random() < 0.05) {
+                (async () => {
+                    const instanceId = crypto.randomUUID();
+                    try {
+                        const now = new Date();
+                        // 🟡 ATOMIC LOCK ACQUISITION WITH OWNERSHIP
+                        const lock = await SystemLock.findOneAndUpdate(
+                            { 
+                                key: "labour_cleanup", 
+                                $or: [
+                                    { expiresAt: { $lt: now } }, 
+                                    { expiresAt: { $exists: false } }
+                                ] 
+                            },
+                            { 
+                                $set: { 
+                                    key: "labour_cleanup", 
+                                    ownerId: instanceId,
+                                    expiresAt: new Date(now.getTime() + 60000) 
+                                } 
+                            },
+                            { upsert: true, new: true, rawResult: true }
+                        ).catch(err => {
+                            if (err.code === 11000) return null; // Duplicate key (lock held)
+                            throw err;
+                        });
+
+                        // Verify we actually own this lock user
+                        const lockDoc = (lock as any)?.value;
+                        if (!lock || (lockDoc && lockDoc.ownerId !== instanceId)) {
+                            return;
+                        }
+
+                        const ninetyDaysAgo = new Date();
+                        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+                        
+                        const result = await BusinessLabourPayment.deleteMany({ 
+                            businessId, 
+                            createdAt: { $lt: ninetyDaysAgo } 
+                        });
+
+                        logger.debug("Payment cleanup success", {
+                            businessId,
+                            ownerId: instanceId,
+                            deletedCount: result.deletedCount,
+                        });
+                    } catch (err: any) {
+                        logger.error("Payment cleanup failed", {
+                            key: "labour_cleanup",
+                            ownerId: instanceId,
+                            error: err.message,
+                        });
+                    }
+                })();
             }
-        }, {
-            headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
+
+            return NextResponse.json({ 
+                data: payment,
+                meta: {
+                    message: "Payment recorded successfully",
+                    businessId,
+                    timestamp: new Date().toISOString()
+                }
+            }, {
+                headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" }
+            });
+        } catch (error: any) {
+            logger.error("Labour payment error", { error: error?.message });
+            return NextResponse.json({ 
+                data: null,
+                meta: {
+                    error: "Failed to record payment",
+                    details: error.message,
+                    timestamp: new Date().toISOString()
+                }
+            }, { status: 500 });
+        }
         });
-    } catch (error: any) {
-        logger.error("Labour payment error", { error: error?.message });
-        return NextResponse.json({ 
-            data: null,
-            meta: {
-                error: "Failed to record payment",
-                details: error.message,
-                timestamp: new Date().toISOString()
-            }
-        }, { status: 500 });
-    }
+            
 }

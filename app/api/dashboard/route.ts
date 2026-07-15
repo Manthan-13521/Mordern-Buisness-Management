@@ -9,6 +9,7 @@ import { getCachedDashboard } from "@/lib/dashboardCache";
 import { withQueryTimeout } from "@/lib/queryTimeout";
 
 import { runOccupancyCleanupInBackground } from "@/lib/cleanup";
+import { requestContext } from "@/lib/requestContext";
 
 export const dynamic = "force-dynamic";
 
@@ -37,197 +38,212 @@ function getISTDayBounds() {
 }
 
 export async function GET(req: Request) {
-    try {
-        const [, user] = await Promise.all([
-            dbConnect(),
-            resolveUser(req),
-        ]);
-        if (!user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        
-        // Fire-and-forget: cleanup runs in background, does NOT block dashboard response
-        void runOccupancyCleanupInBackground().catch(() => {});
 
-        const { startOfDayIST, endOfDayIST, startOfMonthIST, now } = getISTDayBounds();
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "GET";
 
-        const targetPoolId = new URL(req.url).searchParams.get("poolId");
-        
-        const baseMatch: any = { isDeleted: false };
-        if (targetPoolId && user.role === "superadmin") {
-            baseMatch.poolId = targetPoolId;
-        } else if (user.role !== "superadmin") {
-            if (!user.poolId) {
-                return NextResponse.json({ error: "No pool assigned to this account" }, { status: 400, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-            }
-            baseMatch.poolId = user.poolId;
-        }
-            
-        const poolId = baseMatch.poolId;
-
-        // ── Redis-cached dashboard — 15s TTL to share across concurrent requests ──
-        const cacheKey = `dashboard:${poolId}:stats`;
-        const dashboardFetcher = async () => {
-            // ── 1. Total Members = ALL members added this year (never decreases on deletion) ──
-            // Direct count from DB: current members + archived deleted members
-            const currentYear = new Date().getFullYear();
-            const startOfYear = new Date(currentYear, 0, 1);
-            const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59, 999);
-            const yearCreatedFilter = { $gte: startOfYear, $lte: endOfYear };
-
-            const { DeletedMember } = await import("@/models/DeletedMember");
-            const [
-                regActiveMembers,
-                entActiveMembers,
-                entriesToday,
-                todaysRevenueAgg,
-                monthlyRevenueAgg,
-                yearlyRevenueAgg,
-                regExpiringMembers,
-                entExpiringMembers,
-                todaysMemberEntries,
-                todaysEntertainmentEntries,
-                expiredMembersCountResult,
-                entExpiredMembersCountResult,
-                regThisYear,
-                entThisYear,
-                deletedThisYear
-            ] = await Promise.all([
-                // Active = expiry is today or in the future (Trust expiryDate purely)
-                Member.countDocuments({
-                    ...baseMatch,
-                    $or: [
-                        { planEndDate: { $gte: startOfDayIST } },
-                        { expiryDate: { $gte: startOfDayIST } },
-                    ]
-                }),
-                EntertainmentMember.countDocuments({
-                    ...baseMatch,
-                    $or: [
-                        { planEndDate: { $gte: startOfDayIST } },
-                        { expiryDate: { $gte: startOfDayIST } },
-                    ]
-                }),
-
-                // Today's entries — IST bounded
-                EntryLog.aggregate([
-                    { $match: { ...baseMatch, scanTime: { $gte: startOfDayIST, $lte: endOfDayIST }, status: "granted" } },
-                    { $group: { _id: null, total: { $sum: { $ifNull: ["$numPersons", 1] } } } }
-                ]),
-
-                // Today's revenue — IST bounded, using Transactions (Payment) Model
-                Payment.aggregate([
-                    { $match: { ...baseMatch, status: "success", createdAt: { $gte: startOfDayIST, $lte: endOfDayIST } } },
-                    { $group: { _id: null, total: { $sum: "$amount" } } }
-                ]),
-
-                // Monthly revenue — IST bounded
-                Payment.aggregate([
-                    { $match: { ...baseMatch, status: "success", createdAt: { $gte: startOfMonthIST } } },
-                    { $group: { _id: null, total: { $sum: "$amount" } } }
-                ]),
-                
-                // Yearly revenue
-                Payment.aggregate([
-                    { $match: { ...baseMatch, status: "success", createdAt: { $gte: new Date(new Date().getFullYear(), 0, 1) } } },
-                    { $group: { _id: null, total: { $sum: "$amount" } } }
-                ]),
-
-                // Expiring in next 3 days
-                Member.find({
-                    ...baseMatch,
-                    $or: [
-                        { planEndDate: { $gte: startOfDayIST, $lte: new Date(startOfDayIST.getTime() + 3 * 86400000) } },
-                        { expiryDate: { $gte: startOfDayIST, $lte: new Date(startOfDayIST.getTime() + 3 * 86400000) } },
-                    ]
-                })
-                .select('memberId name phone expiryDate planEndDate planQuantity')
-                .lean(),
-
-                EntertainmentMember.find({
-                    ...baseMatch,
-                    $or: [
-                        { planEndDate: { $gte: startOfDayIST, $lte: new Date(startOfDayIST.getTime() + 3 * 86400000) } },
-                        { expiryDate: { $gte: startOfDayIST, $lte: new Date(startOfDayIST.getTime() + 3 * 86400000) } },
-                    ]
-                })
-                .select('memberId name phone expiryDate planEndDate planQuantity')
-                .lean(),
-
-                // Today's regular member registrations
-                Member.countDocuments({
-                    ...baseMatch,
-                    createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
-                }),
-                // Today's entertainment member registrations
-                EntertainmentMember.countDocuments({
-                    ...baseMatch,
-                    createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
-                }),
-
-                // Expired members — NOW PARALLEL (was sequential before)
-                Member.countDocuments({
-                    ...baseMatch,
-                    $and: [
-                        { planEndDate: { $lt: startOfDayIST } },
-                        { expiryDate: { $lt: startOfDayIST } }
-                    ]
-                }),
-                EntertainmentMember.countDocuments({
-                    ...baseMatch,
-                    $and: [
-                        { planEndDate: { $lt: startOfDayIST } },
-                        { expiryDate: { $lt: startOfDayIST } }
-                    ]
-                }),
-
-                // Immutable total counts (now inside cache) — SECURITY: use baseMatch not raw poolId
-                Member.countDocuments({ ...baseMatch, createdAt: yearCreatedFilter }),
-                EntertainmentMember.countDocuments({ ...baseMatch, createdAt: yearCreatedFilter }),
-                DeletedMember.countDocuments({ ...baseMatch, "fullData.createdAt": yearCreatedFilter }),
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            const [, user] = await Promise.all([
+                dbConnect(),
+                resolveUser(req),
             ]);
+            if (!user) return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            
+            // Fire-and-forget: cleanup runs in background, does NOT block dashboard response
+            void runOccupancyCleanupInBackground().catch(() => {});
 
-            const activeMembers = regActiveMembers + entActiveMembers;
-            const expiredMembers = expiredMembersCountResult + entExpiredMembersCountResult;
-            const expiringMembers = [...regExpiringMembers, ...entExpiringMembers];
-            const immutableTotalMembers = regThisYear + entThisYear + deletedThisYear;
+            const { startOfDayIST, endOfDayIST, startOfMonthIST, now } = getISTDayBounds();
 
-            return {
-                stats: {
-                    totalMembers: immutableTotalMembers,
-                    activeMembers,
-                    expiredMembers,
-                    todaysEntries: entriesToday[0]?.total || 0,
-                    todaysRevenue: todaysRevenueAgg[0]?.total || 0,
-                    monthlyRevenue: monthlyRevenueAgg[0]?.total || 0,
-                    yearlyRevenue: yearlyRevenueAgg[0]?.total || 0,
+            const targetPoolId = new URL(req.url).searchParams.get("poolId");
+            
+            const baseMatch: any = { isDeleted: false };
+            if (targetPoolId && user.role === "superadmin") {
+                baseMatch.poolId = targetPoolId;
+            } else if (user.role !== "superadmin") {
+                if (!user.poolId) {
+                    return NextResponse.json({ error: "No pool assigned to this account" }, { status: 400, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+                }
+                baseMatch.poolId = user.poolId;
+            }
+                
+            const poolId = baseMatch.poolId;
+
+            // ── Redis-cached dashboard — 15s TTL to share across concurrent requests ──
+            const cacheKey = `dashboard:${poolId}:stats`;
+            const dashboardFetcher = async () => {
+                // ── 1. Total Members = ALL members added this year (never decreases on deletion) ──
+                // Direct count from DB: current members + archived deleted members
+                const currentYear = new Date().getFullYear();
+                const startOfYear = new Date(currentYear, 0, 1);
+                const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59, 999);
+                const yearCreatedFilter = { $gte: startOfYear, $lte: endOfYear };
+
+                const { DeletedMember } = await import("@/models/DeletedMember");
+                const [
+                    regActiveMembers,
+                    entActiveMembers,
+                    entriesToday,
+                    todaysRevenueAgg,
+                    monthlyRevenueAgg,
+                    yearlyRevenueAgg,
+                    regExpiringMembers,
+                    entExpiringMembers,
                     todaysMemberEntries,
                     todaysEntertainmentEntries,
-                },
-                alerts: {
-                    expiringMembers: expiringMembers.map((m: any) => ({
-                        id: m._id,
-                        memberId: m.memberId,
-                        name: m.name,
-                        phone: m.phone,
-                        qty: m.planQuantity || 1,
-                        remainingDays: Math.ceil(
-                            (new Date(m.planEndDate || m.expiryDate).getTime() - startOfDayIST.getTime()) / 86400000
-                        )
-                    }))
-                }
+                    expiredMembersCountResult,
+                    entExpiredMembersCountResult,
+                    regThisYear,
+                    entThisYear,
+                    deletedThisYear
+                ] = await Promise.all([
+                    // Active = expiry is today or in the future (Trust expiryDate purely)
+                    Member.countDocuments({
+                        ...baseMatch,
+                        $or: [
+                            { planEndDate: { $gte: startOfDayIST } },
+                            { expiryDate: { $gte: startOfDayIST } },
+                        ]
+                    }),
+                    EntertainmentMember.countDocuments({
+                        ...baseMatch,
+                        $or: [
+                            { planEndDate: { $gte: startOfDayIST } },
+                            { expiryDate: { $gte: startOfDayIST } },
+                        ]
+                    }),
+
+                    // Today's entries — IST bounded
+                    EntryLog.aggregate([
+                        { $match: { ...baseMatch, scanTime: { $gte: startOfDayIST, $lte: endOfDayIST }, status: "granted" } },
+                        { $group: { _id: null, total: { $sum: { $ifNull: ["$numPersons", 1] } } } }
+                    ]),
+
+                    // Today's revenue — IST bounded, using Transactions (Payment) Model
+                    Payment.aggregate([
+                        { $match: { ...baseMatch, status: "success", createdAt: { $gte: startOfDayIST, $lte: endOfDayIST } } },
+                        { $group: { _id: null, total: { $sum: "$amount" } } }
+                    ]),
+
+                    // Monthly revenue — IST bounded
+                    Payment.aggregate([
+                        { $match: { ...baseMatch, status: "success", createdAt: { $gte: startOfMonthIST } } },
+                        { $group: { _id: null, total: { $sum: "$amount" } } }
+                    ]),
+                    
+                    // Yearly revenue
+                    Payment.aggregate([
+                        { $match: { ...baseMatch, status: "success", createdAt: { $gte: new Date(new Date().getFullYear(), 0, 1) } } },
+                        { $group: { _id: null, total: { $sum: "$amount" } } }
+                    ]),
+
+                    // Expiring in next 3 days
+                    Member.find({
+                        ...baseMatch,
+                        $or: [
+                            { planEndDate: { $gte: startOfDayIST, $lte: new Date(startOfDayIST.getTime() + 3 * 86400000) } },
+                            { expiryDate: { $gte: startOfDayIST, $lte: new Date(startOfDayIST.getTime() + 3 * 86400000) } },
+                        ]
+                    })
+                    .select('memberId name phone expiryDate planEndDate planQuantity')
+                    .lean(),
+
+                    EntertainmentMember.find({
+                        ...baseMatch,
+                        $or: [
+                            { planEndDate: { $gte: startOfDayIST, $lte: new Date(startOfDayIST.getTime() + 3 * 86400000) } },
+                            { expiryDate: { $gte: startOfDayIST, $lte: new Date(startOfDayIST.getTime() + 3 * 86400000) } },
+                        ]
+                    })
+                    .select('memberId name phone expiryDate planEndDate planQuantity')
+                    .lean(),
+
+                    // Today's regular member registrations
+                    Member.countDocuments({
+                        ...baseMatch,
+                        createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
+                    }),
+                    // Today's entertainment member registrations
+                    EntertainmentMember.countDocuments({
+                        ...baseMatch,
+                        createdAt: { $gte: startOfDayIST, $lte: endOfDayIST }
+                    }),
+
+                    // Expired members — NOW PARALLEL (was sequential before)
+                    Member.countDocuments({
+                        ...baseMatch,
+                        $and: [
+                            { planEndDate: { $lt: startOfDayIST } },
+                            { expiryDate: { $lt: startOfDayIST } }
+                        ]
+                    }),
+                    EntertainmentMember.countDocuments({
+                        ...baseMatch,
+                        $and: [
+                            { planEndDate: { $lt: startOfDayIST } },
+                            { expiryDate: { $lt: startOfDayIST } }
+                        ]
+                    }),
+
+                    // Immutable total counts (now inside cache) — SECURITY: use baseMatch not raw poolId
+                    Member.countDocuments({ ...baseMatch, createdAt: yearCreatedFilter }),
+                    EntertainmentMember.countDocuments({ ...baseMatch, createdAt: yearCreatedFilter }),
+                    DeletedMember.countDocuments({ ...baseMatch, "fullData.createdAt": yearCreatedFilter }),
+                ]);
+
+                const activeMembers = regActiveMembers + entActiveMembers;
+                const expiredMembers = expiredMembersCountResult + entExpiredMembersCountResult;
+                const expiringMembers = [...regExpiringMembers, ...entExpiringMembers];
+                const immutableTotalMembers = regThisYear + entThisYear + deletedThisYear;
+
+                return {
+                    stats: {
+                        totalMembers: immutableTotalMembers,
+                        activeMembers,
+                        expiredMembers,
+                        todaysEntries: entriesToday[0]?.total || 0,
+                        todaysRevenue: todaysRevenueAgg[0]?.total || 0,
+                        monthlyRevenue: monthlyRevenueAgg[0]?.total || 0,
+                        yearlyRevenue: yearlyRevenueAgg[0]?.total || 0,
+                        todaysMemberEntries,
+                        todaysEntertainmentEntries,
+                    },
+                    alerts: {
+                        expiringMembers: expiringMembers.map((m: any) => ({
+                            id: m._id,
+                            memberId: m.memberId,
+                            name: m.name,
+                            phone: m.phone,
+                            qty: m.planQuantity || 1,
+                            remainingDays: Math.ceil(
+                                (new Date(m.planEndDate || m.expiryDate).getTime() - startOfDayIST.getTime()) / 86400000
+                            )
+                        }))
+                    }
+                };
             };
-        };
 
-        const response = await getCachedDashboard(cacheKey, () => withQueryTimeout(dashboardFetcher(), 8000));
+            const response = await getCachedDashboard(cacheKey, () => withQueryTimeout(dashboardFetcher(), 8000));
 
-        return NextResponse.json(response, {
-            headers: {
-                "Cache-Control": "public, max-age=0, s-maxage=30, stale-while-revalidate=60",
-                "X-Cache": "REDIS",
-            },
+            return NextResponse.json(response, {
+                headers: {
+                    "Cache-Control": "public, max-age=0, s-maxage=30, stale-while-revalidate=60",
+                    "X-Cache": "REDIS",
+                },
+            });
+
+        } catch (error) {
+            console.error("[GET /api/dashboard]", error);
+            return NextResponse.json({ error: "Failed to fetch dashboard" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        }
         });
-
-    } catch (error) {
-        console.error("[GET /api/dashboard]", error);
-        return NextResponse.json({ error: "Failed to fetch dashboard" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+            
 }

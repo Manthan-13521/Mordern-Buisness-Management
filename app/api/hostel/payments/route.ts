@@ -13,219 +13,250 @@ import { isDuplicate } from "@/lib/idempotency";
 import { checkRateLimit, getClientIp, rateLimitHeaders } from "@/lib/rateLimit";
 import { logger } from "@/lib/logger";
 import { HostelPaymentSchema } from "@/lib/validators";
+import { requestContext } from "@/lib/requestContext";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/hostel/payments — list payments (with optional block filter)
 export async function GET(req: Request) {
-    try {
-        const user = await resolveUser(req);
-        await dbConnect();
 
-        if (!user || user.role !== "hostel_admin") {
-            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
-        const hostelId = user.hostelId as string;
-        if (!hostelId) return NextResponse.json({ error: "Forbidden" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "GET";
 
-        const url = new URL(req.url);
-        const page     = Math.max(1, parseInt(url.searchParams.get("page") ?? "1"));
-        const limit    = 11;
-        const skip     = (page - 1) * limit;
-        const memberId = url.searchParams.get("memberId") || "";
-        const block    = url.searchParams.get("block") || "";
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            const user = await resolveUser(req);
+            await dbConnect();
 
-        const baseMatch: Record<string, unknown> = { hostelId, isDeleted: false };
-        if (memberId) baseMatch.memberId = new mongoose.Types.ObjectId(memberId);
-
-        // Block filter — resolve block → member IDs → filter payments
-        if (block && block !== "all") {
-            const blockObj = await HostelBlock.findOne({ hostelId, name: block }).lean() as any;
-            if (blockObj) {
-                const memberIds = await HostelMember.distinct("_id", {
-                    hostelId,
-                    blockId: blockObj._id,
-                    isDeleted: false,
-                });
-                baseMatch.memberId = { $in: memberIds };
-            } else {
-                // Unknown block → return empty
-                return NextResponse.json({ data: [], total: 0, page, limit, totalPages: 0 }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            if (!user || user.role !== "hostel_admin") {
+                return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
+            const hostelId = user.hostelId as string;
+            if (!hostelId) return NextResponse.json({ error: "Forbidden" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+
+            const url = new URL(req.url);
+            const page     = Math.max(1, parseInt(url.searchParams.get("page") ?? "1"));
+            const limit    = 11;
+            const skip     = (page - 1) * limit;
+            const memberId = url.searchParams.get("memberId") || "";
+            const block    = url.searchParams.get("block") || "";
+
+            const baseMatch: Record<string, unknown> = { hostelId, isDeleted: false };
+            if (memberId) baseMatch.memberId = new mongoose.Types.ObjectId(memberId);
+
+            // Block filter — resolve block → member IDs → filter payments
+            if (block && block !== "all") {
+                const blockObj = await HostelBlock.findOne({ hostelId, name: block }).lean() as any;
+                if (blockObj) {
+                    const memberIds = await HostelMember.distinct("_id", {
+                        hostelId,
+                        blockId: blockObj._id,
+                        isDeleted: false,
+                    });
+                    baseMatch.memberId = { $in: memberIds };
+                } else {
+                    // Unknown block → return empty
+                    return NextResponse.json({ data: [], total: 0, page, limit, totalPages: 0 }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+                }
+            }
+
+            const [payments, total] = await Promise.all([
+                HostelPayment.find(baseMatch)
+                    .populate("memberId", "name memberId blockNo floorNo roomNo")
+                    .populate("planId", "name price")
+                    .select("memberId planId amount paymentMethod status paymentType createdAt transactionId notes idempotencyKey")
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limit)
+                    .lean(),
+                HostelPayment.countDocuments(baseMatch),
+            ]);
+
+            return NextResponse.json({ data: payments, total, page, limit, totalPages: Math.ceil(total / limit) }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        } catch (error) {
+            console.error("[GET /api/hostel/payments]", error);
+            return NextResponse.json({ data: [], total: 0, error: "Failed to fetch payments" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-
-        const [payments, total] = await Promise.all([
-            HostelPayment.find(baseMatch)
-                .populate("memberId", "name memberId blockNo floorNo roomNo")
-                .populate("planId", "name price")
-                .select("memberId planId amount paymentMethod status paymentType createdAt transactionId notes idempotencyKey")
-                .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(limit)
-                .lean(),
-            HostelPayment.countDocuments(baseMatch),
-        ]);
-
-        return NextResponse.json({ data: payments, total, page, limit, totalPages: Math.ceil(total / limit) }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    } catch (error) {
-        console.error("[GET /api/hostel/payments]", error);
-        return NextResponse.json({ data: [], total: 0, error: "Failed to fetch payments" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+        });
+            
 }
 
 // POST /api/hostel/payments — add a payment (ledger cycle)
 export async function POST(req: Request) {
-    try {
-        const user = await resolveUser(req);
-        await dbConnect();
-        const body = await req.json();
-        if (!user || user.role !== "hostel_admin") {
-            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
-        const hostelId = user.hostelId as string;
-        if (!hostelId) return NextResponse.json({ error: "Forbidden" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
 
-        // Phase 2A FIX 7: Validate input with Zod schema
-        const parsed = HostelPaymentSchema.safeParse(body);
-        if (!parsed.success) {
-            return NextResponse.json(
-                { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
-                { status: 400, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "POST";
+
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            const user = await resolveUser(req);
+            await dbConnect();
+            const body = await req.json();
+            if (!user || user.role !== "hostel_admin") {
+                return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+            const hostelId = user.hostelId as string;
+            if (!hostelId) return NextResponse.json({ error: "Forbidden" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+
+            // Phase 2A FIX 7: Validate input with Zod schema
+            const parsed = HostelPaymentSchema.safeParse(body);
+            if (!parsed.success) {
+                return NextResponse.json(
+                    { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
+                    { status: 400, headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } }
+                );
+            }
+
+            const { memberId, amount, paymentMethod, transactionId, notes, paymentType: rawPaymentType, idempotencyKey } = parsed.data;
+            
+            const paid = Number(amount);
+
+            // ── RATE LIMITING ──
+            const ip = getClientIp(req);
+            const { allowed, limit, remaining } = checkRateLimit(ip, "/api/hostel/payments", "POST");
+            if (!allowed) {
+                return NextResponse.json(
+                    { error: "Too many payment requests. Please wait." },
+                    { status: 429, headers: rateLimitHeaders(limit, remaining) }
+                );
+            }
+
+            // ── IN-MEMORY IDEMPOTENCY: Prevent double-click duplication (5s window) ──
+            const dedupeKey = `payment:${hostelId}:${memberId}:${paid}`;
+            if (await isDuplicate(dedupeKey, 5_000)) {
+                return NextResponse.json(
+                    { message: "Duplicate payment detected. Please wait before retrying." },
+                    { status: 200 }
+                );
+            }
+
+            // ── Idempotency Check (Duplicate Request Guard) ──
+            if (idempotencyKey) {
+                const existing = await HostelPayment.findOne({ idempotencyKey, hostelId }).lean();
+                if (existing) {
+                    return NextResponse.json({ message: "Duplicate payment requested", payment: existing }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+                }
+            }
+
+            const member = await HostelMember.findOne({ _id: memberId, hostelId, isDeleted: false, status: { $in: ["active", "defaulter"] } });
+            if (!member) {
+                return NextResponse.json({ error: "Active member not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+
+            const paymentType = (rawPaymentType as string) || "balance";
+            
+            const previousBalance = member.balance;
+            const currentBalance = previousBalance + paid;
+            
+            // Calculate dues cleared vs advance credit
+            let duesCleared = 0;
+            let advanceCredit = 0;
+            
+            if (previousBalance < 0) {
+                // Member had dues
+                const absDues = Math.abs(previousBalance);
+                if (paid <= absDues) {
+                    duesCleared = paid;
+                    advanceCredit = 0;
+                } else {
+                    duesCleared = absDues;
+                    advanceCredit = paid - absDues;
+                }
+            } else {
+                // Member already had zero or advance balance, all goes to advance
+                duesCleared = 0;
+                advanceCredit = paid;
+            }
+            
+            const paymentDate = new Date();
+            const yearMonth = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, "0")}`;
+            
+            const incomeTypes = ["initial", "renewal", "balance"];
+            const incomeIncrement = incomeTypes.includes(paymentType)
+                ? paid
+                : paymentType === "refund"
+                ? -paid
+                : 0;
+
+            const payment = await HostelPayment.create({
+                hostelId,
+                memberId: new mongoose.Types.ObjectId(memberId),
+                planId: member.planId,
+                amount: paid,
+                paymentMethod: paymentMethod || "cash",
+                transactionId,
+                notes,
+                status: "success",
+                paymentType,
+                idempotencyKey,
+                advanceAmount: advanceCredit,
+                duesCleared: duesCleared,
+                isAdvance: advanceCredit > 0,
+            });
+
+            logger.info("Payment created", { paymentId: payment._id });
+
+            const finalStatus = (currentBalance >= 0 && member.status === "defaulter") ? "active" : member.status;
+
+            await HostelMember.updateOne(
+                { _id: member._id, hostelId },
+                { $inc: { balance: paid }, $set: { status: finalStatus } }
             );
-        }
+            logger.info("Balance updated", { memberId: member._id, amount: paid });
 
-        const { memberId, amount, paymentMethod, transactionId, notes, paymentType: rawPaymentType, idempotencyKey } = parsed.data;
-        
-        const paid = Number(amount);
+            try {
+                await HostelAnalytics.updateOne(
+                    { hostelId, yearMonth },
+                    { $inc: { totalIncome: incomeIncrement } },
+                    { upsert: true }
+                );
+            } catch (err) {
+                console.error("Analytics failed:", err);
+            }
 
-        // ── RATE LIMITING ──
-        const ip = getClientIp(req);
-        const { allowed, limit, remaining } = checkRateLimit(ip, "/api/hostel/payments", "POST");
-        if (!allowed) {
-            return NextResponse.json(
-                { error: "Too many payment requests. Please wait." },
-                { status: 429, headers: rateLimitHeaders(limit, remaining) }
-            );
-        }
+            const createdByName = (user.name || user.email || "Admin") as string;
+            await HostelPaymentLog.create({
+                hostelId,
+                memberId: member.memberId,
+                memberName: member.name,
+                amount: paid,
+                paymentType: paymentType as any,
+                payment_date: paymentDate,
+                createdBy: createdByName,
+            });
 
-        // ── IN-MEMORY IDEMPOTENCY: Prevent double-click duplication (5s window) ──
-        const dedupeKey = `payment:${hostelId}:${memberId}:${paid}`;
-        if (await isDuplicate(dedupeKey, 5_000)) {
-            return NextResponse.json(
-                { message: "Duplicate payment detected. Please wait before retrying." },
-                { status: 200 }
-            );
-        }
-
-        // ── Idempotency Check (Duplicate Request Guard) ──
-        if (idempotencyKey) {
-            const existing = await HostelPayment.findOne({ idempotencyKey, hostelId }).lean();
-            if (existing) {
+            return NextResponse.json({
+                success: true,
+                payment,
+                newBalance: currentBalance,
+                advanceCredit,
+                duesCleared
+            }, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        } catch (error: any) {
+            // Catch duplicate key collision organically
+            if (error?.code === 11000 && error?.keyPattern?.idempotencyKey) {
+                const existing = await HostelPayment.findOne({ idempotencyKey: error.keyValue?.idempotencyKey }).lean();
                 return NextResponse.json({ message: "Duplicate payment requested", payment: existing }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
+            console.error("[POST /api/hostel/payments]", error);
+            return NextResponse.json({ error: error?.message || "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-
-        const member = await HostelMember.findOne({ _id: memberId, hostelId, isDeleted: false, status: { $in: ["active", "defaulter"] } });
-        if (!member) {
-            return NextResponse.json({ error: "Active member not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
-
-        const paymentType = (rawPaymentType as string) || "balance";
-        
-        const previousBalance = member.balance;
-        const currentBalance = previousBalance + paid;
-        
-        // Calculate dues cleared vs advance credit
-        let duesCleared = 0;
-        let advanceCredit = 0;
-        
-        if (previousBalance < 0) {
-            // Member had dues
-            const absDues = Math.abs(previousBalance);
-            if (paid <= absDues) {
-                duesCleared = paid;
-                advanceCredit = 0;
-            } else {
-                duesCleared = absDues;
-                advanceCredit = paid - absDues;
-            }
-        } else {
-            // Member already had zero or advance balance, all goes to advance
-            duesCleared = 0;
-            advanceCredit = paid;
-        }
-        
-        const paymentDate = new Date();
-        const yearMonth = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, "0")}`;
-        
-        const incomeTypes = ["initial", "renewal", "balance"];
-        const incomeIncrement = incomeTypes.includes(paymentType)
-            ? paid
-            : paymentType === "refund"
-            ? -paid
-            : 0;
-
-        const payment = await HostelPayment.create({
-            hostelId,
-            memberId: new mongoose.Types.ObjectId(memberId),
-            planId: member.planId,
-            amount: paid,
-            paymentMethod: paymentMethod || "cash",
-            transactionId,
-            notes,
-            status: "success",
-            paymentType,
-            idempotencyKey,
-            advanceAmount: advanceCredit,
-            duesCleared: duesCleared,
-            isAdvance: advanceCredit > 0,
         });
-
-        logger.info("Payment created", { paymentId: payment._id });
-
-        const finalStatus = (currentBalance >= 0 && member.status === "defaulter") ? "active" : member.status;
-
-        await HostelMember.updateOne(
-            { _id: member._id, hostelId },
-            { $inc: { balance: paid }, $set: { status: finalStatus } }
-        );
-        logger.info("Balance updated", { memberId: member._id, amount: paid });
-
-        try {
-            await HostelAnalytics.updateOne(
-                { hostelId, yearMonth },
-                { $inc: { totalIncome: incomeIncrement } },
-                { upsert: true }
-            );
-        } catch (err) {
-            console.error("Analytics failed:", err);
-        }
-
-        const createdByName = (user.name || user.email || "Admin") as string;
-        await HostelPaymentLog.create({
-            hostelId,
-            memberId: member.memberId,
-            memberName: member.name,
-            amount: paid,
-            paymentType: paymentType as any,
-            payment_date: paymentDate,
-            createdBy: createdByName,
-        });
-
-        return NextResponse.json({
-            success: true,
-            payment,
-            newBalance: currentBalance,
-            advanceCredit,
-            duesCleared
-        }, {  status: 201 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    } catch (error: any) {
-        // Catch duplicate key collision organically
-        if (error?.code === 11000 && error?.keyPattern?.idempotencyKey) {
-            const existing = await HostelPayment.findOne({ idempotencyKey: error.keyValue?.idempotencyKey }).lean();
-            return NextResponse.json({ message: "Duplicate payment requested", payment: existing }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
-        console.error("[POST /api/hostel/payments]", error);
-        return NextResponse.json({ error: error?.message || "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+            
 }

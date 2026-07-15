@@ -16,7 +16,7 @@ export const SECURITY_HEADERS: Record<string, string> = {
     // Google Fonts, Vercel Insights, and inline styles/scripts (Next.js requires unsafe-inline).
     "Content-Security-Policy": [
         "default-src 'self'",
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://cdn.razorpay.com https://fastly.jsdelivr.net https://va.vercel-scripts.com",
+        `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV !== "production" ? " 'unsafe-eval'" : ""} https://checkout.razorpay.com https://cdn.razorpay.com https://fastly.jsdelivr.net https://va.vercel-scripts.com`,
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "font-src 'self' https://fonts.gstatic.com",
         "img-src 'self' data: blob: https://res.cloudinary.com https://*.cloudfront.net",

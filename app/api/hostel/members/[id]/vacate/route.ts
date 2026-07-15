@@ -6,101 +6,118 @@ import { HostelLog } from "@/models/HostelLog";
 import { HostelAnalytics } from "@/models/HostelAnalytics";
 import mongoose from "mongoose";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
+import { requestContext } from "@/lib/requestContext";
+
 export const dynamic = "force-dynamic";
 
 // POST /api/hostel/members/[id]/vacate
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-    try {
-        const user = await resolveUser(req);
-        await dbConnect();
-        const [{ id }] = await Promise.all([params]);
-        
-        if (!user || user.role !== "hostel_admin") {
-            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
-        
-        const hostelId = user.hostelId as string;
 
-        const body = await req.json();
-        const settleAmount = Number(body.settleAmount) || 0;
-        if (!Number.isFinite(settleAmount) || Math.abs(settleAmount) > 9_999_999_999) {
-             return NextResponse.json({ error: "Invalid settlement amount boundary" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "POST";
 
-        const settleMode = body.settleMode || "cash";
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            const user = await resolveUser(req);
+            await dbConnect();
+            const [{ id }] = await Promise.all([params]);
+            
+            if (!user || user.role !== "hostel_admin") {
+                return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+            
+            const hostelId = user.hostelId as string;
 
-        const member = await HostelMember.findOne({ _id: id, hostelId, isDeleted: false });
-        if (!member) {
-            return NextResponse.json({ error: "Member not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
+            const body = await req.json();
+            const settleAmount = Number(body.settleAmount) || 0;
+            if (!Number.isFinite(settleAmount) || Math.abs(settleAmount) > 9_999_999_999) {
+                 return NextResponse.json({ error: "Invalid settlement amount boundary" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
 
-        if (member.status === "vacated") {
-            return NextResponse.json({ error: "Member is already vacated" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
+            const settleMode = body.settleMode || "cash";
 
-        const finalCheck = member.balance + settleAmount;
-        if (Math.abs(finalCheck) >= 1) { 
-            return NextResponse.json({ 
-                error: `Final balance must perfectly equal 0. Current balance: ${member.balance}, but settle parameter provided: ${settleAmount}` 
-            }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
+            const member = await HostelMember.findOne({ _id: id, hostelId, isDeleted: false });
+            if (!member) {
+                return NextResponse.json({ error: "Member not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
 
-        const now = new Date();
-        const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+            if (member.status === "vacated") {
+                return NextResponse.json({ error: "Member is already vacated" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
 
-        if (Math.abs(settleAmount) > 0) {
-            const isRefund = settleAmount < 0;
-            const absoluteAmount = Math.abs(settleAmount);
-            const paymentType = isRefund ? "refund" : "settlement";
+            const finalCheck = member.balance + settleAmount;
+            if (Math.abs(finalCheck) >= 1) { 
+                return NextResponse.json({ 
+                    error: `Final balance must perfectly equal 0. Current balance: ${member.balance}, but settle parameter provided: ${settleAmount}` 
+                }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
 
-            await HostelPayment.create({
+            const now = new Date();
+            const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+            if (Math.abs(settleAmount) > 0) {
+                const isRefund = settleAmount < 0;
+                const absoluteAmount = Math.abs(settleAmount);
+                const paymentType = isRefund ? "refund" : "settlement";
+
+                await HostelPayment.create({
+                    hostelId,
+                    memberId: member._id,
+                    planId: member.planId,
+                    amount: absoluteAmount,
+                    paymentMethod: settleMode,
+                    notes: `Autogenerated ${paymentType} to zero balance during account vacation.`,
+                    paymentType: paymentType,
+                    status: "success",
+                    idempotencyKey: body.idempotencyKey
+                });
+
+                await HostelAnalytics.updateOne(
+                    { hostelId, yearMonth },
+                    { $inc: { totalIncome: settleAmount, checkedOutMembers: 1 } },
+                    { upsert: true }
+                );
+            } else {
+                 await HostelAnalytics.updateOne(
+                    { hostelId, yearMonth },
+                    { $inc: { checkedOutMembers: 1 } },
+                    { upsert: true }
+                );
+            }
+
+            member.status = "vacated";
+            member.isActive = false; 
+            member.balance = 0;      
+            member.vacated_at = now;
+            
+            await member.save();
+            
+            await HostelLog.create({
                 hostelId,
-                memberId: member._id,
-                planId: member.planId,
-                amount: absoluteAmount,
-                paymentMethod: settleMode,
-                notes: `Autogenerated ${paymentType} to zero balance during account vacation.`,
-                paymentType: paymentType,
-                status: "success",
-                idempotencyKey: body.idempotencyKey
+                type: "status_update" as any,
+                memberId: member.memberId,
+                memberObjectId: member._id,
+                memberName: member.name,
+                description: `Member ${member.name} (${member.memberId}) vacated their room. Rent cycle stopped. Settled amount: ₹${settleAmount}`,
+                performedBy: user.email as string,
             });
 
-            await HostelAnalytics.updateOne(
-                { hostelId, yearMonth },
-                { $inc: { totalIncome: settleAmount, checkedOutMembers: 1 } },
-                { upsert: true }
-            );
-        } else {
-             await HostelAnalytics.updateOne(
-                { hostelId, yearMonth },
-                { $inc: { checkedOutMembers: 1 } },
-                { upsert: true }
-            );
+            return NextResponse.json({ success: true, member }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        } catch (error: any) {
+            if (error?.code === 11000 && error?.keyPattern?.idempotencyKey) {
+                return NextResponse.json({ message: "Duplicate vacate processed safely", success: true }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+            console.error("[POST /api/hostel/members/[id]/vacate]", error);
+            return NextResponse.json({ error: error?.message || "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-
-        member.status = "vacated";
-        member.isActive = false; 
-        member.balance = 0;      
-        member.vacated_at = now;
-        
-        await member.save();
-        
-        await HostelLog.create({
-            hostelId,
-            type: "status_update" as any,
-            memberId: member.memberId,
-            memberObjectId: member._id,
-            memberName: member.name,
-            description: `Member ${member.name} (${member.memberId}) vacated their room. Rent cycle stopped. Settled amount: ₹${settleAmount}`,
-            performedBy: user.email as string,
         });
-
-        return NextResponse.json({ success: true, member }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    } catch (error: any) {
-        if (error?.code === 11000 && error?.keyPattern?.idempotencyKey) {
-            return NextResponse.json({ message: "Duplicate vacate processed safely", success: true }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
-        console.error("[POST /api/hostel/members/[id]/vacate]", error);
-        return NextResponse.json({ error: error?.message || "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+            
 }

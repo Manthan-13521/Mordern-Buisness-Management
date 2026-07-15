@@ -13,466 +13,480 @@ import { verifyQRToken } from "@/lib/qrSigner";
 import mongoose from "mongoose";
 import { runOccupancyCleanupInBackground } from "@/lib/cleanup";
 import { getOccupancy, incrOccupancy } from "@/lib/redisOccupancy"; // 1.3 Fast Occupancy
-import { redis } from "@/lib/redis"; // 1.3 Safe fallback checking
+import { redis } from "@/lib/redis";
+import { requestContext } from "@/lib/requestContext";
 
 export const dynamic = "force-dynamic";
 
 const SCAN_COOLDOWN_MS = 3000; // 3-second cooldown
 
 export async function POST(req: Request) {
-    // Rate limiting is now handled globally by middleware
 
-    const startTime = Date.now(); // 1.3 Perf Tracking
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "POST";
+
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            const startTime = Date.now();
     try {
-        const [, user, body] = await Promise.all([
-            dbConnect(),
-            resolveUser(req),
-            req.json(),
-        ]);
-        if (!user) {
-            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
+            const [, user, body] = await Promise.all([
+                dbConnect(),
+                resolveUser(req),
+                req.json(),
+            ]);
+            if (!user) {
+                return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
 
-        const { qrPayload } = body; // Format: "memberId:qrToken"  OR legacy plain memberId
+            const { qrPayload } = body; // Format: "memberId:qrToken"  OR legacy plain memberId
 
-        if (!qrPayload) {
-            return NextResponse.json({ error: "Missing QR payload" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
+            if (!qrPayload) {
+                return NextResponse.json({ error: "Missing QR payload" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
 
-        // Parse payload — support JWT (Section 10), legacy "memberId:token", and legacy plain memberId
-        let memberId: string = "";
-        let providedToken: string | null = null;
-        let planId: string | null = null;
+            // Parse payload — support JWT (Section 10), legacy "memberId:token", and legacy plain memberId
+            let memberId: string = "";
+            let providedToken: string | null = null;
+            let planId: string | null = null;
 
-        // Try JWT verification first
-        const jwtVerifiedId = await verifyQRToken(qrPayload);
-        if (jwtVerifiedId) {
-            memberId = jwtVerifiedId;
-            // The JWT itself is cryptographically secure, so we don't need to do string-matching 
-            // against the DB UUID qrToken.
-            providedToken = null; 
-        } else if (qrPayload.includes(":")) {
-            const parts = qrPayload.split(":");
-            const possibleId = parts[0];
-            const possibleToken = parts.slice(1).join(":");
+            // Try JWT verification first
+            const jwtVerifiedId = await verifyQRToken(qrPayload);
+            if (jwtVerifiedId) {
+                memberId = jwtVerifiedId;
+                // The JWT itself is cryptographically secure, so we don't need to do string-matching 
+                // against the DB UUID qrToken.
+                providedToken = null; 
+            } else if (qrPayload.includes(":")) {
+                const parts = qrPayload.split(":");
+                const possibleId = parts[0];
+                const possibleToken = parts.slice(1).join(":");
 
-            const plan = await Plan.findById(possibleId).lean().catch(() => null);
-            if (plan && plan.groupToken && plan.groupToken === possibleToken) {
-                planId = possibleId;
-                providedToken = possibleToken;
+                const plan = await Plan.findById(possibleId).lean().catch(() => null);
+                if (plan && plan.groupToken && plan.groupToken === possibleToken) {
+                    planId = possibleId;
+                    providedToken = possibleToken;
+                } else {
+                    memberId = possibleId;
+                    providedToken = possibleToken;
+                }
             } else {
-                memberId = possibleId;
-                providedToken = possibleToken;
-            }
-        } else {
-            memberId = qrPayload;
-        }
-
-        // Fire-and-forget cleanup (don't await in critical path)
-        runOccupancyCleanupInBackground().catch(e => console.error("Cleanup error:", e));
-
-        let member = null;
-        if (planId) {
-            // Group QR handling
-            const plan = await Plan.findById(planId).lean();
-            if (!plan) {
-                logger.scan("QR scan denied — plan not found", { planId });
-                await EntryLog.create({
-                    status: "denied",
-                    reason: "Plan Not Found",
-                    operatorId: user.id ? new mongoose.Types.ObjectId(user.id) : undefined,
-                    rawPayload: qrPayload,
-                });
-                return NextResponse.json({ error: "Plan not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+                memberId = qrPayload;
             }
 
-            const numPersons = plan.maxEntriesPerQR || 1;
+            // Fire-and-forget cleanup (don't await in critical path)
+            runOccupancyCleanupInBackground().catch(e => console.error("Cleanup error:", e));
+
+            let member = null;
+            if (planId) {
+                // Group QR handling
+                const plan = await Plan.findById(planId).lean();
+                if (!plan) {
+                    logger.scan("QR scan denied — plan not found", { planId });
+                    await EntryLog.create({
+                        status: "denied",
+                        reason: "Plan Not Found",
+                        operatorId: user.id ? new mongoose.Types.ObjectId(user.id) : undefined,
+                        rawPayload: qrPayload,
+                    });
+                    return NextResponse.json({ error: "Plan not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+                }
+
+                const numPersons = plan.maxEntriesPerQR || 1;
+                
+                // 1.3 Hybrid Occupancy Lookup
+                const pool = await Pool.findOne({ poolId: user.poolId }).select("capacity").lean();
+                const poolCapacity = pool?.capacity || 100;
+                
+                let currentOccupancy = await getOccupancy(user.poolId || "UNKNOWN");
+
+                // Check capacity for the whole group
+                if (currentOccupancy + numPersons > poolCapacity) {
+                    await EntryLog.create({
+                        poolId: user.poolId,
+                        status: "denied",
+                        reason: "Pool Capacity Full for Group",
+                        rawPayload: qrPayload,
+                    });
+                    return NextResponse.json({ 
+                        error: `Pool cannot accommodate ${numPersons} more people (${currentOccupancy}/${poolCapacity})` 
+                    }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+                }
+
+                if (plan.remainingEntries && plan.remainingEntries > 0) {
+                    // Decrement remaining entries atomically
+                    await Plan.updateOne({ _id: planId, remainingEntries: { $gt: 0 } }, { $inc: { remainingEntries: -1 } });
+                    
+                    // Calculate expiry for this user
+                    const expiryTime = new Date();
+                    if (plan.durationSeconds) expiryTime.setSeconds(expiryTime.getSeconds() + plan.durationSeconds);
+                    else if (plan.durationMinutes) expiryTime.setMinutes(expiryTime.getMinutes() + plan.durationMinutes);
+                    else if (plan.durationHours) expiryTime.setHours(expiryTime.getHours() + plan.durationHours);
+                    else {
+                        const settings = await getSettings();
+                        const durationMinutes = settings.occupancyDurationMinutes || 60;
+                        expiryTime.setMinutes(expiryTime.getMinutes() + durationMinutes);
+                    }
+
+                    // Create PoolSession for automated checkout
+                    await PoolSession.create({
+                        poolId: user.poolId,
+                        numPersons,
+                        expiryTime,
+                        status: "active",
+                    });
+                    
+                    await incrOccupancy(user.poolId || "UNKNOWN", numPersons); // 1.3 Atomic sync
+
+                    // Log entry without member association
+                    await EntryLog.create({
+                        poolId: user.poolId,
+                        status: "granted",
+                        reason: "Group QR Entry",
+                        rawPayload: qrPayload,
+                        numPersons,
+                    });
+                    
+                    console.log(`[PERF] entry: ${Date.now() - startTime}ms (group: ${planId})`);
+                    
+                    return NextResponse.json({ 
+                        message: "Group entry granted", 
+                        numPersons,
+                        occupancy: {
+                            current: currentOccupancy + numPersons,
+                            capacity: poolCapacity
+                        }
+                    }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+                } else {
+                    logger.scan("QR scan denied — group quota exhausted", { planId });
+                    await EntryLog.create({
+                        status: "denied",
+                        reason: "Group QR quota exhausted",
+                        rawPayload: qrPayload,
+                    });
+                    return NextResponse.json({ error: "Group QR token has no remaining entries" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+                }
+            }
+
+            // 1.3 Parallelized Lookup (Pool Capacity + Member + Entertainment Member)
+            const baseMatch = user.role !== "superadmin" ? { poolId: user.poolId || "UNASSIGNED_POOL" } : {};
             
-            // 1.3 Hybrid Occupancy Lookup
-            const pool = await Pool.findOne({ poolId: user.poolId }).select("capacity").lean();
+            const [pool, regularMember, entMemberResult] = await Promise.all([
+                Pool.findOne({ poolId: user.poolId }).select("capacity").lean(),
+                Member.findOne({ memberId, ...baseMatch }).populate("planId").lean(),
+                import("@/models/EntertainmentMember").then(async ({ EntertainmentMember }) => 
+                    EntertainmentMember.findOne({ memberId, ...baseMatch }).populate("planId").lean()
+                )
+            ]);
+
+            member = regularMember || entMemberResult;
             const poolCapacity = pool?.capacity || 100;
-            
             let currentOccupancy = await getOccupancy(user.poolId || "UNKNOWN");
 
-            // Check capacity for the whole group
-            if (currentOccupancy + numPersons > poolCapacity) {
+            if (!member) {
+                logger.scan("QR scan denied — member not found", { memberId });
                 await EntryLog.create({
-                    poolId: user.poolId,
+                    poolId: user.poolId || "UNKNOWN",
                     status: "denied",
-                    reason: "Pool Capacity Full for Group",
-                    rawPayload: qrPayload,
-                });
-                return NextResponse.json({ 
-                    error: `Pool cannot accommodate ${numPersons} more people (${currentOccupancy}/${poolCapacity})` 
-                }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-            }
-
-            if (plan.remainingEntries && plan.remainingEntries > 0) {
-                // Decrement remaining entries atomically
-                await Plan.updateOne({ _id: planId, remainingEntries: { $gt: 0 } }, { $inc: { remainingEntries: -1 } });
-                
-                // Calculate expiry for this user
-                const expiryTime = new Date();
-                if (plan.durationSeconds) expiryTime.setSeconds(expiryTime.getSeconds() + plan.durationSeconds);
-                else if (plan.durationMinutes) expiryTime.setMinutes(expiryTime.getMinutes() + plan.durationMinutes);
-                else if (plan.durationHours) expiryTime.setHours(expiryTime.getHours() + plan.durationHours);
-                else {
-                    const settings = await getSettings();
-                    const durationMinutes = settings.occupancyDurationMinutes || 60;
-                    expiryTime.setMinutes(expiryTime.getMinutes() + durationMinutes);
-                }
-
-                // Create PoolSession for automated checkout
-                await PoolSession.create({
-                    poolId: user.poolId,
-                    numPersons,
-                    expiryTime,
-                    status: "active",
-                });
-                
-                await incrOccupancy(user.poolId || "UNKNOWN", numPersons); // 1.3 Atomic sync
-
-                // Log entry without member association
-                await EntryLog.create({
-                    poolId: user.poolId,
-                    status: "granted",
-                    reason: "Group QR Entry",
-                    rawPayload: qrPayload,
-                    numPersons,
-                });
-                
-                console.log(`[PERF] entry: ${Date.now() - startTime}ms (group: ${planId})`);
-                
-                return NextResponse.json({ 
-                    message: "Group entry granted", 
-                    numPersons,
-                    occupancy: {
-                        current: currentOccupancy + numPersons,
-                        capacity: poolCapacity
-                    }
-                }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-            } else {
-                logger.scan("QR scan denied — group quota exhausted", { planId });
-                await EntryLog.create({
-                    status: "denied",
-                    reason: "Group QR quota exhausted",
-                    rawPayload: qrPayload,
-                });
-                return NextResponse.json({ error: "Group QR token has no remaining entries" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-            }
-        }
-
-        // 1.3 Parallelized Lookup (Pool Capacity + Member + Entertainment Member)
-        const baseMatch = user.role !== "superadmin" ? { poolId: user.poolId || "UNASSIGNED_POOL" } : {};
-        
-        const [pool, regularMember, entMemberResult] = await Promise.all([
-            Pool.findOne({ poolId: user.poolId }).select("capacity").lean(),
-            Member.findOne({ memberId, ...baseMatch }).populate("planId").lean(),
-            import("@/models/EntertainmentMember").then(async ({ EntertainmentMember }) => 
-                EntertainmentMember.findOne({ memberId, ...baseMatch }).populate("planId").lean()
-            )
-        ]);
-
-        member = regularMember || entMemberResult;
-        const poolCapacity = pool?.capacity || 100;
-        let currentOccupancy = await getOccupancy(user.poolId || "UNKNOWN");
-
-        if (!member) {
-            logger.scan("QR scan denied — member not found", { memberId });
-            await EntryLog.create({
-                poolId: user.poolId || "UNKNOWN",
-                status: "denied",
-                reason: "Member Not Found",
-                operatorId: user.id ? new mongoose.Types.ObjectId(user.id) : undefined,
-                rawPayload: qrPayload,
-            });
-            return NextResponse.json({ error: "Member not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
-
-        // ── QR Token Verification ────────────────────────────────────────────
-        if (providedToken && member.qrToken && providedToken !== member.qrToken) {
-            logger.scan("QR scan denied — invalid token (possible screenshot reuse)", {
-                memberId,
-                ip: req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown",
-            });
-            await EntryLog.create({
-                poolId: user.poolId,
-                memberId: member._id,
-                status: "denied",
-                reason: "Invalid QR Token (possible screenshot reuse)",
-                operatorId: new mongoose.Types.ObjectId(user.id),
-                qrToken: providedToken,
-                rawPayload: qrPayload,
-            });
-            return NextResponse.json({ error: "QR code is invalid or already used. Please regenerate your QR." }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
-
-        // ── Duplicate Scan Cooldown ──────────────────────────────────────────
-        if (member.lastScannedAt) {
-            const msSinceLastScan = Date.now() - new Date(member.lastScannedAt).getTime();
-            if (msSinceLastScan < SCAN_COOLDOWN_MS) {
-                logger.scan("QR scan denied — cooldown", { memberId, msSinceLastScan });
-                return NextResponse.json({ error: `Please wait ${Math.ceil((SCAN_COOLDOWN_MS - msSinceLastScan) / 1000)} seconds before scanning again.` }, {  status: 429 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-            }
-        }
-
-        // ── Membership Expiry Check ──────────────────────────────────────────
-        const isEntertainment = !('status' in (member as any));
-        const memberStatus = isEntertainment ? ((member as any).isActive && !(member as any).isExpired ? "active" : "expired") : (member as any).status;
-        const expiryFieldValue = isEntertainment ? (member as any).planEndDate : (member as any).expiryDate;
-
-        if (memberStatus !== "active" || new Date(expiryFieldValue ?? 0) < new Date()) {
-            if (isEntertainment) {
-                if ((member as any).isActive) {
-                    const { EntertainmentMember } = await import("@/models/EntertainmentMember");
-                    await EntertainmentMember.updateOne({ _id: member._id }, { $set: { isActive: false, isExpired: true } });
-                }
-            } else {
-                if ((member as any).status === "active") {
-                    await Member.updateOne({ _id: member._id }, { $set: { status: "expired" } });
-                }
-            }
-            await EntryLog.create({
-                poolId: user.poolId,
-                memberId: member._id,
-                status: "denied",
-                reason: "Membership Expired",
-                operatorId: new mongoose.Types.ObjectId(user.id),
-                rawPayload: qrPayload,
-            });
-            logger.scan("QR scan denied — expired", { memberId });
-            return NextResponse.json({ error: "Membership has expired" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
-
-        // ── STEP 8: Defaulter Gate Enforcement ───────────────────────────────
-        if (!isEntertainment) {
-            // 1.3 Fast Access State Check (Short-circuit heavy joins)
-            const fastAccess = (member as any).accessState;
-            const mAccess = (member as any).accessStatus;
-            
-            // If denormalized accessState says active, we can skip the heavy defaulterEngine logic
-            // UNLESS it's explicitly blocked in accessStatus
-            if (fastAccess === "active" && mAccess === "active") {
-                // Skip to next step
-            } else if (mAccess === "blocked" || mAccess === "suspended") {
-                let overdueDays = 0;
-                if (mAccess === "blocked") {
-                    const { resolveDefaulterState } = await import("@/lib/defaulterEngine");
-                    const defaulterObj = await resolveDefaulterState(member._id, user.poolId || "UNASSIGNED_POOL");
-                    overdueDays = defaulterObj.overdueDays;
-                }
-
-                const isSuspended = mAccess === "suspended";
-                const reasonStr = isSuspended ? "Admin Suspended" : `Defaulter Blocked (${overdueDays} days overdue)`;
-                const failReason = isSuspended ? "suspended_admin" : "blocked_defaulter";
-
-                await EntryLog.create({
-                    poolId: user.poolId,
-                    memberId: member._id,
-                    status: "denied",
-                    reason: reasonStr,
-                    failReason: failReason as any,
+                    reason: "Member Not Found",
                     operatorId: user.id ? new mongoose.Types.ObjectId(user.id) : undefined,
                     rawPayload: qrPayload,
                 });
-                logger.scan(`QR scan denied — ${failReason}`, { memberId, overdueDays });
-
-                if (isSuspended) {
-                    return NextResponse.json({ 
-                        reason: "suspended_admin",
-                        message: "Access suspended by administrator." 
-                    }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-                }
-
-                return NextResponse.json({ 
-                    error: "Access denied due to pending dues", // keep legacy error string for UI compatibility
-                    reason: "blocked_defaulter",
-                    overdueDays,
-                    balance: (member as any).balanceAmount || 0,
-                    message: "Access denied due to pending dues" 
-                }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+                return NextResponse.json({ error: "Member not found" }, {  status: 404 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
-        }
 
-        // ── Entry Limit Check (Total & Daily) ───────────────────────────────
-        // Preliminary check for fast rejection
-        if (!isEntertainment) {
-            const entriesUsed = (member as any).entriesUsed || 0;
-            const totalEntriesAllowed = (member as any).totalEntriesAllowed || 1;
-
-            if (entriesUsed >= totalEntriesAllowed) {
+            // ── QR Token Verification ────────────────────────────────────────────
+            if (providedToken && member.qrToken && providedToken !== member.qrToken) {
+                logger.scan("QR scan denied — invalid token (possible screenshot reuse)", {
+                    memberId,
+                    ip: req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown",
+                });
                 await EntryLog.create({
                     poolId: user.poolId,
                     memberId: member._id,
                     status: "denied",
-                    reason: "Entry Limit Reached",
+                    reason: "Invalid QR Token (possible screenshot reuse)",
+                    operatorId: new mongoose.Types.ObjectId(user.id),
+                    qrToken: providedToken,
+                    rawPayload: qrPayload,
+                });
+                return NextResponse.json({ error: "QR code is invalid or already used. Please regenerate your QR." }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+
+            // ── Duplicate Scan Cooldown ──────────────────────────────────────────
+            if (member.lastScannedAt) {
+                const msSinceLastScan = Date.now() - new Date(member.lastScannedAt).getTime();
+                if (msSinceLastScan < SCAN_COOLDOWN_MS) {
+                    logger.scan("QR scan denied — cooldown", { memberId, msSinceLastScan });
+                    return NextResponse.json({ error: `Please wait ${Math.ceil((SCAN_COOLDOWN_MS - msSinceLastScan) / 1000)} seconds before scanning again.` }, {  status: 429 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+                }
+            }
+
+            // ── Membership Expiry Check ──────────────────────────────────────────
+            const isEntertainment = !('status' in (member as any));
+            const memberStatus = isEntertainment ? ((member as any).isActive && !(member as any).isExpired ? "active" : "expired") : (member as any).status;
+            const expiryFieldValue = isEntertainment ? (member as any).planEndDate : (member as any).expiryDate;
+
+            if (memberStatus !== "active" || new Date(expiryFieldValue ?? 0) < new Date()) {
+                if (isEntertainment) {
+                    if ((member as any).isActive) {
+                        const { EntertainmentMember } = await import("@/models/EntertainmentMember");
+                        await EntertainmentMember.updateOne({ _id: member._id }, { $set: { isActive: false, isExpired: true } });
+                    }
+                } else {
+                    if ((member as any).status === "active") {
+                        await Member.updateOne({ _id: member._id }, { $set: { status: "expired" } });
+                    }
+                }
+                await EntryLog.create({
+                    poolId: user.poolId,
+                    memberId: member._id,
+                    status: "denied",
+                    reason: "Membership Expired",
                     operatorId: new mongoose.Types.ObjectId(user.id),
                     rawPayload: qrPayload,
                 });
-                logger.scan("QR scan denied — entry limit", { memberId, entriesUsed, totalEntriesAllowed });
-                return NextResponse.json({ error: "Entry limit reached" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+                logger.scan("QR scan denied — expired", { memberId });
+                return NextResponse.json({ error: "Membership has expired" }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
-        }
 
-        // ── Daily 1-Time Entry Limit Check (C-6 FIX: IST midnight, not UTC) ───
-        // IST = UTC+5:30. We compute today's midnight in IST, then convert back to UTC for the DB query.
-        const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
-        const nowForIST = new Date(Date.now() + IST_OFFSET_MS);
-        const istMidnightUTC = new Date(
-            Date.UTC(nowForIST.getUTCFullYear(), nowForIST.getUTCMonth(), nowForIST.getUTCDate())
-            - IST_OFFSET_MS
-        );
+            // ── STEP 8: Defaulter Gate Enforcement ───────────────────────────────
+            if (!isEntertainment) {
+                // 1.3 Fast Access State Check (Short-circuit heavy joins)
+                const fastAccess = (member as any).accessState;
+                const mAccess = (member as any).accessStatus;
+                
+                // If denormalized accessState says active, we can skip the heavy defaulterEngine logic
+                // UNLESS it's explicitly blocked in accessStatus
+                if (fastAccess === "active" && mAccess === "active") {
+                    // Skip to next step
+                } else if (mAccess === "blocked" || mAccess === "suspended") {
+                    let overdueDays = 0;
+                    if (mAccess === "blocked") {
+                        const { resolveDefaulterState } = await import("@/lib/defaulterEngine");
+                        const defaulterObj = await resolveDefaulterState(member._id, user.poolId || "UNASSIGNED_POOL");
+                        overdueDays = defaulterObj.overdueDays;
+                    }
 
-        const alreadyEnteredToday = await EntryLog.findOne({
-            poolId: user.poolId,
-            memberId: member._id,
-            status: "granted",
-            createdAt: { $gte: istMidnightUTC },
-        });
+                    const isSuspended = mAccess === "suspended";
+                    const reasonStr = isSuspended ? "Admin Suspended" : `Defaulter Blocked (${overdueDays} days overdue)`;
+                    const failReason = isSuspended ? "suspended_admin" : "blocked_defaulter";
 
-        if (alreadyEnteredToday) {
-            await EntryLog.create({
-                poolId: user.poolId,
-                memberId: member._id,
-                status: "denied",
-                reason: "Already Entered Today",
-                operatorId: new mongoose.Types.ObjectId(user.id),
-                rawPayload: qrPayload,
-            });
-            logger.scan("QR scan denied — already entered today", { memberId });
-            return NextResponse.json({ error: "Member has already entered once today." }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
+                    await EntryLog.create({
+                        poolId: user.poolId,
+                        memberId: member._id,
+                        status: "denied",
+                        reason: reasonStr,
+                        failReason: failReason as any,
+                        operatorId: user.id ? new mongoose.Types.ObjectId(user.id) : undefined,
+                        rawPayload: qrPayload,
+                    });
+                    logger.scan(`QR scan denied — ${failReason}`, { memberId, overdueDays });
 
-        const numPersons = (member as any).planQuantity || 1;
+                    if (isSuspended) {
+                        return NextResponse.json({ 
+                            reason: "suspended_admin",
+                            message: "Access suspended by administrator." 
+                        }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+                    }
 
-        if (currentOccupancy + numPersons > poolCapacity) {
-            await EntryLog.create({
-                poolId: user.poolId,
-                memberId: member._id,
-                status: "denied",
-                reason: "Pool at Full Capacity",
-                operatorId: new mongoose.Types.ObjectId(user.id),
-                rawPayload: qrPayload,
-            });
-            logger.scan("QR scan denied — pool full", {
-                memberId,
-                occupancy: currentOccupancy,
-                capacity: poolCapacity,
-                requested: numPersons
-            });
-            return NextResponse.json({
-                    error: `Pool cannot accommodate ${numPersons} more people (${currentOccupancy}/${poolCapacity}).`,
-                }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
-
-        // ── Grant Entry (Atomic Update - Section 9) ──────────────────────────
-        const oldToken = member.qrToken;
-        const newToken = require("crypto").randomUUID();
-
-        if (!isEntertainment) {
-            // Use findOneAndUpdate to atomically increment entriesUsed while ensuring it's strictly less than total allowed
-            const updatedMember = await Member.findOneAndUpdate(
-                { 
-                    _id: member._id, 
-                    entriesUsed: { $lt: (member as any).totalEntriesAllowed || 1 } 
-                },
-                { 
-                    $inc: { entriesUsed: 1 },
-                    $set: { lastScannedAt: new Date(), qrToken: newToken }
-                },
-                { returnDocument: 'after' }
-            ).lean();
-
-            if (!updatedMember) {
-                // Race condition! Another request beat us to the limit.
-                return NextResponse.json({ error: "Entry limit reached (Double Scan Prevented)" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+                    return NextResponse.json({ 
+                        error: "Access denied due to pending dues", // keep legacy error string for UI compatibility
+                        reason: "blocked_defaulter",
+                        overdueDays,
+                        balance: (member as any).balanceAmount || 0,
+                        message: "Access denied due to pending dues" 
+                    }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+                }
             }
-            member = updatedMember; // Sync local object for logging
-        } else {
-            // Entertainment members don't have entry limits
-            const { EntertainmentMember } = await import("@/models/EntertainmentMember");
-            await EntertainmentMember.updateOne(
-                { _id: member._id },
-                { $set: { lastScannedAt: new Date(), qrToken: newToken } }
+
+            // ── Entry Limit Check (Total & Daily) ───────────────────────────────
+            // Preliminary check for fast rejection
+            if (!isEntertainment) {
+                const entriesUsed = (member as any).entriesUsed || 0;
+                const totalEntriesAllowed = (member as any).totalEntriesAllowed || 1;
+
+                if (entriesUsed >= totalEntriesAllowed) {
+                    await EntryLog.create({
+                        poolId: user.poolId,
+                        memberId: member._id,
+                        status: "denied",
+                        reason: "Entry Limit Reached",
+                        operatorId: new mongoose.Types.ObjectId(user.id),
+                        rawPayload: qrPayload,
+                    });
+                    logger.scan("QR scan denied — entry limit", { memberId, entriesUsed, totalEntriesAllowed });
+                    return NextResponse.json({ error: "Entry limit reached" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+                }
+            }
+
+            // ── Daily 1-Time Entry Limit Check (C-6 FIX: IST midnight, not UTC) ───
+            // IST = UTC+5:30. We compute today's midnight in IST, then convert back to UTC for the DB query.
+            const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+            const nowForIST = new Date(Date.now() + IST_OFFSET_MS);
+            const istMidnightUTC = new Date(
+                Date.UTC(nowForIST.getUTCFullYear(), nowForIST.getUTCMonth(), nowForIST.getUTCDate())
+                - IST_OFFSET_MS
             );
-            // Update local object for response
-            (member as any).lastScannedAt = new Date();
-            (member as any).qrToken = newToken;
-        }
 
-        // Create PoolSession for automated checkout
-        let expiryFieldValueForSession = new Date();
-        const planObj = (member as any).planId;
-        const settings = await getSettings();
-        const durationMinutes = settings.occupancyDurationMinutes || 60;
+            const alreadyEnteredToday = await EntryLog.findOne({
+                poolId: user.poolId,
+                memberId: member._id,
+                status: "granted",
+                createdAt: { $gte: istMidnightUTC },
+            });
 
-        if (!isEntertainment && planObj && planObj.durationHours && !planObj.durationDays) {
-            // Hourly plan
-            expiryFieldValueForSession.setHours(expiryFieldValueForSession.getHours() + planObj.durationHours);
-            if (planObj.durationMinutes) {
-                expiryFieldValueForSession.setMinutes(expiryFieldValueForSession.getMinutes() + planObj.durationMinutes);
+            if (alreadyEnteredToday) {
+                await EntryLog.create({
+                    poolId: user.poolId,
+                    memberId: member._id,
+                    status: "denied",
+                    reason: "Already Entered Today",
+                    operatorId: new mongoose.Types.ObjectId(user.id),
+                    rawPayload: qrPayload,
+                });
+                logger.scan("QR scan denied — already entered today", { memberId });
+                return NextResponse.json({ error: "Member has already entered once today." }, {  status: 403 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
-        } else {
-            // Daily/Monthly/Yearly plan or Entertainment member -> use occupancy setting
-            expiryFieldValueForSession.setMinutes(expiryFieldValueForSession.getMinutes() + durationMinutes);
-        }
 
-        await PoolSession.create({
-            poolId: user.poolId,
-            memberId: member._id,
-            numPersons,
-            expiryTime: expiryFieldValueForSession,
-            status: "active",
-        });
+            const numPersons = (member as any).planQuantity || 1;
 
-        await incrOccupancy(user.poolId || "UNKNOWN", numPersons); // 1.3 Atomic sync
-
-        const entry = await EntryLog.create({
-            poolId: user.poolId,
-            memberId: member._id,
-            status: "granted",
-            operatorId: (typeof user.id === "string" && user.id.length === 24) 
-                ? new mongoose.Types.ObjectId(user.id) 
-                : undefined,
-            qrToken: oldToken,
-            rawPayload: qrPayload,
-            numPersons,
-        });
-
-            logger.scan("QR scan granted", {
-            memberId,
-            memberName: member.name,
-            occupancy: currentOccupancy + numPersons,
-            capacity: poolCapacity,
-        });
-
-        import("@/lib/events").then(mod => {
-            mod.dispatchEvent("entry.logged", { poolId: user.poolId, count: currentOccupancy + numPersons });
-        }).catch(() => {});
-
-        const endTime = Date.now();
-        console.log(`[PERF] entry: ${endTime - startTime}ms (member: ${memberId || planId})`);
-
-        return NextResponse.json({
-                message: "Entry Granted",
-                member: {
-                    name: member.name,
-                    memberId: member.memberId,
-                    photoUrl: member.photoUrl,
-                    planName: (member.planId as any)?.name || "Active Plan",
-                    planQuantity: member.planQuantity || 1,
-                    voiceAlert: (member.planId as any)?.voiceAlert || false,
-                    expiryDate: expiryFieldValueForSession,
-                },
-                entry,
-                occupancy: {
-                    current: currentOccupancy + numPersons,
+            if (currentOccupancy + numPersons > poolCapacity) {
+                await EntryLog.create({
+                    poolId: user.poolId,
+                    memberId: member._id,
+                    status: "denied",
+                    reason: "Pool at Full Capacity",
+                    operatorId: new mongoose.Types.ObjectId(user.id),
+                    rawPayload: qrPayload,
+                });
+                logger.scan("QR scan denied — pool full", {
+                    memberId,
+                    occupancy: currentOccupancy,
                     capacity: poolCapacity,
-                    available: poolCapacity - (currentOccupancy + numPersons),
-                },
-            }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    } catch (error) {
-        logger.error("Entry API error", { error: String(error) });
-        return NextResponse.json({ error: "Server error processing entry" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+                    requested: numPersons
+                });
+                return NextResponse.json({
+                        error: `Pool cannot accommodate ${numPersons} more people (${currentOccupancy}/${poolCapacity}).`,
+                    }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+
+            // ── Grant Entry (Atomic Update - Section 9) ──────────────────────────
+            const oldToken = member.qrToken;
+            const newToken = require("crypto").randomUUID();
+
+            if (!isEntertainment) {
+                // Use findOneAndUpdate to atomically increment entriesUsed while ensuring it's strictly less than total allowed
+                const updatedMember = await Member.findOneAndUpdate(
+                    { 
+                        _id: member._id, 
+                        entriesUsed: { $lt: (member as any).totalEntriesAllowed || 1 } 
+                    },
+                    { 
+                        $inc: { entriesUsed: 1 },
+                        $set: { lastScannedAt: new Date(), qrToken: newToken }
+                    },
+                    { returnDocument: 'after' }
+                ).lean();
+
+                if (!updatedMember) {
+                    // Race condition! Another request beat us to the limit.
+                    return NextResponse.json({ error: "Entry limit reached (Double Scan Prevented)" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+                }
+                member = updatedMember; // Sync local object for logging
+            } else {
+                // Entertainment members don't have entry limits
+                const { EntertainmentMember } = await import("@/models/EntertainmentMember");
+                await EntertainmentMember.updateOne(
+                    { _id: member._id },
+                    { $set: { lastScannedAt: new Date(), qrToken: newToken } }
+                );
+                // Update local object for response
+                (member as any).lastScannedAt = new Date();
+                (member as any).qrToken = newToken;
+            }
+
+            // Create PoolSession for automated checkout
+            let expiryFieldValueForSession = new Date();
+            const planObj = (member as any).planId;
+            const settings = await getSettings();
+            const durationMinutes = settings.occupancyDurationMinutes || 60;
+
+            if (!isEntertainment && planObj && planObj.durationHours && !planObj.durationDays) {
+                // Hourly plan
+                expiryFieldValueForSession.setHours(expiryFieldValueForSession.getHours() + planObj.durationHours);
+                if (planObj.durationMinutes) {
+                    expiryFieldValueForSession.setMinutes(expiryFieldValueForSession.getMinutes() + planObj.durationMinutes);
+                }
+            } else {
+                // Daily/Monthly/Yearly plan or Entertainment member -> use occupancy setting
+                expiryFieldValueForSession.setMinutes(expiryFieldValueForSession.getMinutes() + durationMinutes);
+            }
+
+            await PoolSession.create({
+                poolId: user.poolId,
+                memberId: member._id,
+                numPersons,
+                expiryTime: expiryFieldValueForSession,
+                status: "active",
+            });
+
+            await incrOccupancy(user.poolId || "UNKNOWN", numPersons); // 1.3 Atomic sync
+
+            const entry = await EntryLog.create({
+                poolId: user.poolId,
+                memberId: member._id,
+                status: "granted",
+                operatorId: (typeof user.id === "string" && user.id.length === 24) 
+                    ? new mongoose.Types.ObjectId(user.id) 
+                    : undefined,
+                qrToken: oldToken,
+                rawPayload: qrPayload,
+                numPersons,
+            });
+
+                logger.scan("QR scan granted", {
+                memberId,
+                memberName: member.name,
+                occupancy: currentOccupancy + numPersons,
+                capacity: poolCapacity,
+            });
+
+            import("@/lib/events").then(mod => {
+                mod.dispatchEvent("entry.logged", { poolId: user.poolId, count: currentOccupancy + numPersons });
+            }).catch(() => {});
+
+            const endTime = Date.now();
+            console.log(`[PERF] entry: ${endTime - startTime}ms (member: ${memberId || planId})`);
+
+            return NextResponse.json({
+                    message: "Entry Granted",
+                    member: {
+                        name: member.name,
+                        memberId: member.memberId,
+                        photoUrl: member.photoUrl,
+                        planName: (member.planId as any)?.name || "Active Plan",
+                        planQuantity: member.planQuantity || 1,
+                        voiceAlert: (member.planId as any)?.voiceAlert || false,
+                        expiryDate: expiryFieldValueForSession,
+                    },
+                    entry,
+                    occupancy: {
+                        current: currentOccupancy + numPersons,
+                        capacity: poolCapacity,
+                        available: poolCapacity - (currentOccupancy + numPersons),
+                    },
+                }, {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        } catch (error) {
+            logger.error("Entry API error", { error: String(error) });
+            return NextResponse.json({ error: "Server error processing entry" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        }
+        });
+            
 }

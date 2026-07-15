@@ -5,147 +5,208 @@ import { dbConnect } from "@/lib/mongodb";
 import { ReferralCode } from "@/models/ReferralCode";
 import { ReferralUsage } from "@/models/ReferralUsage";
 import mongoose from "mongoose";
+import { requestContext } from "@/lib/requestContext";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
-    try {
-        const user = await resolveUser(req);
-        if (!user || user.role !== "superadmin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
 
-        await dbConnect();
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "GET";
 
-        // Get all codes
-        const codes = await ReferralCode.find({}).sort({ createdAt: -1 }).lean();
-
-        // Aggregate usage stats
-        const usageStats = await ReferralUsage.aggregate([
-            {
-                $group: {
-                    _id: "$code",
-                    uses: { $sum: 1 },
-                    revenueDiscounted: { $sum: "$discountApplied" }
-                }
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            const user = await resolveUser(req);
+            if (!user || user.role !== "superadmin") {
+                return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
             }
-        ]);
 
-        const statsMap = usageStats.reduce((acc, curr) => {
-            acc[curr._id] = curr;
-            return acc;
-        }, {});
+            await dbConnect();
 
-        // Fetch totals
-        const totalReferralUsers = await ReferralUsage.countDocuments();
-        const totalDiscounts = usageStats.reduce((acc, curr) => acc + curr.revenueDiscounted, 0);
+            // Get all codes
+            const codes = await ReferralCode.find({}).sort({ createdAt: -1 }).lean();
 
-        // Map data for response
-        const mappedCodes = codes.map((c: any) => ({
-            ...c,
-            revenueImpact: statsMap[c.code]?.revenueDiscounted || 0,
-            actualUses: statsMap[c.code]?.uses || 0
-        }));
+            // Aggregate usage stats
+            const usageStats = await ReferralUsage.aggregate([
+                {
+                    $group: {
+                        _id: "$code",
+                        uses: { $sum: 1 },
+                        revenueDiscounted: { $sum: "$discountApplied" }
+                    }
+                }
+            ]);
 
-        mappedCodes.sort((a, b) => b.actualUses - a.actualUses); // Sort by highest usage
+            const statsMap = usageStats.reduce((acc, curr) => {
+                acc[curr._id] = curr;
+                return acc;
+            }, {});
 
-        return NextResponse.json({
-            codes: mappedCodes,
-            totalReferralUsers,
-            totalDiscounts,
-            topCode: mappedCodes.length > 0 ? mappedCodes[0].code : "N/A"
+            // Fetch totals
+            const totalReferralUsers = await ReferralUsage.countDocuments();
+            const totalDiscounts = usageStats.reduce((acc, curr) => acc + curr.revenueDiscounted, 0);
+
+            // Map data for response
+            const mappedCodes = codes.map((c: any) => ({
+                ...c,
+                revenueImpact: statsMap[c.code]?.revenueDiscounted || 0,
+                actualUses: statsMap[c.code]?.uses || 0
+            }));
+
+            mappedCodes.sort((a, b) => b.actualUses - a.actualUses); // Sort by highest usage
+
+            return NextResponse.json({
+                codes: mappedCodes,
+                totalReferralUsers,
+                totalDiscounts,
+                topCode: mappedCodes.length > 0 ? mappedCodes[0].code : "N/A"
+            });
+
+        } catch (e) {
+            console.error("Referral fetch error", e);
+            return NextResponse.json({ error: "Server error" }, { status: 500 });
+        }
         });
-
-    } catch (e) {
-        console.error("Referral fetch error", e);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
-    }
+            
 }
 
 export async function POST(req: Request) {
-    try {
-        const user = await resolveUser(req);
-        if (!user || user.role !== "superadmin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "POST";
+
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            const user = await resolveUser(req);
+            if (!user || user.role !== "superadmin") {
+                return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            }
+
+            await dbConnect();
+            const body = await req.json();
+            const { code, discountType, discountValue, maxUses, expiresAt } = body;
+
+            if (!code || !discountType || discountValue === undefined) {
+                return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+            }
+
+            // Always normalize code before storing or querying to avoid case-mismatch issues
+            const normalizedCode = String(code).toUpperCase().trim();
+
+            if (!normalizedCode) {
+                return NextResponse.json({ error: "Code cannot be empty after normalization" }, { status: 400 });
+            }
+
+            const existing = await ReferralCode.findOne({ code: normalizedCode });
+            if (existing) {
+                return NextResponse.json({ error: "Code already exists" }, { status: 400 });
+            }
+
+            const newCode = await ReferralCode.create({
+                code: normalizedCode,
+                createdBy: new mongoose.Types.ObjectId(user.id),
+                discountType,
+                discountValue,
+                maxUses: maxUses || 0,
+                expiresAt: expiresAt ? new Date(expiresAt) : undefined
+            });
+
+            return NextResponse.json(newCode, { status: 201 });
+
+        } catch (e) {
+            console.error("Referral create error", e);
+            return NextResponse.json({ error: "Server error" }, { status: 500 });
         }
-
-        await dbConnect();
-        const body = await req.json();
-        const { code, discountType, discountValue, maxUses, expiresAt } = body;
-
-        if (!code || !discountType || discountValue === undefined) {
-            return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-        }
-
-        // Always normalize code before storing or querying to avoid case-mismatch issues
-        const normalizedCode = String(code).toUpperCase().trim();
-
-        if (!normalizedCode) {
-            return NextResponse.json({ error: "Code cannot be empty after normalization" }, { status: 400 });
-        }
-
-        const existing = await ReferralCode.findOne({ code: normalizedCode });
-        if (existing) {
-            return NextResponse.json({ error: "Code already exists" }, { status: 400 });
-        }
-
-        const newCode = await ReferralCode.create({
-            code: normalizedCode,
-            createdBy: new mongoose.Types.ObjectId(user.id),
-            discountType,
-            discountValue,
-            maxUses: maxUses || 0,
-            expiresAt: expiresAt ? new Date(expiresAt) : undefined
         });
-
-        return NextResponse.json(newCode, { status: 201 });
-
-    } catch (e) {
-        console.error("Referral create error", e);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
-    }
+            
 }
 
 export async function PATCH(req: Request) {
-    try {
-        const user = await resolveUser(req);
-        if (!user || user.role !== "superadmin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "PATCH";
+
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            const user = await resolveUser(req);
+            if (!user || user.role !== "superadmin") {
+                return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            }
+            await dbConnect();
+
+            const body = await req.json();
+            const { id, isActive } = body;
+
+            const updated = await ReferralCode.findByIdAndUpdate(
+                id,
+                { isActive },
+                { new: true }
+            );
+
+            return NextResponse.json({ success: true, data: updated });
+        } catch (error: any) {
+            return NextResponse.json({ error: error.message }, { status: 400 });
         }
-        await dbConnect();
-
-        const body = await req.json();
-        const { id, isActive } = body;
-
-        const updated = await ReferralCode.findByIdAndUpdate(
-            id,
-            { isActive },
-            { new: true }
-        );
-
-        return NextResponse.json({ success: true, data: updated });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 400 });
-    }
+        });
+            
 }
 
 export async function DELETE(req: Request) {
-    try {
-        const user = await resolveUser(req);
-        if (!user || user.role !== "superadmin") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "DELETE";
+
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            const user = await resolveUser(req);
+            if (!user || user.role !== "superadmin") {
+                return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            }
+            await dbConnect();
+
+            const url = new URL(req.url);
+            const id = url.searchParams.get("id");
+
+            if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
+
+            await ReferralCode.findByIdAndDelete(id);
+
+            return NextResponse.json({ success: true });
+        } catch (error: any) {
+            return NextResponse.json({ error: error.message }, { status: 400 });
         }
-        await dbConnect();
-
-        const url = new URL(req.url);
-        const id = url.searchParams.get("id");
-
-        if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
-
-        await ReferralCode.findByIdAndDelete(id);
-
-        return NextResponse.json({ success: true });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 400 });
-    }
+        });
+            
 }

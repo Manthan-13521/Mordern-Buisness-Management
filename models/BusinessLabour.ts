@@ -24,6 +24,8 @@ const businessLabourSchema = new Schema<IBusinessLabour>(
 );
 
 businessLabourSchema.index({ businessId: 1, name: 1 });
+// Speed up summary queries: { _id, businessId, isActive }
+businessLabourSchema.index({ businessId: 1, isActive: 1 });
 
 export const BusinessLabour: Model<IBusinessLabour> =
   mongoose.models.BusinessLabour || mongoose.model<IBusinessLabour>("BusinessLabour", businessLabourSchema);

@@ -18,6 +18,8 @@ const staffPaymentSchema = new Schema<IStaffPayment>(
 );
 
 staffPaymentSchema.index({ poolId: 1, createdAt: -1 });
+// Speed up summary queries: { staffId, poolId, createdAt range }
+staffPaymentSchema.index({ poolId: 1, staffId: 1, createdAt: -1 });
 
 export const StaffPayment: Model<IStaffPayment> =
   mongoose.models.StaffPayment || mongoose.model<IStaffPayment>("StaffPayment", staffPaymentSchema);

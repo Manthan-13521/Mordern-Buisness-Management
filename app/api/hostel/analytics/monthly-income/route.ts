@@ -9,91 +9,108 @@ import { HostelFloor } from "@/models/HostelFloor";
 import mongoose from "mongoose";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { timedQuery } from "@/lib/queryTimer";
+import { requestContext } from "@/lib/requestContext";
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function GET(req: Request) {
-    try {
-        await dbConnect();
-        const user = await resolveUser(req);
 
-        if (!user) {
-            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "GET";
 
-        const hostelId = user.hostelId;
-        if (!hostelId) {
-            return NextResponse.json({ error: "No hostel assigned" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            await dbConnect();
+            const user = await resolveUser(req);
 
-        const url = new URL(req.url);
-        const block = url.searchParams.get("block") || "all";
-
-        // Build last 12 month keys
-        const months: string[] = [];
-        const now = new Date();
-        const startDate = new Date(now.getFullYear(), now.getMonth() - 11, 1);
-        for (let i = 11; i >= 0; i--) {
-            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
-        }
-
-        const allBlocks = await HostelBlock.find({ hostelId }).lean() as any[];
-        const blockIdToName = new Map(allBlocks.map(b => [b._id.toString(), b.name]));
-
-        const matchStage: any = { hostelId, status: "success", isDeleted: false, paymentType: { $ne: "rent" }, createdAt: { $gte: startDate } };
-
-        const agg = await timedQuery(
-            "hostel/analytics/monthly-income",
-            hostelId as string,
-            () => HostelPayment.aggregate([
-                { $match: matchStage },
-                { $lookup: { from: "hostelmembers", localField: "memberId", foreignField: "_id", as: "member" } },
-                { $unwind: { path: "$member", preserveNullAndEmptyArrays: true } },
-                { $group: {
-                    _id: {
-                        month: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
-                        blockId: "$member.blockId"
-                    },
-                    totalIncome: { $sum: "$amount" }
-                }}
-            ])
-        );
-
-        const finalData = months.map(m => {
-            const monthObj: any = { month: m };
-            if (block === "all") {
-                allBlocks.forEach(b => monthObj[b.name] = 0);
-            } else {
-                monthObj.value = 0;
+            if (!user) {
+                return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
-            return monthObj;
-        });
 
-        // Populate dynamic data
-        agg.forEach(item => {
-            const m = item._id.month;
-            const bId = item._id.blockId?.toString();
-            const bName = blockIdToName.get(bId);
-
-            const row = finalData.find(d => d.month === m);
-            if (!row) return;
-
-            if (block === "all") {
-                 if (bName) row[bName] = (row[bName] || 0) + item.totalIncome;
-                 // (if blockName not mapped, could be an unassigned block, ignoring per clustered req)
-            } else {
-                 if (bName === block) {
-                     row.value += item.totalIncome;
-                 }
+            const hostelId = user.hostelId;
+            if (!hostelId) {
+                return NextResponse.json({ error: "No hostel assigned" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
+
+            const url = new URL(req.url);
+            const block = url.searchParams.get("block") || "all";
+
+            // Build last 12 month keys
+            const months: string[] = [];
+            const now = new Date();
+            const startDate = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+            for (let i = 11; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+            }
+
+            const allBlocks = await HostelBlock.find({ hostelId }).lean() as any[];
+            const blockIdToName = new Map(allBlocks.map(b => [b._id.toString(), b.name]));
+
+            const matchStage: any = { hostelId, status: "success", isDeleted: false, paymentType: { $ne: "rent" }, createdAt: { $gte: startDate } };
+
+            const agg = await timedQuery(
+                "hostel/analytics/monthly-income",
+                hostelId as string,
+                () => HostelPayment.aggregate([
+                    { $match: matchStage },
+                    { $lookup: { from: "hostelmembers", localField: "memberId", foreignField: "_id", as: "member" } },
+                    { $unwind: { path: "$member", preserveNullAndEmptyArrays: true } },
+                    { $group: {
+                        _id: {
+                            month: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+                            blockId: "$member.blockId"
+                        },
+                        totalIncome: { $sum: "$amount" }
+                    }}
+                ])
+            );
+
+            const finalData = months.map(m => {
+                const monthObj: any = { month: m };
+                if (block === "all") {
+                    allBlocks.forEach(b => monthObj[b.name] = 0);
+                } else {
+                    monthObj.value = 0;
+                }
+                return monthObj;
+            });
+
+            // Populate dynamic data
+            agg.forEach(item => {
+                const m = item._id.month;
+                const bId = item._id.blockId?.toString();
+                const bName = blockIdToName.get(bId);
+
+                const row = finalData.find(d => d.month === m);
+                if (!row) return;
+
+                if (block === "all") {
+                     if (bName) row[bName] = (row[bName] || 0) + item.totalIncome;
+                     // (if blockName not mapped, could be an unassigned block, ignoring per clustered req)
+                } else {
+                     if (bName === block) {
+                         row.value += item.totalIncome;
+                     }
+                }
+            });
+
+            return NextResponse.json(finalData, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+
+        } catch (error) {
+            console.error("[GET /api/hostel/analytics/monthly-income]", error);
+            // SAFE FALLBACK: Return empty chart data instead of crashing
+            return NextResponse.json([], {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+        }
         });
-
-        return NextResponse.json(finalData, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-
-    } catch (error) {
-        console.error("[GET /api/hostel/analytics/monthly-income]", error);
-        // SAFE FALLBACK: Return empty chart data instead of crashing
-        return NextResponse.json([], {  status: 200 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+            
 }

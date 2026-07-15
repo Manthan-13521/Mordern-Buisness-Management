@@ -2,90 +2,105 @@ import { NextResponse } from "next/server";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { dbConnect } from "@/lib/mongodb";
 import { PoolAnalytics } from "@/models/PoolAnalytics";
-
+import { requestContext } from "@/lib/requestContext";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function GET(req: Request) {
-    try {
-        await dbConnect();
-        const user = await resolveUser(req);
 
-        if (!user) {
-            return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
+        const requestId = req ? (req.headers.get("x-request-id") || crypto.randomUUID()) : crypto.randomUUID();
+        const clientIp = req ? (req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown") : "unknown";
+        const routePath = req ? new URL(req.url).pathname : "unknown";
+        const requestMethod = "GET";
 
-        const poolId = user.poolId;
-        if (!poolId) {
-            return NextResponse.json({ error: "No pool assigned" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-        }
+        return requestContext.run({
+            requestId,
+            ip: clientIp,
+            route: routePath,
+            method: requestMethod,
+            startTime: Date.now()
+        }, async () => {
+            try {
+            await dbConnect();
+            const user = await resolveUser(req);
 
-        const url = new URL(req.url);
-        const memberType = url.searchParams.get("type") || "all";
-
-        // Build last 12 month keys explicitly
-        const months: string[] = [];
-        const now = new Date();
-        for (let i = 11; i >= 0; i--) {
-            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
-        }
-
-        const incomeMap = new Map<string, number>();
-
-        if (memberType === "all") {
-            // Fast path: use snapshots for "all"
-            const rows = await PoolAnalytics.find({
-                poolId,
-                yearMonth: { $in: months }
-            }).lean();
-            rows.forEach((r: any) => incomeMap.set(r.yearMonth, r.totalIncome || 0));
-        } else {
-            // Live aggregation for specific member types
-            const { Payment } = await import("@/models/Payment");
-            
-            // Reconstruct exact date range for the query
-            const startDate = new Date(now.getFullYear(), now.getMonth() - 11, 1);
-            
-            const matchQuery: any = { 
-                poolId,
-                status: "success",
-                createdAt: { $gte: startDate }
-            };
-            
-            // Timezone offset for IST grouping is complex, but we can do a simple JS loop grouping after fetching
-            // Filter by memberCollection instead of regex on populated memberId
-            if (memberType !== "all") {
-                matchQuery.memberCollection = memberType === "member" ? "members" : "entertainment_members";
+            if (!user) {
+                return NextResponse.json({ error: "Unauthorized" }, {  status: 401 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
             }
-            
-            // No need for .populate() — memberCollection already filters at DB level
-            const rawPayments = await Payment.find(matchQuery, "amount createdAt").lean();
-            
-            rawPayments.forEach((p: any) => {
-                const date = new Date(p.createdAt);
-                // Adjust for IST manually to match snapshot logic exactly
-                const istTime = date.getTime() + (5.5 * 60 * 60 * 1000);
-                const istDate = new Date(istTime);
-                const yrMo = `${istDate.getUTCFullYear()}-${String(istDate.getUTCMonth() + 1).padStart(2, "0")}`;
+
+            const poolId = user.poolId;
+            if (!poolId) {
+                return NextResponse.json({ error: "No pool assigned" }, {  status: 400 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+            }
+
+            const url = new URL(req.url);
+            const memberType = url.searchParams.get("type") || "all";
+
+            // Build last 12 month keys explicitly
+            const months: string[] = [];
+            const now = new Date();
+            for (let i = 11; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+            }
+
+            const incomeMap = new Map<string, number>();
+
+            if (memberType === "all") {
+                // Fast path: use snapshots for "all"
+                const rows = await PoolAnalytics.find({
+                    poolId,
+                    yearMonth: { $in: months }
+                }).lean();
+                rows.forEach((r: any) => incomeMap.set(r.yearMonth, r.totalIncome || 0));
+            } else {
+                // Live aggregation for specific member types
+                const { Payment } = await import("@/models/Payment");
                 
-                if (months.includes(yrMo)) {
-                    incomeMap.set(yrMo, (incomeMap.get(yrMo) || 0) + p.amount);
+                // Reconstruct exact date range for the query
+                const startDate = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+                
+                const matchQuery: any = { 
+                    poolId,
+                    status: "success",
+                    createdAt: { $gte: startDate }
+                };
+                
+                // Timezone offset for IST grouping is complex, but we can do a simple JS loop grouping after fetching
+                // Filter by memberCollection instead of regex on populated memberId
+                if (memberType !== "all") {
+                    matchQuery.memberCollection = memberType === "member" ? "members" : "entertainment_members";
                 }
-            });
+                
+                // No need for .populate() — memberCollection already filters at DB level
+                const rawPayments = await Payment.find(matchQuery, "amount createdAt").lean();
+                
+                rawPayments.forEach((p: any) => {
+                    const date = new Date(p.createdAt);
+                    // Adjust for IST manually to match snapshot logic exactly
+                    const istTime = date.getTime() + (5.5 * 60 * 60 * 1000);
+                    const istDate = new Date(istTime);
+                    const yrMo = `${istDate.getUTCFullYear()}-${String(istDate.getUTCMonth() + 1).padStart(2, "0")}`;
+                    
+                    if (months.includes(yrMo)) {
+                        incomeMap.set(yrMo, (incomeMap.get(yrMo) || 0) + p.amount);
+                    }
+                });
+            }
+
+            // Generate the last 12 months explicitly to fill in zeros
+            const finalData = months.map(month => ({
+                month,
+                total_income: incomeMap.get(month) || 0
+            }));
+
+            return NextResponse.json(finalData, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
+
+        } catch (error) {
+            console.error("[GET /api/analytics/monthly-income]", error);
+            return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
         }
-
-        // Generate the last 12 months explicitly to fill in zeros
-        const finalData = months.map(month => ({
-            month,
-            total_income: incomeMap.get(month) || 0
-        }));
-
-        return NextResponse.json(finalData, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-
-    } catch (error) {
-        console.error("[GET /api/analytics/monthly-income]", error);
-        return NextResponse.json({ error: "Server error" }, {  status: 500 , headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } });
-    }
+        });
+            
 }

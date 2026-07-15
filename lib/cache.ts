@@ -7,8 +7,19 @@ import { redis } from "./redis";
  */
 class FastCache {
     private cache: Map<string, { value: any; expiry: number }> = new Map();
+    private readonly MAX_SIZE = 5000;
 
     async set(key: string, value: any, ttlSeconds: number = 300) {
+        if (this.cache.size >= this.MAX_SIZE) {
+            // Evict oldest 20% of entries to prevent memory leak
+            const entriesToDelete = Math.ceil(this.MAX_SIZE * 0.2);
+            let deleted = 0;
+            for (const k of this.cache.keys()) {
+                this.cache.delete(k);
+                if (++deleted >= entriesToDelete) break;
+            }
+        }
+        
         const l1Expiry = Date.now() + 5 * 1000; // L1: 5-second max locally
         this.cache.set(key, { value, expiry: l1Expiry });
         
