@@ -37,7 +37,7 @@ async function runExplainAudit() {
 
         for (const q of queries) {
             console.log(`Running explain for: ${q.name}...`);
-            const queryObj = q.model.find(q.filter);
+            const queryObj = (q.model as any).find(q.filter);
             
             // @ts-ignore
             const explainResult = await queryObj.explain("executionStats");

@@ -31,7 +31,7 @@ async function runAudit() {
   for (const q of queries) {
     try {
       // Using explicit `.explain('executionStats')`
-      const explainData = await q.query.explain("executionStats");
+      const explainData = (await q.query.explain("executionStats")) as any;
       
       let executionStats;
       // Depending on mongoose version, explain structure varies slightly
