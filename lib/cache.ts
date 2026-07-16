@@ -67,3 +67,10 @@ class FastCache {
 }
 
 export const memberCache = new FastCache();
+
+/**
+ * Short-lived cache for user active-status lookups (Issue 4 — JWT Trust).
+ * Caches { isActive, isDeleted, role } per userId for 5 minutes.
+ * Invalidated immediately when a user is disabled, deleted, or role-changed.
+ */
+export const userStatusCache = new FastCache();

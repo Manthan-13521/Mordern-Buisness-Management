@@ -24,6 +24,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ customer
         }, async () => {
             try {
             const { customerId } = await params;
+            if (!mongoose.Types.ObjectId.isValid(customerId)) {
+                return NextResponse.json({ error: "Invalid customerId format" }, { status: 400 });
+            }
             const user = await resolveUser(req);
             if (!user || user.role !== "business_admin") {
                 return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -122,6 +125,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ custom
         }, async () => {
             try {
             const { customerId } = await params;
+            if (!mongoose.Types.ObjectId.isValid(customerId)) {
+                return NextResponse.json({ error: "Invalid customerId format" }, { status: 400 });
+            }
             const user = await resolveUser(req);
             if (!user || user.role !== "business_admin") {
                 return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -4,6 +4,7 @@ import { dbConnect } from "@/lib/mongodb";
 import { Pool } from "@/models/Pool";
 import { Member } from "@/models/Member";
 import { requestContext } from "@/lib/requestContext";
+import { redis } from "@/lib/redis";
 
 export async function GET(req: Request, props: { params: Promise<{ poolId: string }> }) {
 
@@ -88,6 +89,17 @@ export async function PATCH(req: Request, props: { params: Promise<{ poolId: str
                 const newStatus = pool.subscriptionStatus === "paused" ? "active" : "paused";
                 pool.subscriptionStatus = newStatus;
                 await pool.save();
+
+                // Invalidate SaaS guard cache so the new status takes effect immediately
+                // (bypasses the default TTL window that would otherwise serve stale status)
+                if (redis) {
+                    try {
+                        await redis.del(`saasGuard:poolMap:${poolId}`);
+                    } catch (e) {
+                        // Non-fatal: cache miss on next request will re-read from DB
+                    }
+                }
+
                 return NextResponse.json({ success: true, status: newStatus });
             }
 

@@ -1,5 +1,6 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
 import crypto from "crypto";
+import { encryptAadhaar, decryptAadhaar } from "@/lib/aadhaarEncryption";
 
 export interface IEquipmentItem {
     itemName: string;
@@ -85,7 +86,11 @@ const memberSchema = new Schema<IMember>(
         phone: { type: String, required: true },
         age: { type: Number },
         dob: { type: Date },
-        aadharCard: { type: String },
+        aadharCard: {
+            type: String,
+            set: (v: string | undefined) => (v ? encryptAadhaar(v) : v),
+            get: (v: string | undefined) => (v ? decryptAadhaar(v) : v),
+        },
         address: { type: String },
         photoUrl: { type: String }, // Cloudinary URL only — never base64
         planId: { type: Schema.Types.ObjectId, ref: "Plan", required: true },

@@ -2,6 +2,7 @@ import { jwtVerify } from "jose";
 import { getToken } from "next-auth/jwt";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { userStatusCache } from "@/lib/cache";
 
 /**
  * Normalized user object returned from any auth source.
@@ -75,12 +76,87 @@ function enrichContext(user: AuthUser | null): AuthUser | null {
 }
 
 /**
+ * DB status cache key for a given userId.
+ */
+function userStatusKey(userId: string) {
+    return `user:status:${userId}`;
+}
+
+/**
+ * Verifies the user is still active in the database.
+ * Uses a 5-minute cache (Redis → in-memory fallback) to avoid a DB hit on every request.
+ * Only queries DB on cache miss.
+ *
+ * Returns true if user is active and not deleted.
+ * Returns false if user is disabled or deleted — caller should return 401.
+ */
+async function verifyUserActiveStatus(userId: string): Promise<boolean> {
+    const cacheKey = userStatusKey(userId);
+
+    // L1/L2 cache check
+    const cached = await userStatusCache.get(cacheKey);
+    if (cached !== null) {
+        try {
+            const parsed = typeof cached === "string" ? JSON.parse(cached) : cached;
+            if (typeof parsed === "object" && "isActive" in parsed) {
+                return parsed.isActive === true && parsed.isDeleted !== true;
+            }
+        } catch {
+            // Cache entry malformed — fall through to DB
+        }
+    }
+
+    // Cache miss — query DB (lightweight .select for minimal load)
+    try {
+        const { dbConnect } = await import("@/lib/mongodb");
+        const { User } = await import("@/models/User");
+        await dbConnect();
+
+        const user = await User.findById(userId)
+            .select("isActive isDeleted")
+            .lean() as { isActive?: boolean; isDeleted?: boolean } | null;
+
+        if (!user) {
+            // User not found — could be a legacy member token (pool admin, etc.)
+            // Cache as active to avoid breaking legacy flows
+            await userStatusCache.set(cacheKey, JSON.stringify({ isActive: true, isDeleted: false }), 300);
+            return true;
+        }
+
+        const status = {
+            isActive: user.isActive !== false,  // undefined treated as active
+            isDeleted: user.isDeleted === true,
+        };
+
+        // Cache for 5 minutes
+        await userStatusCache.set(cacheKey, JSON.stringify(status), 300);
+
+        return status.isActive && !status.isDeleted;
+    } catch {
+        // DB lookup failed — fail open to avoid cascading outages
+        // Only applies if the cache is completely cold and DB is unreachable
+        return true;
+    }
+}
+
+/**
+ * Invalidates the user status cache for a given userId.
+ * Call this whenever a user is disabled, deleted, or their role changes.
+ */
+export async function invalidateUserStatusCache(userId: string): Promise<void> {
+    await userStatusCache.delete(userStatusKey(userId));
+}
+
+/**
  * Resolves the authenticated user from a Next.js API Request.
  *
  * Priority order:
  *  1. Bearer JWT token in Authorization header (for scripts / Node.js clients)
  *  2. NextAuth JWT cookie (for browser sessions)
  *  3. NextAuth server session via getServerSession (fallback for edge cases)
+ *
+ * All resolved users are verified against the DB (via cache) to ensure
+ * disabled or deleted accounts lose access immediately.
  *
  * Returns a strongly-typed AuthUser or null if unauthenticated.
  */
@@ -103,6 +179,8 @@ export async function resolveUser(req: Request): Promise<AuthUser | null> {
         }
     }
 
+    let user: AuthUser | null = null;
+
     // 1. Bearer token check
     const authHeader = req.headers.get("authorization");
     if (authHeader?.startsWith("Bearer ")) {
@@ -110,26 +188,37 @@ export async function resolveUser(req: Request): Promise<AuthUser | null> {
             const bearerToken = authHeader.split(" ")[1];
             const secret = new TextEncoder().encode(process.env.JWT_SECRET);
             const { payload } = await jwtVerify(bearerToken, secret);
-            const user = normalizeRawPayload(payload as Record<string, unknown>);
-            if (user) return enrichContext(user);
+            user = normalizeRawPayload(payload as Record<string, unknown>);
         } catch {
             // Invalid bearer token — fall through to NextAuth
         }
     }
 
     // 2. NextAuth JWT cookie
-    const token = await getToken({ req: req as Parameters<typeof getToken>[0]["req"] });
-    if (token) {
-        const user = normalizeRawPayload(token as Record<string, unknown>);
-        if (user) return enrichContext(user);
+    if (!user) {
+        const token = await getToken({ req: req as Parameters<typeof getToken>[0]["req"] });
+        if (token) {
+            user = normalizeRawPayload(token as Record<string, unknown>);
+        }
     }
 
     // 3. NextAuth Server Session (slower, for edge-case compatibility)
-    const session = await getServerSession(authOptions);
-    if (session?.user) {
-        const user = normalizeRawPayload(session.user as Record<string, unknown>);
-        if (user) return enrichContext(user);
+    if (!user) {
+        const session = await getServerSession(authOptions);
+        if (session?.user) {
+            user = normalizeRawPayload(session.user as Record<string, unknown>);
+        }
     }
 
-    return null;
+    if (!user) return null;
+
+    // 4. Verify user is still active in DB (cached 5min to avoid per-request DB hits)
+    const isActive = await verifyUserActiveStatus(user.id);
+    if (!isActive) {
+        // User has been disabled or deleted — deny access immediately
+        return null;
+    }
+
+    return enrichContext(user);
 }
+

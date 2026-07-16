@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { register, httpRequestDurationMicroseconds, cacheHitCounter, apiErrorCounter, circuitBreakerState } from "@/lib/metrics";
 import { requestContext } from "@/lib/requestContext";
+import { requireCronAuth } from "@/lib/requireCronAuth";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,10 @@ export async function GET(req: Request) {
             method: requestMethod,
             startTime: Date.now()
         }, async () => {
+            // Auth gate: polled by Vercel cron + uptime monitors using CRON_SECRET
+            const authErr = requireCronAuth(req);
+            if (authErr) return authErr;
+
             try {
             const metrics = await register.getMetricsAsJSON();
             const alerts: Alert[] = [];

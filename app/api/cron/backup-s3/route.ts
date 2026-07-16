@@ -18,7 +18,9 @@ async function* generateBackupStream(
 ) {
     yield '{"members":[';
     let first = true;
-    for await (const doc of Member.find().cursor()) {
+    // .lean() prevents Mongoose getters from running (avoids decrypting aadharCard into backup).
+    // .select("-aadharCard -__v") strips sensitive PII and internal Mongoose field from backup.
+    for await (const doc of Member.find().select("-aadharCard -__v").lean().cursor()) {
         if (!first) yield ',';
         yield JSON.stringify(doc);
         stats.memberCount++;
@@ -27,7 +29,8 @@ async function* generateBackupStream(
     
     yield '],"entertainmentMembers":[';
     first = true;
-    for await (const doc of EntertainmentMember.find().cursor()) {
+    // Same: exclude aadharCard and __v from entertainment members backup
+    for await (const doc of EntertainmentMember.find().select("-aadharCard -__v").lean().cursor()) {
         if (!first) yield ',';
         yield JSON.stringify(doc);
         stats.entertainmentMemberCount++;
@@ -36,7 +39,8 @@ async function* generateBackupStream(
 
     yield '],"payments":[';
     first = true;
-    for await (const doc of Payment.find().cursor()) {
+    // Payments have no aadharCard field, but .lean() still reduces memory overhead
+    for await (const doc of Payment.find().select("-__v").lean().cursor()) {
         if (!first) yield ',';
         yield JSON.stringify(doc);
         stats.paymentCount++;

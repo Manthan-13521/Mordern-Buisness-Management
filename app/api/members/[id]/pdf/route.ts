@@ -8,6 +8,7 @@ import path from "path";
 import QRCode from "qrcode";
 import { signQRToken } from "@/lib/qrSigner";
 import { uploadBuffer } from "@/lib/local-upload";
+import { maskAadhaar } from "@/lib/aadhaarEncryption";
 import { resolveUser, AuthUser } from "@/lib/authHelper";
 import { requestContext } from "@/lib/requestContext";
 
@@ -221,7 +222,8 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
 
             if (member.aadharCard) {
                 page.drawText(`Aadhar:`, { x: textStartX, y: startY, size: 10, font: fontRegular, color: rgb(0.4, 0.4, 0.4) });
-                page.drawText(member.aadharCard, { x: textStartX + 45, y: startY, size: 11, font: fontBold, color: rgb(0.1, 0.1, 0.1) });
+                // Security: Aadhaar is always masked on the ID card (XXXX-XXXX-last4)
+                page.drawText(maskAadhaar(member.aadharCard), { x: textStartX + 45, y: startY, size: 11, font: fontBold, color: rgb(0.1, 0.1, 0.1) });
                 startY -= 18;
             }
 

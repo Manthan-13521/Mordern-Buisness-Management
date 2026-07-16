@@ -1,11 +1,11 @@
 import { dbConnect } from "@/lib/mongodb";
 import { Organization } from "@/models/Organization";
 import { SaaSPlan } from "@/models/SaaSPlan";
-import { Member } from "@/models/Member";
 import { Pool } from "@/models/Pool";
 import { redis } from "@/lib/redis";
 import { logger } from "@/lib/logger";
 import { resolveSubscriptionState } from "@/lib/subscriptionState";
+
 
 // ── Force model registration ────────────────────────────────────────────
 // SaaSPlan is referenced by Organization.planId via populate().
@@ -164,10 +164,17 @@ export async function enforceSaaSGuard(poolId: string): Promise<SaaSContext> {
 
 /**
  * Specific Limit Enforcer: Member Count
+ * ─────────────────────────────────────────────────────────────────────────────
+ * RACE-CONDITION SAFE: Uses atomic $inc on OrgUsage.memberCount to reserve
+ * a slot BEFORE the member document is created. If the reserved count exceeds
+ * maxMembers, we immediately roll back the counter and throw.
+ *
+ * This replaces the previous non-atomic: countDocuments() → check → insert
+ * which could be bypassed by concurrent requests.
  */
 export async function enforceMemberCreationLimit(poolId: string) {
     const context = await enforceSaaSGuard(poolId);
-    
+
     // 1) Hard Kill Switch — Do not let expired orgs create data forever
     if (context.isHardExpired) {
         throw new Error("SaaS_Subscription_Expired");
@@ -176,31 +183,39 @@ export async function enforceMemberCreationLimit(poolId: string) {
     // Bypassing for legacy transitioners
     if (context.orgId === "LEGACY_TRANSITION") return true;
 
-    const currentCount = await Member.countDocuments({ poolId });
-    
-    // 2) Anti-Cheat Snapshot: Enforce against max(currentMembers, peakMembers)
     const { OrgUsage } = await import("@/models/OrgUsage");
+
+    // 2) Atomically increment the counter, reserving a slot for this request
     const usage = await OrgUsage.findOneAndUpdate(
         { orgId: context.orgId },
-        { $max: { peakMembers: currentCount } },
-        { returnDocument: 'after', upsert: true }
+        {
+            $inc: { memberCount: 1 },
+            $max: { peakMembers: 0 }, // ensure field exists
+        },
+        { returnDocument: "after", upsert: true }
     );
-    
-    const peak = usage?.peakMembers || currentCount;
-    const effectiveCount = Math.max(currentCount, peak);
 
-    if (effectiveCount >= context.maxMembers) {
+    const reservedCount = usage?.memberCount ?? 1;
+
+    // 3) If the reserved count exceeds the plan limit, roll back and throw
+    if (reservedCount > context.maxMembers) {
+        // Roll back the counter — do not leave a phantom reservation
+        await OrgUsage.updateOne(
+            { orgId: context.orgId },
+            { $inc: { memberCount: -1 } }
+        );
         throw new Error("SaaS_Member_Limit_Reached");
     }
-    
-    // Account for the new member about to be added
+
+    // 4) Update the peak watermark to reflect this new high
     await OrgUsage.updateOne(
         { orgId: context.orgId },
-        { $max: { peakMembers: currentCount + 1 } }
+        { $max: { peakMembers: reservedCount } }
     );
-    
+
     return true;
 }
+
 
 /**
  * Specific Feature Enforcer: Analytics

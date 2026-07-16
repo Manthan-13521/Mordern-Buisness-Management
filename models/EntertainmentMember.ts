@@ -1,5 +1,6 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
 import crypto from "crypto";
+import { encryptAadhaar, decryptAadhaar } from "@/lib/aadhaarEncryption";
 
 // Entertainment members use MS0001 format instead of M0001
 // Stored in 'entertainment_members' collection (separate from regular members)
@@ -62,7 +63,11 @@ const entertainmentMemberSchema = new Schema<IEntertainmentMember>(
         phone: { type: String, required: true },
         age: { type: Number },
         dob: { type: Date },
-        aadharCard: { type: String },
+        aadharCard: {
+            type: String,
+            set: (v: string | undefined) => (v ? encryptAadhaar(v) : v),
+            get: (v: string | undefined) => (v ? decryptAadhaar(v) : v),
+        },
         address: { type: String },
         photoUrl: { type: String },
         planId: { type: Schema.Types.ObjectId, ref: "Plan", required: true },

@@ -1,4 +1,5 @@
 import { Client } from "@upstash/qstash";
+import { withRetry } from "./withRetry";
 
 /**
  * ── High-Scale Queue Wrapper (Prompt 2.1) ──
@@ -32,15 +33,18 @@ export async function enqueueJob(type: QueueType, payload: any) {
     }
 
     try {
-        await qstashClient.publishJSON({
-            url: `${appUrl}${endpoint}`,
-            body: payload,
-            retries: 5, // QStash native exponential backoff activates automatically
-        });
+        await withRetry(
+            () => qstashClient!.publishJSON({
+                url: `${appUrl}${endpoint}`,
+                body: payload,
+                retries: 5, // QStash native exponential backoff activates automatically
+            }),
+            { label: `QStash publish [${type}]`, maxRetries: 3, baseDelayMs: 250 }
+        );
 
         return { success: true, fallback: false };
     } catch (e) {
-        console.error(`[Queue] Failed to enqueue job for ${type}. Queue fallback triggered`);
+        console.error(`[Queue] Failed to enqueue job for ${type} after retries. Queue fallback triggered`);
         return { success: false, fallback: true };
     }
 }

@@ -321,13 +321,27 @@ export async function activateSubscription(params: {
             // Invalidate Redis SaaS guard cache so it picks up new state immediately
             if (redis) {
                 try {
-                    await redis.del(`org:${orgForSync._id.toString()}:plan`);
-                    logger.info("[Activation] Redis saasGuard cache invalidated", { orgId: orgForSync._id.toString() });
+                    const keysToInvalidate = [
+                        `org:${orgForSync._id.toString()}:plan`,       // SaaS guard plan cache
+                        `saasGuard:poolMap:${user.poolId}`,            // Pool → Org mapping cache
+                        `saasGuard:poolMap:${user.hostelId}`,          // Hostel → Org mapping cache
+                        `biz:sub:${user.businessId}`,                  // Business subscription cache
+                    ].filter(Boolean);
+
+                    // Use pipeline for atomic multi-key delete
+                    for (const key of keysToInvalidate) {
+                        await redis.del(key);
+                    }
+                    logger.info("[Activation] Redis plan caches invalidated", {
+                        orgId: orgForSync._id.toString(),
+                        invalidatedKeys: keysToInvalidate,
+                    });
                 } catch (e) {
                     // Non-fatal — cache will expire naturally
                     logger.warn("[Activation] Redis cache invalidation failed", { error: (e as Error).message });
                 }
             }
+
 
             logger.info("[Activation] Organization synced", {
                 orgId: orgForSync._id.toString(),

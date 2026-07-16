@@ -19,39 +19,48 @@ const BUCKET = process.env.AWS_S3_BUCKET_NAME || "";
 
 import { Upload } from "@aws-sdk/lib-storage";
 import { Readable } from "stream";
+import { withRetry, isS3TransientError } from "./withRetry";
+import { logger } from "./logger";
 
 /**
- * Uploads a buffer to S3
+ * Uploads a buffer to S3 with exponential backoff retry (max 3 attempts).
  */
 export async function uploadBackup(buffer: Buffer, key: string, contentType: string) {
     if (!BUCKET) throw new Error("AWS_S3_BUCKET_NAME is not configured");
-    await s3Client.send(
-        new PutObjectCommand({
-            Bucket: BUCKET,
-            Key: key,
-            Body: buffer,
-            ContentType: contentType,
-        })
-    );
-    return key;
+    return withRetry(
+        () => s3Client.send(
+            new PutObjectCommand({
+                Bucket: BUCKET,
+                Key: key,
+                Body: buffer,
+                ContentType: contentType,
+            })
+        ),
+        { label: `S3 uploadBackup [${key}]`, maxRetries: 3, baseDelayMs: 500, isTransient: isS3TransientError }
+    ).then(() => key);
 }
 
 /**
- * Uploads a readable stream to S3 using multi-part chunking (memory-safe).
+ * Uploads a readable stream to S3 using multi-part chunking (memory-safe)
+ * with exponential backoff retry on transient errors.
  */
 export async function uploadStreamBackup(stream: Readable, key: string, contentType: string) {
     if (!BUCKET) throw new Error("AWS_S3_BUCKET_NAME is not configured");
-    const upload = new Upload({
-        client: s3Client,
-        params: {
-            Bucket: BUCKET,
-            Key: key,
-            Body: stream,
-            ContentType: contentType,
+    return withRetry(
+        async () => {
+            const upload = new Upload({
+                client: s3Client,
+                params: {
+                    Bucket: BUCKET,
+                    Key: key,
+                    Body: stream,
+                    ContentType: contentType,
+                },
+            });
+            await upload.done();
         },
-    });
-    await upload.done();
-    return key;
+        { label: `S3 uploadStreamBackup [${key}]`, maxRetries: 3, baseDelayMs: 500, isTransient: isS3TransientError }
+    ).then(() => key);
 }
 
 /**
