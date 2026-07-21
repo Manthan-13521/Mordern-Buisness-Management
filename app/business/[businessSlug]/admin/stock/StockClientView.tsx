@@ -176,13 +176,12 @@ export default function StockClientView({ initialItems, kpis }: { initialItems: 
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
           { title: "Total Products", val: kpis.totalProducts, icon: <Package className="w-5 h-5 text-indigo-400" />, bg: "bg-indigo-500/10" },
           { title: "Healthy", val: kpis.healthy, icon: <CheckCircle2 className="w-5 h-5 text-emerald-400" />, bg: "bg-emerald-500/10" },
           { title: "Low Stock", val: kpis.lowStock, icon: <AlertTriangle className="w-5 h-5 text-orange-400" />, bg: "bg-orange-500/10" },
           { title: "Out Of Stock", val: kpis.outOfStock, icon: <XCircle className="w-5 h-5 text-rose-400" />, bg: "bg-rose-500/10" },
-          { title: "Today's Used", val: kpis.todaysConsumption, icon: <ArrowUpFromLine className="w-5 h-5 text-purple-400" />, bg: "bg-purple-500/10" },
         ].map((card, idx) => (
           <div key={idx} className="bg-[#0b1220] p-5 rounded-2xl border border-[#1f2937] flex flex-col justify-between shadow-sm hover:border-[#374151] transition-colors">
             <div className="flex justify-between items-start mb-4">
