@@ -45,24 +45,24 @@ export function Topbar() {
                 </div>
             )}
 
-            <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[#1f2937] bg-[#020617] px-4 sm:px-8 gap-5">
+            <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background px-4 sm:px-8 gap-5">
                 {/* Left: Mobile Toggle + Breadcrumb/Title */}
                 <div className="flex items-center gap-4 min-w-0">
                     <button
-                        className="md:hidden rounded-xl p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-[#9ca3af] hover:text-[#f9fafb] hover:bg-[#111827] transition-all"
+                        className="md:hidden rounded-xl p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-muted hover:text-foreground hover:bg-surface transition-all focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#09090b]"
                         onClick={() => setMobileOpen(!mobileOpen)}
                         aria-label="Toggle menu"
                     >
                         {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                     </button>
                     
-                    <div className="hidden sm:flex items-center gap-2 text-[#8b5cf6]">
+                    <div className="hidden sm:flex items-center gap-2 text-brand">
                         <Droplets className="h-5 w-5" />
                         <span className="text-xs font-bold uppercase tracking-widest opacity-50">Portal</span>
-                        <span className="text-[#1f2937]">/</span>
+                        <span className="text-border">/</span>
                     </div>
                     
-                    <h1 className="text-base font-bold text-[#f9fafb] truncate tracking-tight">{title}</h1>
+                    <h1 className="text-base font-bold text-foreground truncate tracking-tight font-heading">{title}</h1>
                 </div>
 
 
@@ -77,21 +77,21 @@ export function Topbar() {
                         </div>
                     )}
                     
-                    <div className="h-10 w-px bg-[#1f2937] mx-1 hidden sm:block" />
+                    <div className="h-10 w-px bg-border mx-1 hidden sm:block" />
 
                     <div className="flex items-center gap-3 pl-1">
                         <div className="text-right hidden sm:block">
-                            <p className="text-sm font-bold text-[#f9fafb] leading-none mb-1">
+                            <p className="text-sm font-bold text-foreground font-heading leading-none mb-1">
                                 {session?.user?.role === "admin" || session?.user?.role === "superadmin"
                                     ? `${session?.user?.poolName || "Pool"} (Admin)`
                                     : `${session?.user?.name || "User"} (${session?.user?.role})`}
                             </p>
-                            <p className="text-xs font-medium text-[#9ca3af] uppercase tracking-wide">
+                            <p className="text-xs font-medium text-muted uppercase tracking-wide">
                                 {session?.user?.role?.replace('_', ' ')}
                             </p>
                         </div>
-                        <div className="h-11 w-11 rounded-xl bg-[#0b1220] flex items-center justify-center border border-[#1f2937]">
-                            <span className="text-sm font-bold text-[#8b5cf6] uppercase">
+                        <div className="h-11 w-11 rounded-xl bg-surface flex items-center justify-center border border-border">
+                            <span className="text-sm font-bold text-brand uppercase font-heading">
                                 {session?.user?.name?.[0] ?? "A"}
                             </span>
                         </div>

@@ -11,6 +11,7 @@ import { NativeAdSlot } from "@/components/ads/slots/NativeAdSlot";
 import { TopStripAd } from "@/components/ads/slots/TopStripAd";
 import { AD_SLOTS } from "@/lib/ad-slots";
 import UsageCounters from "@/components/ui/quota/UsageCounters";
+import AnimatedNumber from "@/components/ui/AnimatedNumber";
 
 // Stats Component (Server)
 async function DashboardStats({ poolId, isAdmin, memberType }: { poolId: string, isAdmin: boolean, memberType: string }) {
@@ -36,18 +37,18 @@ async function DashboardStats({ poolId, isAdmin, memberType }: { poolId: string,
             {stats.map((item) => (
                 <div
                     key={item.name}
-                    className="relative overflow-hidden rounded-2xl bg-[#0b1220] px-4 pb-12 pt-5 shadow-sm sm:px-6 sm:pt-6 border border-[#1f2937] group hover:border-[#8b5cf6]/30 transition-all"
+                    className="relative overflow-hidden rounded-2xl bg-surface px-4 pb-12 pt-5 shadow-sm sm:px-6 sm:pt-6 border border-border group hover:border-brand/30 transition-all"
                 >
                     <dt>
-                        <div className={`absolute rounded-xl ${item.color} p-3 border border-[#1f2937]/50`}>
+                        <div className={`absolute rounded-xl ${item.color} p-3 border border-border/50`}>
                             <item.icon className={`h-6 w-6 ${item.iconColor}`} aria-hidden="true" />
                         </div>
-                        <p className="ml-16 line-clamp-2 text-sm font-medium leading-tight text-[#9ca3af]">
+                        <p className="ml-16 line-clamp-2 text-sm font-medium leading-tight text-muted">
                             {item.name}
                         </p>
                     </dt>
                     <dd className="ml-16 flex items-baseline pb-6 sm:pb-7">
-                        <p className="text-2xl font-semibold text-[#f9fafb]">{item.stat}</p>
+                        <AnimatedNumber value={item.stat} className="text-2xl font-semibold text-foreground font-heading" delay={0.1} />
                     </dd>
                 </div>
             ))}
@@ -67,26 +68,26 @@ async function SystemHealth() {
     };
 
     return (
-        <div className="rounded-2xl bg-[#0b1220] shadow-sm p-6 border border-[#1f2937]">
-            <h2 className="text-lg font-semibold text-[#f9fafb] mb-4 flex items-center gap-2">
+        <div className="rounded-2xl bg-surface shadow-sm p-6 border border-border">
+            <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2 font-heading">
                 <Heart className="w-5 h-5 text-rose-500" /> System Health
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
                 <div className="flex flex-col">
-                    <span className="text-[#9ca3af] text-xs uppercase font-medium">DB Status</span>
-                    <span className={`font-semibold mt-1 ${health.database?.status === "connected" ? "text-green-400" : "text-rose-400"}`}>{health.database?.status}</span>
+                    <span className="text-muted text-xs uppercase font-medium">DB Status</span>
+                    <span className={`font-semibold mt-1 font-heading ${health.database?.status === "connected" ? "text-success" : "text-rose-400"}`}>{health.database?.status}</span>
                 </div>
                 <div className="flex flex-col">
-                    <span className="text-[#9ca3af] text-xs uppercase font-medium">Uptime</span>
-                    <span className="font-semibold mt-1 text-[#f9fafb]">{health.system?.uptime}</span>
+                    <span className="text-muted text-xs uppercase font-medium">Uptime</span>
+                    <span className="font-semibold mt-1 text-foreground font-heading">{health.system?.uptime}</span>
                 </div>
                 <div className="flex flex-col">
-                    <span className="text-[#9ca3af] text-xs uppercase font-medium">Heap Memory</span>
-                    <span className="font-semibold mt-1 text-[#f9fafb]">{health.system?.memoryUsedMB} / {health.system?.memoryTotalMB} MB</span>
+                    <span className="text-muted text-xs uppercase font-medium">Heap Memory</span>
+                    <span className="font-semibold mt-1 text-foreground font-heading">{health.system?.memoryUsedMB} / {health.system?.memoryTotalMB} MB</span>
                 </div>
                 <div className="flex flex-col">
-                    <span className="text-[#9ca3af] text-xs uppercase font-medium">Last Backup</span>
-                    <span className="font-semibold mt-1 text-[#f9fafb]">Active (S3)</span>
+                    <span className="text-muted text-xs uppercase font-medium">Last Backup</span>
+                    <span className="font-semibold mt-1 text-foreground font-heading">Active (S3)</span>
                 </div>
             </div>
         </div>
@@ -122,20 +123,20 @@ async function RevenueKPIs({ poolId }: { poolId: string }) {
 
     const kpis = [
         { label: "Outstanding Dues", value: `₹${l.outstandingDues.toLocaleString("en-IN")}`, icon: AlertTriangle, accent: "from-rose-500/20 to-rose-600/10", textColor: "text-rose-400" },
-        { label: "Recovery Rate", value: `${recoveryRate}%`, icon: BarChart3, accent: recoveryRate >= 80 ? "from-emerald-500/20 to-emerald-600/10" : "from-amber-500/20 to-amber-600/10", textColor: recoveryRate >= 80 ? "text-emerald-400" : "text-yellow-400" },
-        { label: "Credit Balance", value: `₹${l.creditBalance.toLocaleString("en-IN")}`, icon: CreditCard, accent: "from-blue-500/20 to-blue-600/10", textColor: "text-blue-400" },
+        { label: "Recovery Rate", value: `${recoveryRate}%`, icon: BarChart3, accent: recoveryRate >= 80 ? "from-emerald-500/20 to-emerald-600/10" : "from-amber-500/20 to-amber-600/10", textColor: recoveryRate >= 80 ? "text-success" : "text-amber-400" },
+        { label: "Credit Balance", value: `₹${l.creditBalance.toLocaleString("en-IN")}`, icon: CreditCard, accent: "from-brand/20 to-brand/10", textColor: "text-brand" },
     ];
 
     return (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {kpis.map(k => (
-                <div key={k.label} className="relative overflow-hidden rounded-2xl bg-[#0b1220] border border-[#1f2937] p-5 group hover:border-[#8b5cf6]/30 transition-all">
+                <div key={k.label} className="relative overflow-hidden rounded-2xl bg-surface border border-border p-5 group hover:border-brand/30 transition-all">
                     <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${k.accent} opacity-10 blur-2xl -mr-8 -mt-8`} />
                     <div className="flex items-center gap-3 mb-2">
                         <k.icon className={`w-5 h-5 ${k.textColor}`} />
-                        <span className="text-xs uppercase tracking-wider text-[#9ca3af] font-medium">{k.label}</span>
+                        <span className="text-xs uppercase tracking-wider text-muted font-medium">{k.label}</span>
                     </div>
-                    <p className={`text-2xl font-bold ${k.textColor}`}>{k.value}</p>
+                    <AnimatedNumber value={k.value} className={`text-2xl font-bold font-heading ${k.textColor}`} delay={0.2} />
                 </div>
             ))}
         </div>
@@ -181,7 +182,7 @@ async function ExpiryAlerts({ poolId }: { poolId: string }) {
     }));
 
     return (
-        <div className="rounded-2xl bg-[#0b1220] border border-orange-500/20 shadow-sm p-6 relative overflow-hidden group hover:border-orange-500/40 transition-all">
+        <div className="rounded-2xl bg-surface border border-orange-500/20 shadow-sm p-6 relative overflow-hidden group hover:border-orange-500/40 transition-all">
             <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 blur-3xl -mr-16 -mt-16 pointer-events-none" />
             <h2 className="text-lg font-semibold text-orange-400 mb-4 flex items-center">
                 <span className="w-2 h-2 bg-orange-500 rounded-full mr-2 animate-pulse shadow-[0_0_8px_rgba(249,115,22,0.8)]"></span>
@@ -190,13 +191,13 @@ async function ExpiryAlerts({ poolId }: { poolId: string }) {
             {alerts.length > 0 ? (
                 <ul className="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                     {alerts.map((m: any) => (
-                        <li key={m.id || m.memberId} className="flex justify-between items-center text-sm py-2 border-b border-[#1f2937] last:border-0 hover:bg-[#8b5cf6]/5 px-2 rounded-lg transition-colors">
+                        <li key={m.id || m.memberId} className="flex justify-between items-center text-sm py-2 border-b border-border last:border-0 hover:bg-brand/5 px-2 rounded-lg transition-colors">
                             <div className="flex flex-col">
                                 <div className="flex items-center gap-2">
-                                    <span className="font-medium text-[#f9fafb]">{m.name}</span>
-                                    <span className="text-[10px] text-[#6b7280] font-mono">#{m.memberId}</span>
+                                    <span className="font-medium text-foreground">{m.name}</span>
+                                    <span className="text-[10px] text-muted font-mono">#{m.memberId}</span>
                                 </div>
-                                <span className="text-xs text-[#9ca3af] mt-1">{m.phone}</span>
+                                <span className="text-xs text-muted mt-1">{m.phone}</span>
                             </div>
                             <div className="text-right flex flex-col items-end">
                                 <span className={`font-semibold text-xs px-2 py-0.5 rounded-full ${m.remainingDays <= 0 ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'}`}>
@@ -207,7 +208,7 @@ async function ExpiryAlerts({ poolId }: { poolId: string }) {
                     ))}
                 </ul>
             ) : (
-                <p className="text-sm text-[#6b7280] font-medium">No members expiring soon.</p>
+                <p className="text-sm text-muted font-medium">No members expiring soon.</p>
             )}
         </div>
     );
@@ -234,8 +235,8 @@ export default async function DashboardPage(props: { searchParams?: Promise<any>
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-[#f9fafb]">Dashboard Overview</h1>
-                    <p className="mt-1 text-sm text-[#9ca3af]">
+                    <h1 className="text-2xl font-bold text-foreground font-heading">Dashboard Overview</h1>
+                    <p className="mt-1 text-sm text-muted">
                         Welcome back, {session?.user?.name || "Admin"}. Here's what's happening today.
                     </p>
                 </div>
@@ -257,7 +258,7 @@ export default async function DashboardPage(props: { searchParams?: Promise<any>
 
             {/* Priority 2: Revenue KPIs */}
             {isAdmin && (
-                <Suspense fallback={<div className="h-24 bg-[#0b1220] rounded-xl animate-pulse" />}>
+                <Suspense fallback={<div className="h-24 bg-surface rounded-xl animate-pulse border border-border" />}>
                     <RevenueKPIs poolId={poolId} />
                 </Suspense>
             )}
@@ -275,7 +276,7 @@ export default async function DashboardPage(props: { searchParams?: Promise<any>
 
                     
                     {/* Priority 5: Notifications / Alerts panel (deferred) */}
-                    <Suspense fallback={<div className="h-48 bg-[#0b1220] rounded-xl animate-pulse" />}>
+                    <Suspense fallback={<div className="h-48 bg-surface rounded-xl animate-pulse border border-border" />}>
                         <ExpiryAlerts poolId={poolId} />
                     </Suspense>
                 </div>
