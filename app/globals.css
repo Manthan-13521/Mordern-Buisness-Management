@@ -2,33 +2,56 @@
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
   --color-foreground: var(--foreground);
-  --color-primary: #3B82F6;
-  --color-purple: #8B5CF6;
-  --color-dark-bg: #020617;
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-border: var(--border);
+  --color-brand: var(--brand);
+  --color-success: var(--success);
+  
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-outfit);
 }
 
 :root {
   --background: #ffffff;
+  --surface: #fafafa;
   --foreground: #0a0a0a;
+  --border: #e4e5e9;
+  
+  /* Custom AquaSync Deep Teal - shifted from tailwind stock */
+  --brand: #0B827A; 
+  --success: #10B981;
 }
 
 .dark {
-  --background: #020617;
+  --background: #09090B;
+  --surface: #18181B;
   --foreground: #e2e8f0;
+  --border: #27272A;
+  
+  /* Custom AquaSync Deep Teal - shifted to be vibrant in dark mode */
+  --brand: #13978E;
+  --success: #10B981;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading), sans-serif;
+}
+
+/* Base focus styles for accessibility */
+*:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
 }
 
 /* Hero dashboard preview — premium hover effect */
 .hero-dashboard-wrapper:hover {
   transform: perspective(1200px) rotateX(0deg) rotateY(0deg) scale(1.03) !important;
-  box-shadow: 0 40px 100px rgba(0,0,0,0.6), 0 0 80px rgba(59,130,246,0.3) !important;
+  box-shadow: 0 40px 100px rgba(0,0,0,0.6), 0 0 80px rgba(11,130,122,0.3) !important;
 }

@@ -10,7 +10,7 @@ export function HeroSection() {
     <section className="relative overflow-hidden pt-32 pb-16 lg:pt-40 lg:pb-32">
       {/* Background gradients */}
       <div className="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80" aria-hidden="true">
-        <div className="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] opacity-20 dark:opacity-30 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]" style={{ clipPath: 'polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)', background: 'linear-gradient(135deg, var(--color-primary), var(--color-purple))' }} />
+        <div className="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] opacity-20 dark:opacity-30 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]" style={{ clipPath: 'polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)', background: 'radial-gradient(circle, var(--color-brand) 0%, transparent 100%)' }} />
       </div>
 
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
@@ -20,20 +20,19 @@ export function HeroSection() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white sm:text-6xl">
-              All-in-One Cloud SaaS for <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-500">Growing Indian Businesses</span>
+            <h1 className="text-4xl font-heading font-extrabold tracking-tight text-gray-900 dark:text-white sm:text-6xl">
+              All-in-One Cloud SaaS for <span className="text-brand">Growing Indian Businesses</span>
             </h1>
-            <h2 className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300 font-medium">
+            <h2 className="mt-6 text-lg leading-8 text-muted font-medium">
               Enterprise-grade management software for Swimming Pools, Hostels, and Trading Businesses. Automate your workforce, inventory, and revenue from one unified dashboard.
             </h2>
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link 
                 href="/select-plan"
-                className="relative group overflow-hidden rounded-full px-8 py-4 text-sm font-semibold text-white shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 w-full sm:w-auto text-center"
-                style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-purple))' }}
+                className="relative group overflow-hidden rounded-full px-8 py-4 text-sm font-semibold text-white shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 w-full sm:w-auto text-center bg-brand hover:bg-brand/90 focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#09090b]"
               >
                 <div className="absolute inset-0 bg-white/20 opacity-0 transition-opacity group-hover:opacity-100" />
-                <div className="absolute -inset-1 blur-md bg-gradient-to-r from-blue-500 to-purple-500 opacity-0 group-hover:opacity-40 transition-opacity z-[-1]"></div>
+                <div className="absolute -inset-1 blur-md bg-brand opacity-0 group-hover:opacity-40 transition-opacity z-[-1]"></div>
                 Start Free Trial
               </Link>
               <Link href="/demo" className="flex items-center justify-center gap-2 px-8 py-4 text-sm font-semibold leading-6 text-gray-900 dark:text-white bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-full transition hover:bg-gray-50 dark:hover:bg-white/10 w-full sm:w-auto">

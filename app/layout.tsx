@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Outfit } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
@@ -8,7 +8,8 @@ import { LocalDBInitializer } from "@/components/LocalDBInitializer";
 import TrialBanner from "@/components/ui/quota/TrialBanner";
 import QuotaWarningModal from "@/components/ui/quota/QuotaWarningModal";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://aquasync.in";
 
@@ -88,7 +89,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
-      <body className={`${inter.className} bg-background`}>
+      <body className={`${inter.variable} ${outfit.variable} font-sans bg-background`}>
         <Providers>
           <LocalDBInitializer />
           <TrialBanner />
